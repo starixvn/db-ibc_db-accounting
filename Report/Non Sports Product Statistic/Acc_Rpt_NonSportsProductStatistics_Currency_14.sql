@@ -785,8 +785,10 @@ BEGIN
 			SUM(b.CompanyTurnOverBase) AS CompanyTurnOver,
 			SUM(b.CompanyGrossIncomeBase) AS CompanyGrossIncome,
 			SUM(b.CompanyCommBase) AS CompanyComm
-		FROM #Data b
-		WHERE EXISTS (SELECT 1 FROM #recommend c WHERE b.recommend = c.recommend)
+		FROM #Data b			
+		WHERE EXISTS ( SELECT 1 
+					   FROM #recommend c INNER JOIN #ResultByCompany s ON c.SiteName = s.SiteName 
+					   WHERE b.recommend = c.recommend)
 	END
 
 	DROP TABLE #Data

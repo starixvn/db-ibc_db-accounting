@@ -169,9 +169,8 @@ BEGIN
 	-- End Sport Bettype Matrix
 
 	-- Handle Product Group		
-	IF @CasinoType <> -1 -- @CasinoType = 0_KN, VS, NG, 1_RNG Casino, 2_:Live Casino
-	BEGIN	
-
+	IF @CasinoType <> -1 -- @CasinoType = 0_KN, VS, NG, 1_RNG Casino, 2_Live Casino
+	BEGIN
 		DELETE s
 		FROM #SportBettype s
 		WHERE NOT EXISTS (SELECT 1 
@@ -180,7 +179,7 @@ BEGIN
 								AND s.ProductID = p.ProductID)							
 	END		
 	-- End Product Group
-
+	
 	-- Get Site	
 	CREATE TABLE #tmp_Company (SiteName VARCHAR(50), Srecommend INT, isDeposit BIT)
 
@@ -692,7 +691,9 @@ BEGIN
 				OR (@GameIncomeType = -1 AND SUM(b.TotalBets - b.TotalWins) <= @GameIncomeValue)
 					)
 	END
-	
+
+	------------------------------------------IV. Return Detail ------------------------------------------------------
+
 	IF @IsGrandTotal = 0
 	BEGIN
 		IF @IsDrillDown = 0
@@ -716,16 +717,17 @@ BEGIN
 		BEGIN
 			SELECT b.ProductID AS ReportById,
 				b.ProductName AS ReportBy,
-				COUNT(b.CustID) AS NoOfPlayers,
+				COUNT(DISTINCT b.CustID) AS NoOfPlayers,
 				SUM(b.BetCount) AS BetCount,
 				b.CurrencyID,
 				b.Currency,
-				SUM(b.TotalBets) AS TotalBets,
-				SUM(b.TotalWins) AS TotalWins,
-				SUM(b.TotalRefund) AS TotalRefund,
-				SUM(b.CompanyTurnOver) AS CompanyTurnOver,
-				SUM(b.CompanyGrossIncome) AS CompanyGrossIncome,
-				SUM(b.CompanyComm) AS CompanyComm
+				CASE WHEN @Currency = -1 THEN SUM(b.TotalBetsBase) ELSE SUM(b.TotalBets) END AS TotalBets,
+				CASE WHEN @Currency = -1 THEN SUM(b.TotalWinsBase) ELSE SUM(b.TotalWins) END AS TotalWins,
+				CASE WHEN @Currency = -1 THEN SUM(b.TotalRefundBase) ELSE SUM(b.TotalRefund) END AS TotalRefund,
+				CASE WHEN @Currency = -1 THEN SUM(b.CompanyTurnOverBase) ELSE SUM(b.CompanyTurnOver) END AS CompanyTurnOver,
+				CASE WHEN @Currency = -1 THEN SUM(b.CompanyGrossIncomeBase) ELSE SUM(b.CompanyGrossIncome) END AS CompanyGrossIncome,
+				CASE WHEN @Currency = -1 THEN SUM(b.CompanyCommBase) ELSE SUM(b.CompanyComm) END AS CompanyComm
+		
 			FROM #Data b	
 				INNER JOIN #Result r ON (@Currency = -1 OR b.CurrencyID = r.CurrencyID) AND b.ProductName = r.ProductName	
 			GROUP BY b.ProductID, b.ProductName, b.CurrencyID , b.Currency	
@@ -736,26 +738,27 @@ BEGIN
 	BEGIN
 		SELECT b.CurrencyID AS ReportById,
 				b.Currency AS ReportBy,
-				COUNT(b.CustID) AS NoOfPlayers,
+				COUNT(DISTINCT b.CustID) AS NoOfPlayers,
 				SUM(b.BetCount) AS BetCount,
 				b.CurrencyID,
 				b.Currency,
-				SUM(b.TotalBets) AS TotalBets,
-				SUM(b.TotalWins) AS TotalWins,
-				SUM(b.TotalRefund) AS TotalRefund,
-				SUM(b.CompanyTurnOver) AS CompanyTurnOver,
-				SUM(b.CompanyGrossIncome) AS CompanyGrossIncome,
-				SUM(b.CompanyComm) AS CompanyComm
+				CASE WHEN @Currency = -1 THEN SUM(b.TotalBetsBase) ELSE SUM(b.TotalBets) END AS TotalBets,
+				CASE WHEN @Currency = -1 THEN SUM(b.TotalWinsBase) ELSE SUM(b.TotalWins) END AS TotalWins,
+				CASE WHEN @Currency = -1 THEN SUM(b.TotalRefundBase) ELSE SUM(b.TotalRefund) END AS TotalRefund,
+				CASE WHEN @Currency = -1 THEN SUM(b.CompanyTurnOverBase) ELSE SUM(b.CompanyTurnOver) END AS CompanyTurnOver,
+				CASE WHEN @Currency = -1 THEN SUM(b.CompanyGrossIncomeBase) ELSE SUM(b.CompanyGrossIncome) END AS CompanyGrossIncome,
+				CASE WHEN @Currency = -1 THEN SUM(b.CompanyCommBase) ELSE SUM(b.CompanyComm) END AS CompanyComm
+		
 		FROM #Data b	
 			INNER JOIN #Result r ON (@Currency = -1 OR b.CurrencyID = r.CurrencyID) AND b.ProductName = r.ProductName	
 		GROUP BY b.CurrencyID , b.Currency	
 		ORDER BY b.Currency
 	END
 		
-	------------------------------------------IV. Return Total Rows ------------------------------------------------------
+	------------------------------------------V. Return Total Rows ------------------------------------------------------
 	SELECT
         'GrandTotal' AS ReportBy,
-        SUM(NoOfPlayers)AS NoOfPlayers,
+        COUNT(DISTINCT d.CustID)AS NoOfPlayers,
         SUM(d.BetCount) BetCount,
         2 as CurrencyId, 
         'RM' AS Currency,
@@ -765,8 +768,8 @@ BEGIN
         SUM(d.CompanyTurnOverBase) CompanyTurnOver,
 		SUM(d.CompanyGrossIncomeBase) CompanyGrossIncome,
 		SUM(d.CompanyCommBase) CompanyComm
-    FROM #Result d
-		--INNER JOIN #Data d ON (r.CurrencyID = -1 OR r.CurrencyID = d.CurrencyID) AND r.ProductID = d.ProductID
+    FROM #Result r
+		INNER JOIN #Data d ON (r.CurrencyID = -1 OR r.CurrencyID = d.CurrencyID) AND r.ProductID = d.ProductID
 
 	DROP TABLE #Data
 	DROP TABLE #Result

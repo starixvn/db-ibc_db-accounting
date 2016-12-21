@@ -655,7 +655,7 @@ SET NOCOUNT ON
 					)
 			SELECT 
 				b.IsDeposit AS IsDeposit,
-				CASE WHEN @Site IN ('MBC Group', 'Licensee Group', 'All') AND @IsDrillDown = 1 THEN @Site ELSE b.SiteName END AS SiteName,
+				b.SiteName AS SiteName,
 				COUNT(DISTINCT custid) AS NoOfPlayers,
 				SUM(BetCount) AS BetCount ,
 				b.CurrencyID AS CurrencyId, 
@@ -674,7 +674,7 @@ SET NOCOUNT ON
 				SUM (b.CompanyCommBase) AS CompanyCommBase
 			FROM #Data b
 			GROUP BY b.IsDeposit,
-				CASE WHEN @Site IN ('MBC Group', 'Licensee Group', 'All') AND @IsDrillDown = 1 THEN @Site ELSE b.SiteName END,
+				b.SiteName,
 				b.CurrencyID , 
 				b.Currency
 			HAVING (@TotalBetType = 0
@@ -797,7 +797,7 @@ SET NOCOUNT ON
 		
 	END
 
-	-- Return Detail
+	------------------------------------------IV. Return Detail ------------------------------------------------------
 	IF @IsGrandTotal = 0
 	BEGIN
 		IF @IsDrillDown = 0
@@ -820,17 +820,17 @@ SET NOCOUNT ON
 		ELSE
 		BEGIN
 			SELECT 0 AS IsDeposit,
-				@Site AS ReportBy,
-				COUNT(b.CustID) AS NoOfPlayers,
+				CASE WHEN @isDrillDownLicensee = 1 THEN 'Licensee Group' ELSE @Site END AS ReportBy,
+				COUNT(DISTINCT b.CustID) AS NoOfPlayers,
 				SUM(b.BetCount) AS BetCount,
 				b.CurrencyID,
 				b.Currency,
-				SUM(b.TotalBets) AS TotalBets,
-				SUM(b.TotalWins) AS TotalWins,
-				SUM(b.TotalRefund) AS TotalRefund,
-				SUM(b.CompanyTurnOver) AS CompanyTurnOver,
-				SUM(b.CompanyGrossIncome) AS CompanyGrossIncome,
-				SUM(b.CompanyComm) AS CompanyComm
+				CASE WHEN @Currency = -1 THEN SUM(b.TotalBetsBase) ELSE SUM(b.TotalBets) END AS TotalBets,
+				CASE WHEN @Currency = -1 THEN SUM(b.TotalWinsBase) ELSE SUM(b.TotalWins) END AS TotalWins,
+				CASE WHEN @Currency = -1 THEN SUM(b.TotalRefundBase) ELSE SUM(b.TotalRefund) END AS TotalRefund,
+				CASE WHEN @Currency = -1 THEN SUM(b.CompanyTurnOverBase) ELSE SUM(b.CompanyTurnOver) END AS CompanyTurnOver,
+				CASE WHEN @Currency = -1 THEN SUM(b.CompanyGrossIncomeBase) ELSE SUM(b.CompanyGrossIncome) END AS CompanyGrossIncome,
+				CASE WHEN @Currency = -1 THEN SUM(b.CompanyCommBase) ELSE SUM(b.CompanyComm) END AS CompanyComm
 		FROM #Data b	
 			INNER JOIN #Result r ON (@Currency = -1 OR b.CurrencyID = r.CurrencyID) AND b.SiteName = r.SiteName	
 		GROUP BY b.CurrencyID , b.Currency	
@@ -840,21 +840,22 @@ SET NOCOUNT ON
 	BEGIN
 		SELECT b.CurrencyID AS ReportById,
 				b.Currency AS ReportBy,
-				COUNT(b.CustID) AS NoOfPlayers,
+				COUNT(DISTINCT b.CustID) AS NoOfPlayers,
 				SUM(b.BetCount) AS BetCount,
 				b.CurrencyID,
 				b.Currency,
-				SUM(b.TotalBets) AS TotalBets,
-				SUM(b.TotalWins) AS TotalWins,
-				SUM(b.TotalRefund) AS TotalRefund,
-				SUM(b.CompanyTurnOver) AS CompanyTurnOver,
-				SUM(b.CompanyGrossIncome) AS CompanyGrossIncome,
-				SUM(b.CompanyComm) AS CompanyComm
+				CASE WHEN @Currency = -1 THEN SUM(b.TotalBetsBase) ELSE SUM(b.TotalBets) END AS TotalBets,
+				CASE WHEN @Currency = -1 THEN SUM(b.TotalWinsBase) ELSE SUM(b.TotalWins) END AS TotalWins,
+				CASE WHEN @Currency = -1 THEN SUM(b.TotalRefundBase) ELSE SUM(b.TotalRefund) END AS TotalRefund,
+				CASE WHEN @Currency = -1 THEN SUM(b.CompanyTurnOverBase) ELSE SUM(b.CompanyTurnOver) END AS CompanyTurnOver,
+				CASE WHEN @Currency = -1 THEN SUM(b.CompanyGrossIncomeBase) ELSE SUM(b.CompanyGrossIncome) END AS CompanyGrossIncome,
+				CASE WHEN @Currency = -1 THEN SUM(b.CompanyCommBase) ELSE SUM(b.CompanyComm) END AS CompanyComm
+		
 		FROM #Data b	
 			INNER JOIN #Result r ON (@Currency = -1 OR b.CurrencyID = r.CurrencyID) AND b.SiteName = r.SiteName	
 		GROUP BY b.CurrencyID , b.Currency		
 	END
-	------------------------------------------IV. Return Total Rows ------------------------------------------------------
+	------------------------------------------V. Return Total Rows ------------------------------------------------------
 	
 	IF @IsDrillDown = 0
 	BEGIN
@@ -899,7 +900,7 @@ SET NOCOUNT ON
 			SELECT
 				2 AS IsDeposit,
 				'GrandTotalRM' AS ReportBy,
-				SUM(b.NoOfPlayers) AS NoOfPlayers,
+				COUNT(DISTINCT custid) AS NoOfPlayers,
 				SUM(b.BetCount) BetCount,
 				-1 as CurrencyId, 
 				'RM' AS Currency,
@@ -909,7 +910,8 @@ SET NOCOUNT ON
 				SUM(b.CompanyTurnOverBase) CompanyTurnOver,
 				SUM(b.CompanyGrossIncomeBase) CompanyGrossIncome,
 				SUM(b.CompanyCommBase) CompanyComm
-			FROM #Result b
+			FROM #Data b
+				INNER JOIN  #Result c ON (b.SiteName = c.SiteName) AND (@Currency = -1 OR b.CurrencyID = c.CurrencyID)
 		END
 		ELSE
 		BEGIN
@@ -930,7 +932,7 @@ SET NOCOUNT ON
 				INNER JOIN  #Result c ON b.SiteName = c.SiteName AND (@Currency = -1 OR b.CurrencyID = c.CurrencyID)
 		END
 	END
-	
+
 	DROP TABLE #Data
 	DROP TABLE #Result
 	DROP TABLE #SportBettype
