@@ -549,7 +549,7 @@ BEGIN
 	SET d.Device = CASE WHEN d.Betfrom IN ('i', 'f') THEN 'Internet' ELSE f.fullname END,
 		d.DeviceGroup = f.DeviceGroup
 	FROM #Data d
-		INNER JOIN DBDW2.bodb_Account.dbo.tbl_Betfrom f ON f.betfrom = d.Betfrom
+		INNER JOIN DBWH.bodb_Account.dbo.tbl_Betfrom f ON f.betfrom = d.Betfrom
 
 	UPDATE d
 	SET d.Betfrom = CASE WHEN d.Betfrom IN ('i','f') THEN 'i,f' ELSE d.Betfrom END

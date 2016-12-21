@@ -25,7 +25,7 @@ SET NOCOUNT ON
 		IsTest
 	FROM dbo.league WITH (NOLOCK)
 	WHERE sporttype = 162			
-	ORDER BY leagueid ASC
+	ORDER BY leaguename
 		
 END  
 
