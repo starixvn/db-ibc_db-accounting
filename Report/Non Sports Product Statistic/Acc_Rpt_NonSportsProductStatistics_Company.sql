@@ -834,6 +834,7 @@ BEGIN
 		FROM #Data b	
 			INNER JOIN #Result r ON (@Currency = -1 OR b.CurrencyID = r.CurrencyID) AND b.SiteName = r.SiteName	
 		GROUP BY b.CurrencyID , b.Currency	
+		ORDER BY b.Currency
 		END
 	END
 	ELSE
@@ -854,6 +855,7 @@ BEGIN
 		FROM #Data b	
 			INNER JOIN #Result r ON (@Currency = -1 OR b.CurrencyID = r.CurrencyID) AND b.SiteName = r.SiteName	
 		GROUP BY b.CurrencyID , b.Currency		
+		ORDER BY b.Currency
 	END
 	------------------------------------------V. Return Total Rows ------------------------------------------------------
 	
