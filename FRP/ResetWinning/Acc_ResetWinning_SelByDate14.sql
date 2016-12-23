@@ -31,6 +31,7 @@ AS
 		- 20160815@Percy: Apply new bettype of Bettrade: 904 [RedmineID: #61786]
 		- 20161004@Percy: Refno Issue [RedmineID: #65007]
 		- 20161013@Percy: Apply NG2 [RedmineID: #64117]
+		- 20161222@Percy: Apply Fishing World [RedmineID: #65734]
 		
 	Explanation's Param:
 
@@ -263,6 +264,7 @@ BEGIN
 			 WHEN bettype BETWEEN 2401 AND 2499 THEN 'Allbet' 
 			 WHEN bettype BETWEEN 4001 AND 7999 THEN 'Macau Games'
 			 WHEN bettype BETWEEN 2501 AND 2699 THEN 'NG2'
+			 WHEN bettype BETWEEN 1011 AND 1020 THEN 'Fishing World'
 		   END AS Product,
 		   ISNULL(SUM(winlost), 0) as winlost
 	 FROM #bettranstmp
@@ -286,6 +288,7 @@ BEGIN
 			OR bettype BETWEEN 2401 AND 2499
 			OR bettype BETWEEN 4001 AND 7999
 			OR bettype BETWEEN 2501 AND 2699
+			OR bettype BETWEEN 1011 AND 1020
 		   )
 	GROUP BY CASE
 	         WHEN bettype BETWEEN 31 AND 33 THEN 'Racing gross income'
@@ -309,6 +312,7 @@ BEGIN
 			 WHEN bettype BETWEEN 2401 AND 2499 THEN 'Allbet' 
 			 WHEN bettype BETWEEN 4001 AND 7999 THEN 'Macau Games'
 			 WHEN bettype BETWEEN 2501 AND 2699 THEN 'NG2'
+			 WHEN bettype BETWEEN 1011 AND 1020 THEN 'Fishing World'
 	         END
 
 	---------------------------------------------------
