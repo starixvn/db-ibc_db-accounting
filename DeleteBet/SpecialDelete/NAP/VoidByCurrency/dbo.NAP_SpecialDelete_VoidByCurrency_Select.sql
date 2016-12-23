@@ -29,6 +29,7 @@ BEGIN
 	SET NOCOUNT ON
 	
 	DECLARE @MBCGroup_Name VARCHAR(50) = 'MBC Group'
+		  , @789y_Name	   VARCHAR(50) = '789y'
 	
 	DECLARE @SearchSingle BIT
 		  , @SearchParlay BIT
@@ -63,7 +64,8 @@ BEGIN
 			NetWinLost			MONEY,
 			srecommend			INT,
 			GroupName			VARCHAR(10),
-			IsBettrade			BIT,
+			betdaqid			BIGINT,	
+			SoldId				BIGINT,
 			
 			SubTransId			BIGINT,
 			SubBetCheck			NVARCHAR(50),
@@ -88,9 +90,9 @@ BEGIN
 		INSERT INTO #t_LicenseeNames(LicenseeName, GroupName)
 		SELECT [site] AS LicenseeName, @MBCGroup_Name AS GroupName
 		FROM DBCUST.CUSTDB.dbo.Site WITH(NOLOCK) 
-		WHERE isLicensee = 0
-		  and SpecialGroup = 0 
-		  and isActive = 1		  			  
+		WHERE isLicensee = 0		  
+		  AND isActive = 1	
+		  AND [site] <> @789y_Name -- '789y' is treated as special licensee as 'MBC Group'	  			  
 	
 	INSERT INTO #t_exchanges(exchangeid, currency)
 	SELECT e.exchangeid, e.currency
@@ -139,7 +141,7 @@ BEGIN
 					NetWinLost,
 					srecommend,
 					GroupName,
-					IsBettrade,
+					betdaqid,					
 					
 					SubTransId,
 					SubBetCheck,
@@ -182,11 +184,7 @@ BEGIN
 				b.WinLost - b.actual_stake AS NetWinLost,
 				b.srecommend,
 				tl.GroupName AS GroupName,
-				CASE
-					WHEN (b.Username like '%bettrade%' AND b.betdaqid = 0) -- current owner is not member bettrade
-							THEN 1
-					ELSE 0
-				END AS IsBettrade,
+				b.betdaqid,				
 				
 				NULL AS SubTransId,
 				NULL AS SubBetCheck,
@@ -212,7 +210,24 @@ BEGIN
 			AND b.matchid = @MatchID -- filer for @MatchID	
 			AND b.bettype <> 500 -- exclude charge comm
 		
-		-- get sold records for bettrade tickets	
+		-- get sold records for bettrade tickets
+		;WITH CTE_LastTransBT AS (
+			SELECT  sub.BetId,					
+					sub.RefNo,					
+					sub.TransDate,					
+					sub.TransId,
+					sub.UserName,
+					sub.winlost - sub.actual_stake AS NetWinLost,
+					sub.srecommend,
+					ROW_NUMBER() OVER (PARTITION  BY sub.refno ORDER BY sub.transId DESC ) AS BTNo				
+			FROM #SpecialDeleteBets main
+				 INNER JOIN bettrans sub WITH (NOLOCK)
+						ON	main.TransId = sub.refno			 
+			WHERE main.betdaqid	= 0
+			  AND sub.matchid = @MatchID -- filer for @MatchID
+			  AND sub.bettype = 901 -- get only sold records
+			  AND sub.statusID 	IN (111,112,113,103) --WON/LOSE/DRAW/REFUND			  
+		)	
 		INSERT INTO #SpecialDeleteBets(
 					Stake,
 					AwayId,
@@ -243,7 +258,7 @@ BEGIN
 					NetWinLost,
 					srecommend,
 					GroupName,
-					IsBettrade,
+					betdaqid,					
 					
 					SubTransId,
 					SubBetCheck,
@@ -279,10 +294,10 @@ BEGIN
 				main.TransDesc,
 				sub.TransId,
 				sub.UserName,
-				sub.winlost - sub.actual_stake AS NetWinLost,
+				sub.NetWinLost,
 				sub.srecommend,
 				main.GroupName,
-				main.IsBettrade,
+				main.betdaqid,
 				
 				NULL AS SubTransId,
 				NULL AS SubBetCheck,
@@ -292,11 +307,23 @@ BEGIN
 				NULL AS SubHdp2,
 				NULL AS SubOdds	
 		FROM #SpecialDeleteBets main
-			 INNER JOIN bettrans sub WITH (NOLOCK)
+			 INNER JOIN CTE_LastTransBT sub WITH (NOLOCK)
 					 ON	main.TransId = sub.refno			 
-		WHERE main.IsBettrade = 1
-		  AND sub.matchid = @MatchID -- filer for @MatchID
-		  AND sub.bettype = 901 -- get only sold records
+		WHERE sub.BTNo = 1
+		
+		-- update SoldId column: if main ticket is BT, update SoldId = transid of subticket(901)
+		;WITH CTE_BetTradeSold AS (
+			SELECT transid
+				, refno				
+			FROM #SpecialDeleteBets
+			WHERE STATUS = 'SOLD'
+		)
+		UPDATE	main
+		SET main.SoldId = bt.transid
+		FROM #SpecialDeleteBets main 
+			INNER JOIN CTE_BetTradeSold bt
+			ON main.transId = bt.refno					
+		WHERE main.betdaqid = 0 -- main ticket is BTrade
 	END
 		
 	--> parlay
@@ -331,7 +358,7 @@ BEGIN
 					NetWinLost,
 					srecommend,
 					GroupName,
-					IsBettrade,
+					betdaqid,					
 					
 					SubTransId,
 					SubBetCheck,
@@ -374,7 +401,7 @@ BEGIN
 				main.winlost - main.actual_stake AS NetWinLost,
 				main.srecommend,
 				tl1.GroupName AS GroupName,
-				CAST(0 AS BIT) AS IsBettrade,
+				main.betdaqid,				
 				
 				sub.transid AS SubTransId,
 				sub.betcheck AS SubBetCheck,
@@ -433,6 +460,7 @@ BEGIN
 			s.UserName,
 			s.NetWinLost AS WinLost,			
 			s.GroupName,
+			s.SoldId,
 			
 			s.SubTransId,
 			s.SubBetCheck,
@@ -451,6 +479,14 @@ BEGIN
 											THEN 1
 									ELSE 0
 							 END AS IsDeposit) AS T1
+	ORDER BY CASE
+				WHEN s.GroupName = @MBCGroup_Name THEN 1
+				WHEN s.GroupName = @789y_Name THEN 2
+				ELSE 3
+			 END ASC
+		   , s.GroupName ASC
+		   , s.IsMixParlay ASC
+		   , s.TransId ASC
 			
 	SET NOCOUNT OFF
 END
