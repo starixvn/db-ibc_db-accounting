@@ -1,7 +1,7 @@
 ALTER PROCEDURE [dbo].[NAP_Admin_Parlay_Calculate_3]
 	@matchid 		INT
 	,@matchdate		SMALLDATETIME
-    ,@action		VARCHAR(10)
+    ,@Action		VARCHAR(10)
 	,@strTransIds 	VARCHAR(MAX) = NULL
 AS
 /*    
@@ -19,14 +19,17 @@ BEGIN
 	
 	DECLARE @xmlParlayTicket 	XML
 		
-	CREATE TABLE #parlayTicket (transid BIGINT PRIMARY KEY, statusId TINYINT)		
-	CREATE TABLE #parlayOutput (transid BIGINT PRIMARY KEY, refno BIGINT, statusID TINYINT, statuswinlost TINYINT)		
+	CREATE TABLE #parlayTicket (transid BIGINT, refno BIGINT, statusId TINYINT, modds SMALLMONEY, IsRefundGame BIT)		
+	CREATE TABLE #parlayOutput (transid BIGINT, refno BIGINT, statusId TINYINT, statuswinlost TINYINT)		
 	
 	SET @xmlParlayTicket = CONVERT(XML, @strTransIds)
 	
-	INSERT INTO #parlayTicket (transid, statusId)
-	SELECT T.C.value('./@t', 'BIGINT') 		AS transid
-			,T.C.value('./@s', 'TINYINT') 	AS statusId
+	INSERT INTO #parlayTicket (transid, refno, statusId, modds, IsRefundGame)
+	SELECT T.C.value('./@t', 'BIGINT') 			AS transid
+			,T.C.value('./@r', 'BIGINT') 		AS refno
+			,T.C.value('./@s', 'TINYINT') 		AS statusId
+			,T.C.value('./@m', 'SMALLMONEY') 	AS modds
+			,T.C.value('./@i', 'BIT') 			AS IsRefundGame
 	FROM @xmlParlayTicket.nodes('/b') AS T(C)
 	OPTION (OPTIMIZE FOR (@xmlParlayTicket = NULL ))
 	
@@ -59,7 +62,57 @@ BEGIN
 		INTO #parlayOutput(transid, refno, statusID, statuswinlost)
 		FROM dbo.bettransm bm WITH(ROWLOCK, UPDLOCK)
 			INNER JOIN #parlayTicket t
-			ON bm.transid = t.transid
+			ON bm.refno = t.refno AND bm.transid = t.transid
+		
+		--UPDATE BetParlayDetail
+		UPDATE pd 
+		SET winlostdate 	= @matchdate
+			,statusid 		= r.statusId
+			,statuswinlost 	= r.statuswinlost
+		FROM dbo.BetParlayDetail pd WITH(ROWLOCK, UPDLOCK)
+			INNER JOIN #parlayOutput r
+			ON pd.transid 	= r.transid
+			AND pd.RefNo 	= r.refno
+	END
+	
+	IF (@action IN ('CAL'))
+	BEGIN
+		--UPDATE bettransm
+		UPDATE bm
+		SET ruben = CASE 
+				WHEN t.modds IS NULL THEN 0
+				ELSE 1
+            END
+			,winlostdate 	= @matchdate
+			,[status] = CASE 
+					WHEN t.modds IS NULL THEN N'running'
+					WHEN t.modds = 0 AND t.IsRefundGame = 0 THEN N'DRAW'
+					WHEN t.modds = 0 AND t.IsRefundGame = 1 THEN N'Refund'
+					WHEN t.modds < 0 THEN N'LOSE'
+					WHEN t.modds > 0 THEN N'WON'
+					END
+			,statusID = CASE 
+				WHEN t.modds IS NULL THEN 0
+				WHEN t.modds = 0 AND t.IsRefundGame = 0 THEN 111
+				WHEN t.modds = 0 AND t.IsRefundGame = 1 THEN 103 
+				WHEN t.modds < 0 THEN 113
+				WHEN t.modds > 0 THEN 112
+				END
+			,statuswinlost = CASE 
+				WHEN t.modds <= - 0.5 THEN 4 -- LOSE
+				WHEN t.modds >= 0.5 THEN 2 -- WIN
+				WHEN t.modds > 0 THEN 1 -- Half WIN
+				WHEN t.modds < 0 THEN 3 -- Half LOSE
+				ELSE 0 -- DRAW
+				END
+		OUTPUT INSERTED.transid
+				,INSERTED.refno
+				,INSERTED.statusID
+				,INSERTED.statuswinlost
+		INTO #parlayOutput(transid, refno, statusID, statuswinlost)
+		FROM dbo.bettransm bm WITH(ROWLOCK, UPDLOCK)
+			INNER JOIN #parlayTicket t
+			ON bm.refno = t.refno AND bm.transid = t.transid
 		
 		--UPDATE BetParlayDetail
 		UPDATE pd 
@@ -73,7 +126,7 @@ BEGIN
 	END
 	
 	--UNDO Process
-	IF(@action = 'UNDO')
+	/*IF(@action = 'UNDO')
 	BEGIN
 		--UNDO bettransm
 		UPDATE bm
@@ -97,7 +150,7 @@ BEGIN
 			INNER JOIN #parlayOutput r
 				ON pd.transid 	= r.transid
 				AND pd.RefNo 	= r.refno
-	END
+	END*/
 	
 	DROP TABLE #parlayTicket;
 	DROP TABLE #parlayOutput

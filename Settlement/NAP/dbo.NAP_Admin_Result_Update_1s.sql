@@ -418,7 +418,8 @@ BEGIN
 	BEGIN
 		
 		INSERT INTO @tmpResultDetail(ResourceID,HomeValue,AwayValue)
-		--SELECT '01', 'NA', 'NA' 
+		SELECT '00', NULL, NULL
+		UNION ALL
 		SELECT '01', CAST(@hth AS VARCHAR(50)), CAST(@hta AS VARCHAR(50))
 		UNION ALL
 		SELECT '04', NULL, NULL 

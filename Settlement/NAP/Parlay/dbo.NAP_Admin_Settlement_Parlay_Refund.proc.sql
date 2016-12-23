@@ -22,87 +22,103 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	DECLARE @tempRefundBatch TABLE (transid BIGINT, statusId TINYINT)
-	CREATE TABLE #tempRefundTickets (transid BIGINT PRIMARY KEY, statusId TINYINT)
+	DECLARE @tempRefundBatch TABLE (transid BIGINT, refno BIGINT, statusId TINYINT)
+	CREATE TABLE #refundBettypes (bettype SMALLINT)
 
-	;WITH CTE_RefundBettypes 
-	AS 
-	(
-		SELECT f.BetType
-		FROM dbo.f_Set_GetGroupBettypes() f
-		WHERE f.GroupId <> 8 -- auto betradar
-			AND 1 = CASE 
-					WHEN @Mode = 'REFUND' THEN 1
-					WHEN @Mode = 'REFUND-HT' THEN
-						CASE 
-							WHEN GroupId IN (1,3,5) THEN 1
-							WHEN GroupId = 2 AND f.Is3x30 = 1 AND @IsRefundHT = 1 THEN 1
-							ELSE 0
-						END
-					WHEN @Mode = 'REFUND-FT' THEN 
-						CASE 
-							WHEN GroupId IN (2,4,6) THEN 1
-							ELSE 0
-						END
-					ELSE 0 
-				END
-			
-	)
-	INSERT INTO #tempRefundTickets (transid, statusId)
-	SELECT transid
-		, 103 AS statusId
-	FROM
-	(
-		SELECT bm.transid
-		FROM dbo.bettransm bm WITH(ROWLOCK)		
-		WHERE matchid = @matchid
-			AND statusID NOT IN (101, 102)
-			AND bm.bettype IN (SELECT bettype FROM CTE_RefundBettypes)
-	) AS b
+	SELECT @ticketCount		= 0
 	
-	DECLARE @batchNo		INT
+	INSERT INTO #refundBettypes (bettype)
+	SELECT f.BetType
+	FROM dbo.f_Set_GetGroupBettypes() f
+	WHERE 1 = CASE 
+				WHEN @Mode = 'REFUND' THEN 1
+				WHEN @Mode = 'REFUND-HT' THEN
+					CASE 
+						WHEN f.Is3x30 = 1 THEN 1
+						ELSE 0
+					END
+				WHEN @Mode = 'REFUND-FT' THEN 
+					CASE 
+						WHEN GroupId IN (2,4,6) THEN 1
+						ELSE 0
+					END
+				ELSE 0 
+			END
+		AND f.GroupId <> 8 -- exclude auto betradar
+	
+	DECLARE @minTransId		BIGINT
+		,@maxTransId		BIGINT
+		,@fromTransId		BIGINT
+		,@batchNo			INT
 		,@batchCount		INT
-		,@strRefundTicket	VARCHAR(MAX)
+		,@strTicket			VARCHAR(MAX)
+
+
+	SELECT  @minTransId 	= MIN(transid)
+		, @maxTransId 		= MAX(transid)
+		, @ticketCount		= COUNT(1)
+	FROM dbo.bettransm bm WITH(NOLOCK)
+		INNER JOIN #refundBettypes t 
+		ON bm.bettype		= t.bettype
 	
-	SELECT @batchNo			= 1000
+	WHERE bm.matchId		= @matchId
+		AND bm.statusID		NOT IN (101, 102)	
+
+	SELECT @batchNo			= 10000
 		, @batchCount		= 0
-		, @ticketCount		= 0
+		, @fromTransId		= @minTransId
 		
-	--DO settle SDT parlay tickets
+	
+	--DO REFUND parlay tickets
 	WHILE (1 = 1)
 	BEGIN
 		
 		DELETE @tempRefundBatch
 		
-		DELETE TOP(@batchNo) t
-		OUTPUT DELETED.transid, DELETED.statusId INTO @tempRefundBatch(transid, statusId)
-		FROM #tempRefundTickets t
+		INSERT INTO @tempRefundBatch (transid, refno, statusId)
+		SELECT TOP(@batchNo)
+			bm.transid
+			,bm.refno
+			,103 AS statusId
+		FROM dbo.bettransm bm WITH(ROWLOCK)		
+		WHERE matchid 		= @matchid
+			AND bm.statusID NOT IN (101,102)
+			AND bm.transid 	BETWEEN @fromTransId AND @maxTransId
+			
+		ORDER BY bm.transid
 		
 		SELECT @batchCount 		= @@ROWCOUNT
-			, @ticketCount 		+= @batchCount
-			, @strRefundTicket	= CAST((SELECT b.transid AS t
+			, @strTicket		= CAST((SELECT b.transid AS t
+											,b.refno AS r
 											,b.statusId AS s
 										FROM @tempRefundBatch b
 										FOR XML AUTO) AS VARCHAR(MAX)
 								)
 		
-		/*select @matchid
+		select @matchid
 			,@matchdate
 			,@mode AS mode
 			,'REFUND' AS [action] 		
-			,@strRefundTicket AS strTransIds*/
+			,@strTicket AS strTransIds
 		
+		IF(@strTicket IS NOT NULL)
+		BEGIN
 		EXEC dbo.NAP_Admin_Calculate_MP_broker 
 			@matchid 		= @matchid
 			,@matchdate		= @matchdate
 			,@mode 			= 'REFUND'
 			,@action 		= 'REFUND'
-			,@strTransIds	= @strRefundTicket
+			,@strTransIds	= @strTicket
+		END
+		
+		SELECT @fromTransId = MAX(transid) + 1
+		FROM @tempRefundBatch
+		
+		IF(@batchCount < @batchNo OR @fromTransId = @maxTransId) BREAK
 			
-		IF(@batchCount < @batchNo) BREAK
 	END
 	
-	DROP TABLE #tempRefundTickets
+	DROP TABLE #refundBettypes
 	RETURN
 END
 GO

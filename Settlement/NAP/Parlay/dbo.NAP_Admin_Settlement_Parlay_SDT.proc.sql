@@ -35,29 +35,23 @@ BEGIN
 		, @aScore2H			TINYINT
 		
 	--conners result
-	DECLARE @hthCorners			TINYINT
-		, @htaCorners			TINYINT
-		, @fthCorners			TINYINT
-		, @ftaCorners			TINYINT
-		, @ftFCorner			VARCHAR(1)
-		, @htFCorner			VARCHAR(1)
+		, @hthCorners		TINYINT
+		, @htaCorners		TINYINT
+		, @fthCorners		TINYINT
+		, @ftaCorners		TINYINT
+		, @ftFCorner		VARCHAR(1)
+		, @htFCorner		VARCHAR(1)
 		
-		, @totalConner			TINYINT
-		, @totalConner1H 		TINYINT
-	
-	--BetRadar result
-	DECLARE @NextGoal			NVARCHAR(MAX)
-		, @GoalScorerAnytime	NVARCHAR(MAX)
+		, @totalConner		TINYINT
+		, @totalConner1H 	TINYINT
 	
 	DECLARE @rsQuery			NVARCHAR(MAX)
 	
-	DECLARE @tempSDTBatch TABLE (transid BIGINT, statusId TINYINT)
-	CREATE TABLE #tempSDTTickets (transid BIGINT PRIMARY KEY, statusId TINYINT)
-	
+	CREATE TABLE #SDTBettypes (bettype SMALLINT PRIMARY KEY, IsDetermined BIT)
 	CREATE TABLE #tmpResultDetail (
-		ResourceID 		VARCHAR(20)
-		, HomeValue 	VARCHAR(50)
-		, AwayValue 	VARCHAR(50)
+		ResourceID 			VARCHAR(20)
+		, HomeValue 		VARCHAR(50)
+		, AwayValue 		VARCHAR(50)
 	)	
 	
 	SELECT @IsHT			= CASE WHEN @Mode IN ('ABANDONED-1H') THEN 1 ELSE 0 END 
@@ -73,6 +67,7 @@ BEGIN
 		, @ftaCorners		= 0
 		, @ftFCorner		= ''
 		, @htFCorner		= ''
+		, @ticketCount		= 0
 	
 	SET @rsQuery = '
 		INSERT INTO #tmpResultDetail(ResourceID, HomeValue, AwayValue)	
@@ -100,124 +95,150 @@ BEGIN
 	
 	SELECT @totalConner			= CASE WHEN @IsHT = 1 THEN (@hthCorners + @htaCorners) ELSE (@fthCorners + @ftaCorners) END
 		, @totalConner1H 		= (@hthCorners + @htaCorners)
+
 	
-	;WITH cteBettypes
-	AS
-	(
-		SELECT f.BetType
-		FROM dbo.f_Set_GetGroupBettypes() f
-		WHERE f.IsDetermined = 1 -- support to settle determined tickets
-				AND 1 = CASE 
-							WHEN @IsHT = 0 AND f.GroupId IN (2,4,6)  THEN 1 -- FT, FT corner, HTFT-FGLG
-							WHEN @IsHT = 1 THEN 1
-							ELSE 0
-						END
-				AND f.GroupId <> 8 -- auto betradar
-	)
-	INSERT INTO #tempSDTTickets (transid, statusId)
-	SELECT t.transid
-		, t.statusId
-	FROM
-	(
-		SELECT bm.transid
-			, odds.StatusId
+	INSERT INTO #SDTBettypes (bettype, IsDetermined)
+	SELECT f.BetType
+		, f.IsDetermined
+	FROM dbo.f_Set_GetGroupBettypes() f
+	WHERE 1 = CASE 
+				WHEN @IsHT = 0 AND f.GroupId IN (2,4,6)  THEN 1 -- FT, FT corner, HTFT-FGLG
+				WHEN @IsHT = 1 THEN 1
+				ELSE 0
+			END
+		AND f.GroupId <> 8 -- auto betradar
+	
+	BEGIN --SDT Process
+		DECLARE @tempBatch TABLE (transid BIGINT, refno BIGINT, StatusId TINYINT)
+		DECLARE @minTransId		BIGINT
+			,@maxTransId		BIGINT
+			,@fromTransId		BIGINT
+			,@batchNo			INT
+			,@batchCount		INT
+			,@loopCount			INT
+			,@strTicket			VARCHAR(MAX)
+
+
+		SELECT  @minTransId 	= MIN(transid)
+			, @maxTransId 		= MAX(transid)
+			, @ticketCount		= COUNT(1)
+			
 		FROM dbo.bettransm bm WITH(NOLOCK)
-			CROSS APPLY
-			(
-				SELECT modds, StatusId 
-				FROM [dbo].[f_Set_Parlay_CalModds](
-					bm.bettype
-					, bm.betteam
-					, bm.hdp1
-					, bm.hdp2
-					, @hScore1H
-					, @aScore1H
-					, @hScore2H
-					, @aScore2H
-					, bm.transdesc
-					, @IsHT
-				)
-				WHERE StatusId IN (112,113)
-				UNION ALL
-				SELECT modds, StatusId 
-				FROM [dbo].[f_Set_Parlay_CalModds_Corner](
-					bm.bettype
-					, bm.betteam
-					, bm.hdp1
-					, bm.hdp2
-					, @totalConner
-					, @totalConner1H
-					, @ftFCorner
-					, @htFCorner
-					, @hthCorners
-					, @htaCorners
-					, @fthCorners
-					, @ftaCorners
-					, @IsHT
-				)
-				WHERE StatusId IN (112,113)
-				UNION ALL
-				SELECT modds, StatusId 
-				FROM [dbo].[f_Set_Parlay_CalModds_GoalRecord](
-					bm.bettype
-					, bm.betteam
-					, @GoalRecord
-					, @IsHT
-				)
-				WHERE StatusId IN (112,113)
-				UNION ALL --103-REFUND
-				SELECT NULL AS modds
-					, 103 AS StatusId 
-			)  AS odds
-			
-		WHERE bm.matchid = @matchid
-			AND bm.statusID IN (0)
-			AND bm.bettype IN (SELECT bettype FROM cteBettypes)
-	) AS t
-	
-	DECLARE @batchNo		INT
-		,@batchCount		INT
-		,@strSDTTicket		VARCHAR(MAX)
-	
-	SELECT @batchNo			= 1000
-		, @batchCount		= 0
-		, @ticketCount		= 0
+			INNER JOIN #SDTBettypes t 
+			ON bm.bettype		= t.bettype
 		
-	--DO settle SDT parlay tickets
-	WHILE (1 = 1)
-	BEGIN
+		WHERE bm.matchId		= @matchId
+			AND bm.statusID		NOT IN (101, 102)	
 		
-		DELETE @tempSDTBatch
+		SELECT @batchNo			= 2000
+			, @batchCount		= 0
+			, @fromTransId		= @minTransId
 		
-		DELETE TOP(@batchNo) t
-		OUTPUT DELETED.transid, DELETED.statusId 
-		INTO @tempSDTBatch(transid, statusId)
-		FROM #tempSDTTickets t
+		WHILE (1 = 1)
+		BEGIN
 		
-		SELECT @batchCount 		= @@ROWCOUNT
-			, @ticketCount 		+= @batchCount
-			, @strSDTTicket		= CAST((SELECT b.transid AS t
-											,b.statusId AS s 
-										FROM @tempSDTBatch b
+			DELETE @tempBatch
+		
+			INSERT INTO @tempBatch(transid, refno, StatusId)
+			SELECT TOP(@batchNo) 
+				bm.transid
+				, bm.refno
+				, CASE 
+					WHEN t.IsDetermined = 1 AND odds.modds IS NOT NULL THEN odds.StatusId 
+					ELSE 103 
+				END AS StatusId
+			FROM dbo.bettransm bm WITH(NOLOCK)
+				INNER JOIN #SDTBettypes t ON bm.bettype = t.bettype
+				OUTER APPLY
+				(
+					SELECT modds, StatusId 
+					FROM [dbo].[f_Set_Parlay_SDT_CalModds](
+						bm.bettype
+						, bm.betteam
+						, bm.hdp1
+						, bm.hdp2
+						, @hScore1H
+						, @aScore1H
+						, @hScore2H
+						, @aScore2H
+						, bm.transdesc
+						, @IsHT
+					)
+					WHERE StatusId IN (112,113)
+					UNION ALL
+					SELECT modds, StatusId 
+					FROM [dbo].[f_Set_Parlay_SDT_CalModds_Corner](
+						bm.bettype
+						, bm.betteam
+						, bm.hdp1
+						, bm.hdp2
+						, @totalConner
+						, @totalConner1H
+						, @ftFCorner
+						, @htFCorner
+						, @hthCorners
+						, @htaCorners
+						, @fthCorners
+						, @ftaCorners
+						, @IsHT
+					)
+					WHERE StatusId IN (112,113)
+					UNION ALL
+					SELECT modds, StatusId 
+					FROM [dbo].[f_Set_Parlay_SDT_CalModds_GoalRecord](
+						bm.bettype
+						, bm.betteam
+						, @GoalRecord
+						, @IsHT
+					)
+					WHERE StatusId IN (112,113)
+				
+				)  AS odds
+			WHERE bm.matchId = @matchId
+				AND bm.statusID NOT IN (101,102)
+				AND bm.transid BETWEEN @fromTransId AND @maxTransId
+
+			ORDER BY bm.transid
+		
+			SELECT @batchCount 	= @@ROWCOUNT
+				, @loopCount	+=  @batchCount
+				, @strTicket	= CAST((SELECT b.transid AS t
+											,b.refno AS r
+											,b.statusId AS s
+										FROM @tempBatch b
 										FOR XML AUTO) AS VARCHAR(MAX)
-								)
-		
-		
-		EXEC dbo.NAP_Admin_Calculate_MP_broker 
-			@matchid 		= @matchid
-			,@matchdate		= @matchdate
-			,@mode 			= 'ABANDONED'
-			,@action 		= 'REFUND'
-			,@strTransIds	= @strSDTTicket
+									)
 			
-		IF(@batchCount < @batchNo) BREAK
+			select @matchid
+				,@matchdate
+				,@mode AS mode
+				,'REFUND' AS [action] 		
+				,@strTicket AS strTransIds
+			
+			IF(@strTicket IS NOT NULL)
+			BEGIN
+				EXEC dbo.NAP_Admin_Calculate_MP_broker 
+					@matchid 		= @matchid
+					,@matchdate		= @matchdate
+					,@mode 			= 'ABANDONED'
+					,@action 		= 'REFUND'
+					,@strTransIds	= @strTicket
+			END
+			
+			SELECT @fromTransId = MAX(transid) + 1
+			FROM @tempBatch
+			
+			IF(@batchCount < @batchNo OR @fromTransId = @maxTransId) BREAK
+		
+		END
+		select @loopCount AS LoopCount_SDT
 	END
 	
+	
+	DROP TABLE #SDTBettypes
 	DROP TABLE #tmpResultDetail
-	DROP TABLE #tempSDTTickets
 	
 	RETURN
-	
 END
 GO
 

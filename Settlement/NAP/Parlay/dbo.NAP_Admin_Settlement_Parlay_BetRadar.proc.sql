@@ -55,14 +55,18 @@ BEGIN
 		,AwayValue				VARCHAR(20)
 		,SettlementStatusID		TINYINT
 	)
-	CREATE TABLE #autoBettypes (bettype SMALLINT) 
 	
-	SELECT @IsHT			= CASE WHEN @Mode IN ('ABANDONED-1H', 'REFUND') THEN 1 ELSE 0 END 
+	CREATE TABLE #autoBettypes (bettype SMALLINT, ResourceId VARCHAR(20)) 
 	
-	INSERT INTO #autoBettypes (bettype)
+	SELECT @IsHT			= CASE WHEN @Mode IN ('ABANDONED-1H', 'REFUND') THEN 1 ELSE 0 END
+		,@ticketCount		= 0
+	
+	INSERT INTO #autoBettypes (bettype, ResourceId)
 	SELECT bettype
+		,CAST(bm.bettype AS VARCHAR(20)) + '%' ResourceId
 	FROM dbo.bettransm bm (NOLOCK)
 	WHERE matchid = @matchId
+		AND statusID NOT IN(101, 102)
 		AND EXISTS (
 			SELECT TOP 1 1 
 			FROM dbo.f_Set_GetGroupBettypes() AS f 
@@ -78,17 +82,17 @@ BEGIN
 		,AwayValue
 		,SettlementStatusID
 	)
-	SELECT	 MatchID
-			,ResourceID
-			,HomeValue
-			,AwayValue
-			,SettlementStatusID
+	SELECT rs.MatchID
+		,rs.ResourceID
+		,rs.HomeValue
+		,rs.AwayValue
+		,rs.SettlementStatusID
 	FROM DBPRO.bodb02.dbo.ResultDetail rs WITH (NOLOCK)
 		INNER JOIN #autoBettypes AS f 
-		ON rs.ResourceId LIKE CAST(f.BetType AS VARCHAR(20)) + '%'
+		ON rs.ResourceId LIKE f.ResourceId
 		
-	WHERE MatchID = @MatchID 
-		AND SettlementStatusID = 4 -- Completed
+	WHERE rs.MatchID = @MatchID 
+		AND rs.SettlementStatusID = 4 -- Completed
 	
 	SELECT	 @PenaltyShootout		= ISNULL(MAX(CASE WHEN ResourceID='135' THEN HomeValue ELSE '' END),'')
 			,@WhoAdvancesNextRound	= ISNULL(MAX(CASE WHEN ResourceID='168' THEN HomeValue ELSE '' END),'')
@@ -111,21 +115,23 @@ BEGIN
 	FROM	@tmpResultDetail
 	
 	
-	DECLARE @tempSDTBatch TABLE (transid BIGINT, statusId TINYINT)
-	CREATE TABLE #tempSDTTickets (transid BIGINT PRIMARY KEY, statusId TINYINT)
+	DECLARE @tempBatch TABLE (transid BIGINT, refno BIGINT, statusId TINYINT)
+	CREATE TABLE #tempTickets (transid BIGINT, refno BIGINT, statusId TINYINT)
 	
-	INSERT INTO #tempSDTTickets (transid, statusId)
+	INSERT INTO #tempTickets (transid, refno, statusId)
 	SELECT t.transid
+		, t.refno
 		, t.statusId
 	FROM
 	(
-		SELECT bm.transid, bm.bettype
+		SELECT bm.transid, bm.refno
 			, CASE 
 				WHEN odds.modds IS NULL THEN 103 --REFUND
 				ELSE odds.StatusId --settle determined
 			END AS StatusId
 		FROM dbo.bettransm bm WITH(NOLOCK)
-			CROSS APPLY [dbo].[f_Set_Parlay_CalModds_BetRadar](
+			INNER JOIN #autoBettypes t ON bm.bettype = t.bettype	
+			CROSS APPLY [dbo].[f_Set_Parlay_SDT_CalModds_BetRadar](
 					bm.bettype
 					, bm.betteam
 					, bm.betcheck
@@ -157,49 +163,59 @@ BEGIN
 				)  AS odds
 			
 		WHERE bm.matchid = @matchid
-			AND bm.statusID IN (0)
-			AND EXISTS(SELECT 1 FROM #autoBettypes WHERE bettype = bm.bettype)
+			AND bm.statusID NOT IN (101,102)
 	) AS t
 	
-	DECLARE @batchNo		INT
-		,@batchCount		INT
-		,@strSDTTicket		VARCHAR(MAX)
+	SET @ticketCount 		= @@ROWCOUNT
 	
-	SELECT @batchNo			= 1000
-		, @batchCount		= 0
-		, @ticketCount		= 0
-		
-	--DO settle SDT parlay tickets
-	WHILE (1 = 1)
+	IF(@ticketCount  > 0)
 	BEGIN
+		DECLARE @batchNo		INT
+			,@batchCount		INT
+			,@strTicket			VARCHAR(MAX)
 		
-		DELETE @tempSDTBatch
-		
-		DELETE TOP(@batchNo) t
-		OUTPUT DELETED.transid, DELETED.statusId 
-		INTO @tempSDTBatch(transid, statusId)
-		FROM #tempSDTTickets t
-		
-		SELECT @batchCount 		= @@ROWCOUNT
-			, @ticketCount 		+= @batchCount
-			, @strSDTTicket		= CAST((SELECT b.transid AS t
-											,b.statusId AS s 
-										FROM @tempSDTBatch b
-										FOR XML AUTO) AS VARCHAR(MAX)
-								)
-		
-		
-		EXEC dbo.NAP_Admin_Calculate_MP_broker 
-			@matchid 		= @matchid
-			,@matchdate		= @matchdate
-			,@mode 			= 'ABANDONED'
-			,@action 		= 'REFUND'
-			,@strTransIds	= @strSDTTicket
+		SELECT @batchNo			= 2000
+			, @batchCount		= 0
 			
-		IF(@batchCount < @batchNo) BREAK
+		--DO settle SDT parlay tickets
+		WHILE (1 = 1)
+		BEGIN
+			
+			DELETE @tempBatch
+			
+			DELETE TOP(@batchNo) t
+			OUTPUT DELETED.transid, DELETED.refno, DELETED.statusId 
+			INTO @tempBatch(transid, refno, statusId)
+			FROM #tempTickets t
+			
+			SELECT @batchCount 		= @@ROWCOUNT
+				, @strTicket		= CAST((SELECT b.transid AS t
+												,b.refno AS r 
+												,b.statusId AS s 
+											FROM @tempBatch b
+											FOR XML AUTO) AS VARCHAR(MAX)
+									)
+			
+			select @matchid
+				,@matchdate
+				,@mode AS mode
+				,'REFUND' AS [action] 		
+				,@strTicket AS strTransIds
+				
+			IF(@strTicket IS NOT NULL)
+			BEGIN
+				EXEC dbo.NAP_Admin_Calculate_MP_broker 
+					@matchid 		= @matchid
+					,@matchdate		= @matchdate
+					,@mode 			= 'ABANDONED'
+					,@action 		= 'REFUND'
+					,@strTransIds	= @strTicket
+			END
+			
+			IF(@batchCount < @batchNo) BREAK
+		END
 	END
-	
-	DROP TABLE #tempSDTTickets
+	DROP TABLE #tempTickets
 	
 	RETURN
 	

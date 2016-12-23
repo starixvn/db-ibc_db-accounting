@@ -23,14 +23,20 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-DECLARE @start DATETIME
-	, @stop DATETIME
-	, @ActionID INT
-	, @IsDetermined BIT
-	, @resultDetail_cb VARCHAR(MAX) = NULL -- for corners bets
-	, @resultDetail_ss VARCHAR(MAX)
-	, @SelectedSetCAL VARCHAR(50)
-	, @SelectedSetREFUND VARCHAR(50)
+DECLARE @start 				DATETIME
+	, @stop 				DATETIME
+	, @ActionID 			INT
+	, @IsDetermined 		BIT
+	, @resultDetail_cb 		VARCHAR(MAX) = NULL -- for corners bets
+	, @resultDetail_ss 		VARCHAR(MAX)
+	, @SelectedSetCAL 		VARCHAR(50)
+	, @SelectedSetREFUND 	VARCHAR(50)
+	--ticket count
+	, @ticketCountTotal		INT		
+	, @ticketCountBetRadar	INT
+	, @ticketCountCAL		INT
+	, @ticketCountSDT		INT
+	, @ticketCountREFUND	INT
 	
 	DECLARE @TennisTotal INT = NULL, @TotalGameHomeMatch INT = NULL, @TotalGameAwayMatch INT = NULL
 
@@ -42,6 +48,11 @@ DECLARE @start DATETIME
 					END
 		, @IsDetermined = CASE WHEN @action IN ('ABANDONED-1H', 'ABANDONED-2H') THEN 1 ELSE 0 END
 		, @start 		= CURRENT_TIMESTAMP
+		, @ticketCountTotal		= 0
+		, @ticketCountBetRadar	= 0
+		, @ticketCountCAL		= 0
+		, @ticketCountSDT		= 0
+		, @ticketCountREFUND	= 0
 	
 	-- match info
 	DECLARE 
@@ -76,6 +87,26 @@ DECLARE @start DATETIME
 		RETURN -- incorrect matchid? maybe
 	END
 	
+	IF @action <> 'UNDO' 
+	BEGIN		
+		SELECT	TOP (1) @ErrCode = 1000002
+				,@ErrMsg = 'This match is being calculated, please wait a few seconds until the on-going process is completed and try again.'
+		FROM	dbo.TempVariableNumber WIHT(NOLOCK) 
+		WHERE	KeyID = 1 
+				AND KeyValue = @matchid
+		
+		IF @ErrCode > 0
+			RETURN
+			
+		IF (@fthomescore IS NULL OR @ftawayscore IS NULL OR @hthomescore IS NULL OR @htawayscore IS NULL) 
+		BEGIN
+			SELECT	@ErrCode = 1000003
+					,@ErrMsg = 'This match has not been keyed in score yet'
+			RETURN
+		END
+	END 
+	
+	
 	IF @Sporttype = 1
 	BEGIN
 		EXEC dbo.NAP_Admin_Settlement_2 
@@ -94,232 +125,251 @@ DECLARE @start DATETIME
 			,@str_resultDetail = @resultDetail_ss OUTPUT	
 	END
 	
-	--CHECK Auto-Bettype first if any
-	IF (EXISTS (
-			SELECT TOP 1 1
-			FROM dbo.bettransm bm (NOLOCK)
-			WHERE bm.matchid = @matchId
-				AND EXISTS (
-					SELECT TOP 1 1 
-					FROM dbo.f_Set_GetGroupBettypes() AS f 
-					WHERE f.GroupId 	= 8 
-						AND f.bettype 	= bm.bettype
+	BEGIN TRY
+		--CHECK Auto-Bettype first if any
+		IF (EXISTS (
+				SELECT TOP 1 1
+				FROM dbo.bettransm bm (NOLOCK)
+				WHERE bm.matchid = @matchId
+					AND EXISTS (
+						SELECT TOP 1 1 
+						FROM dbo.f_Set_GetGroupBettypes() AS f 
+						WHERE f.GroupId 	= 8 
+							AND f.bettype 	= bm.bettype
+					)
 				)
-			)
-	)
-	BEGIN		
-		EXEC dbo.NAP_Admin_Settlement_Parlay_Betradar
-			@MatchId			= @MatchId
-			,@matchdate			= @matchdate
-			,@Mode				= @Action
-	END	
-	
-	--CHECK for CAL fisrt
-	IF(@action IN ('REFUND-HT', 'ABANDONED-2H', 'REFUND-FT'))
-	BEGIN
-		/*IF(@action IN ('REFUND-HT')) --REFUND Is3x30 AND CAL the REST
-		BEGIN
-			TODO
-		END
-		IF(@action IN ('ABANDONED-2H', 'REFUND-FT')) --CAL-HT and REFUND/ABANDONED the REST
-		BEGIN
-			TODO
-		END*/
-		
-		--DO calculation
-		EXEC dbo.NAP_Admin_Settlement_Parlay_Calculate
-			@MatchId			= @MatchId
-			,@matchdate			= @matchdate
-			,@mode				= @Action
-			,@hth		 		= @hthomescore
-			,@hta		 		= @htawayscore
-			,@fth				= @fthomescore
-			,@fta				= @ftawayscore
-			,@Sporttype			= @Sporttype
-			,@betstatus 		= @betstatus
-			,@GoalSequence 		= @GoalRecord
-			,@resultDetail_cb	= @resultDetail_cb
-			,@resultDetail_ss	= @resultDetail_ss
-			
-	END
-	
-	--CALL settle determinable first
-	IF(@IsDetermined = 1)
-	BEGIN
-		--DO settle determined
-		EXEC dbo.NAP_Admin_Settlement_Parlay_SDT
-			@MatchId			= @MatchId
-			,@matchdate			= @matchdate
-			,@mode				= @Action
-			,@hthomescore 		= @hthomescore
-			,@htawayscore 		= @htawayscore
-			,@fthomescore		= @fthomescore
-			,@ftawayscore		= @ftawayscore
-			,@Sporttype			= @Sporttype
-			,@betstatus 		= @betstatus
-			,@GoalRecord 		= @GoalRecord
-	END
-	ELSE
-	BEGIN
-		--REFUND all tickets
-		EXEC dbo.NAP_Admin_Settlement_Parlay_Refund
-			@MatchId			= @MatchId
-			,@matchdate			= @matchdate
-			,@mode				= @Action
-			,@IsRefundHT		= @IsRefundHT
-	END
-	return
-	
-	--CAL main tickets by refno
-	DECLARE @rowCnt29 int
-			,@rowCnt int
-	DECLARE @strTransIds varchar(MAX) = ''
-			,@strRefnos VARCHAR(MAX) = ''
-	
-	DECLARE @refnos TABLE (refno BIGINT)		
-	CREATE TABLE #tempRefno29 (refno BIGINT, transid BIGINT)	
-	
-	-- for balance table --	
-	DECLARE @BeforeUpd 					TVP_BalanceChange
-		, @AfterUpd 					TVP_BalanceChange
-		
-	CREATE TABLE #Balance_29 (custid int PRIMARY KEY, balance money, Increased bit)
-	CREATE INDEX IX_Balance_29_Increased ON #Balance_29 (Increased)
-	
-	DECLARE @tblDebitPending_29 TVP_BalanceList
-	DECLARE @tblCreditPending_29 TVP_BalanceList
-
-	DECLARE @TotalAccount INT, @TotalAccount_BalanceUpdate INT
-	
-	----------------------------------------------------------------------------------------------------------------------------------------
-	INSERT INTO @refnos(refno)
-	SELECT refno
-	FROM dbo.bettransm bm WITH(ROWLOCK)
-	WHERE matchid = @matchid
-		AND NOT EXISTS (
-			SELECT 1 FROM bettransm WITH(NOLOCK) WHERE refno = bm.refno AND statusID IN(1, 101)
 		)
-	SET @rowCnt = @@ROWCOUNT --number of tickets of the match
-	
-	BEGIN --BEGIN: calculate 29 ----------------------------------
-	
-		SELECT transid, refno, 0 AS IsFinished
-		INTO #temp_bettrans_29
-		FROM bettrans b WITH(NOLOCK)		
-		WHERE b.matchid = 29
-			AND b.statusID NOT IN (101,102) --('VOID','REJECT')
-			AND refno IN (SELECT refno FROM @refnos)
-			
-		SET @rowCnt29 = @@ROWCOUNT -- number of system parlay ticket
-
-		INSERT INTO dbo.ParlaySettlement_trace (matchid, runcnt, starttime, endtime, doing)
-		VALUES (@matchid, @rowCnt29, CURRENT_TIMESTAMP, NULL, 'Start running PRECAL-29')
-
-		IF @rowCnt29 > 0 -- got system parlay tickets
-		BEGIN	
-			SET @strTransIds = STUFF((
-				SELECT ',' + cast(transid as varchar(20)) 
-				FROM #temp_bettrans_29 
-				FOR XML PATH('')
-			), 1,1,'')
+		BEGIN		
+			EXEC dbo.NAP_Admin_Settlement_Parlay_BetRadar
+				@MatchId			= @MatchId
+				,@matchdate			= @matchdate
+				,@Mode				= @Action
+				,@ticketCount		= @ticketCountBetRadar OUTPUT
+		END	
 		
-			-- handle betParlayDetail, betParlayResult
-			EXEC dbo.NAP_Admin_Calculate_MP_broker @matchid = @matchid
-				,@mode = 'PRECAL-29'
-				,@matchdate = @matchdate
-				,@strXML = @strTransIds
-			
-			-- CAPTURE value BALANCE before udpate bettrans
-			INSERT INTO @BeforeUpd (
-				custid
-				,balance
-				,balanceType
-			)
-			SELECT b.custid
-				,SUM(b.winlost - b.actual_stake + b.playercomm) AS balance
-				,1 -- Sports
-			FROM dbo.bettrans b WITH(ROWLOCK)
-			WHERE EXISTS( SELECT 1 FROM #temp_bettrans_29 WHERE transid = b.transid)
-			GROUP BY b.custid
-			--------------------------------------------------------------	
-		
-			INSERT INTO dbo.ParlaySettlement_trace (matchid, runcnt, starttime, endtime, doing)
-			VALUES (@matchid, NULL, CURRENT_TIMESTAMP, NULL, 'Start running CAL-29')
-
-			-- update summary info back to bettrans
-			WHILE (1=1)
+		--CHECK for CAL fisrt
+		IF(@action IN ('REFUND-HT', 'ABANDONED-2H', 'REFUND-FT'))
+		BEGIN
+			/*IF(@action IN ('REFUND-HT')) --REFUND Is3x30 AND CAL the REST
 			BEGIN
-				TRUNCATE TABLE #tempRefno29
-				SET @strRefnos = ''
-				
-				UPDATE TOP (800) #temp_bettrans_29
-					SET IsFinished = 1
-				OUTPUT INSERTED.refno, INSERTED.transid INTO #tempRefno29 (refno, transid)
-				WHERE IsFinished = 0
-				
-				IF @@rowcount = 0
-					BREAK
-					
-				SELECT @strRefnos = @strRefnos + ',' + CONVERT(VARCHAR(20), refno) + '|' + CONVERT(VARCHAR(20), transid)
-				FROM	#tempRefno29
-				
-				SET @strRefnos = STUFF(@strRefnos,1,1,'')
-				
-				EXEC dbo.NAP_Admin_Calculate_MP_broker
-					@mode = '29'
-					,@matchdate = @matchdate
-					,@strXML = @strRefnos
-			END			
-												
-			-- CAPTURE value BALANCE after update bettrans
-			INSERT INTO @AfterUpd (
-				custid
-				,balance
-				,balanceType
-			)
-			SELECT b.custid
-				,SUM(b.winlost - b.actual_stake + b.playercomm) AS balance
-				,1 -- Sports
-			FROM dbo.bettrans b WITH(ROWLOCK)
-			WHERE EXISTS( SELECT 1 FROM #temp_bettrans_29 WHERE transid = b.transid)
-			GROUP BY b.custid
+				TODO
+			END
+			IF(@action IN ('ABANDONED-2H', 'REFUND-FT')) --CAL-HT and REFUND/ABANDONED the REST
+			BEGIN
+				TODO
+			END*/
 			
-			INSERT INTO #Balance_29 (custid, balance, Increased)
-			SELECT b.custid, a.balance - b.balance, CASE WHEN a.balance > b.balance THEN 1 ELSE 0 END
-			FROM #beforeUpd b
-				INNER JOIN #afterUpd a ON b.custid = a.custid
-			WHERE b.balance <> a.balance
-
-			SET @TotalAccount_BalanceUpdate = @@ROWCOUNT
-			
-			---INSERT data into pending balance table   
-			EXEC [dbo].[NAP_Admin_BalancePendingIns]
-				@BeforeUpd	 = @beforeUpd
-				, @AfterUpd	 = @afterUpd
+			--DO calculation
+			EXEC dbo.NAP_Admin_Settlement_Parlay_Calculate
+				@MatchId			= @MatchId
+				,@matchdate			= @matchdate
+				,@mode				= @Action
+				,@hth		 		= @hthomescore
+				,@hta		 		= @htawayscore
+				,@fth				= @fthomescore
+				,@fta				= @ftawayscore
+				,@Sporttype			= @Sporttype
+				,@betstatus 		= @betstatus
+				,@GoalSequence 		= @GoalRecord
+				,@resultDetail_cb	= @resultDetail_cb
+				,@resultDetail_ss	= @resultDetail_ss
+				,@ticketCount		= @ticketCountCAL OUTPUT
+				
+		END
 		
-			----
-			-- Add Negative Balance into BalanceNegative table 
-			----
-			INSERT INTO [bodb02].[dbo].[BalanceNegative] (
-				[ExecDate]
-				,[MatchID]
-				,[ActionID]
-				,[GroupID]
-				,[CustID]
-				,[Balance]
-				,[StatusID]
-				,[Remark]
+		--CALL settle determinable first
+		IF(@IsDetermined = 1)
+		BEGIN
+			--DO settle determined
+			EXEC dbo.NAP_Admin_Settlement_Parlay_SDT
+				@MatchId			= @MatchId
+				,@matchdate			= @matchdate
+				,@mode				= @Action
+				,@hthomescore 		= @hthomescore
+				,@htawayscore 		= @htawayscore
+				,@fthomescore		= @fthomescore
+				,@ftawayscore		= @ftawayscore
+				,@Sporttype			= @Sporttype
+				,@betstatus 		= @betstatus
+				,@GoalRecord 		= @GoalRecord
+				,@ticketCount		= @ticketCountSDT OUTPUT
+		END
+		ELSE
+		BEGIN
+			--REFUND all tickets
+			EXEC dbo.NAP_Admin_Settlement_Parlay_Refund
+				@MatchId			= @MatchId
+				,@matchdate			= @matchdate
+				,@mode				= @Action
+				,@IsRefundHT		= @IsRefundHT
+				,@ticketCount		= @ticketCountREFUND OUTPUT
+		END
+		
+		/*
+		SELECT @ticketCountBetRadar	AS TC_BetRadar
+			, @ticketCountCAL		AS TC_CAL
+			, @ticketCountSDT		AS TC_SDT
+			, @ticketCountREFUND	AS TC_REFUND
+		*/
+		
+		SET @ticketCountTotal		= ISNULL(@ticketCountBetRadar, 0) + ISNULL(@ticketCountCAL, 0) + ISNULL(@ticketCountSDT, 0) + ISNULL(@ticketCountREFUND, 0)
+	
+	END TRY
+	BEGIN CATCH
+		SELECT @ErrCode = 1000004
+			,@ErrMsg	= ERROR_MESSAGE()
+			
+		RETURN
+	END CATCH
+	
+	BEGIN --CAL main tickets by refno
+		DECLARE @rowCnt29 int
+				,@rowCnt int
+		DECLARE @strTransIds varchar(MAX) = ''
+				,@strRefnos VARCHAR(MAX) = ''
+		
+		DECLARE @refnos TABLE (refno BIGINT)		
+		CREATE TABLE #tempRefno29 (refno BIGINT, transid BIGINT)	
+		
+		-- for balance table --	
+		DECLARE @BeforeUpd 					TVP_BalanceChange
+			, @AfterUpd 					TVP_BalanceChange
+			
+		CREATE TABLE #Balance_29 (custid int PRIMARY KEY, balance money, Increased bit)
+		CREATE INDEX IX_Balance_29_Increased ON #Balance_29 (Increased)
+
+		DECLARE @TotalAccount INT, @TotalAccount_BalanceUpdate INT
+		
+		----------------------------------------------------------------------------------------------------------------------------------------
+		INSERT INTO @refnos(refno)
+		SELECT refno
+		FROM dbo.bettransm bm WITH(ROWLOCK)
+		WHERE matchid = @matchid
+			AND NOT EXISTS (
+				SELECT 1 FROM bettransm WITH(NOLOCK) WHERE refno = bm.refno AND statusID IN(1, 101)
+			)
+		SET @rowCnt = @@ROWCOUNT --number of tickets of the match
+		
+		BEGIN --BEGIN: calculate 29 ----------------------------------
+		
+			SELECT transid, refno, 0 AS IsFinished
+			INTO #temp_bettrans_29
+			FROM bettrans b WITH(NOLOCK)		
+			WHERE b.matchid = 29
+				AND b.statusID NOT IN (101,102) --('VOID','REJECT')
+				AND refno IN (SELECT refno FROM @refnos)
+				
+			SET @rowCnt29 = @@ROWCOUNT -- number of system parlay ticket
+
+			INSERT INTO dbo.ParlaySettlement_trace (matchid, runcnt, starttime, endtime, doing)
+			VALUES (@matchid, @rowCnt29, CURRENT_TIMESTAMP, NULL, 'Start running PRECAL-29')
+
+			IF @rowCnt29 > 0 -- got system parlay tickets
+			BEGIN	
+				SET @strTransIds = STUFF((
+					SELECT ',' + cast(transid as varchar(20)) 
+					FROM #temp_bettrans_29 
+					FOR XML PATH('')
+				), 1,1,'')
+			
+				-- handle betParlayDetail, betParlayResult
+				EXEC dbo.NAP_Admin_Calculate_MP_broker @matchid = @matchid
+					,@mode = 'PRECAL-29'
+					,@matchdate = @matchdate
+					,@strXML = @strTransIds
+				
+				-- CAPTURE value BALANCE before udpate bettrans
+				INSERT INTO @BeforeUpd (
+					custid
+					,balance
+					,balanceType
 				)
-			SELECT GETDATE()
-				,@MatchID
-				,@ActionID
-				,2 -- Sportsbook Parlay Settlement 
-				,CustID
-				,Balance
-				,0
-				,@matchid
-			FROM #Balance_29 WITH (NOLOCK)
-			WHERE Increased = 0
+				SELECT b.custid
+					,SUM(b.winlost - b.actual_stake + b.playercomm) AS balance
+					,1 -- Sports
+				FROM dbo.bettrans b WITH(ROWLOCK)
+				WHERE EXISTS( SELECT 1 FROM #temp_bettrans_29 WHERE transid = b.transid)
+				GROUP BY b.custid
+				--------------------------------------------------------------	
+			
+				INSERT INTO dbo.ParlaySettlement_trace (matchid, runcnt, starttime, endtime, doing)
+				VALUES (@matchid, NULL, CURRENT_TIMESTAMP, NULL, 'Start running CAL-29')
+
+				-- update summary info back to bettrans
+				WHILE (1=1)
+				BEGIN
+					TRUNCATE TABLE #tempRefno29
+					SET @strRefnos = ''
+					
+					UPDATE TOP (800) #temp_bettrans_29
+						SET IsFinished = 1
+					OUTPUT INSERTED.refno, INSERTED.transid INTO #tempRefno29 (refno, transid)
+					WHERE IsFinished = 0
+					
+					IF @@rowcount = 0
+						BREAK
+						
+					SELECT @strRefnos = @strRefnos + ',' + CONVERT(VARCHAR(20), refno) + '|' + CONVERT(VARCHAR(20), transid)
+					FROM	#tempRefno29
+					
+					SET @strRefnos = STUFF(@strRefnos,1,1,'')
+					
+					EXEC dbo.NAP_Admin_Calculate_MP_broker
+						@mode = '29'
+						,@matchdate = @matchdate
+						,@strXML = @strRefnos
+				END			
+													
+				-- CAPTURE value BALANCE after update bettrans
+				INSERT INTO @AfterUpd (
+					custid
+					,balance
+					,balanceType
+				)
+				SELECT b.custid
+					,SUM(b.winlost - b.actual_stake + b.playercomm) AS balance
+					,1 -- Sports
+				FROM dbo.bettrans b WITH(ROWLOCK)
+				WHERE EXISTS( SELECT 1 FROM #temp_bettrans_29 WHERE transid = b.transid)
+				GROUP BY b.custid
+				
+				INSERT INTO #Balance_29 (custid, balance, Increased)
+				SELECT b.custid, a.balance - b.balance, CASE WHEN a.balance > b.balance THEN 1 ELSE 0 END
+				FROM @beforeUpd b
+					INNER JOIN @afterUpd a ON b.custid = a.custid
+				WHERE b.balance <> a.balance
+
+				SET @TotalAccount_BalanceUpdate = @@ROWCOUNT
+				
+				---INSERT data into pending balance table   
+				EXEC [dbo].[NAP_Admin_BalancePendingIns]
+					@BeforeUpd	 = @beforeUpd
+					, @AfterUpd	 = @afterUpd
+			
+				----
+				-- Add Negative Balance into BalanceNegative table 
+				----
+				INSERT INTO [bodb02].[dbo].[BalanceNegative] (
+					[ExecDate]
+					,[MatchID]
+					,[ActionID]
+					,[GroupID]
+					,[CustID]
+					,[Balance]
+					,[StatusID]
+					,[Remark]
+					)
+				SELECT GETDATE()
+					,@MatchID
+					,@ActionID
+					,2 -- Sportsbook Parlay Settlement 
+					,CustID
+					,Balance
+					,0
+					,@matchid
+				FROM #Balance_29 WITH (NOLOCK)
+				WHERE Increased = 0
+			END
 		END
 	END
 	
@@ -351,7 +401,7 @@ DECLARE @start DATETIME
 		SELECT @Remark = 'NAP: Calculate Multiple (' + @action + ') for matchid:' + CAST(@matchid AS NVARCHAR(10)) + ' (' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + ' ms)'
 		EXEC dbo.WriteLog_UserLog @creator, @Remark
 
-		SELECT @Remark = 'NAP: Duration:' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + ' ms'
+		SELECT @Remark = 'NAP: Duration:' + CAST(DATEDIFF(millisecond, @start, @stop) AS NVARCHAR(50)) + ' ms;TC:' + CAST(@ticketCountTotal AS NVARCHAR(10)) 
 
 		BEGIN TRY
 			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Settle @UserID = @creator

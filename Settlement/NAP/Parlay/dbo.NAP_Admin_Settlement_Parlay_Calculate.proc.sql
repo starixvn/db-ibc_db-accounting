@@ -101,6 +101,7 @@ BEGIN
 			, @HT_FGLG1 		= ''
 			, @HT_FGLG2 		= ''
 			, @temp_betstatus 	= @betstatus
+			, @ticketCount		= 0
 	
 	IF CHARINDEX('1FL:', @temp_betstatus) > 0 
 	BEGIN
@@ -180,17 +181,18 @@ BEGIN
 	WHERE	1 = CASE 
 					WHEN @Mode IN ('REFUND-HT') THEN 
 						CASE 
-							WHEN GroupId IN (3,4,6,7) THEN 1 
-							WHEN GroupId = 2 AND Is3x30 = 0 THEN 1
+							WHEN f.Is3x30 = 0 THEN 1 
 							ELSE 0
 						END
 					WHEN @Mode IN ('REFUND-FT', 'ABANDONED-2H') THEN 
 						CASE 
-							WHEN GroupId IN (1,3,5,7) THEN 1 
+							WHEN f.GroupId IN (1,3,5,7) THEN 1 
 							ELSE 0
 						END
+					WHEN @Mode IN ('CAL') THEN 1
 					ELSE 0
 				END
+			AND f.GroupId <> 8 --Exclude BetRadar
 	
 	IF @Sporttype = 1 AND @resultDetail_cb IS NOT NULL -- corners bets 
 	BEGIN
@@ -210,6 +212,7 @@ BEGIN
 		OPTION ( OPTIMIZE FOR ( @xmlCorner = NULL ) )    
 	
 	END
+	
 	IF @Sporttype = 5 AND @resultDetail_ss IS NOT NULL -- sportting solution
 	BEGIN
 		DECLARE @xmlSS XML
@@ -242,9 +245,9 @@ BEGIN
 		,@maxTransId		BIGINT
 		,@fromTransId		BIGINT
 
-	SELECT  @minTransId = MIN(transid)
-		,  @maxTransId = MAX(transid)
-	
+	SELECT  @minTransId 	= MIN(transid)
+		, @maxTransId 		= MAX(transid)
+		, @ticketCount		= COUNT(1)
 	FROM dbo.bettransm bm WITH(NOLOCK)
 		INNER JOIN #bettypeCAL t ON bm.bettype = t.bettype
 		
@@ -253,13 +256,13 @@ BEGIN
 	
 	DECLARE @batchNo		INT
 		,@batchCount		INT
-		,@strTicket	VARCHAR(MAX)
+		,@loopCount			INT = 0
+		,@strTicket			VARCHAR(MAX)
 	
-	DECLARE @tempBatch TABLE (transid BIGINT, statusId TINYINT)
-
-	SELECT @batchNo			= 1000
+	DECLARE @tempBatch TABLE (transid BIGINT, refno BIGINT, modds SMALLMONEY, IsRefundGame BIT)
+	
+	SELECT @batchNo			= 2000
 		, @batchCount		= 0
-		, @ticketCount		= 0
 		, @fromTransId		= @minTransId
 		
 	WHILE (1 = 1)
@@ -267,13 +270,15 @@ BEGIN
 		
 		DELETE @tempBatch
 		
-		INSERT INTO @tempBatch(transid, statusId)
+		INSERT INTO @tempBatch(transid, refno, modds, IsRefundGame)
 		SELECT TOP(@batchNo) 
 			bm.transid
-			,odds.StatusId
+			,bm.refno
+			,odds.modds
+			,odds.IsRefundGame
 		FROM dbo.bettransm bm WITH(ROWLOCK)
 			INNER JOIN #bettypeCAL t ON bm.bettype = t.bettype	
-			CROSS APPLY dbo.f_Set_Parlay_Calculate_Modds(
+			CROSS APPLY dbo.f_Set_Parlay_CalModds(
 				bm.bettype
 				, bm.betteam
 				, bm.betcheck
@@ -346,36 +351,47 @@ BEGIN
 				, @home_firstteam3goals
 				, @away_firstteam3goals
 			) AS odds
-		WHERE bm.transid BETWEEN @fromTransId AND @maxTransId
+		WHERE bm.matchId = @matchId
+			AND bm.statusId NOT IN (101, 102)
+			AND bm.transid BETWEEN @fromTransId AND @maxTransId
+		ORDER BY bm.transid
 		
-		SELECT @batchCount 		= @@ROWCOUNT
-			, @ticketCount 		+= @batchCount
+		SELECT @batchCount 	= @@ROWCOUNT
+			, @loopCount	+=  @batchCount
 			, @strTicket	= CAST((SELECT b.transid AS t
-											,b.statusId AS s
+											,b.refno AS r
+											,b.modds AS m
+											,b.IsRefundGame AS i
 										FROM @tempBatch b
 										FOR XML AUTO) AS VARCHAR(MAX)
 								)
 		
-		/*select @matchid
+		select @matchid
 			,@matchdate
 			,@mode AS mode
-			,'REFUND' AS [action] 		
-			,@strTicket AS strTransIds*/
+			,'CAL' AS [action] 		
+			,@strTicket AS strTransIds
+			
+		IF(@strTicket IS NOT NULL)
+		BEGIN
+			EXEC dbo.NAP_Admin_Calculate_MP_broker 
+				@matchid 		= @matchid
+				,@matchdate		= @matchdate
+				,@mode 			= 'CAL'
+				,@action 		= 'CAL'
+				,@strTransIds	= @strTicket
+		END
 		
-		EXEC dbo.NAP_Admin_Calculate_MP_broker 
-			@matchid 		= @matchid
-			,@matchdate		= @matchdate
-			,@mode 			= 'CAL'
-			,@action 		= 'CAL'
-			,@strTransIds	= @strTicket
-		
-		SELECT @fromTransId = MAX(transid)
+		SELECT @fromTransId = MAX(transid) + 1
 		FROM @tempBatch
 			
 		IF(@batchCount < @batchNo OR @fromTransId = @maxTransId) BREAK
 	END
 	
-	RETURN
+	select @loopCount AS LoopCount_CAL
 	
+	DROP TABLE #bettypeCAL
+	
+	RETURN
 END
 GO

@@ -89,8 +89,9 @@ BEGIN
 			AND matchid = @matchid 
 			AND f.IsDetermined = 1
 			AND f.IsAuto = 0
-			AND statusID NOT IN (101, 102) AND ruben = 0
-			)
+			AND statusID NOT IN (101, 102, 103) 
+			AND ruben = 0
+		)
 	BEGIN
 		SELECT @IsSettleAbandonedMatchBetfair = 1
 
