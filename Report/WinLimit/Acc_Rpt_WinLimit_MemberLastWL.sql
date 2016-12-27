@@ -73,6 +73,9 @@ BEGIN
 		, SUM((b.actual_stake - b.winlost) * b.actualrate) AS GameIncomeRM
 		, SUM((1 - b.tpositiontaking) * b.stake * b.actualrate) AS CompanyTurnOverRM
 		, SUM((b.winlost - b.actual_stake + b.awinlost + b.mwinlost + b.swinlost + b.scomm) * b.actualrate) AS CompanyNetIncomeRM
+		
+		, SUM(b.scomm) AS CompanyComm
+		, SUM(b.scomm * b.actualrate) AS CompanyCommRM
 	FROM dbo.bettrans b (NOLOCK)
 		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 		INNER JOIN @TmpCust c ON b.custid = c.CustID
