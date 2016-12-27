@@ -28,7 +28,7 @@ AS
 		- 20160916@Robert:
 			1. Integrate new product NG2 [RedmindID: #63460]
 			2. Clean code of Cockfighting
-
+		- 20161129@Robert: NAP Reports - Integrate Fishing World Product [RedmindID: #67757]  
 	Param's Explanation:  
 	  + @MoveBetsDay: The day of moving bets to battrans14
 	  + @BalanceUpDay: The day of moving bets to battransbk
@@ -96,7 +96,7 @@ BEGIN
 			OR b.bettype BETWEEN 73 AND (CASE WHEN @sportType= 252 THEN 73 ELSE 0 END)
 			OR b.bettype BETWEEN 1701 AND (CASE WHEN @sportType= 255 THEN 1703 ELSE 0 END) -- GoldDeluxe
 			OR b.bettype BETWEEN 18000 AND (CASE WHEN @sportType= 204 THEN 18005 ELSE 0 END) -- Colossus Bet
-			OR b.bettype BETWEEN 2501 AND (CASE WHEN @SportType = 213 AND b.StatusID <> 0 THEN 2699 ELSE 0 END) -- NG2			
+			OR b.bettype BETWEEN 2501 AND (CASE WHEN @SportType = 213 AND b.StatusID <> 0 THEN 2699 ELSE 0 END) -- NG2						
 		) 
 		AND ( 
 				----b.status IN ('WON','LOSE','DRAW','running') 
@@ -106,7 +106,7 @@ BEGIN
 		GROUP BY b.custid,b.[status]
 		
 		-- Get data from bettransRnG
-		IF @sportType IN (251, 212)
+		IF @sportType IN (251, 212, 219)
 		BEGIN
 			INSERT INTO #AvailableMember
 			SELECT b.custid,b.[status],COUNT(1) 
@@ -115,6 +115,7 @@ BEGIN
 			AND (
 					b.gameID BETWEEN 2101 AND CASE WHEN @sportType=251 THEN 2399 ELSE 0 END 	
 					OR b.gameID BETWEEN 4001 AND CASE WHEN @sportType=212 THEN 7999 ELSE 0 END 	
+					OR b.gameID BETWEEN 1011 AND CASE WHEN @sportType=219 THEN 1020 ELSE 0 END -- Fishing World			
 				) 
 			AND (
 					b.statusId IN (111,112,113,0) 
@@ -169,6 +170,7 @@ BEGIN
 							OR b.bettype BETWEEN 2401  AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +'  = 211 THEN 2499 ELSE 0 END) -- AllBet
 							OR b.bettype BETWEEN 4001  AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +'  = 212 THEN 7999 ELSE 0 END) -- Voidbridge
 							OR b.bettype BETWEEN 2501  AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +'  = 213 THEN 2699 ELSE 0 END) -- NG2
+							OR b.bettype BETWEEN 1011  AND (CASE WHEN ' + CONVERT(VARCHAR(5),@sportType) +'  = 219 THEN 1020 ELSE 0 END) -- Fishing World
 						) 
 						AND b.status IN (3  ---DRAW
 										,12	---HALF LOSE
@@ -288,7 +290,7 @@ BEGIN
 			LEFT JOIN CustEnableKeno ce ON ce.CustID = av.custid    
 		WHERE ce.CustID IS NULL
 	END
-	IF @sportType IN (211,212,213)
+	IF @sportType IN (211,212,213,219)
     BEGIN
 		DECLARE @bitmapOrder TABLE (bitmapOrder TINYINT)
 		INSERT INTO @bitmapOrder (bitmapOrder)

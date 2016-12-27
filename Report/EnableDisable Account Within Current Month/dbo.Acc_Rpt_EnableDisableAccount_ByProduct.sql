@@ -25,6 +25,7 @@ AS
 		- 20160916@Robert:
 			1. Integrate new product NG2 [RedmindID: #63460]
 			2. Clean code of Cockfighting
+		- 20161129@Robert: NAP Reports - Integrate Fishing World Product [RedmindID: #67757]  
 
 	Param's Explanation:  
 	  + @ListCurrency: The specified date used as one of the filter criterias, if its value is 'all' then no need to be filtered by currency
@@ -65,7 +66,7 @@ BEGIN
 	END
 
 	DECLARE @bitmap TINYINT -- using for sporttype that has 1 setting
-	IF @SportType IN (212,213)
+	IF @SportType IN (212, 213, 219)
 	BEGIN
 		SELECT  @bitmap = bitmapOrder FROM dbo.ProductStatusProfile WITH(NOLOCK) WHERE Sporttype = @SportType
 	END
@@ -93,7 +94,7 @@ BEGIN
 												CROSS APPLY @bitmapOrder b
 												CROSS APPLY f_CustSetting_ProductStatusSel(cps.bitmapIsDisabled, b.bitmapOrder) f
 											WHERE custid = ci.custid)
-			WHEN @SportType IN (212,213) THEN (SELECT CASE (SELECT value FROM dbo.f_CustSetting_ProductStatusSel(bitmapIsDisabled, @bitmap)) WHEN 0 THEN 0 ELSE 1 END 
+			WHEN @SportType IN (212, 213, 219) THEN (SELECT CASE (SELECT value FROM dbo.f_CustSetting_ProductStatusSel(bitmapIsDisabled, @bitmap)) WHEN 0 THEN 0 ELSE 1 END 
 										FROM CustProductStatus
 										WHERE custid = ci.custid)
 		END
@@ -441,8 +442,8 @@ BEGIN
 						GROUP BY fda.CustID
 						) A ON fda.CustID = A.CustID
 	END
-	-- Macau Games, NG2
-	IF @sportType IN (212,213)
+	-- Macau Games, NG2, Fishing World
+	IF @sportType IN (212, 213, 219)
     BEGIN      
 		INSERT INTO #FiltedDownlineAcc
 		SELECT sup.CustID,

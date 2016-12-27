@@ -8,8 +8,8 @@ IF EXISTS
     DROP PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Universal_SportType];
 GO
 CREATE PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Universal_SportType] @StartDate SMALLDATETIME,
-																	@EndDate   SMALLDATETIME,
-																	@ProductId INT
+                                                                    @EndDate   SMALLDATETIME,
+                                                                    @ProductId INT
 AS
 
 /*	
@@ -91,7 +91,6 @@ EXEC [Acc_Rpt_CompanyWinLoss_Universal_SportType] @StartDate='2016-11-07', @EndD
      END;
      DROP TABLE #SportBetType;
      DROP TABLE #DepositSuper;
-END
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_CompanyWinLoss_Universal_SportType] TO [bodbAdminNet];
 GO

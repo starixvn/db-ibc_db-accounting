@@ -1,19 +1,15 @@
-USE [bodb02]
-GO
-
 ALTER PROCEDURE dbo.Acc_Rpt_CompanyWinloss
 	  @FromDate SMALLDATETIME
 	, @ToDate SMALLDATETIME
 	, @LicenseeId INT
 	, @CurrencyId TINYINT = 0
 	, @ProductPrefix VARCHAR(10) = ''
-
 	, @MoveBetsDay SMALLDATETIME
 	
 AS
 /*	Creator: 20150612@Patrick
 	Task : Get company win loss
-	DB: DBAEXT/bodb02
+	DB: DBEXT/bodb02
 
 	Param's Explanation:
 		@ProductId default value is 0 it mean get all products
@@ -27,7 +23,8 @@ AS
 		- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model [RedmineID: #55589]
 		- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
 		- 20160919@Robert: Licensee / Company Win Loss: Missing data of Bettrade when generating report for All Products [RedmineID: #64312]
-		- 20160909@Robert: Offer Colossus Bets for Cash Model (#63144)
+		- 20161022@Jim:move table to bodb_licenseereport [RedmineID :#60449]
+		- 20161129@Robert: NAP Reports - Integrate Fishing World Product [RedmindID: #67757]
 
 */
 
@@ -177,15 +174,15 @@ BEGIN
 	   FROM bodb02.dbo.bettype WITH (NOLOCK)
 	   WHERE typeid BETWEEN 4001 AND 7999
     END
-    ELSE IF @ProductPrefix = 'CB'
+    ELSE IF @ProductPrefix = 'FW'
     BEGIN
-	   INSERT INTO @SportTypeList(SportType, IsBA)	   
-	   SELECT 204, 0
+	   INSERT INTO @SportTypeList(SportType, IsBA)
+	   VALUES(219, 0)
 
 	   INSERT INTO @BetTypeList(BetType)
 	   SELECT typeid
 	   FROM bodb02.dbo.bettype WITH (NOLOCK)
-	   WHERE typeid = 18000
+	   WHERE typeid BETWEEN 1011 AND 1020
     END
 	
 	INSERT INTO @Super(custid, currency)
@@ -223,7 +220,7 @@ BEGIN
 				AND b.apositiontaking = 0
 			GROUP BY b.srecommend
 		END
-		ELSE IF @ProductPrefix IN ('RB', 'VS', 'NG', 'KN', 'CS', 'LC', 'GD', 'AGC', 'VG', 'MGCLC', 'MGCRNG', 'VB', 'CB')
+		ELSE IF @ProductPrefix IN ('RB', 'VS', 'NG', 'KN', 'CS', 'LC', 'GD', 'AGC', 'VG', 'MGCLC', 'MGCRNG', 'VB', 'FW')
 		BEGIN
 			INSERT INTO @SAgWinLoss(CustId, CompanyWL)
 			SELECT b.srecommend
@@ -276,7 +273,7 @@ BEGIN
 				INSERT INTO @SAgWinLoss(custid, CompanyWL)
 				SELECT b.srecommend
 					, - SUM(ISNULL(b.swinlost, 0) + ISNULL(b.mwinlost, 0) + ISNULL(b.awinlost, 0) + ISNULL(b.winlost, 0) + ISNULL(b.scomm, 0)) AS Company
-				FROM bodb_Licensee.dbo.rptLicWinloss2 b WITH (NOLOCK)
+				FROM bodb_licenseereport.dbo.rptLicWinloss2 b WITH (NOLOCK)
 					INNER JOIN @Super s ON b.srecommend = s.custid AND b.currency = s.currency
 				WHERE b.winlostdate BETWEEN @FromDateTmp AND @ToDateTmp
 					AND b.RoleId = 4
@@ -289,7 +286,7 @@ BEGIN
 				INSERT INTO @SAgWinLoss(custid, CompanyWL)
 				SELECT b.srecommend
 					, - SUM(ISNULL(b.swinlost, 0) + ISNULL(b.mwinlost, 0) + ISNULL(b.awinlost, 0) + ISNULL(b.winlost, 0) + ISNULL(b.scomm, 0)) AS Company
-				FROM bodb_Licensee.dbo.rptLicWinloss2 b WITH (NOLOCK)
+				FROM bodb_licenseereport.dbo.rptLicWinloss2 b WITH (NOLOCK)
 					INNER JOIN @Super s ON b.srecommend = s.custid AND b.currency = s.currency
 					INNER JOIN @SportTypeList bt ON b.SportType = bt.SportType AND b.IsBA = bt.IsBA
 				WHERE b.winlostdate BETWEEN @FromDateTmp AND @ToDateTmp
@@ -304,7 +301,7 @@ BEGIN
 			INSERT INTO @SAgWinLoss(custid, CompanyWL)
 			SELECT b.srecommend
 				, - SUM(ISNULL(b.swinlost, 0) + ISNULL(b.mwinlost, 0) + ISNULL(b.awinlost, 0) + ISNULL(b.winlost, 0) + ISNULL(b.scomm, 0)) AS Company
-			FROM bodb_Licensee.dbo.rptLicWinloss2 b WITH (NOLOCK)
+			FROM bodb_licenseereport.dbo.rptLicWinloss2 b WITH (NOLOCK)
 				INNER JOIN @Super s ON b.srecommend = s.custid AND b.currency = s.currency
 			WHERE b.winlostdate BETWEEN @FromDateTmp AND @ToDateTmp
 				AND b.RoleId = 4

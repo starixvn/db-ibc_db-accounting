@@ -29,6 +29,7 @@ AS
 			- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
 			- 20160830@Robert: Enhance System/Mix Parlay [RedmineID: #63022]
 			- 20160916@Robert: Integrate new product NG2 [RedmindID: #63460]
+			- 20161129@Robert: NAP Reports - Integrate Fishing World Product [RedmindID: #67757]
         Parameter's Explanation:
     */
 BEGIN
@@ -597,9 +598,32 @@ BEGIN
         FROM rptWinlost b WITH(NOLOCK)
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
 		WHERE winlostdate BETWEEN @_fromdate AND @_todate
-            AND s.ProductId=23
+            AND s.ProductId IN (23)
         GROUP BY sporttype,b.bettype, b.liveindicator ,ibc	
-	ORDER BY OrderKey ASC	    
+	   --Fish World
+		UNION ALL
+		  SELECT 219 sporttype
+            ,b.bettype
+            ,b.liveindicator
+            ,ibc
+            ,0 as IsHedge
+            ,'' status 
+			,17 as OrderKey
+			,17 as SortKey
+            ,ISNULL(SUM(realWinlost),0) as realWinlost
+            ,ISNULL(SUM(realPosition),0) as realPosition
+            ,ISNULL(SUM(realcommission),0) as realCommission
+            ,ISNULL(SUM(realLineTotal),0) as realLineTotal
+            ,ISNULL(SUM(virtualLineTotal),0) as virtualLineTotal
+            ,ISNULL(SUM(realTurnover),0) as realTurnover
+            ,ISNULL(SUM(virtualTurnover),0) as virtualTurnover
+        FROM rptWinlost b WITH(NOLOCK)
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
+		WHERE winlostdate BETWEEN @_fromdate AND @_todate
+            AND s.ProductId IN (24)
+        GROUP BY b.bettype, b.liveindicator ,ibc		
+	ORDER BY OrderKey ASC	
+	    
 	
 	UPDATE #TempData SET IsHedge =1,
 						ibc = 0
