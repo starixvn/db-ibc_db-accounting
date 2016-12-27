@@ -365,4 +365,6 @@ END
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Fast_Market_Auto_1s] TO [bodbAdminNet] AS [dbo]
 GO
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Fast_Market_Auto_1s] TO [Dot_Admin] AS [dbo]
+GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Fast_Market_Auto_1s] TO [vnteam] AS [dbo]
