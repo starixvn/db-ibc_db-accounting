@@ -1,9 +1,8 @@
-USE [bodb02]
+SET QUOTED_IDENTIFIER ON 
 GO
-SET ANSI_NULLS ON
+SET ANSI_NULLS ON 
 GO
-SET QUOTED_IDENTIFIER ON
-GO
+
 ALTER PROCEDURE [dbo].[NAP_Set_WaitingSel] @MatchCode NVARCHAR(50) = ''
 	, @SportType SMALLINT = 0
 	, @LeagueId INT = 0 -- 0 for ALL Leagues
@@ -152,33 +151,31 @@ BEGIN
 		
 		INSERT INTO #tblBetStatus (matchid, bettype, isRunning, groupId, IsParlay)
 		SELECT  b.matchid, b.bettype, MAX(isRunning), bt.GroupId, 0
-		FROM	@TempMatch t
+		FROM	#tblBettype bt
 			INNER JOIN
 			(
 				SELECT	b.matchid, b.bettype, SUM(CASE WHEN b.statusID = 0 THEN 1 ELSE 0 END) isRunning
 				FROM	dbo.bettrans b WITH (NOLOCK)
-				WHERE	b.statusID NOT BETWEEN 101 AND 102
+				WHERE	EXISTS (SELECT TOP 1 1 FROM @TempMatch t WHERE t.matchid = b.matchid)
+						AND b.statusID NOT BETWEEN 101 AND 102
 						AND b.bettype BETWEEN @MinBettype AND @MaxBettype
 				GROUP BY b.matchid, b.bettype
 			)b
-				ON b.matchid = t.MatchId
-			INNER JOIN #tblBettype bt
 				ON b.bettype = bt.bettype
 		GROUP BY b.matchid, b.bettype, bt.GroupId
 
 		INSERT INTO #tblBetStatus (matchid, bettype, isRunning, groupId, IsParlay)
 		SELECT  bm.matchid, bm.bettype, MAX(bm.isRunning), bt.GroupId, 1
-		FROM	@TempMatch t
+		FROM	#tblBettype bt
 			INNER JOIN
 				(
 					SELECT	bm.matchid, bm.bettype, SUM(CASE WHEN bm.statusID = 0 THEN 1 ELSE 0 END) isRunning
 					FROM	dbo.bettransm bm WITH (NOLOCK)
-					WHERE	bm.statusID NOT BETWEEN 101 AND 102
+					WHERE	EXISTS (SELECT TOP 1 1 FROM @TempMatch t WHERE t.matchid = bm.matchid)
+							AND bm.statusID NOT BETWEEN 101 AND 102
 							AND bm.bettype BETWEEN @MinBettype AND @MaxBettype
 					GROUP BY bm.matchid, bm.bettype
 				)bm
-					ON bm.matchid = t.MatchId
-			INNER JOIN #tblBettype bt
 				ON bm.bettype = bt.bettype
 		WHERE	bt.GroupId IN (3,4,8)
 		GROUP BY bm.matchid, bm.bettype, bt.GroupId
@@ -289,3 +286,18 @@ BEGIN
 
 END
 
+
+
+GO
+
+SET QUOTED_IDENTIFIER OFF 
+GO
+SET ANSI_NULLS ON 
+GO
+
+
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[NAP_Set_WaitingSel] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[NAP_Set_WaitingSel] TO [bodbAdminNet]
+GO 
