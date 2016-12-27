@@ -32,6 +32,7 @@ AS
 		- 20161004@Percy: Refno Issue [RedmineID: #65007]
 		- 20161013@Percy: Apply NG2 [RedmineID: #64117]
 		- 20161222@Percy: Apply Fishing World [RedmineID: #65734]
+		- 20161227@Percy: Clean up code Cockfighting [RedmineID: #69446]
 		
 	Explanation's Param:
 
@@ -259,7 +260,7 @@ BEGIN
 			 WHEN bettype BETWEEN 2008 AND 2009 THEN 'Microgaming - RNG Casino'
 			 WHEN bettype BETWEEN 901 AND 904 THEN 'Bettrade'
 			 WHEN bettype BETWEEN 18000 AND 18099 THEN 'Colossus Bets'
-			 WHEN bettype = 1003 THEN 'Cockfighting'
+			 --WHEN bettype = 1003 THEN 'Cockfighting'
 			 WHEN Sporttype = 44 THEN 'Muay Thai'
 			 WHEN bettype BETWEEN 2401 AND 2499 THEN 'Allbet' 
 			 WHEN bettype BETWEEN 4001 AND 7999 THEN 'Macau Games'
@@ -282,7 +283,7 @@ BEGIN
 			OR bettype BETWEEN 2008 AND 2009 
 			OR bettype BETWEEN 901 AND 904 
 			OR bettype BETWEEN 18000 AND 18099  
-			OR bettype = 1003
+			--OR bettype = 1003
 			OR bettype BETWEEN 2101 AND 2399
 			OR Sporttype = 44
 			OR bettype BETWEEN 2401 AND 2499
@@ -307,7 +308,7 @@ BEGIN
 			 WHEN bettype BETWEEN 2008 AND 2009 THEN 'Microgaming - RNG Casino'
 			 WHEN bettype BETWEEN 901 AND 904 THEN 'Bettrade'
 			 WHEN bettype BETWEEN 18000 AND 18099 THEN 'Colossus Bets'
-			 WHEN bettype = 1003 THEN 'Cockfighting'
+			 --WHEN bettype = 1003 THEN 'Cockfighting'
 			 WHEN Sporttype = 44 THEN 'Muay Thai'
 			 WHEN bettype BETWEEN 2401 AND 2499 THEN 'Allbet' 
 			 WHEN bettype BETWEEN 4001 AND 7999 THEN 'Macau Games'
