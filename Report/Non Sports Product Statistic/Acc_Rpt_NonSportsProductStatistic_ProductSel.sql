@@ -36,7 +36,7 @@ SET NOCOUNT ON
 	FROM  dbo.Products WITH (NOLOCK)
 	WHERE CasinoType IN (1,2) 
 		 OR ProductID IN (3, 5, 8)
-	ORDER BY CasinoType DESC 
+	ORDER BY ProductName 
 
 END 
  

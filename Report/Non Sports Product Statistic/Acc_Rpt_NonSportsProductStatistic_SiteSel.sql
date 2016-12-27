@@ -42,9 +42,9 @@ SET NOCOUNT ON
 	
 	----Get Site
 
-	SELECT 'MBC Group' as Site,  0 AS OrderId  --- Credit only
+	SELECT 'MBC Group' as Site,  0 AS OrderId, 0 AS SortID  --- Credit only
 	UNION
-	SELECT DISTINCT l.Licenseename as Site, l.LicenseeId As OrderId 				
+	SELECT DISTINCT l.Licenseename as Site, l.LicenseeId As OrderId,  1 AS SortID 				
 	FROM
 		dbo.Products b WITH (NOLOCK) 
 		INNER JOIN DBLIC.bodb_Licensee.dbo.Product3rd p WITH (NOLOCK) ON p.ProductPrefix = b.ProductPrefix
@@ -54,7 +54,7 @@ SET NOCOUNT ON
 		INNER JOIN #tmpProductID m ON b.ProductID=m.ProductID
 	WHERE s.systemId = 3 AND l.IsDeposit = 1
 	GROUP BY l.LicenseeID, l.Licenseename
-	ORDER BY OrderId
+	ORDER BY SortID, [Site]
 
 
 END 

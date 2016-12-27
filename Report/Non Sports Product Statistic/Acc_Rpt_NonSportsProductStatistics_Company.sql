@@ -19,7 +19,8 @@ ALTER PROCEDURE [dbo].[Acc_Rpt_NonSportsProductStatistics_Company]
 	@GameIncomeValue MONEY = NULL,	 
 	@HousePTType	SMALLINT = 0,
 	@HousePTValue   MONEY = 0,
-	@IsDrillDown	BIT = 0
+	@IsDrillDown	BIT = 0,
+	@IsGrandTotal	BIT = 0 
 AS
 /*
 	Created	: 20161104@Harper
@@ -66,7 +67,7 @@ BEGIN
 	DECLARE @WLDate DATETIME
 	SELECT @WLDate = @WinlostDate
 
-	CREATE TABLE #Data ( recommend INT, CustID INT,
+	CREATE TABLE #Data ( recommend INT, CustID INT, IsDeposit BIT, SiteName VARCHAR(50),
 						 BetCount INT, CurrencyID INT, Currency NVARCHAR(50),
 						 TotalBets MONEY, TotalBetsBase MONEY,
 						 TotalWins MONEY, TotalWinsBase MONEY,
@@ -255,20 +256,20 @@ BEGIN
 			  Matchid,
 			  ProductID
 	        )	
-	SELECT b.recommend, b.custid,
+	SELECT b.recommend, CASE WHEN b.statusID IN (111, 112, 113) THEN b.custid ELSE NULL END AS custid,
 				COUNT(CASE WHEN b.statusID IN (111, 112, 113) THEN b.transid ELSE NULL END) AS BetCount, b.currency,
 
-				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) AS TotalBets,
-				SUM((CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) * actualrate)  AS TotalBetsBase,
+				SUM(CASE WHEN b.statusID IN (103) THEN 0 ELSE actual_stake END) AS TotalBets,
+				SUM((CASE WHEN b.statusID IN (103) THEN 0 ELSE actual_stake END) * actualrate)  AS TotalBetsBase,
 
-				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE winlost END) AS TotalWins,
-				SUM((CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE winlost END) * actualrate) AS TotalWinsBase,
+				SUM(CASE WHEN b.statusID IN (103) THEN 0 ELSE winlost END) AS TotalWins,
+				SUM((CASE WHEN b.statusID IN (103) THEN 0 ELSE winlost END) * actualrate) AS TotalWinsBase,
 
-				SUM(CASE WHEN b.statusID IN (101,102,103) THEN actual_stake ELSE 0 END) AS TotalRefund,
-				SUM((CASE WHEN b.statusID IN (101,102,103) THEN actual_stake ELSE 0 END)  * actualrate) AS TotalRefundBase,
+				SUM(CASE WHEN b.statusID IN (103) THEN actual_stake ELSE 0 END) AS TotalRefund,
+				SUM((CASE WHEN b.statusID IN (103) THEN actual_stake ELSE 0 END)  * actualrate) AS TotalRefundBase,
 
-				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE (1- b.tpositiontaking) * b.stake END) AS CompanyTurnover,	
-				SUM((CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE (1- b.tpositiontaking) * b.stake END) * actualrate) AS CompanyTurnoverBase,		
+				SUM(CASE WHEN b.statusID IN (103) THEN 0 ELSE (1- b.tpositiontaking) * b.stake END) AS CompanyTurnover,	
+				SUM((CASE WHEN b.statusID IN (103) THEN 0 ELSE (1- b.tpositiontaking) * b.stake END) * actualrate) AS CompanyTurnoverBase,		
 								
 				SUM(winlost - actual_stake + awinlost + mwinlost + swinlost) AS CompanyGrossIncome,
 				SUM((winlost - actual_stake + awinlost + mwinlost + swinlost)* actualrate) AS CompanyGrossIncomeBase,
@@ -281,7 +282,6 @@ BEGIN
 	FROM  dbo.bettrans b WITH (NOLOCK)
 		INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 	WHERE b.winlostdate = @WLDate
-		--AND b.matchid > 0
 		AND b.statusID IN (111, 112, 113, 103) -- won/lose/draw/refund tickets
 		AND ((b.currency <> 20 AND @ExcludeTest = 1) OR @ExcludeTest = 0)
 		AND (b.currency = @Currency OR @Currency IN (0, -1))
@@ -289,11 +289,13 @@ BEGIN
 		AND (EXISTS (SELECT 1 FROM #tmp_Devide d WHERE d.Betfrom = b.betfrom) OR @Device = '')
 		AND ( @Site = 'ALL'
 				  OR (EXISTS (SELECT 1 From #recommend s WHERE s.recommend = b.recommend))
-			)
-		AND ( (@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue)
-			OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
-			OR @HousePTType = 0)
-	GROUP BY b.recommend, b.custid, b.currency, s.RefTable, s.EvenType, b.matchid, s.ProductID	
+		)
+		AND (
+			@HousePTType = 0
+			OR (@HousePTType = -1 AND b.tpositiontaking >= 1-@HousePTValue) -- 1-tpositiontaking <= @HousePTValue
+			OR (@HousePTType = 1 AND b.tpositiontaking <= 1-@HousePTValue) -- 1-tpositiontaking >= @HousePTValue
+		)
+	GROUP BY b.recommend, CASE WHEN b.statusID IN (111, 112, 113) THEN b.custid ELSE NULL END, b.currency, s.RefTable, s.EvenType, b.matchid, s.ProductID	
 
 	--- Check condition 
 	IF EXISTS (SELECT 1 FROM #tmp_ProductID WHERE ProductID NOT IN (3, 4, 5)) -- NG, SLI-Live Casino, Virtual Sport
@@ -361,20 +363,20 @@ BEGIN
 				  CompanyComm ,
 				  CompanyCommBase
 				)
-		SELECT	b.recommend, b.custid,
+		SELECT	b.recommend, CASE WHEN b.statusID IN (111, 112, 113) THEN b.custid ELSE NULL END AS custid,
 				COUNT(CASE WHEN StatusID IN (111,112,113) THEN b.TransId ELSE NULL END) AS BetCount, b.currency, 
 
-				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) AS TotalBets,
-				SUM((CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) * actualrate)  AS TotalBetsBase,
+				SUM(CASE WHEN b.statusID IN (103) THEN 0 ELSE actual_stake END) AS TotalBets,
+				SUM((CASE WHEN b.statusID IN (103) THEN 0 ELSE actual_stake END) * actualrate)  AS TotalBetsBase,
 
-				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE winlost END) AS TotalWins,
-				SUM((CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE winlost END) * actualrate) AS TotalWinsBase,
+				SUM(CASE WHEN b.statusID IN (103) THEN 0 ELSE winlost END) AS TotalWins,
+				SUM((CASE WHEN b.statusID IN (103) THEN 0 ELSE winlost END) * actualrate) AS TotalWinsBase,
 
-				SUM(CASE WHEN b.statusID IN (101,102,103) THEN actual_stake ELSE 0 END) AS TotalRefund,
-				SUM((CASE WHEN b.statusID IN (101,102,103) THEN actual_stake ELSE 0 END)  * actualrate) AS TotalRefundBase,
+				SUM(CASE WHEN b.statusID IN (103) THEN actual_stake ELSE 0 END) AS TotalRefund,
+				SUM((CASE WHEN b.statusID IN (103) THEN actual_stake ELSE 0 END)  * actualrate) AS TotalRefundBase,
 
-				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE (1- b.tpositiontaking) * b.stake END) AS CompanyTurnover,	
-				SUM((CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE (1- b.tpositiontaking) * b.stake END) * actualrate) AS CompanyTurnoverBase,		
+				SUM(CASE WHEN b.statusID IN (103) THEN 0 ELSE (1- b.tpositiontaking) * b.stake END) AS CompanyTurnover,	
+				SUM((CASE WHEN b.statusID IN (103) THEN 0 ELSE (1- b.tpositiontaking) * b.stake END) * actualrate) AS CompanyTurnoverBase,		
 								
 				- SUM(winlost - actual_stake + awinlost + mwinlost + swinlost) AS CompanyGrossIncome,
 				- SUM((winlost - actual_stake + awinlost + mwinlost + swinlost)* actualrate) AS CompanyGrossIncomeBase,
@@ -393,10 +395,12 @@ BEGIN
 			AND ( @Site = 'ALL'
 				  OR (EXISTS (SELECT 1 From #recommend s WHERE s.recommend = b.recommend))
 			)
-			AND ( (@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue)
-				OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
-				OR @HousePTType = 0) 
-		GROUP BY b.recommend, b.custid, b.currency
+			AND (
+				@HousePTType = 0
+				OR (@HousePTType = -1 AND b.tpositiontaking >= 1-@HousePTValue) -- 1-tpositiontaking <= @HousePTValue
+				OR (@HousePTType = 1 AND b.tpositiontaking <= 1-@HousePTValue) -- 1-tpositiontaking >= @HousePTValue
+			)
+		GROUP BY b.recommend, CASE WHEN b.statusID IN (111, 112, 113) THEN b.custid ELSE NULL END, b.currency
 		
 		-- 2b. By Bettype for Casino Product
 		INSERT INTO #Data
@@ -417,20 +421,20 @@ BEGIN
 				  CompanyComm ,
 				  CompanyCommBase
 				)
-		SELECT	b.recommend, b.custid,
+		SELECT	b.recommend, CASE WHEN b.statusID IN (111, 112, 113) THEN b.custid ELSE NULL END AS custid,
 				COUNT(CASE WHEN StatusID IN (111,112,113) THEN b.TransId ELSE NULL END) AS BetCount, b.Currency, 
 
-				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) AS TotalBets,
-				SUM((CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) * actualrate)  AS TotalBetsBase,
+				SUM(CASE WHEN b.statusID IN (103) THEN 0 ELSE actual_stake END) AS TotalBets,
+				SUM((CASE WHEN b.statusID IN (103) THEN 0 ELSE actual_stake END) * actualrate)  AS TotalBetsBase,
 
-				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE winlost END) AS TotalWins,
-				SUM((CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE winlost END) * actualrate) AS TotalWinsBase,
+				SUM(CASE WHEN b.statusID IN (103) THEN 0 ELSE winlost END) AS TotalWins,
+				SUM((CASE WHEN b.statusID IN (103) THEN 0 ELSE winlost END) * actualrate) AS TotalWinsBase,
 
-				SUM(CASE WHEN b.statusID IN (101,102,103) THEN actual_stake ELSE 0 END) AS TotalRefund,
-				SUM((CASE WHEN b.statusID IN (101,102,103) THEN actual_stake ELSE 0 END)  * actualrate) AS TotalRefundBase,
+				SUM(CASE WHEN b.statusID IN (103) THEN actual_stake ELSE 0 END) AS TotalRefund,
+				SUM((CASE WHEN b.statusID IN (103) THEN actual_stake ELSE 0 END)  * actualrate) AS TotalRefundBase,
 
-				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE (1- b.tpositiontaking) * b.stake END) AS CompanyTurnover,	
-				SUM((CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE (1- b.tpositiontaking) * b.stake END) * actualrate) AS CompanyTurnoverBase,		
+				SUM(CASE WHEN b.statusID IN (103) THEN 0 ELSE (1- b.tpositiontaking) * b.stake END) AS CompanyTurnover,	
+				SUM((CASE WHEN b.statusID IN (103) THEN 0 ELSE (1- b.tpositiontaking) * b.stake END) * actualrate) AS CompanyTurnoverBase,		
 								
 				- SUM(winlost - actual_stake + awinlost + mwinlost + swinlost) AS CompanyGrossIncome,
 				- SUM((winlost - actual_stake + awinlost + mwinlost + swinlost)* actualrate) AS CompanyGrossIncomeBase,
@@ -449,10 +453,12 @@ BEGIN
 			AND ( @Site = 'ALL'
 				  OR (EXISTS (SELECT 1 From #recommend s WHERE s.recommend = b.recommend))
 			)
-			AND ( (@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue)
-				OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
-				OR @HousePTType = 0) 
-		GROUP BY b.recommend, b.custid, b.currency		
+			AND (
+				@HousePTType = 0
+				OR (@HousePTType = -1 AND b.tpositiontaking >= 1-@HousePTValue) -- 1-tpositiontaking <= @HousePTValue
+				OR (@HousePTType = 1 AND b.tpositiontaking <= 1-@HousePTValue) -- 1-tpositiontaking >= @HousePTValue
+			)
+		GROUP BY b.recommend, CASE WHEN b.statusID IN (111, 112, 113) THEN b.custid ELSE NULL END, b.currency		
 	END
 
 	IF EXISTS (SELECT 1 FROM #tmp_ProductID WHERE ProductID IN (3, 4, 5))
@@ -563,28 +569,41 @@ BEGIN
 		INNER JOIN dbo.Exchange e ON e.exchangeid = d.CurrencyID
 	-- End Currency Name	
 
-	------------------------------------------III. Drill down data ------------------------------------------------------
+	-- Get Site name
+	UPDATE d
+	SET d.SiteName = c.SiteName,
+		d.IsDeposit = c.isDeposit
+	FROM #Data d
+		INNER JOIN #recommend c ON d.recommend = c.recommend
+	-- End Site name
 
-	IF @Currency = -1 --BaseRM
+	------------------------------------------III. Drill down data ------------------------------------------------------
+	IF @IsGrandTotal = 0
 	BEGIN
-		IF @IsDrillDown = 0
-		BEGIN
+		IF @Currency = -1 --BaseRM
+		BEGIN			
 			INSERT INTO #Result
-			        ( IsDeposit ,
-			          SiteName ,
-			          NoOfPlayers ,
-			          BetCount ,
-			          CurrencyID ,
-			          Currency ,
-			          TotalBets ,
-			          TotalWins ,
-			          TotalRefund ,
-			          CompanyTurnOver ,
-			          CompanyGrossIncome ,
-			          CompanyComm
-			        )
-			SELECT c.IsDeposit,
-					c.SiteName,
+					( IsDeposit ,
+						SiteName ,
+						NoOfPlayers ,
+						BetCount ,
+						CurrencyID ,
+						Currency ,
+						TotalBets ,
+						TotalWins ,
+						TotalRefund ,
+						CompanyTurnOver ,
+						CompanyGrossIncome ,
+						CompanyComm,
+						TotalBetsBase,
+						TotalWinsBase,
+						TotalRefundBase,
+						CompanyTurnOverBase,
+						CompanyGrossIncomeBase,
+						CompanyCommBase
+					)
+			SELECT b.IsDeposit,
+					b.SiteName,
 					COUNT(DISTINCT custid) AS NoOfPlayers,
 					SUM(BetCount) AS BetCount ,
 					-1 as CurrencyId, 
@@ -594,10 +613,15 @@ BEGIN
 					SUM (TotalRefundBase) AS TotalRefund,
 					SUM (CompanyTurnoverBase) AS CompanyTurnover,
 					SUM (CompanyGrossIncomeBase) AS CompanyGrossIncome,
-					SUM (CompanyCommBase) AS CompanyComm
+					SUM (CompanyCommBase) AS CompanyComm,
+					SUM (TotalBetsBase) AS TotalBetsBase, 
+					SUM (TotalWinsBase) AS TotalWinsBase,
+					SUM (TotalRefundBase) AS TotalRefundBase,
+					SUM (CompanyTurnoverBase) AS CompanyTurnoverBase,
+					SUM (CompanyGrossIncomeBase) AS CompanyGrossIncomeBase,
+					SUM (CompanyCommBase) AS CompanyCommBase
 			FROM #Data b
-				INNER JOIN #recommend c ON b.recommend = c.recommend
-			GROUP BY c.IsDeposit, c.SiteName
+			GROUP BY b.IsDeposit, b.SiteName
 			HAVING (@TotalBetType = 0
 					OR (@TotalBetType = 1 AND SUM(b.TotalBetsBase) >= @TotalBetValue) 
 					OR (@TotalBetType = -1 AND SUM(b.TotalBetsBase) <= @TotalBetValue)
@@ -605,90 +629,162 @@ BEGIN
 				AND (@GameIncomeType = 0
 					OR (@GameIncomeType = 1 AND SUM(b.TotalBetsBase - b.TotalWinsBase) >= @GameIncomeValue) 
 					OR (@GameIncomeType = -1 AND SUM(b.TotalBetsBase - b.TotalWinsBase) <= @GameIncomeValue)
-					)
-		END
-		ELSE --@IsDrillDown = 1 AND @Currency = -1
+					)			
+		END		
+		ELSE -- @Currency <> -1
 		BEGIN
 			INSERT INTO #Result
-			        ( IsDeposit ,
-			          SiteName ,
-			          NoOfPlayers ,
-			          BetCount ,
-			          CurrencyID ,
-			          Currency ,
-			          TotalBets ,
-			          TotalWins ,
-			          TotalRefund ,
-			          CompanyTurnOver ,
-			          CompanyGrossIncome ,
-			          CompanyComm
-			        )
+					( IsDeposit ,
+						SiteName ,
+						NoOfPlayers ,
+						BetCount ,
+						CurrencyID ,
+						Currency ,
+						TotalBets ,
+						TotalWins ,
+						TotalRefund ,
+						CompanyTurnOver ,
+						CompanyGrossIncome ,
+						CompanyComm,
+						TotalBetsBase,
+						TotalWinsBase,
+						TotalRefundBase,
+						CompanyTurnOverBase,
+						CompanyGrossIncomeBase,
+						CompanyCommBase
+					)
 			SELECT 
-				CASE WHEN @Site = 'All' THEN 1 ELSE c.IsDeposit END AS IsDeposit,
-				CASE	WHEN @isDrillDownLicensee = 1 THEN 'Licensee Group'
-						WHEN @Site NOT IN ('MBC Group', 'Licensee Group', 'All') THEN c.SiteName ELSE @Site END AS SiteName,
+				b.IsDeposit AS IsDeposit,
+				b.SiteName AS SiteName,
 				COUNT(DISTINCT custid) AS NoOfPlayers,
 				SUM(BetCount) AS BetCount ,
-				b.CurrencyID , 
-				b.Currency ,
-				SUM (TotalBetsBase) AS TotalBets, 
-				SUM (TotalWinsBase) AS TotalWins,
-				SUM (TotalRefundBase) AS TotalRefund,
-				SUM (CompanyTurnoverBase) AS CompanyTurnover,
-				SUM (CompanyGrossIncomeBase) AS CompanyGrossIncome,
-				SUM (CompanyCommBase) AS CompanyComm
+				b.CurrencyID AS CurrencyId, 
+				b.Currency AS Currency,
+				SUM (b.TotalBets) AS TotalBets, 
+				SUM (b.TotalWins) AS TotalWins,
+				SUM (b.TotalRefund) AS TotalRefund,
+				SUM (b.CompanyTurnOver) AS CompanyTurnover,
+				SUM (b.CompanyGrossIncome) AS CompanyGrossIncome,
+				SUM (b.CompanyComm) AS CompanyComm,
+				SUM (b.TotalBetsBase) AS TotalBetsBase, 
+				SUM (b.TotalWinsBase) AS TotalWinsBase,
+				SUM (b.TotalRefundBase) AS TotalRefundBase,
+				SUM (b.CompanyTurnOverBase) AS CompanyTurnoverBase,
+				SUM (b.CompanyGrossIncomeBase) AS CompanyGrossIncomeBase,
+				SUM (b.CompanyCommBase) AS CompanyCommBase
 			FROM #Data b
-				INNER JOIN #recommend c ON b.recommend = c.recommend
-			GROUP BY CASE WHEN @Site = 'All' THEN 1 ELSE c.IsDeposit END,
-				CASE	WHEN @isDrillDownLicensee = 1 THEN 'Licensee Group'
-						WHEN @Site NOT IN ('MBC Group', 'Licensee Group', 'All') THEN c.SiteName ELSE @Site END,
+			GROUP BY b.IsDeposit,
+				b.SiteName,
 				b.CurrencyID , 
 				b.Currency
 			HAVING (@TotalBetType = 0
-					OR (@TotalBetType = 1 AND SUM(b.TotalBetsBase) >= @TotalBetValue) 
-					OR (@TotalBetType = -1 AND SUM(b.TotalBetsBase) <= @TotalBetValue)
+					OR (@TotalBetType = 1 AND SUM(b.TotalBets) >= @TotalBetValue) 
+					OR (@TotalBetType = -1 AND SUM(b.TotalBets) <= @TotalBetValue)
 					)
 				AND (@GameIncomeType = 0
-					OR (@GameIncomeType = 1 AND SUM(b.TotalBetsBase - b.TotalWinsBase) >= @GameIncomeValue) 
-					OR (@GameIncomeType = -1 AND SUM(b.TotalBetsBase - b.TotalWinsBase) <= @GameIncomeValue)
-					)		
+					OR (@GameIncomeType = 1 AND SUM(b.TotalBets - b.TotalWins) >= @GameIncomeValue) 
+					OR (@GameIncomeType = -1 AND SUM(b.TotalBets - b.TotalWins) <= @GameIncomeValue)
+					)	
 		END
 	END
-	ELSE -- @Currency <> -1
+	ELSE -- @IsGrandTotal = 1 (Click TO GrandTotal)
 	BEGIN
-		INSERT INTO #Result
-			    ( IsDeposit ,
-			        SiteName ,
-			        NoOfPlayers ,
-			        BetCount ,
-			        CurrencyID ,
-			        Currency ,
-			        TotalBets ,
-			        TotalWins ,
-			        TotalRefund ,
-			        CompanyTurnOver ,
-			        CompanyGrossIncome ,
-			        CompanyComm
-			    )
-		SELECT 
-			CASE WHEN @Site = 'All' AND @IsDrillDown = 1 THEN 1 ELSE c.IsDeposit END AS IsDeposit,
-			CASE WHEN @Site IN ('MBC Group', 'Licensee Group', 'All') AND @IsDrillDown = 1 THEN @Site ELSE c.SiteName END AS SiteName,
-			COUNT(DISTINCT custid) AS NoOfPlayers,
-			SUM(BetCount) AS BetCount ,
-			b.CurrencyID AS CurrencyId, 
-			b.Currency AS Currency,
-			SUM (b.TotalBets) AS TotalBets, 
-			SUM (b.TotalWins) AS TotalWins,
-			SUM (b.TotalRefund) AS TotalRefund,
-			SUM (b.CompanyTurnOver) AS CompanyTurnover,
-			SUM (b.CompanyGrossIncome) AS CompanyGrossIncome,
-			SUM (b.CompanyComm) AS CompanyComm
+		IF @Currency = -1
+		BEGIN
+			INSERT INTO #Result
+						( IsDeposit ,
+						  SiteName ,
+						  NoOfPlayers ,
+						  BetCount ,
+						  CurrencyID ,
+						  Currency ,
+						  TotalBets ,
+						  TotalWins ,
+						  TotalRefund ,
+						  CompanyTurnOver ,
+						  CompanyGrossIncome ,
+						  CompanyComm,
+						  TotalBetsBase,
+						  TotalWinsBase,
+						  TotalRefundBase,
+						  CompanyTurnOverBase,
+						  CompanyGrossIncomeBase,
+						  CompanyCommBase
+						)
+		SELECT b.IsDeposit,
+				b.SiteName,
+				COUNT(DISTINCT custid) AS NoOfPlayers,
+				SUM(BetCount) AS BetCount ,
+				-1 AS CurrencyId, 
+				'RM' AS Currency,
+				SUM (TotalBetsBase) AS TotalBets, 
+				SUM (TotalWinsBase ) AS TotalWins,
+				SUM (TotalRefundBase ) AS TotalRefund,
+				SUM (CompanyTurnoverBase ) AS CompanyTurnover,
+				SUM (CompanyGrossIncomeBase ) AS CompanyGrossIncome,
+				SUM (CompanyCommBase) AS CompanyComm,
+
+				SUM (TotalBetsBase) AS TotalBetsBase, 
+				SUM (TotalWinsBase) AS TotalWinsBase,
+				SUM (TotalRefundBase) AS TotalRefundBase,
+				SUM (CompanyTurnoverBase) AS CompanyTurnoverBase,
+				SUM (CompanyGrossIncomeBase) AS CompanyGrossIncomeBase,
+				SUM (CompanyCommBase) AS CompanyCommBase
 		FROM #Data b
-			INNER JOIN #recommend c ON b.recommend = c.recommend
-		GROUP BY CASE WHEN @Site = 'All' AND @IsDrillDown = 1 THEN 1 ELSE c.IsDeposit END,
-			CASE WHEN @Site IN ('MBC Group', 'Licensee Group', 'All') AND @IsDrillDown = 1 THEN @Site ELSE c.SiteName END,
-			b.CurrencyID , 
-			b.Currency
+		GROUP BY b.IsDeposit, b.SiteName
+		HAVING (@TotalBetType = 0
+				OR (@TotalBetType = 1 AND SUM(TotalBetsBase ) >= @TotalBetValue) 
+				OR (@TotalBetType = -1 AND SUM(TotalBetsBase) <= @TotalBetValue)
+				)
+			AND (@GameIncomeType = 0
+				OR (@GameIncomeType = 1 AND SUM(TotalBetsBase - TotalWinsBase) >= @GameIncomeValue) 
+				OR (@GameIncomeType = -1 AND SUM(TotalBetsBase - b.TotalWinsBase) <= @GameIncomeValue)
+				)
+		END
+		ELSE
+		BEGIN
+			INSERT INTO #Result
+						( IsDeposit ,
+						  SiteName ,
+						  NoOfPlayers ,
+						  BetCount ,
+						  CurrencyID ,
+						  Currency ,
+						  TotalBets ,
+						  TotalWins ,
+						  TotalRefund ,
+						  CompanyTurnOver ,
+						  CompanyGrossIncome ,
+						  CompanyComm,
+						  TotalBetsBase,
+						  TotalWinsBase,
+						  TotalRefundBase,
+						  CompanyTurnOverBase,
+						  CompanyGrossIncomeBase,
+						  CompanyCommBase
+						)
+		SELECT b.IsDeposit,
+				b.SiteName,
+				COUNT(DISTINCT custid) AS NoOfPlayers,
+				SUM(BetCount) AS BetCount ,
+				b.CurrencyID AS CurrencyId, 
+				Currency AS Currency,
+				SUM (b.TotalBets) AS TotalBets, 
+				SUM (b.TotalWins) AS TotalWins,
+				SUM (b.TotalRefund) AS TotalRefund,
+				SUM (b.CompanyTurnOver) AS CompanyTurnover,
+				SUM (b.CompanyGrossIncome) AS CompanyGrossIncome,
+				SUM (b.CompanyComm) AS CompanyComm,
+
+				SUM (TotalBetsBase) AS TotalBetsBase, 
+				SUM (TotalWinsBase) AS TotalWinsBase,
+				SUM (TotalRefundBase) AS TotalRefundBase,
+				SUM (CompanyTurnoverBase) AS CompanyTurnoverBase,
+				SUM (CompanyGrossIncomeBase) AS CompanyGrossIncomeBase,
+				SUM (CompanyCommBase) AS CompanyCommBase
+		FROM #Data b
+		GROUP BY b.IsDeposit, b.SiteName, 
+				b.CurrencyID, Currency
 		HAVING (@TotalBetType = 0
 				OR (@TotalBetType = 1 AND SUM(b.TotalBets) >= @TotalBetValue) 
 				OR (@TotalBetType = -1 AND SUM(b.TotalBets) <= @TotalBetValue)
@@ -696,26 +792,73 @@ BEGIN
 			AND (@GameIncomeType = 0
 				OR (@GameIncomeType = 1 AND SUM(b.TotalBets - b.TotalWins) >= @GameIncomeValue) 
 				OR (@GameIncomeType = -1 AND SUM(b.TotalBets - b.TotalWins) <= @GameIncomeValue)
-				)	
+				)
+		END
+		
 	END
-	
-	SELECT IsDeposit,
-			SiteName AS ReportBy,
-			NoOfPlayers,
-			BetCount,
-			CurrencyID,
-			Currency,
-			TotalBets,
-			TotalWins,
-			TotalRefund,
-			CompanyTurnOver,
-			CompanyGrossIncome,
-			CompanyComm
-		FROM #Result
-		ORDER BY IsDeposit, SiteName, Currency
-	
-	------------------------------------------IV. Return Total Rows ------------------------------------------------------
 
+	------------------------------------------IV. Return Detail ------------------------------------------------------
+	IF @IsGrandTotal = 0
+	BEGIN
+		IF @IsDrillDown = 0
+		BEGIN
+			SELECT IsDeposit,
+					SiteName AS ReportBy,
+					NoOfPlayers,
+					BetCount,
+					CurrencyID,
+					Currency,
+					TotalBets,
+					TotalWins,
+					TotalRefund,
+					CompanyTurnOver,
+					CompanyGrossIncome,
+					CompanyComm
+			FROM #Result
+			ORDER BY IsDeposit, SiteName, Currency
+		END
+		ELSE
+		BEGIN
+			SELECT 0 AS IsDeposit,
+				CASE WHEN @isDrillDownLicensee = 1 THEN 'Licensee Group' ELSE @Site END AS ReportBy,
+				COUNT(DISTINCT b.CustID) AS NoOfPlayers,
+				SUM(b.BetCount) AS BetCount,
+				b.CurrencyID,
+				b.Currency,
+				CASE WHEN @Currency = -1 THEN SUM(b.TotalBetsBase) ELSE SUM(b.TotalBets) END AS TotalBets,
+				CASE WHEN @Currency = -1 THEN SUM(b.TotalWinsBase) ELSE SUM(b.TotalWins) END AS TotalWins,
+				CASE WHEN @Currency = -1 THEN SUM(b.TotalRefundBase) ELSE SUM(b.TotalRefund) END AS TotalRefund,
+				CASE WHEN @Currency = -1 THEN SUM(b.CompanyTurnOverBase) ELSE SUM(b.CompanyTurnOver) END AS CompanyTurnOver,
+				CASE WHEN @Currency = -1 THEN SUM(b.CompanyGrossIncomeBase) ELSE SUM(b.CompanyGrossIncome) END AS CompanyGrossIncome,
+				CASE WHEN @Currency = -1 THEN SUM(b.CompanyCommBase) ELSE SUM(b.CompanyComm) END AS CompanyComm
+		FROM #Data b	
+			INNER JOIN #Result r ON (@Currency = -1 OR b.CurrencyID = r.CurrencyID) AND b.SiteName = r.SiteName	
+		GROUP BY b.CurrencyID , b.Currency	
+		ORDER BY b.Currency
+		END
+	END
+	ELSE
+	BEGIN
+		SELECT b.CurrencyID AS ReportById,
+				b.Currency AS ReportBy,
+				COUNT(DISTINCT b.CustID) AS NoOfPlayers,
+				SUM(b.BetCount) AS BetCount,
+				b.CurrencyID,
+				b.Currency,
+				CASE WHEN @Currency = -1 THEN SUM(b.TotalBetsBase) ELSE SUM(b.TotalBets) END AS TotalBets,
+				CASE WHEN @Currency = -1 THEN SUM(b.TotalWinsBase) ELSE SUM(b.TotalWins) END AS TotalWins,
+				CASE WHEN @Currency = -1 THEN SUM(b.TotalRefundBase) ELSE SUM(b.TotalRefund) END AS TotalRefund,
+				CASE WHEN @Currency = -1 THEN SUM(b.CompanyTurnOverBase) ELSE SUM(b.CompanyTurnOver) END AS CompanyTurnOver,
+				CASE WHEN @Currency = -1 THEN SUM(b.CompanyGrossIncomeBase) ELSE SUM(b.CompanyGrossIncome) END AS CompanyGrossIncome,
+				CASE WHEN @Currency = -1 THEN SUM(b.CompanyCommBase) ELSE SUM(b.CompanyComm) END AS CompanyComm
+		
+		FROM #Data b	
+			INNER JOIN #Result r ON (@Currency = -1 OR b.CurrencyID = r.CurrencyID) AND b.SiteName = r.SiteName	
+		GROUP BY b.CurrencyID , b.Currency		
+		ORDER BY b.Currency
+	END
+	------------------------------------------V. Return Total Rows ------------------------------------------------------
+	
 	IF @IsDrillDown = 0
 	BEGIN
 		SELECT
@@ -732,8 +875,7 @@ BEGIN
 			SUM(b.CompanyGrossIncomeBase) CompanyGrossIncome,
 			SUM(b.CompanyCommBase) CompanyComm
 		FROM #Data b
-			INNER JOIN  #Result c ON (@Currency = -1 OR c.CurrencyId = b.CurrencyId)
-		WHERE EXISTS (SELECT 1 FROM #recommend t WHERE t.recommend = b.recommend AND c.SiteName = t.SiteName)
+			INNER JOIN  #Result c ON (@Currency = -1 OR c.CurrencyId = b.CurrencyId) AND c.SiteName = b.SiteName
 		GROUP BY c.isDeposit,
 			CASE WHEN c.isDeposit = 0 THEN 'MBC Group' ELSE 'Licensee Group' END
 		UNION ALL
@@ -751,25 +893,46 @@ BEGIN
 			SUM(b.CompanyGrossIncomeBase) CompanyGrossIncome,
 			SUM(b.CompanyCommBase) CompanyComm
 		FROM #Data b
-			INNER JOIN  #Result c ON (@Currency = -1 OR c.CurrencyId = b.CurrencyId)
-		WHERE EXISTS (SELECT 1 FROM #recommend t WHERE t.recommend = b.recommend AND c.SiteName = t.SiteName)
+			INNER JOIN  #Result c ON (@Currency = -1 OR c.CurrencyId = b.CurrencyId) AND b.SiteName = c.SiteName
 	END
-	ELSE
-	BEGIN
-		SELECT
-			2 AS IsDeposit,
-			'GrandTotalRM' AS ReportBy,
-			COUNT(DISTINCT custid) AS NoOfPlayers,
-			SUM(b.BetCount) BetCount,
-			-1 as CurrencyId, 
-			'RM' AS Currency,
-			SUM(b.TotalBetsBase) TotalBets,
-			SUM(b.TotalWinsBase) TotalWins,
-			SUM(b.TotalRefundBase) TotalRefund,
-			SUM(b.CompanyTurnOverBase) CompanyTurnOver,
-			SUM(b.CompanyGrossIncomeBase) CompanyGrossIncome,
-			SUM(b.CompanyCommBase) CompanyComm
-		FROM #Data b
+	ELSE 
+	BEGIN	
+		IF @IsGrandTotal = 0
+		BEGIN	
+			SELECT
+				2 AS IsDeposit,
+				'GrandTotalRM' AS ReportBy,
+				COUNT(DISTINCT custid) AS NoOfPlayers,
+				SUM(b.BetCount) BetCount,
+				-1 as CurrencyId, 
+				'RM' AS Currency,
+				SUM(b.TotalBetsBase) TotalBets,
+				SUM(b.TotalWinsBase) TotalWins,
+				SUM(b.TotalRefundBase) TotalRefund,
+				SUM(b.CompanyTurnOverBase) CompanyTurnOver,
+				SUM(b.CompanyGrossIncomeBase) CompanyGrossIncome,
+				SUM(b.CompanyCommBase) CompanyComm
+			FROM #Data b
+				INNER JOIN  #Result c ON (b.SiteName = c.SiteName) AND (@Currency = -1 OR b.CurrencyID = c.CurrencyID)
+		END
+		ELSE
+		BEGIN
+			SELECT
+				2 AS IsDeposit,
+				'GrandTotalRM' AS ReportBy,
+				COUNT(DISTINCT custid) AS NoOfPlayers,
+				SUM(b.BetCount) BetCount,
+				-1 as CurrencyId, 
+				'RM' AS Currency,
+				SUM(b.TotalBetsBase) TotalBets,
+				SUM(b.TotalWinsBase) TotalWins,
+				SUM(b.TotalRefundBase) TotalRefund,
+				SUM(b.CompanyTurnOverBase) CompanyTurnOver,
+				SUM(b.CompanyGrossIncomeBase) CompanyGrossIncome,
+				SUM(b.CompanyCommBase) CompanyComm
+			FROM #Data b
+				INNER JOIN  #Result c ON b.SiteName = c.SiteName AND (@Currency = -1 OR b.CurrencyID = c.CurrencyID)
+		END
 	END
 
 	DROP TABLE #Data
