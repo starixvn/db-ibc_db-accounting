@@ -1,6 +1,5 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_BettransRecoverParlayBet_Main]    Script Date: 11/03/2016 15:51:19 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -24,6 +23,8 @@ AS
 	Revisions: 		
 		- 20161104@Kent: Correct logic for GroupName [Redmine:#65531]
 		- 20161111@Kent: Correct WinLost when for returned table [Redmine:#65531]
+		- 20161221@Kathy: Release lock after recovering tickets [Redmine:#68960]
+
 	Example: 
 		DECLARE @ErrCode INT, @ErrMsg VARCHAR(300)
 		EXEC NAP_BettransRecoverParlayBet_Main @BetType = 'All', @TransIds = '10094287060761,10094287060762,10094287060763,10094287060764', @UserID = 8, @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
@@ -308,6 +309,20 @@ BEGIN
 		EXEC [dbo].[NAP_CustNegativeBalance_Sel] 	
 			@CustIds = @CustIds,
 			@NegativeBalanceUsers = @NegativeBalanceUsers OUTPUT	
+		
+		DELETE	z
+		FROM	dbo.zzzbettrans z WITH(ROWLOCK, UPDLOCK)
+			INNER JOIN #tblRecoverBet t  ON	z.custid = t.custid AND z.matchid = t.matchid AND z.transid = t.transid
+
+		------ release Parlay procesee	
+		EXEC [dbo].[NAP_Admin_CheckingProcess]
+				@IsExistParlay = 1			
+			  , @IsReleased	= 1	
+
+		SELECT @LogData = 'Recover Parlay bets having transid: IP=' + @Ip + ' ' + @TransIds				
+		EXEC WriteLog_UserLog 
+			 @UserId = @UserId,
+			 @Doing = @LogData 
 
 		--transid is auto settled
 		SELECT @SettledMainTranIds = ''
@@ -377,15 +392,6 @@ BEGIN
 									END AS GroupName) AS T1				
 		WHERE T1.GroupName IS NOT NULL
 		ORDER BY T1.GroupName, t.transid				
-
-		DELETE	z
-		FROM	dbo.zzzbettrans z WITH(ROWLOCK, UPDLOCK)
-			INNER JOIN #tblRecoverBet t  ON	z.custid = t.custid AND z.matchid = t.matchid AND z.transid = t.transid
-			
-		SELECT @LogData = 'Recover Parlay bets having transid: IP=' + @Ip + ' ' + @TransIds				
-		EXEC WriteLog_UserLog 
-			 @UserId = @UserId,
-			 @Doing = @LogData 
 	END TRY
 	BEGIN CATCH
 		------ release Parlay procesee	
@@ -401,12 +407,13 @@ BEGIN
 						
 		RETURN
 	END CATCH
-
-	------ release Parlay procesee	
-	EXEC [dbo].[NAP_Admin_CheckingProcess]
-			@IsExistParlay = 1			
-		  , @IsReleased	= 1	
 	
 	DROP TABLE #t
 END
 
+
+
+GO
+GRANT EXECUTE ON [dbo].[NAP_BettransRecoverParlayBet_Main] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_BettransRecoverParlayBet_Main] TO [vnteam] AS [dbo]

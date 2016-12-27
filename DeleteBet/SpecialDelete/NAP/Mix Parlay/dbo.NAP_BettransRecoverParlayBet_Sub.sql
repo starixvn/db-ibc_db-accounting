@@ -1,6 +1,5 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_BettransRecoverParlayBet_Sub]    Script Date: 10/20/2016 17:53:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -24,6 +23,7 @@ AS
 
 	Revisions: 		
 		- 20161019@Kent: Recover sub voided Parlay tickets [Redmine:#65531]
+		- 20161221@Kathy: Release lock after recovering tickets [Redmine:#68960]
 	
 	Param's Explanation:			
 			- @BetType:
@@ -454,6 +454,11 @@ BEGIN
 			@CustIds = @CustIds,
 			@NegativeBalanceUsers = @NegativeBalanceUsers OUTPUT				
 		
+		------ release Parlay procesee	
+		EXEC [dbo].[NAP_Admin_CheckingProcess]
+				@IsExistParlay = 1			
+			  , @IsReleased	= 1	
+
 		--> write log		
 		SELECT @LogData = 'Recover Parlay bets having transid: IP=' + @Ip + ' ' + @transids_29
 		EXEC WriteLog_UserLog 
@@ -570,21 +575,14 @@ BEGIN
 							
 		RETURN				
 	END CATCH									  			
-			
-	------ release Parlay procesee	
-	EXEC [dbo].[NAP_Admin_CheckingProcess]
-			@IsExistParlay = 1			
-		  , @IsReleased	= 1	
 		  
 	DROP TABLE #t		  	  
 		
 	RETURN;							
 END
-GO
 
+
+GO
 GRANT EXECUTE ON [dbo].[NAP_BettransRecoverParlayBet_Sub] TO [bodbAdminNet] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_BettransRecoverParlayBet_Sub] TO [vnteam] AS [dbo]
-GO
-
-
