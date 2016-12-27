@@ -30,6 +30,7 @@ AS
 		- 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
 		- 20160315@Patrick: Auto payout [Redmine: #53262]
 		- 20160830@Kathy: PH-AIO phase 2b [Redmine:#62861]
+		- 20160311@Kathy: Exclude Fast Market [Redmine:#56367]
 		
 	Param's Explanation:
 
@@ -39,7 +40,7 @@ BEGIN
 	DECLARE	 @start DATETIME, @stop DATETIME, @eventstatus NVARCHAR(50), @fth INT, @fta INT, @hth INT
 		, @hta INT, @goalrecord VARCHAR(50), @betstatus VARCHAR(50), @ActionID INT, @Remark VARCHAR(500), @LogData NVARCHAR(300)		
 		,@strBettypes VARCHAR(MAX)	
-		,@strAutoBetRadarBettypes VARCHAR(MAX)	
+		,@strAutoBettypes VARCHAR(MAX)	
 
 	SELECT @start = CURRENT_TIMESTAMP
 	SELECT @ActionID = CASE WHEN @Action = 'CAL' THEN 151 
@@ -58,9 +59,9 @@ BEGIN
 						
 			
 	
-	SELECT	@strAutoBetRadarBettypes = COALESCE(@strAutoBetRadarBettypes + ',' + CAST(BetType AS VARCHAR),CAST(BetType AS VARCHAR))
+	SELECT	@strAutoBettypes = COALESCE(@strAutoBettypes + ',' + CAST(BetType AS VARCHAR),CAST(BetType AS VARCHAR))
 	FROM	dbo.f_Set_GetGroupBettypes()
-	WHERE	GroupId = 8
+	WHERE	IsAuto = 1
 	
 	SELECT @fth = finalhomescore
 		, @fta = finalawayscore
@@ -129,7 +130,7 @@ BEGIN
 				AND bettype NOT BETWEEN 1501 AND 1599 -- Keno
 				AND bettype NOT BETWEEN 801 AND 899 --Metric Gaming 
 				AND 1 = CASE 
-							WHEN CHARINDEX(',' + CAST(bettype AS VARCHAR) + ',', ',' + @strAutoBetRadarBettypes + ',') > 0 THEN 0 
+							WHEN CHARINDEX(',' + CAST(bettype AS VARCHAR) + ',', ',' + @strAutoBettypes + ',') > 0 THEN 0 
 							ELSE 1 
 						END
 		GROUP BY CASE WHEN CHARINDEX(',' + CAST(bettype AS VARCHAR) + ',', ',' + @strBettypes + ',') > 0 THEN 1
