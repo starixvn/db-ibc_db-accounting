@@ -192,7 +192,7 @@ BEGIN
 					WHEN @Mode IN ('CAL') THEN 1
 					ELSE 0
 				END
-			AND f.GroupId <> 8 --Exclude BetRadar
+			AND f.IsAuto = 0 --Exclude BetRadar, FM
 	
 	IF @Sporttype = 1 AND @resultDetail_cb IS NOT NULL -- corners bets 
 	BEGIN

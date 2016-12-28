@@ -44,7 +44,7 @@ BEGIN
 					END
 				ELSE 0 
 			END
-		AND f.GroupId <> 8 -- exclude auto betradar
+		AND f.IsAuto = 0 --Exclude BetRadar, FM
 	
 	DECLARE @minTransId		BIGINT
 		,@maxTransId		BIGINT

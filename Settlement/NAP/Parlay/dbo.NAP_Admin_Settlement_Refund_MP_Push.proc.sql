@@ -2,7 +2,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Refund_MP_Push] (
 	@AdminId 						INT
 	,@MatchId 						INT
 	,@Action 						VARCHAR(20) = 'REFUND'
-	,@IsSettleAbandonedMatchIBC     BIT	= 0
+	,@SettleAbandonedMatchIBCParlay TINYINT	= 0
 	,@IP 							VARCHAR(15) = ''
 	,@ErrCode 						INT = 0 OUTPUT
 	,@ErrMsg NVARCHAR(200) 			= '' OUTPUT
@@ -16,7 +16,10 @@ AS
 	Revisions:		
 
 	Param's Explanation:		
-		- @Action: [Refund, Refund-FT]
+		- @Action: [Refund, Refund-HT, Refund-FT]
+		- @SettleAbandonedMatchIBCParlay: TINYINT
+			+ 1: Single - Abandoned 1H
+			+ 2: Single - Abandoned 2H
 */
 BEGIN
 	SET NOCOUNT ON
@@ -31,10 +34,15 @@ BEGIN
 		,@IsExistNetPosition	BIT = 0
 		,@Mode					VARCHAR(20)
 
-	SELECT @ActionId		= CASE WHEN @Action = 'REFUND' THEN 107 ELSE 106 END
+	SELECT @ActionId		= CASE 
+								WHEN @Action = 'REFUND' THEN 107 
+								WHEN @Action = 'REFUND-HT' THEN 120 
+								WHEN @Action = 'REFUND-FT' THEN 106 
+								ELSE 0 
+							END
 		, @Mode				= CASE 
-								WHEN @Action = 'REFUND' AND @IsSettleAbandonedMatchIBC =  1 THEN 'ABANDONED-1H'
-								WHEN @Action = 'REFUND-FT' AND @IsSettleAbandonedMatchIBC =  1 THEN 'ABANDONED-2H'
+								WHEN @Action = 'REFUND' AND @SettleAbandonedMatchIBCParlay =  1 THEN 'ABANDONED-1H'
+								WHEN @Action = 'REFUND-FT' AND @SettleAbandonedMatchIBCParlay =  2 THEN 'ABANDONED-2H'
 								ELSE @Action
 							END
 	
@@ -90,8 +98,8 @@ BEGIN
 	END
 	ELSE
 	BEGIN		
-		INSERT INTO dbo.Parlay_Calculate_Queue (matchid, isCalculating, creator, ip, starttime, action, ActionId)
-		SELECT @matchid, 0, @AdminId, @IP, CURRENT_TIMESTAMP, @mode, @ActionId
+		INSERT INTO dbo.Parlay_Calculate_Queue (matchid, isCalculating, creator, ip, starttime, action)
+		SELECT @matchid, 0, @AdminId, @IP, CURRENT_TIMESTAMP, @mode
 	END
 END
 GO 

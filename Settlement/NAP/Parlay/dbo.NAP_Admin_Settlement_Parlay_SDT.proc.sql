@@ -106,7 +106,7 @@ BEGIN
 				WHEN @IsHT = 1 THEN 1
 				ELSE 0
 			END
-		AND f.GroupId <> 8 -- auto betradar
+		AND f.IsAuto = 0 --Exclude BetRadar, FM
 	
 	BEGIN --SDT Process
 		DECLARE @tempBatch TABLE (transid BIGINT, refno BIGINT, StatusId TINYINT)

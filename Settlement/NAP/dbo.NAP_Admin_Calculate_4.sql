@@ -728,7 +728,6 @@ BEGIN
 		END
 	END
 	
-	/*-------------Start:Settle FGLG for bettransm-------------
 	IF (ISNULL(@FGLG2,'') = '' AND ISNULL(@correctscore, '0:0') <> '0:0')
 		SET @FGLG2 = @correctscore
 
