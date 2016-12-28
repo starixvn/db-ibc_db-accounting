@@ -62,7 +62,6 @@ AS
 
 BEGIN
 	SET NOCOUNT ON
-	RETURN
 
 	DECLARE @WLDate DATETIME, @UName VARCHAR(5000), @UrsName VARCHAR(5000)
 	SELECT  @WLDate = @WinlostDate, @UrsName = @Username
@@ -138,19 +137,21 @@ BEGIN
 
 	-- Get Site	
 	CREATE TABLE #tmp_Site (Site VARCHAR(50))
-	CREATE TABLE #tmp_Company (SiteName VARCHAR(50), srecommend INT PRIMARY KEY)
+	CREATE TABLE #tmp_Company (SiteName VARCHAR(50), srecommend INT)
 	CREATE TABLE #tmp_MemIDs (CustID INT PRIMARY KEY, roleID TINYINT)
 	
 	SELECT  @UrsName = LTRIM(RTRIM(@UrsName))
 	SELECT  @UName = '''' + REPLACE(@UrsName, ',', ''',''') + ''''
 	DECLARE @SQL NVARCHAR(MAX)
 
-	DECLARE @CID INT
+	DECLARE @CID INT, @IsFilterCust BIT
+	SELECT  @IsFilterCust = 0
 	
 	CREATE TABLE #CustUser (CustID INT, roleID TINYINT)
 	IF @IsDrillDown = 1
 	BEGIN
 		SELECT @CID = custid FROM dbo.Customer WITH(NOLOCK) WHERE username = @UrsName AND roleid = @RoleID
+		SELECT @IsFilterCust = 1
 	END
 	ELSE IF @RoleID = 0 -- click associated accounts link
 	BEGIN
@@ -159,6 +160,8 @@ BEGIN
 						SELECT custid, roleid FROM dbo.Customer WITH(NOLOCK)
 						WHERE username IN (' + @UName + ')'
 		EXEC sp_executesql @SQL
+		
+		SELECT @IsFilterCust = 1
 	END
 	ELSE
 	BEGIN
@@ -166,20 +169,36 @@ BEGIN
 		BEGIN
 			INSERT INTO #CustUser (CustID)
 			SELECT custid FROM dbo.Customer WITH(NOLOCK) WHERE username LIKE @UrsName + '%' AND roleid = @RoleID
+
+			SELECT @IsFilterCust = 1
 		END
 	END
 	
 	IF @Site <> 'ALL'
 	BEGIN
+		SELECT @IsFilterCust = 1
+
 		INSERT INTO #tmp_Site (Site)
 		SELECT RTRIM(LTRIM(val)) FROM dbo.strSplit(@Site, ',')
 
-		INSERT INTO #tmp_Company (SiteName, Srecommend)
-		SELECT s.Site, c.srecommend
-		FROM #tmp_Site s
-			INNER JOIN dbo.Site ss WITH (NOLOCK) ON s.Site = ss.site
-			INNER JOIN dbo.Customer c WITH (NOLOCK) ON ss.Site = c.site
-		WHERE c.roleid = 4
+		IF EXISTS (SELECT 1 FROM #tmp_Site WHERE Site = 'MBC Group')
+		BEGIN
+			INSERT INTO #tmp_Company (Srecommend)
+			SELECT custid
+			FROM Customer c WITH(NOLOCK)
+			WHERE NOT EXISTS (SELECT 1 FROM dbo.Dep_CustSuper d WITH(NOLOCK) WHERE c.custid = d.custid)
+				AND c.roleid = 4
+		END
+
+		IF EXISTS (SELECT 1 FROM #tmp_Site WHERE Site <> 'MBC Group')
+		BEGIN
+			INSERT INTO #tmp_Company (SiteName, Srecommend)
+			SELECT s.Site, c.srecommend
+			FROM #tmp_Site s
+				INNER JOIN dbo.Site ss WITH (NOLOCK) ON s.Site = ss.site
+				INNER JOIN dbo.Customer c WITH (NOLOCK) ON ss.Site = c.site
+			WHERE c.roleid = 4 AND ss.isDeposit = 1
+		END
 
 		IF @UrsName <> ''
 		BEGIN
@@ -191,9 +210,9 @@ BEGIN
 					SELECT c.custid, 1
 					FROM
 						dbo.Customer c WITH (NOLOCK)
-						INNER JOIN #tmp_Company tc ON c.srecommend = tc.srecommend
 						INNER JOIN #CustUser cu ON c.custid = cu.CustID
 					WHERE c.roleid = 1
+						AND EXISTS (SELECT 1 FROM #tmp_Company tc WHERE c.srecommend = tc.srecommend)
 				END
 				
 				IF @RoleID IN (0,2)
@@ -202,9 +221,9 @@ BEGIN
 					SELECT c.custid, 1
 					FROM
 						dbo.Customer c WITH (NOLOCK)
-						INNER JOIN #tmp_Company tc ON c.srecommend = tc.srecommend
 						INNER JOIN #CustUser cu ON c.recommend = cu.CustID
 					WHERE c.roleid = 1
+						AND EXISTS (SELECT 1 FROM #tmp_Company tc WHERE c.srecommend = tc.srecommend)
 				END
 				
 				IF @RoleID IN (0,3)
@@ -213,9 +232,9 @@ BEGIN
 					SELECT c.custid, 1
 					FROM
 						dbo.Customer c WITH (NOLOCK)
-						INNER JOIN #tmp_Company tc ON c.srecommend = tc.srecommend
 						INNER JOIN #CustUser cu ON c.mrecommend = cu.CustID
 					WHERE c.roleid = 1
+						AND EXISTS (SELECT 1 FROM #tmp_Company tc WHERE c.srecommend = tc.srecommend)
 				END
 				
 				IF @RoleID IN (0,4)
@@ -224,9 +243,9 @@ BEGIN
 					SELECT c.custid, 1
 					FROM
 						dbo.Customer c WITH (NOLOCK)
-						INNER JOIN #tmp_Company tc ON c.srecommend = tc.srecommend
 						INNER JOIN #CustUser cu ON c.srecommend = cu.CustID
 					WHERE c.roleid = 1
+						AND EXISTS (SELECT 1 FROM #tmp_Company tc WHERE c.srecommend = tc.srecommend)
 				END
 			END
 			ELSE -- @IsDrillDown = 1
@@ -237,8 +256,8 @@ BEGIN
 					SELECT custid, 1
 					FROM
 						dbo.Customer c WITH (NOLOCK)
-						INNER JOIN #tmp_Company tc ON c.srecommend = tc.srecommend
 					WHERE c.custid = @CID AND roleid = 1
+						AND EXISTS (SELECT 1 FROM #tmp_Company tc WHERE c.srecommend = tc.srecommend)
 				END
 				ELSE IF @RoleID = 2
 				BEGIN
@@ -246,8 +265,8 @@ BEGIN
 					SELECT custid, 1
 					FROM
 						dbo.Customer c WITH (NOLOCK)
-						INNER JOIN #tmp_Company tc ON c.srecommend = tc.srecommend
 					WHERE c.recommend = @CID AND roleid = 1
+						AND EXISTS (SELECT 1 FROM #tmp_Company tc WHERE c.srecommend = tc.srecommend)
 				END
 				ELSE IF @RoleID = 3
 				BEGIN
@@ -255,8 +274,8 @@ BEGIN
 					SELECT custid, 1
 					FROM
 						dbo.Customer c WITH (NOLOCK)
-						INNER JOIN #tmp_Company tc ON c.srecommend = tc.srecommend
 					WHERE c.mrecommend = @CID AND roleid = 1
+						AND EXISTS (SELECT 1 FROM #tmp_Company tc WHERE c.srecommend = tc.srecommend)
 				END
 				ELSE IF @RoleID = 4
 				BEGIN
@@ -264,8 +283,8 @@ BEGIN
 					SELECT custid, 1
 					FROM
 						dbo.Customer c WITH (NOLOCK)
-						INNER JOIN #tmp_Company tc ON c.srecommend = tc.srecommend
 					WHERE c.srecommend = @CID AND roleid = 1
+						AND EXISTS (SELECT 1 FROM #tmp_Company tc WHERE c.srecommend = tc.srecommend)
 				END
 			END
 		END
@@ -275,14 +294,16 @@ BEGIN
 			SELECT custid, 1
 			FROM
 				dbo.Customer c WITH (NOLOCK)
-				INNER JOIN #tmp_Company tc ON c.srecommend = tc.srecommend
 			WHERE c.roleid = 1
+				AND EXISTS (SELECT 1 FROM #tmp_Company tc WHERE c.srecommend = tc.srecommend)
 		END
 	END
 	ELSE
 	BEGIN
 		IF @UrsName <> ''
 		BEGIN
+			SELECT @IsFilterCust = 1
+
 			IF @IsDrillDown = 0
 			BEGIN
 				IF @RoleID IN (0,1)
@@ -363,7 +384,7 @@ BEGIN
 	DROP TABLE #tmp_Company
 	-- End Get Site --
 
-	-- Select temp data of bettrans
+	-- Select temp data of bettrans, bettransRnG, bettransLC
 	CREATE TABLE #tmp_bettrans
 	(
 		srecommend INT,
@@ -383,10 +404,11 @@ BEGIN
 		CompanyComm MONEY,
 		CompanyCommBase MONEY,
 		EvenType INT DEFAULT (-1), Matchid INT DEFAULT (-1), ProductID INT,
-		HousePT SMALLMONEY
+		HousePT SMALLMONEY,
+		statusID TINYINT,
 	)
 
-	IF EXISTS (SELECT TOP 1 1 FROM #tmp_MemIDs) -- has filter custid
+	IF @IsFilterCust = 1 -- has filter custid
 	BEGIN
 		IF EXISTS (SELECT TOP 1 1 FROM #SportBettype WHERE RefTable IN (0, 3)) -- bettrans
 		BEGIN
@@ -409,7 +431,8 @@ BEGIN
 				CompanyComm,
 				CompanyCommBase,
 				EvenType, Matchid, ProductID,
-				HousePT
+				HousePT,
+				statusID
 			)
 			SELECT
 				b.srecommend,
@@ -429,13 +452,14 @@ BEGIN
 				SUM(scomm) AS CompanyComm,
 				SUM(scomm *actualrate) AS CompanyCommBase,
 				s.EvenType, b.matchid, s.ProductID,
-				SUM(1 - b.tpositiontaking) AS HousePT
+				SUM(1 - b.tpositiontaking) AS HousePT,
+				CASE WHEN statusID = 103 THEN 103 ELSE 112 END AS statusID
 			FROM  dbo.bettrans b WITH (NOLOCK)
 				INNER JOIN #tmp_MemIDs m ON b.custid = m.CustID
 				INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 			WHERE b.winlostdate = @WLDate
 				AND b.matchid >= 0
-				AND b.statusID IN (111, 112, 113) -- won/lose/draw tickets
+				AND b.statusID IN (111, 112, 113, 103) -- won/lose/draw/refund tickets
 				AND s.RefTable IN (0, 3)
 				AND ((b.currency <> 20 AND @ExcludeTest = 1) OR @ExcludeTest = 0)
 				AND (b.currency = @Currency OR @Currency IN (0, -1))
@@ -445,7 +469,7 @@ BEGIN
 					OR (@HousePTType = -1 AND b.tpositiontaking >= 1-@HousePTValue) -- 1-tpositiontaking <= @HousePTValue
 					OR (@HousePTType = 1 AND b.tpositiontaking <= 1-@HousePTValue) -- 1-tpositiontaking >= @HousePTValue
 				)
-			GROUP BY b.srecommend, b.mrecommend, b.recommend, b.custid, b.currency, s.EvenType, b.matchid, s.ProductID
+			GROUP BY b.srecommend, b.mrecommend, b.recommend, b.custid, b.currency, s.EvenType, b.matchid, s.ProductID, CASE WHEN statusID = 103 THEN 103 ELSE 112 END
 		END
 
 		IF EXISTS (SELECT TOP 1 1 FROM #SportBettype WHERE RefTable = 1) -- bettransRnG
@@ -469,7 +493,8 @@ BEGIN
 				CompanyComm,
 				CompanyCommBase,
 				ProductID,
-				HousePT
+				HousePT,
+				statusID
 			)
 			SELECT
 				b.srecommend,
@@ -489,12 +514,13 @@ BEGIN
 				SUM(scomm) AS CompanyComm,
 				SUM(scomm *actualrate) AS CompanyCommBase,
 				s.ProductID,
-				SUM(1 - b.tpositiontaking) AS HousePT
+				SUM(1 - b.tpositiontaking) AS HousePT,
+				CASE WHEN statusID = 103 THEN 103 ELSE 112 END AS statusID
 			FROM dbo.bettransRnG b WITH (NOLOCK)
 				INNER JOIN #tmp_MemIDs m ON b.custid = m.CustID
 				INNER JOIN #SportBettype s ON s.Bettype = b.gameID
 			WHERE b.winlostdate = @WLDate
-				AND b.statusID IN (111, 112, 113) -- won/lose/draw tickets
+				AND b.statusID IN (111, 112, 113, 103) -- won/lose/draw/refund tickets
 				AND s.RefTable = 1		
 				AND ((b.currency <> 20 AND @ExcludeTest = 1) OR @ExcludeTest = 0)
 				AND (b.currency = @Currency OR @Currency IN (0, -1))
@@ -504,7 +530,7 @@ BEGIN
 					OR (@HousePTType = -1 AND b.tpositiontaking >= 1-@HousePTValue) -- 1-tpositiontaking <= @HousePTValue
 					OR (@HousePTType = 1 AND b.tpositiontaking <= 1-@HousePTValue) -- 1-tpositiontaking >= @HousePTValue
 				)
-			GROUP BY b.srecommend, b.mrecommend, b.recommend, b.custid, b.currency, s.ProductID
+			GROUP BY b.srecommend, b.mrecommend, b.recommend, b.custid, b.currency, s.ProductID, CASE WHEN statusID = 103 THEN 103 ELSE 112 END
 		END
 		
 		IF EXISTS (SELECT TOP 1 1 FROM #SportBettype WHERE RefTable = 2) -- bettransLC
@@ -528,7 +554,8 @@ BEGIN
 				CompanyComm,
 				CompanyCommBase,
 				ProductID,
-				HousePT
+				HousePT,
+				statusID
 			)
 			SELECT
 				b.srecommend,
@@ -548,13 +575,14 @@ BEGIN
 				SUM(scomm) AS CompanyComm,
 				SUM(scomm *actualrate) AS CompanyCommBase,
 				s.ProductID,
-				SUM(1 - b.tpositiontaking) AS HousePT
+				SUM(1 - b.tpositiontaking) AS HousePT,
+				CASE WHEN statusID = 103 THEN 103 ELSE 112 END AS statusID
 			FROM dbo.bettransLC b WITH (NOLOCK)
 				INNER JOIN #tmp_MemIDs m ON b.custid = m.CustID
 				INNER JOIN #SportBettype s ON s.Bettype = b.gameID
 			WHERE b.winlostdate = @WLDate
-				AND b.statusID IN (111, 112, 113) -- won/lose/draw tickets
-				AND s.RefTable = 1		
+				AND b.statusID IN (111, 112, 113, 103) -- won/lose/draw/refund tickets
+				AND s.RefTable = 2
 				AND ((b.currency <> 20 AND @ExcludeTest = 1) OR @ExcludeTest = 0)
 				AND (b.currency = @Currency OR @Currency IN (0, -1))
 				AND (EXISTS (SELECT 1 FROM #tmp_Devide d WHERE d.Betfrom = b.betfrom) OR @Device = '')
@@ -563,7 +591,7 @@ BEGIN
 					OR (@HousePTType = -1 AND b.tpositiontaking >= 1-@HousePTValue) -- 1-tpositiontaking <= @HousePTValue
 					OR (@HousePTType = 1 AND b.tpositiontaking <= 1-@HousePTValue) -- 1-tpositiontaking >= @HousePTValue
 				)
-			GROUP BY b.srecommend, b.mrecommend, b.recommend, b.custid, b.currency, s.ProductID
+			GROUP BY b.srecommend, b.mrecommend, b.recommend, b.custid, b.currency, s.ProductID, CASE WHEN statusID = 103 THEN 103 ELSE 112 END
 		END
 	END
 	ELSE -- non filter custid
@@ -589,7 +617,8 @@ BEGIN
 				CompanyComm,
 				CompanyCommBase,
 				EvenType, matchid, ProductID,
-				HousePT
+				HousePT,
+				statusID
 			)
 			SELECT
 				b.srecommend,
@@ -609,11 +638,12 @@ BEGIN
 				SUM(scomm) AS CompanyComm,
 				SUM(scomm *actualrate) AS CompanyCommBase,
 				s.EvenType, b.matchid, s.ProductID,
-				SUM(1 - b.tpositiontaking) AS HousePT
+				SUM(1 - b.tpositiontaking) AS HousePT,
+				CASE WHEN statusID = 103 THEN 103 ELSE 112 END AS statusID
 			FROM  dbo.bettrans b WITH (NOLOCK)
 				INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 			WHERE b.winlostdate = @WLDate
-				AND b.statusID IN (111, 112, 113) -- won/lose/draw tickets
+				AND b.statusID IN (111, 112, 113, 103) -- won/lose/draw/refund tickets
 				AND b.matchid >= 0
 				AND s.RefTable IN (0, 3)
 				AND ((b.currency <> 20 AND @ExcludeTest = 1) OR @ExcludeTest = 0)
@@ -624,7 +654,7 @@ BEGIN
 					OR (@HousePTType = -1 AND b.tpositiontaking >= 1-@HousePTValue) -- 1-tpositiontaking <= @HousePTValue
 					OR (@HousePTType = 1 AND b.tpositiontaking <= 1-@HousePTValue) -- 1-tpositiontaking >= @HousePTValue
 				)
-			GROUP BY b.srecommend, b.mrecommend, b.recommend, b.custid, b.currency, s.EvenType, b.matchid, s.ProductID
+			GROUP BY b.srecommend, b.mrecommend, b.recommend, b.custid, b.currency, s.EvenType, b.matchid, s.ProductID, CASE WHEN statusID = 103 THEN 103 ELSE 112 END
 		END
 
 		IF EXISTS (SELECT TOP 1 1 FROM #SportBettype WHERE RefTable = 1) -- bettransRnG
@@ -648,7 +678,8 @@ BEGIN
 				CompanyComm,
 				CompanyCommBase,
 				ProductID,
-				HousePT
+				HousePT,
+				statusID
 			)
 			SELECT
 				b.srecommend,
@@ -668,11 +699,12 @@ BEGIN
 				SUM(scomm) AS CompanyComm,
 				SUM(scomm *actualrate) AS CompanyCommBase,
 				s.ProductID,
-				SUM(1 - b.tpositiontaking) AS HousePT
+				SUM(1 - b.tpositiontaking) AS HousePT,
+				CASE WHEN statusID = 103 THEN 103 ELSE 112 END AS statusID
 			FROM dbo.bettransRnG b WITH (NOLOCK)
 				INNER JOIN #SportBettype s ON s.Bettype = b.gameID
 			WHERE b.winlostdate = @WLDate
-				AND b.statusID IN (111, 112, 113) -- won/lose/draw tickets
+				AND b.statusID IN (111, 112, 113, 103) -- won/lose/draw/refund tickets
 				AND s.RefTable = 1		
 				AND ((b.currency <> 20 AND @ExcludeTest = 1) OR @ExcludeTest = 0)
 				AND (b.currency = @Currency OR @Currency IN (0, -1))
@@ -682,7 +714,7 @@ BEGIN
 					OR (@HousePTType = -1 AND b.tpositiontaking >= 1-@HousePTValue) -- 1-tpositiontaking <= @HousePTValue
 					OR (@HousePTType = 1 AND b.tpositiontaking <= 1-@HousePTValue) -- 1-tpositiontaking >= @HousePTValue
 				)
-			GROUP BY b.srecommend, b.mrecommend, b.recommend, b.custid, b.currency, s.ProductID
+			GROUP BY b.srecommend, b.mrecommend, b.recommend, b.custid, b.currency, s.ProductID, CASE WHEN statusID = 103 THEN 103 ELSE 112 END
 		END
 
 		IF EXISTS (SELECT TOP 1 1 FROM #SportBettype WHERE RefTable = 2) -- bettransLC
@@ -706,7 +738,8 @@ BEGIN
 				CompanyComm,
 				CompanyCommBase,
 				ProductID,
-				HousePT
+				HousePT,
+				statusID
 			)
 			SELECT
 				b.srecommend,
@@ -726,11 +759,12 @@ BEGIN
 				SUM(scomm) AS CompanyComm,
 				SUM(scomm *actualrate) AS CompanyCommBase,
 				s.ProductID,
-				SUM(1 - b.tpositiontaking) AS HousePT
+				SUM(1 - b.tpositiontaking) AS HousePT,
+				CASE WHEN statusID = 103 THEN 103 ELSE 112 END AS statusID
 			FROM dbo.bettransLC b WITH (NOLOCK)
 				INNER JOIN #SportBettype s ON s.Bettype = b.gameID
 			WHERE b.winlostdate = @WLDate
-				AND b.statusID IN (111, 112, 113) -- won/lose/draw tickets
+				AND b.statusID IN (111, 112, 113, 103) -- won/lose/draw/refund tickets
 				AND s.RefTable = 2		
 				AND ((b.currency <> 20 AND @ExcludeTest = 1) OR @ExcludeTest = 0)
 				AND (b.currency = @Currency OR @Currency IN (0, -1))
@@ -740,7 +774,7 @@ BEGIN
 					OR (@HousePTType = -1 AND b.tpositiontaking >= 1-@HousePTValue) -- 1-tpositiontaking <= @HousePTValue
 					OR (@HousePTType = 1 AND b.tpositiontaking <= 1-@HousePTValue) -- 1-tpositiontaking >= @HousePTValue
 				)
-			GROUP BY b.srecommend, b.mrecommend, b.recommend, b.custid, b.currency, s.ProductID
+			GROUP BY b.srecommend, b.mrecommend, b.recommend, b.custid, b.currency, s.ProductID, CASE WHEN statusID = 103 THEN 103 ELSE 112 END
 		END
 	END
 
@@ -766,7 +800,8 @@ BEGIN
 		CompanyGrossIncomeBase MONEY,
 		CompanyComm MONEY,
 		CompanyCommBase MONEY,
-		HousePT SMALLMONEY
+		HousePT SMALLMONEY,
+		statusID TINYINT
 	)
 	--- Check condition 
 	IF EXISTS (SELECT TOP 1 1 FROM #tmp_bettrans WHERE ProductID NOT IN (3, 4, 5)) -- NG, SLI-Live Casino, Virtual Sport
@@ -790,7 +825,8 @@ BEGIN
 			CompanyGrossIncomeBase,
 			CompanyComm,
 			CompanyCommBase,
-			HousePT
+			HousePT,
+			statusID
 		)
 		SELECT
 			srecommend,
@@ -810,10 +846,11 @@ BEGIN
 			- SUM(CompanyGrossIncomeBase) AS CompanyGrossIncomeBase,
 			- SUM(CompanyComm) AS CompanyComm,
 			- SUM(CompanyCommBase) AS CompanyCommBase,
-			SUM(HousePT) AS HousePT
+			SUM(HousePT) AS HousePT,
+			statusID
 		FROM  #tmp_bettrans
 		WHERE ProductID NOT IN (3, 4, 5)
-		GROUP BY srecommend, mrecommend, recommend, custid, CurrencyID, ProductID
+		GROUP BY srecommend, mrecommend, recommend, custid, CurrencyID, ProductID, statusID
 	END
 
 	IF EXISTS (SELECT TOP 1 1 FROM #SportBettype WHERE ProductID IN (3, 4, 5)) -- NG, SLI-Live Casino, Virtual Sport
@@ -837,7 +874,8 @@ BEGIN
 			CompanyGrossIncomeBase,
 			CompanyComm,
 			CompanyCommBase,
-			HousePT
+			HousePT,
+			statusID
 		)
 		SELECT
 			srecommend,
@@ -857,7 +895,8 @@ BEGIN
 			- SUM(CompanyGrossIncomeBase) AS CompanyGrossIncomeBase,
 			- SUM(CompanyComm) AS CompanyComm,
 			- SUM(CompanyCommBase) AS CompanyCommBase,
-			SUM(HousePT) AS HousePT
+			SUM(HousePT) AS HousePT,
+			statusID
 		FROM  #tmp_bettrans b
 			INNER JOIN dbo.match m WITH (NOLOCK) ON m.matchid = b.matchid
 		WHERE ProductID IN (3, 4, 5) AND b.EvenType = 1
@@ -866,7 +905,7 @@ BEGIN
 				(b.ProductID = 4 AND (@GameTableId = '' OR (EXISTS (SELECT 1 FROM #tmp_GameTableID g WHERE g.GameTableID = m.leagueid)))) OR
 				(b.ProductID = 5 AND (@Sporttype = '' OR (EXISTS (SELECT 1 FROM #tmp_SportType st WHERE st.Sporttype = m.sporttype))))
 			)
-		GROUP BY b.srecommend, b.mrecommend, b.recommend, b.custid, b.CurrencyID, b.ProductID
+		GROUP BY b.srecommend, b.mrecommend, b.recommend, b.custid, b.CurrencyID, b.ProductID, statusID
 
 		-- HR
 		INSERT INTO #Data
@@ -888,7 +927,8 @@ BEGIN
 			CompanyGrossIncomeBase,
 			CompanyComm,
 			CompanyCommBase,
-			HousePT
+			HousePT,
+			statusID
 		)
 		SELECT
 			srecommend,
@@ -908,15 +948,16 @@ BEGIN
 			- SUM(CompanyGrossIncomeBase) AS CompanyGrossIncomeBase,
 			- SUM(CompanyComm) AS CompanyComm,
 			- SUM(CompanyCommBase) AS CompanyCommBase,
-			SUM(HousePT) AS HousePT
+			SUM(HousePT) AS HousePT,
+			statusID
 		FROM  #tmp_bettrans b
 			INNER JOIN dbo.VSRaceInfo r WITH (NOLOCK) ON r.EventID = b.matchid
 		WHERE b.ProductID = 5 AND b.EvenType = 3
 			AND (@Sporttype = '' OR (EXISTS(SELECT 1 FROM #tmp_SportType st WHERE st.Sporttype = r.SportType)))			  
-		GROUP BY b.srecommend, b.mrecommend, b.recommend, b.custid, b.CurrencyID, b.ProductID
+		GROUP BY b.srecommend, b.mrecommend, b.recommend, b.custid, b.CurrencyID, b.ProductID, statusID
 	END
 
-	CREATE TABLE #Result
+	CREATE TABLE #tmp_Result
 	( 
 		custid BIGINT,
 		BetCount INT,
@@ -924,11 +965,13 @@ BEGIN
 		ProductID TINYINT,
 		TotalBets MONEY,
 		TotalWins MONEY,
+		TotalRefund MONEY,
 		CompanyTurnover MONEY,
 		CompanyGrossIncome MONEY,
 		CompanyComm MONEY,
 		TotalBetsBase MONEY,
 		TotalWinsBase MONEY,
+		TotalRefundBase MONEY,
 		CompanyTurnoverBase MONEY,
 		CompanyGrossIncomeBase MONEY,
 		CompanyCommBase MONEY,
@@ -938,7 +981,7 @@ BEGIN
 	-- Return Data
 	IF @RoleID IN (1,2,3,4) -- member (username) / agent / master / super
 	BEGIN
-		IF @IsDrillDown = 1 AND @IsGrandTotal = 0
+		IF @IsDrillDown = 1 --AND @IsGrandTotal = 0
 		BEGIN
 			SELECT @RoleID = @RoleID - 1
 		END
@@ -962,20 +1005,22 @@ BEGIN
 						WHEN 3 THEN mrecommend
 						WHEN 4 THEN srecommend
 						END AS custid,
-					SUM(BetCount) AS BetCount,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE BetCount END) AS BetCount,
 					CurrencyID,
 					ProductID,
-					SUM(TotalBetsBase) AS TotalBets,
-					SUM(TotalWinsBase) AS TotalWins,
-					SUM(CompanyTurnoverBase) AS CompanyTurnover,		
-					SUM(CompanyGrossIncomeBase) AS CompanyGrossIncome,
-					SUM(CompanyCommBase) AS CompanyComm,
-					SUM(TotalBetsBase)  AS TotalBetsBase,
-					SUM(TotalWinsBase) AS TotalWinsBase,
-					SUM(CompanyTurnoverBase) AS CompanyTurnoverBase,		
-					SUM(CompanyGrossIncomeBase) AS CompanyGrossIncomeBase,
-					SUM(CompanyCommBase) AS CompanyCommBase,
-					SUM(HousePT)/SUM(BetCount) AS HousePT
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE TotalBetsBase END) AS TotalBets,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE TotalWinsBase END) AS TotalWins,
+					SUM(CASE statusID WHEN 112 THEN 0 ELSE TotalBetsBase END) AS TotalRefund,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE CompanyTurnoverBase END) AS CompanyTurnover,		
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE CompanyGrossIncomeBase END) AS CompanyGrossIncome,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE CompanyCommBase END) AS CompanyComm,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE TotalBetsBase END)  AS TotalBetsBase,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE TotalWinsBase END) AS TotalWinsBase,
+					SUM(CASE statusID WHEN 112 THEN 0 ELSE TotalBetsBase END) AS TotalRefundBase,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE CompanyTurnoverBase END) AS CompanyTurnoverBase,		
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE CompanyGrossIncomeBase END) AS CompanyGrossIncomeBase,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE CompanyCommBase END) AS CompanyCommBase,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE HousePT END) AS HousePT
 				FROM #Data
 				GROUP BY CASE @roleID
 						WHEN 1 THEN custid
@@ -983,20 +1028,8 @@ BEGIN
 						WHEN 3 THEN mrecommend
 						WHEN 4 THEN srecommend
 						END, CurrencyID, ProductID
-				HAVING
-					(
-						@TotalBetType = 0
-						OR (@TotalBetType = 1 AND SUM(TotalBets) >= @TotalBetValue) 
-						OR (@TotalBetType = -1 AND SUM(TotalBets) <= @TotalBetValue)
-					)
-					AND
-					(
-						@GameIncomeType = 0
-						OR (@GameIncomeType = 1 AND SUM(TotalBets - TotalWins) >= @GameIncomeValue) 
-						OR (@GameIncomeType = -1 AND SUM(TotalBets - TotalWins) <= @GameIncomeValue)
-					)
 			)
-			INSERT INTO #Result
+			INSERT INTO #tmp_Result
 			(
 				custid,
 				BetCount,
@@ -1004,11 +1037,13 @@ BEGIN
 				ProductID,
 				TotalBets,
 				TotalWins,
+				TotalRefund,
 				CompanyTurnover,
 				CompanyGrossIncome,
 				CompanyComm,
 				TotalBetsBase,
 				TotalWinsBase,
+				TotalRefundBase,
 				CompanyTurnoverBase,
 				CompanyGrossIncomeBase,
 				CompanyCommBase,
@@ -1021,11 +1056,13 @@ BEGIN
 				ProductID,
 				TotalBets,
 				TotalWins,
+				TotalRefund,
 				CompanyTurnover,
 				CompanyGrossIncome,
 				CompanyComm,
 				TotalBetsBase,
 				TotalWinsBase,
+				TotalRefundBase,
 				CompanyTurnoverBase,
 				CompanyGrossIncomeBase,
 				CompanyCommBase,
@@ -1042,20 +1079,22 @@ BEGIN
 						WHEN 3 THEN mrecommend
 						WHEN 4 THEN srecommend
 						END AS custid,
-					SUM(BetCount) AS BetCount,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE BetCount END) AS BetCount,
 					CurrencyID,
 					ProductID,
-					SUM(TotalBets) AS TotalBets,
-					SUM(TotalWins) AS TotalWins,
-					SUM(CompanyTurnover) AS CompanyTurnover,		
-					SUM(CompanyGrossIncome) AS CompanyGrossIncome,
-					SUM(CompanyComm) AS CompanyComm,
-					SUM(TotalBetsBase)  AS TotalBetsBase,
-					SUM(TotalWinsBase) AS TotalWinsBase,
-					SUM(CompanyTurnoverBase) AS CompanyTurnoverBase,		
-					SUM(CompanyGrossIncomeBase) AS CompanyGrossIncomeBase,
-					SUM(CompanyCommBase) AS CompanyCommBase,
-					SUM(HousePT)/SUM(BetCount) AS HousePT
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE TotalBets END) AS TotalBets,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE TotalWins END) AS TotalWins,
+					SUM(CASE statusID WHEN 112 THEN 0 ELSE TotalBets END) AS TotalRefund,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE CompanyTurnover END) AS CompanyTurnover,		
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE CompanyGrossIncome END) AS CompanyGrossIncome,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE CompanyComm END) AS CompanyComm,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE TotalBetsBase END)  AS TotalBetsBase,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE TotalWinsBase END) AS TotalWinsBase,
+					SUM(CASE statusID WHEN 112 THEN 0 ELSE TotalBetsBase END) AS TotalRefundBase,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE CompanyTurnoverBase END) AS CompanyTurnoverBase,		
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE CompanyGrossIncomeBase END) AS CompanyGrossIncomeBase,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE CompanyCommBase END) AS CompanyCommBase,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE HousePT END) AS HousePT
 				FROM #Data
 				GROUP BY CASE @roleID
 						WHEN 1 THEN custid
@@ -1063,20 +1102,8 @@ BEGIN
 						WHEN 3 THEN mrecommend
 						WHEN 4 THEN srecommend
 						END, CurrencyID, ProductID
-				HAVING
-					(
-						@TotalBetType = 0
-						OR (@TotalBetType = 1 AND SUM(TotalBets) >= @TotalBetValue) 
-						OR (@TotalBetType = -1 AND SUM(TotalBets) <= @TotalBetValue)
-					)
-					AND
-					(
-						@GameIncomeType = 0
-						OR (@GameIncomeType = 1 AND SUM(TotalBets - TotalWins) >= @GameIncomeValue) 
-						OR (@GameIncomeType = -1 AND SUM(TotalBets - TotalWins) <= @GameIncomeValue)
-					)
 			)
-			INSERT INTO #Result
+			INSERT INTO #tmp_Result
 			(
 				custid,
 				BetCount,
@@ -1084,11 +1111,13 @@ BEGIN
 				ProductID,
 				TotalBets,
 				TotalWins,
+				TotalRefund,
 				CompanyTurnover,
 				CompanyGrossIncome,
 				CompanyComm,
 				TotalBetsBase,
 				TotalWinsBase,
+				TotalRefundBase,
 				CompanyTurnoverBase,
 				CompanyGrossIncomeBase,
 				CompanyCommBase,
@@ -1101,11 +1130,13 @@ BEGIN
 				ProductID,
 				TotalBets,
 				TotalWins,
+				TotalRefund,
 				CompanyTurnover,
 				CompanyGrossIncome,
 				CompanyComm,
 				TotalBetsBase,
 				TotalWinsBase,
+				TotalRefundBase,
 				CompanyTurnoverBase,
 				CompanyGrossIncomeBase,
 				CompanyCommBase,
@@ -1120,20 +1151,22 @@ BEGIN
 			;WITH Result AS (
 				SELECT
 					c.custid,
-					SUM(BetCount) AS BetCount,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE BetCount END) AS BetCount,
 					CurrencyID,
 					ProductID,
-					SUM(TotalBetsBase) AS TotalBets,
-					SUM(TotalWinsBase) AS TotalWins,
-					SUM(CompanyTurnoverBase) AS CompanyTurnover,		
-					SUM(CompanyGrossIncomeBase) AS CompanyGrossIncome,
-					SUM(CompanyCommBase) AS CompanyComm,
-					SUM(TotalBetsBase)  AS TotalBetsBase,
-					SUM(TotalWinsBase) AS TotalWinsBase,
-					SUM(CompanyTurnoverBase) AS CompanyTurnoverBase,		
-					SUM(CompanyGrossIncomeBase) AS CompanyGrossIncomeBase,
-					SUM(CompanyCommBase) AS CompanyCommBase,
-					SUM(HousePT)/SUM(BetCount) AS HousePT
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE TotalBetsBase END) AS TotalBets,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE TotalWinsBase END) AS TotalWins,
+					SUM(CASE statusID WHEN 112 THEN 0 ELSE TotalBetsBase END) AS TotalRefund,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE CompanyTurnoverBase END) AS CompanyTurnover,		
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE CompanyGrossIncomeBase END) AS CompanyGrossIncome,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE CompanyCommBase END) AS CompanyComm,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE TotalBetsBase END)  AS TotalBetsBase,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE TotalWinsBase END) AS TotalWinsBase,
+					SUM(CASE statusID WHEN 112 THEN 0 ELSE TotalBetsBase END) AS TotalRefundBase,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE CompanyTurnoverBase END) AS CompanyTurnoverBase,		
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE CompanyGrossIncomeBase END) AS CompanyGrossIncomeBase,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE CompanyCommBase END) AS CompanyCommBase,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE HousePT END) AS HousePT
 				FROM #Data d
 					INNER JOIN #CustUser c
 						ON c.CustID = CASE c.roleID
@@ -1143,20 +1176,8 @@ BEGIN
 										WHEN 4 THEN d.srecommend
 										END
 				GROUP BY c.custid, CurrencyID, ProductID
-				HAVING
-					(
-						@TotalBetType = 0
-						OR (@TotalBetType = 1 AND SUM(TotalBets) >= @TotalBetValue) 
-						OR (@TotalBetType = -1 AND SUM(TotalBets) <= @TotalBetValue)
-					)
-					AND
-					(
-						@GameIncomeType = 0
-						OR (@GameIncomeType = 1 AND SUM(TotalBets - TotalWins) >= @GameIncomeValue) 
-						OR (@GameIncomeType = -1 AND SUM(TotalBets - TotalWins) <= @GameIncomeValue)
-					)
 			)
-			INSERT INTO #Result
+			INSERT INTO #tmp_Result
 			(
 				custid,
 				BetCount,
@@ -1164,11 +1185,13 @@ BEGIN
 				ProductID,
 				TotalBets,
 				TotalWins,
+				TotalRefund,
 				CompanyTurnover,
 				CompanyGrossIncome,
 				CompanyComm,
 				TotalBetsBase,
 				TotalWinsBase,
+				TotalRefundBase,
 				CompanyTurnoverBase,
 				CompanyGrossIncomeBase,
 				CompanyCommBase,
@@ -1181,11 +1204,13 @@ BEGIN
 				ProductID,
 				TotalBets,
 				TotalWins,
+				TotalRefund,
 				CompanyTurnover,
 				CompanyGrossIncome,
 				CompanyComm,
 				TotalBetsBase,
 				TotalWinsBase,
+				TotalRefundBase,
 				CompanyTurnoverBase,
 				CompanyGrossIncomeBase,
 				CompanyCommBase,
@@ -1197,20 +1222,22 @@ BEGIN
 			;WITH Result AS (
 				SELECT
 					c.custid,
-					SUM(BetCount) AS BetCount,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE BetCount END) AS BetCount,
 					CurrencyID,
 					ProductID,
-					SUM(TotalBets) AS TotalBets,
-					SUM(TotalWins) AS TotalWins,
-					SUM(CompanyTurnover) AS CompanyTurnover,		
-					SUM(CompanyGrossIncome) AS CompanyGrossIncome,
-					SUM(CompanyComm) AS CompanyComm,
-					SUM(TotalBetsBase)  AS TotalBetsBase,
-					SUM(TotalWinsBase) AS TotalWinsBase,
-					SUM(CompanyTurnoverBase) AS CompanyTurnoverBase,		
-					SUM(CompanyGrossIncomeBase) AS CompanyGrossIncomeBase,
-					SUM(CompanyCommBase) AS CompanyCommBase,
-					SUM(HousePT)/SUM(BetCount) AS HousePT
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE TotalBets END) AS TotalBets,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE TotalWins END) AS TotalWins,
+					SUM(CASE statusID WHEN 112 THEN 0 ELSE TotalBets END) AS TotalRefund,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE CompanyTurnover END) AS CompanyTurnover,		
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE CompanyGrossIncome END) AS CompanyGrossIncome,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE CompanyComm END) AS CompanyComm,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE TotalBetsBase END)  AS TotalBetsBase,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE TotalWinsBase END) AS TotalWinsBase,
+					SUM(CASE statusID WHEN 112 THEN 0 ELSE TotalBetsBase END) AS TotalRefundBase,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE CompanyTurnoverBase END) AS CompanyTurnoverBase,		
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE CompanyGrossIncomeBase END) AS CompanyGrossIncomeBase,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE CompanyCommBase END) AS CompanyCommBase,
+					SUM(CASE statusID WHEN 103 THEN 0 ELSE HousePT END) AS HousePT
 				FROM #Data d
 					INNER JOIN #CustUser c
 						ON c.CustID = CASE c.roleID
@@ -1220,20 +1247,8 @@ BEGIN
 										WHEN 4 THEN d.srecommend
 										END
 				GROUP BY c.custid, CurrencyID, ProductID
-				HAVING
-					(
-						@TotalBetType = 0
-						OR (@TotalBetType = 1 AND SUM(TotalBets) >= @TotalBetValue) 
-						OR (@TotalBetType = -1 AND SUM(TotalBets) <= @TotalBetValue)
-					)
-					AND
-					(
-						@GameIncomeType = 0
-						OR (@GameIncomeType = 1 AND SUM(TotalBets - TotalWins) >= @GameIncomeValue) 
-						OR (@GameIncomeType = -1 AND SUM(TotalBets - TotalWins) <= @GameIncomeValue)
-					)
 			)
-			INSERT INTO #Result
+			INSERT INTO #tmp_Result
 			(
 				custid,
 				BetCount,
@@ -1241,11 +1256,13 @@ BEGIN
 				ProductID,
 				TotalBets,
 				TotalWins,
+				TotalRefund,
 				CompanyTurnover,
 				CompanyGrossIncome,
 				CompanyComm,
 				TotalBetsBase,
 				TotalWinsBase,
+				TotalRefundBase,
 				CompanyTurnoverBase,
 				CompanyGrossIncomeBase,
 				CompanyCommBase,
@@ -1258,11 +1275,13 @@ BEGIN
 				ProductID,
 				TotalBets,
 				TotalWins,
+				TotalRefund,
 				CompanyTurnover,
 				CompanyGrossIncome,
 				CompanyComm,
 				TotalBetsBase,
 				TotalWinsBase,
+				TotalRefundBase,
 				CompanyTurnoverBase,
 				CompanyGrossIncomeBase,
 				CompanyCommBase,
@@ -1270,6 +1289,91 @@ BEGIN
 			FROM Result
 		END
 	END
+
+	CREATE TABLE #Result
+	( 
+		custid BIGINT,
+		BetCount INT,
+		CurrencyID INT,
+		TotalBets MONEY,
+		TotalWins MONEY,
+		TotalRefund MONEY,
+		CompanyTurnover MONEY,
+		CompanyGrossIncome MONEY,
+		CompanyComm MONEY,
+		TotalBetsBase MONEY,
+		TotalWinsBase MONEY,
+		TotalRefundBase MONEY,
+		CompanyTurnoverBase MONEY,
+		CompanyGrossIncomeBase MONEY,
+		CompanyCommBase MONEY,
+		HousePT SMALLMONEY
+	)
+
+	INSERT INTO #Result
+	(
+		custid,
+		BetCount,
+		CurrencyID,
+		TotalBets,
+		TotalWins,
+		TotalRefund,
+		CompanyTurnover,
+		CompanyGrossIncome,
+		CompanyComm,
+		TotalBetsBase,
+		TotalWinsBase,
+		TotalRefundBase,
+		CompanyTurnoverBase,
+		CompanyGrossIncomeBase,
+		CompanyCommBase,
+		HousePT
+	)
+	SELECT
+		custid,
+		SUM(BetCount) AS BetCount,
+		CurrencyID,
+		SUM(TotalBets) AS TotalBets,
+		SUM(TotalWins) AS TotalWins,
+		SUM(TotalRefund) AS TotalRefund,
+		SUM(CompanyTurnover) AS CompanyTurnover,
+		SUM(CompanyGrossIncome) AS CompanyGrossIncome,
+		SUM(CompanyComm) AS CompanyComm,
+		SUM(TotalBetsBase) AS TotalBetsBase,
+		SUM(TotalWinsBase) AS TotalWinsBase,
+		SUM(TotalRefundBase) AS TotalRefundBase,
+		SUM(CompanyTurnoverBase) AS CompanyTurnoverBase,
+		SUM(CompanyGrossIncomeBase) AS CompanyGrossIncomeBase,
+		SUM(CompanyCommBase) AS CompanyCommBase,
+		AVG(CASE WHEN BetCount = 0 THEN NULL ELSE HousePT/BetCount END) AS HousePT
+	FROM #tmp_Result
+	GROUP BY custid, CurrencyID
+	HAVING
+		(
+			@TotalBetType = 0
+			OR (@TotalBetType = 1 AND SUM(TotalBets) >= @TotalBetValue) 
+			OR (@TotalBetType = -1 AND SUM(TotalBets) <= @TotalBetValue)
+		)
+		AND
+		(
+			@GameIncomeType = 0
+			OR (@GameIncomeType = 1 AND SUM(TotalBets - TotalWins) >= @GameIncomeValue) 
+			OR (@GameIncomeType = -1 AND SUM(TotalBets - TotalWins) <= @GameIncomeValue)
+		)
+
+	DECLARE @TotalRefundCust BIGINT
+	SELECT  @TotalRefundCust = COUNT(DISTINCT custid)
+	FROM #Result
+	GROUP BY custid
+	HAVING
+		(
+			SUM(TotalBets) = 0
+			AND SUM(TotalWins) = 0
+			AND SUM(CompanyTurnover) = 0
+			AND SUM(CompanyGrossIncome) = 0
+			AND SUM(CompanyComm) = 0
+		)
+	SELECT  @TotalRefundCust = ISNULL(@TotalRefundCust, 0)
 
 	-- Detail
 	IF @IsGrandTotal = 0
@@ -1279,30 +1383,32 @@ BEGIN
 			c.username AS ReportBy,
 			c.roleid AS RoleId,
 			CASE c.roleid WHEN 1 THEN 'Member' WHEN 2 THEN 'Agent' WHEN 3 THEN 'Master' WHEN 4 THEN 'Super' END AS RoleName,
-			SUM(r.BetCount) AS BetCount,
+			r.BetCount,
 			e.exchangeid AS CurrencyId,
 			e.currency AS Currency,
-			SUM(r.TotalBets) AS TotalBets,
-			SUM(r.TotalWins) AS TotalWins,
-			SUM(r.CompanyTurnover) AS CompanyTurnover,
-			SUM(r.CompanyGrossIncome) AS CompanyGrossIncome,
-			SUM(r.CompanyComm) AS CompanyComm,
-			AVG(r.HousePT) AS HousePT
+			r.TotalBets,
+			r.TotalWins,
+			r.TotalRefund,
+			r.CompanyTurnover,
+			r.CompanyGrossIncome,
+			r.CompanyComm,
+			r.HousePT AS HousePositionTaking
 		FROM #Result r
 			INNER JOIN dbo.Exchange e WITH(NOLOCK) ON r.CurrencyID = e.exchangeid
 			INNER JOIN dbo.Customer c WITH(NOLOCK) ON r.custId = c.custid
-		GROUP BY c.custid, c.username, c.roleid, e.exchangeid, e.currency
 		ORDER BY c.username
 	END
 	ELSE
 	BEGIN
+		
 		SELECT
 			SUM(r.BetCount) AS BetCount,
-			COUNT(DISTINCT r.custid) AS NoOfPlayers,
+			COUNT(DISTINCT r.custid) - @TotalRefundCust AS NoOfPlayers,
 			e.exchangeid AS CurrencyId,
 			e.currency AS Currency,
 			SUM(r.TotalBets) AS TotalBets,
 			SUM(r.TotalWins) AS TotalWins,
+			SUM(r.TotalRefund) AS TotalRefund,
 			SUM(r.CompanyTurnover) AS CompanyTurnover,
 			SUM(r.CompanyGrossIncome) AS CompanyGrossIncome,
 			SUM(r.CompanyComm) AS CompanyComm
@@ -1316,11 +1422,12 @@ BEGIN
 	SELECT
 		'GrandTotal' AS ReportBy,
 		SUM(BetCount) AS BetCount,
-		COUNT(DISTINCT custid) AS NoOfPlayers,
+		COUNT(DISTINCT custid) - @TotalRefundCust AS NoOfPlayers,
 		-1 AS CurrencyId,
 		'RM' AS Currency,
 		SUM(TotalBetsBase)  AS TotalBets,
 		SUM(TotalWinsBase) AS TotalWins,
+		SUM(TotalRefundBase) AS TotalRefund,
 		SUM(CompanyTurnoverBase) AS CompanyTurnover,		
 		SUM(CompanyGrossIncomeBase) AS CompanyGrossIncome,
 		SUM(CompanyCommBase) AS CompanyComm
@@ -1336,6 +1443,7 @@ BEGIN
 	DROP TABLE #tmp_SportType
 	DROP TABLE #CustUser
 	DROP TABLE #Result
+	DROP TABLE #tmp_Result
 END
 GO
 
