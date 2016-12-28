@@ -136,4 +136,6 @@ GO
 
 GRANT EXECUTE ON [dbo].[Acc_Rpt_HouseNetIncome_NG2_Credit] TO [bodbAdminNet]
 GO
+GRANT EXECUTE ON [dbo].[Acc_Rpt_HouseNetIncome_NG2_Credit] TO [dwrs]
+GO
 GRANT VIEW definition ON [dbo].[Acc_Rpt_HouseNetIncome_NG2_Credit] TO vnteam

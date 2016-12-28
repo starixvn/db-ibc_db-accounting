@@ -15,6 +15,7 @@ AS
 		- 20160919@Harper - #64338, #64352 - PayToSupplier is incorrect
 		- 20160922@Harper - #64429 - Edit status ID
 		- 20160923@Harper - #64582 - PayToSupplier should use ExchangeOANDA
+		- 20161206@Harper - #65545 - Change formula's PayToSupplier of Credit licensee
 	Param's Explanation:   
 */  
 BEGIN  
@@ -90,12 +91,12 @@ BEGIN
 		INNER JOIN ExtraPT e ON CONVERT(VARCHAR(2), e.rptDate, 106) = f.RptDate
 
 	-- House WL
-	CREATE TABLE #TmpHouseWL (rptDate DATE, HouseWL MONEY, HouseWLOANDA MONEY)
-	INSERT INTO #TmpHouseWL (rptDate, HouseWL, HouseWLOANDA)
+	CREATE TABLE #TmpHouseWL (rptDate DATE, HouseWL MONEY, MemberWLOANDA MONEY)
+	INSERT INTO #TmpHouseWL (rptDate, HouseWL, MemberWLOANDA)
 	SELECT 
 		b.rptDate,
 		ISNULL(-SUM((winlossP+winlossS+winlossM+winlossA+commissionS) * ex.rate),0) HouseWL,
-		ISNULL(-SUM((winlossP+winlossS+winlossM+winlossA+commissionS) * oanda.rate),0) HouseWLOANDA
+		ISNULL(SUM((winlossP+winlossS+winlossM+winlossA) * oanda.rate),0) MemberWLOANDA
 	FROM bodb_Account.dbo.mcSiteDaily b WITH(NOLOCK)
 		INNER JOIN #exchange ex ON b.rptdate = ex.exchangedate AND b.currencyid = ex.ExchangeID
 		INNER JOIN #ExchangeOANDA oanda ON b.rptdate = oanda.exchangedate AND b.currencyid = oanda.ExchangeID
@@ -116,7 +117,7 @@ BEGIN
 
 	-- Pay To Supplier
 	UPDATE f
-	SET PayToSupplier = -0.01 * wl.HouseWLOANDA
+	SET PayToSupplier = 0.01 * wl.MemberWLOANDA
 	FROM #FinalResult f
 		INNER JOIN #TmpHouseWL wl ON CONVERT(VARCHAR(2), wl.rptDate, 106) = f.RptDate
 
@@ -127,11 +128,11 @@ BEGIN
 	SELECT @SumExtraPT = SUM(ExtraPT) FROM #FinalResult
 
 	DECLARE @SumPayToSupplier MONEY
-	SELECT @SumPayToSupplier = SUM(HouseWLOANDA) FROM #TmpHouseWL
+	SELECT @SumPayToSupplier = SUM(MemberWLOANDA) FROM #TmpHouseWL
 
 	-- FullRange amount
 	INSERT INTO #FinalResult (RptDate, HouseWL, ExtraPT, PayToSupplier)
-	VALUES('FullRange', @SumHouseWL, @SumExtraPT, -0.01 * (CASE WHEN @SumPayToSupplier < 0 THEN 0 ELSE @SumPayToSupplier END))
+	VALUES('FullRange', @SumHouseWL, @SumExtraPT, 0.01 * (CASE WHEN @SumPayToSupplier > 0 THEN 0 ELSE @SumPayToSupplier END))
 	
 	---------------------------------------------------- Select the output -------------------------------------------------------
 	DECLARE @SQL VARCHAR(1000)
@@ -162,5 +163,7 @@ END
 GO
 
 GRANT EXECUTE ON [dbo].[Acc_Rpt_HouseNetIncome_VS_Credit] TO [bodbAdminNet]
+GO
+GRANT EXECUTE ON [dbo].[Acc_Rpt_HouseNetIncome_VS_Credit] TO [dwrs]
 GO
 GRANT VIEW definition ON [dbo].[Acc_Rpt_HouseNetIncome_VS_Credit] TO vnteam
