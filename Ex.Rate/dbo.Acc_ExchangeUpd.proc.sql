@@ -1,11 +1,12 @@
-﻿ALTER PROC [dbo].[Acc_ExchangeUpd]
+﻿USE [CustDB]
+GO
+
+ALTER PROC [dbo].[Acc_ExchangeUpd]
 	@exchangeid int,
 	@actualrate FLOAT,
 	@minbet FLOAT = 0,
 	@minbetlive FLOAT = 0,
 	@GBPRate FLOAT = NULL,
-	@AUDRate FLOAT = NULL,
-	@ZARRate FLOAT = NULL,	
 	@EURORate FLOAT = NULL,
 	@US$Rate  FLOAT = NULL,
 	@currency NVARCHAR(50),
@@ -21,7 +22,7 @@ AS
 Created: ?
 Task : Update ex rate
 
-DB: DBTXN/bodb02
+DB: DBCUST.CustDB
 Original: 
 
 Revisions: 
@@ -32,6 +33,7 @@ Revisions:
 	                    coz it will be updated on Affiliate Admin
 	- 20110605@Johnson: Add columns Description, MultipliedBy       
 	- 20130822@Lukas: change alias for DB03
+	- 20161219@Percy: Remove AUDRate and ZARRate columns [RedmineID: #68649]
 Param's Explanation:
 • @actualrate: new rate to update
 • @minbet: update new minbet 
@@ -54,8 +56,6 @@ declare
 	@old_minbetlive FLOAT ,
 	@old_actualrate FLOAT,
 	@old_GBPRate FLOAT ,
-	@old_AUDRate FLOAT ,
-	@old_ZARRate FLOAT ,	
 	@old_EURORate FLOAT ,
 	@old_US$Rate FLOAT ,	
 	@old_currency NVARCHAR(50),
@@ -68,8 +68,6 @@ select
 	@old_minbetlive = minbetlive,
 	@old_actualrate = actualrate,
 	@old_GBPRate = GBPRate,
-	@old_AUDRate = AUDRate,
-	@old_ZARRate = ZARRate,	
 	@old_EURORate = EURORate,
 	@old_US$Rate = US$Rate,	
 	@old_currency = currency,
@@ -82,8 +80,6 @@ UPDATE exchange SET
 	minbet=@minbet,
 	minbetlive=@minbetlive,
 	GBPRate = CASE WHEN ISNULL(@GBPRate,-1) > -1 THEN @GBPRate ELSE GBPRate END,
-	AUDRate = CASE WHEN ISNULL(@AUDRate,-1) > -1 THEN @AUDRate ELSE AUDRate END,
-	ZARRate = CASE WHEN ISNULL(@ZARRate,-1) > -1 THEN @ZARRate ELSE ZARRate END,
 	EURORate = CASE WHEN ISNULL(@EURORate,-1) > -1 THEN @EURORate ELSE EURORate END,
 	US$Rate = CASE WHEN ISNULL(@US$Rate,-1) > -1 THEN @US$Rate ELSE US$Rate END,
 	Description = @Description,
@@ -101,10 +97,6 @@ Select @LogData = 'Update exchange rate:'
 	+  ' ,oldminbetlive='+ ISNULL(convert(VARCHAR(10), @old_minbetlive),'') 
 	+  ' ,newGBPRate='+ ISNULL(convert(VARCHAR(10), @GBPRate),'') 
 	+  ' ,oldGBPRate='+ ISNULL(convert(VARCHAR(10), @old_GBPRate),'') 
-	+  ' ,newAUDRate='+ ISNULL(convert(VARCHAR(10), @AUDRate),'') 
-	+  ' ,oldAUDRate='+ ISNULL(convert(VARCHAR(10), @old_AUDRate),'') 
-	+  ' ,newZARRate='+ ISNULL(convert(VARCHAR(10), @ZARRate),'') 
-	+  ' ,oldZARRate='+ ISNULL(convert(VARCHAR(10), @old_ZARRate),'') 
 	+  ' ,newEURORate='+ ISNULL(convert(VARCHAR(10), @EURORate),'') 
 	+  ' ,oldEURORate='+ ISNULL(convert(VARCHAR(10), @old_EURORate),'') 
 	+  ' ,newUS$Rate='+ ISNULL(convert(VARCHAR(10), @US$Rate),'') 
