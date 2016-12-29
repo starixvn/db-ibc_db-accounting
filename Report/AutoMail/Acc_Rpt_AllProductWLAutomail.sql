@@ -26,6 +26,8 @@ AS
 		- 20160412@Percy: support Voidbridge single wallet [Redmine: #55258]
 		- 20160815@Percy: Apply new bettype of Bettrade: 904 [RedmineID: #61786]
 		- 20161013@Percy: Apply NG2 [RedmineID: #64117]
+		- 20161222@Percy: Apply Fishing World [RedmineID: #65734]
+		- 20161227@Percy: Clean up code Cockfighting [RedmineID: #69446]
 		 
 	Param's Explanation:
 	
@@ -223,11 +225,12 @@ BEGIN
 							WHEN bettype BETWEEN 2008 AND 2009 THEN 19692521
 							WHEN bettype BETWEEN 901 AND 904 THEN 18371760
 							WHEN bettype BETWEEN 18000 AND 18099 THEN 19236210
-							WHEN bettype = 1003 THEN 20174484
+							--WHEN bettype = 1003 THEN 20174484
 							WHEN Sporttype = 44 THEN 20174356
 							WHEN bettype BETWEEN 2401 AND 2499 THEN 20664406
 							WHEN bettype BETWEEN 4001 AND 7999 THEN 21535688
 							WHEN bettype BETWEEN 2501 AND 2699 THEN 23765766
+							WHEN bettype BETWEEN 1011 AND 1020 THEN 24569216
 						END
 		FROM bodb_report.dbo.rptWinLost b WITH(NOLOCK)
 		WHERE b.winlostdate = @_todate
@@ -255,11 +258,12 @@ BEGIN
 							WHEN bettype BETWEEN 2008 AND 2009 THEN 19741787
 							WHEN bettype BETWEEN 901 AND 904 THEN 18377348
 							WHEN bettype BETWEEN 18000 AND 18099 THEN 19235780
-							WHEN bettype = 1003 THEN  20256514
+							--WHEN bettype = 1003 THEN  20256514
 							WHEN Sporttype = 44 THEN 20174451
 							WHEN bettype BETWEEN 2401 AND 2499 THEN 20805826
 							WHEN bettype BETWEEN 4001 AND 7999 THEN 21526102
 							WHEN bettype BETWEEN 2501 AND 2699 THEN 23766923
+							WHEN bettype BETWEEN 1011 AND 1020 THEN 24567778
 						END
 		FROM bodb_report.dbo.rptWinLost b WITH(NOLOCK)
 		WHERE b.winlostdate = @_todate
