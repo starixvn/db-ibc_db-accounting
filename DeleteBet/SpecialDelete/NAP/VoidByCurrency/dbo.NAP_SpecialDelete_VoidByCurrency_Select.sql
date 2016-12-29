@@ -66,6 +66,7 @@ BEGIN
 			GroupName			VARCHAR(10),
 			betdaqid			BIGINT,	
 			SoldId				BIGINT,
+			IsBetTrade			BIT,
 			
 			SubTransId			BIGINT,
 			SubBetCheck			NVARCHAR(50),
@@ -141,7 +142,8 @@ BEGIN
 					NetWinLost,
 					srecommend,
 					GroupName,
-					betdaqid,					
+					betdaqid,
+					IsBetTrade,					
 					
 					SubTransId,
 					SubBetCheck,
@@ -184,7 +186,8 @@ BEGIN
 				b.WinLost - b.actual_stake AS NetWinLost,
 				b.srecommend,
 				tl.GroupName AS GroupName,
-				b.betdaqid,				
+				b.betdaqid,	
+				CASE WHEN b.betdaqid = 0 THEN 1 ELSE 0 END AS IsBetTrade,			
 				
 				NULL AS SubTransId,
 				NULL AS SubBetCheck,
@@ -210,120 +213,127 @@ BEGIN
 			AND b.matchid = @MatchID -- filer for @MatchID	
 			AND b.bettype <> 500 -- exclude charge comm
 		
-		-- get sold records for bettrade tickets
-		;WITH CTE_LastTransBT AS (
-			SELECT  sub.BetId,					
-					sub.RefNo,					
-					sub.TransDate,					
+		IF EXISTS (SELECT TOP 1 1
+				   FROM #SpecialDeleteBets
+				   WHERE betdaqid	= 0)
+		BEGIN
+			-- get sold records for bettrade tickets
+			;WITH CTE_LastTransBT AS (
+				SELECT  sub.BetId,					
+						sub.RefNo,					
+						sub.TransDate,					
+						sub.TransId,
+						sub.UserName,
+						sub.winlost - sub.actual_stake AS NetWinLost,
+						sub.srecommend,
+						ROW_NUMBER() OVER (PARTITION  BY sub.refno ORDER BY sub.transId DESC ) AS BTNo				
+				FROM #SpecialDeleteBets main
+					 INNER JOIN bettrans sub WITH (NOLOCK)
+							ON	main.TransId = sub.refno			 
+				WHERE main.betdaqid	= 0
+				  AND sub.matchid = @MatchID -- filer for @MatchID
+				  AND sub.bettype = 901 -- get only sold records
+				  AND sub.statusID 	IN (111,112,113,103) --WON/LOSE/DRAW/REFUND			  
+			)	
+			INSERT INTO #SpecialDeleteBets(
+						Stake,
+						AwayId,
+						BetCheck,
+						BetId,
+						BetTeam,
+						BetType,
+						CurrencyCode,
+						Creator,					
+						Hdp1,
+						Hdp2,
+						HomeId,
+						IsLiveIndicator,
+						IsNeutral,
+						IsSecondAcceptFlag,
+						LiveAwayScore,
+						LiveHomeScore,
+						Odds,
+						IsMixParlay,
+						OddsType,
+						RefNo,
+						SportType,
+						Status,
+						TransDate,
+						TransDesc,
+						TransId,
+						UserName,
+						NetWinLost,
+						srecommend,
+						GroupName,
+						betdaqid,					
+						IsBetTrade,
+						
+						SubTransId,
+						SubBetCheck,
+						SubBetTeam,
+						SubBetType,
+						SubHdp1,
+						SubHdp2,
+						SubOdds		
+					)
+			SELECT  main.Stake,
+					main.AwayId,
+					main.BetCheck,
+					sub.BetId,
+					main.BetTeam,
+					main.BetType,
+					main.CurrencyCode,
+					main.Creator,					
+					main.Hdp1,
+					main.Hdp2,
+					main.HomeId,
+					main.IsLiveIndicator,
+					main.IsNeutral,
+					main.IsSecondAcceptFlag,
+					main.LiveAwayScore,
+					main.LiveHomeScore,
+					main.Odds,
+					main.IsMixParlay,
+					main.OddsType,
+					sub.RefNo,
+					main.SportType,
+					'SOLD' AS Status,
+					sub.TransDate,
+					main.TransDesc,
 					sub.TransId,
 					sub.UserName,
-					sub.winlost - sub.actual_stake AS NetWinLost,
+					sub.NetWinLost,
 					sub.srecommend,
-					ROW_NUMBER() OVER (PARTITION  BY sub.refno ORDER BY sub.transId DESC ) AS BTNo				
-			FROM #SpecialDeleteBets main
-				 INNER JOIN bettrans sub WITH (NOLOCK)
-						ON	main.TransId = sub.refno			 
-			WHERE main.betdaqid	= 0
-			  AND sub.matchid = @MatchID -- filer for @MatchID
-			  AND sub.bettype = 901 -- get only sold records
-			  AND sub.statusID 	IN (111,112,113,103) --WON/LOSE/DRAW/REFUND			  
-		)	
-		INSERT INTO #SpecialDeleteBets(
-					Stake,
-					AwayId,
-					BetCheck,
-					BetId,
-					BetTeam,
-					BetType,
-					CurrencyCode,
-					Creator,					
-					Hdp1,
-					Hdp2,
-					HomeId,
-					IsLiveIndicator,
-					IsNeutral,
-					IsSecondAcceptFlag,
-					LiveAwayScore,
-					LiveHomeScore,
-					Odds,
-					IsMixParlay,
-					OddsType,
-					RefNo,
-					SportType,
-					Status,
-					TransDate,
-					TransDesc,
-					TransId,
-					UserName,
-					NetWinLost,
-					srecommend,
-					GroupName,
-					betdaqid,					
+					main.GroupName,
+					main.betdaqid,
+					CAST(1 AS BIT) AS IsBetTrade,
 					
-					SubTransId,
-					SubBetCheck,
-					SubBetTeam,
-					SubBetType,
-					SubHdp1,
-					SubHdp2,
-					SubOdds		
-				)
-		SELECT  main.Stake,
-				main.AwayId,
-				main.BetCheck,
-				sub.BetId,
-				main.BetTeam,
-				main.BetType,
-				main.CurrencyCode,
-				main.Creator,					
-				main.Hdp1,
-				main.Hdp2,
-				main.HomeId,
-				main.IsLiveIndicator,
-				main.IsNeutral,
-				main.IsSecondAcceptFlag,
-				main.LiveAwayScore,
-				main.LiveHomeScore,
-				main.Odds,
-				main.IsMixParlay,
-				main.OddsType,
-				sub.RefNo,
-				main.SportType,
-				'SOLD' AS Status,
-				sub.TransDate,
-				main.TransDesc,
-				sub.TransId,
-				sub.UserName,
-				sub.NetWinLost,
-				sub.srecommend,
-				main.GroupName,
-				main.betdaqid,
-				
-				NULL AS SubTransId,
-				NULL AS SubBetCheck,
-				NULL AS SubBetTeam,
-				NULL AS SubBetType,
-				NULL AS SubHdp1,
-				NULL AS SubHdp2,
-				NULL AS SubOdds	
-		FROM #SpecialDeleteBets main
-			 INNER JOIN CTE_LastTransBT sub WITH (NOLOCK)
-					 ON	main.TransId = sub.refno			 
-		WHERE sub.BTNo = 1
-		
-		-- update SoldId column: if main ticket is BT, update SoldId = transid of subticket(901)
-		;WITH CTE_BetTradeSold AS (
-			SELECT transid
-				, refno				
-			FROM #SpecialDeleteBets
-			WHERE STATUS = 'SOLD'
-		)
-		UPDATE	main
-		SET main.SoldId = bt.transid
-		FROM #SpecialDeleteBets main 
-			INNER JOIN CTE_BetTradeSold bt
-			ON main.transId = bt.refno					
-		WHERE main.betdaqid = 0 -- main ticket is BTrade
+					NULL AS SubTransId,
+					NULL AS SubBetCheck,
+					NULL AS SubBetTeam,
+					NULL AS SubBetType,
+					NULL AS SubHdp1,
+					NULL AS SubHdp2,
+					NULL AS SubOdds	
+			FROM #SpecialDeleteBets main
+				 INNER JOIN CTE_LastTransBT sub WITH (NOLOCK)
+						 ON	main.TransId = sub.refno			 
+			WHERE sub.BTNo = 1
+			
+			-- update SoldId column: if main ticket is BT, update SoldId = transid of subticket(901)
+			;WITH CTE_BetTradeSold AS (
+				SELECT transid
+					, refno				
+				FROM #SpecialDeleteBets
+				WHERE STATUS = 'SOLD'
+			)
+			UPDATE	main
+			SET main.SoldId = bt.transid
+			FROM #SpecialDeleteBets main 
+				INNER JOIN CTE_BetTradeSold bt
+				ON main.transId = bt.refno					
+			WHERE main.betdaqid = 0 -- main ticket is BTrade
+		END
 	END
 		
 	--> parlay
@@ -358,7 +368,8 @@ BEGIN
 					NetWinLost,
 					srecommend,
 					GroupName,
-					betdaqid,					
+					betdaqid,
+					IsBetTrade,					
 					
 					SubTransId,
 					SubBetCheck,
@@ -389,11 +400,7 @@ BEGIN
 				main.OddsType,
 				main.RefNo,
 				m.SportType,
-				CASE 
-					WHEN main.status = 'running' AND ISNULL(main.SecAcceptFlag, 0) = 1 AND ISNULL(main.checktime, CURRENT_TIMESTAMP) > CURRENT_TIMESTAMP 
-						THEN 'waiting'
-					ELSE main.status 
-				END AS STATUS,
+				main.STATUS,
 				main.transdate AS TransDate,
 				sub.transdesc AS TransDesc,
 				main.transid AS TransId,
@@ -401,7 +408,8 @@ BEGIN
 				main.winlost - main.actual_stake AS NetWinLost,
 				main.srecommend,
 				tl1.GroupName AS GroupName,
-				main.betdaqid,				
+				main.betdaqid,
+				CAST(0 AS BIT) AS IsBetTrade,			
 				
 				sub.transid AS SubTransId,
 				sub.betcheck AS SubBetCheck,
@@ -486,7 +494,7 @@ BEGIN
 			 END ASC
 		   , s.GroupName ASC
 		   , s.IsMixParlay ASC
-		   , s.TransId ASC
+		   , s.TransId ASC		   
 			
 	SET NOCOUNT OFF
 END
