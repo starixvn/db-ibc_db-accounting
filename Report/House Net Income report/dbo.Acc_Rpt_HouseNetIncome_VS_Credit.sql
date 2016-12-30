@@ -96,7 +96,7 @@ BEGIN
 	SELECT 
 		b.rptDate,
 		ISNULL(-SUM((winlossP+winlossS+winlossM+winlossA+commissionS) * ex.rate),0) HouseWL,
-		ISNULL(SUM((winlossP+winlossS+winlossM+winlossA) * oanda.rate),0) MemberWLOANDA
+		ISNULL(SUM((winlossP) * oanda.rate),0) MemberWLOANDA
 	FROM bodb_Account.dbo.mcSiteDaily b WITH(NOLOCK)
 		INNER JOIN #exchange ex ON b.rptdate = ex.exchangedate AND b.currencyid = ex.ExchangeID
 		INNER JOIN #ExchangeOANDA oanda ON b.rptdate = oanda.exchangedate AND b.currencyid = oanda.ExchangeID
