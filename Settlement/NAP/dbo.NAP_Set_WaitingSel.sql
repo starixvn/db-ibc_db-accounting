@@ -238,10 +238,12 @@ BEGIN
 		, ISNULL(mr.IsHTCal, 0) AS IsHalfTimeCal
 		, ISNULL(mr.isPending, 0) AS IsPending
 		, ISNULL(mr.isUndecided, 0) AS IsUndecided
-		, CAST(CASE WHEN hthomescore IS NOT NULL 
-				AND htawayscore IS NOT NULL 
-				AND finalhomescore IS NOT NULL 
-				AND finalawayscore IS NOT NULL THEN 1 ELSE 0 END AS BIT) AS IsKeyscore
+		,CASE 
+			WHEN (betstatus LIKE 'Abandoned 1H%' AND (hthomescore IS NOT NULL AND htawayscore IS NOT NULL)) THEN 1
+			WHEN (betstatus LIKE 'Abandoned 2H%' AND (finalhomescore IS NOT NULL AND finalawayscore IS NOT NULL)) THEN 1
+			WHEN (hthomescore IS NOT NULL AND htawayscore IS NOT NULL AND finalhomescore IS NOT NULL AND finalawayscore IS NOT NULL) THEN 1
+			ELSE 0
+		END IsKeyscore
 		, IsExistFGLG
 		, IsExistHTFGLG
 		, tm.SingleStatus AS IsCalculatingSingle

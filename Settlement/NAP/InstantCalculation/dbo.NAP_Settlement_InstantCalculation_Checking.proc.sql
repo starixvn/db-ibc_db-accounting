@@ -218,7 +218,7 @@ BEGIN
 			IF(@instantCheck > 0)
 			BEGIN
 				SELECT @ErrCode = 1001002
-					, @ErrMsg   = 'There are some ''WON''/''LOSE'' tickets of 1H/FT Over/Under bet types which need to be un-calculated with the score. Please contact CSD and ask CSD to uncalculate this match first. Then, please try to execute instant calculation again.'
+					, @ErrMsg   = 'Some ''WON''/''LOSE'' tickets settled by instant calculation need to be un-calculated with the score. Please contact CSD and ask CSD to uncalculate the wrong score first. Then, please try to execute instant calculation again.'
 
 				RETURN
 			END
