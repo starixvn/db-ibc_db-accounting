@@ -51,8 +51,7 @@ BEGIN
 		  , @SearchParlay				BIT = 0
 		  , @CountParlay				INT = 0
 		  
-	DECLARE @IsExistParlay				BIT = 0
-		  , @isExistOutright 			BIT = 0
+	DECLARE @IsExistParlay				BIT = 0		  
 		  , @isExistMatch				BIT = 0
 		  , @KeyID						INT
 		  , @AvaiableProcess			BIT = 1			  			  	  	  
@@ -115,15 +114,16 @@ BEGIN
 		)
 		
 	SELECT * INTO #SpecialDeleteBets_Single FROM #SpecialDeleteBets WHERE 1 = 0	
-	CREATE CLUSTERED INDEX IDX_SpecialDeleteBets_Single_custid ON #SpecialDeleteBets_Single(custid)	
-	CREATE INDEX IDX_SpecialDeleteBets_Single_BetType_CustId ON #SpecialDeleteBets_Single(BetType, custid)	
+	CREATE CLUSTERED INDEX IDX_SpecialDeleteBets_Single_betdaqid_transid ON #SpecialDeleteBets_Single(betdaqid, transid)
+	CREATE INDEX IDX_SpecialDeleteBets_Single_BetType_custid_balance ON #SpecialDeleteBets_Single(BetType, custid, balance)	INCLUDE(transid)		
 	
 	SELECT * INTO #SpecialDeleteBets_Parlay FROM #SpecialDeleteBets WHERE 1 = 0
-	CREATE CLUSTERED INDEX IDX_SpecialDeleteBets_Parlay_custid ON #SpecialDeleteBets_Parlay(custid)	
-	CREATE INDEX IDX_SpecialDeleteBets_Parlay_id_TransId ON #SpecialDeleteBets_Parlay(id, TransId)
+	CREATE INDEX IDX_SpecialDeleteBets_Parlay_custid_balance ON #SpecialDeleteBets_Parlay(custid, balance) INCLUDE(transid)
+	CREATE INDEX IDX_SpecialDeleteBets_Parlay_id ON #SpecialDeleteBets_Parlay(id) INCLUDE(TransId, SubTransId, refno)
 	
 	-- BT transaction
 	CREATE TABLE #tblTransIdSolds (grouptransid BIGINT, transid BIGINT PRIMARY KEY)
+	
 	CREATE TABLE #BTTransActive (
 		custid			INT
 		, refno			BIGINT
@@ -131,7 +131,19 @@ BEGIN
 		, bettype		SMALLINT
 		, transId		BIGINT
 		, awinlost		MONEY
+		, BetId			BIGINT DEFAULT (0)
+		, TransDate		DATETIME
+		, UserName		VARCHAR(30)
+		, NetWinLost	MONEY
+		, srecommend	INT
+		, mrecommend	INT
+		, recommend		INT
+		, balance		MONEY
+		, betdaqid		BIGINT
 	)
+	CREATE CLUSTERED INDEX IDX_BTTransActive_bettype_refno ON #BTTransActive(bettype, refno)
+	CREATE INDEX IDX_BTTransActive_bettype_custid_matchid ON #BTTransActive(bettype, custid, matchid)
+	CREATE INDEX IDX_BTTransActive_custid_balance ON #BTTransActive(custid, balance) INCLUDE(transId)	
 			
 	DECLARE @tblCustBT902 TABLE (custid INT, matchid INT) --store BT's custid
 	
@@ -414,8 +426,10 @@ BEGIN
 					AND transid IN (SELECT grouptransid FROM #tblTransIdSolds)								
 			
 			--Insert multiple Bet trade transaction
-			INSERT INTO #BTTransActive (custid, refno, matchid, bettype, transId, awinlost)
+			INSERT INTO #BTTransActive (custid, refno, matchid, bettype, transId, awinlost
+									  , BetId, TransDate, UserName, NetWinLost, srecommend, mrecommend, recommend, balance, betdaqid)
 			SELECT bt.custid, bt.refno, bt.matchid, bt.bettype, bt.transId, bt.awinlost
+				 , bt.BetId, bt.TransDate, bt.UserName, bt.NetWinLost, bt.srecommend, bt.mrecommend, bt.recommend, bt.balance, bt.betdaqid
 			FROM (
 				SELECT sub.custid
 					, sub.refno
@@ -423,15 +437,24 @@ BEGIN
 					, sub.bettype
 					, sub.transId
 					, sub.awinlost
+					, sub.betid
+					, sub.TransDate
+					, sub.UserName
+					, sub.winlost - sub.actual_stake AS NetWinLost
+					, sub.srecommend
+					, sub.mrecommend
+					, sub.recommend	
+					, sub.winlost - sub.actual_stake + sub.playercomm AS balance	
+					, sub.betdaqid	
 					, ROW_NUMBER() OVER ( PARTITION  BY sub.custid, sub.refno, sub.matchid, sub.bettype ORDER BY sub.transId DESC ) AS BTNo 
 					
-				FROM dbo.bettrans sub WITH(NOLOCK)					
-					INNER JOIN #SpecialDeleteBets_Single main
-					ON sub.refno		= main.transId						
-				WHERE sub.matchid = @MatchID
-					AND sub.bettype 		BETWEEN 901 AND 910
-					AND sub.statusID 	IN (111,112,113,103)
-					AND main.betdaqid	= 0
+				FROM #SpecialDeleteBets_Single main
+					INNER JOIN dbo.bettrans sub WITH(NOLOCK)					
+							ON main.transId = sub.refno						
+				WHERE main.betdaqid = 0
+					AND sub.matchid = @MatchID
+					AND sub.bettype BETWEEN 901 AND 910
+					AND sub.statusID IN (111,112,113,103)					
 			) AS bt
 			WHERE bt.BTNo = 1
 			
@@ -503,14 +526,14 @@ BEGIN
 					tmpmain.TransDesc,
 					sub.TransId,
 					sub.UserName,
-					sub.winlost - sub.actual_stake AS NetWinLost,
+					sub.NetWinLost,
 					tmpmain.site,
 					tmpmain.betfrom,
 					sub.srecommend,
 					sub.mrecommend,
 					sub.recommend,
 					sub.custid,
-					sub.winlost - sub.actual_stake + sub.playercomm AS balance,
+					sub.balance,
 					sub.betdaqid,
 					CAST(1 AS BIT) AS IsBetTrade,
 					
@@ -521,16 +544,11 @@ BEGIN
 					NULL AS SubHdp1,
 					NULL AS SubHdp2,
 					NULL AS SubOdds
-			FROM dbo.bettrans sub WITH(NOLOCK)
-				INNER JOIN #BTTransActive bt
-					ON sub.matchid 	= bt.matchid
-					AND sub.bettype	= bt.bettype
-					AND sub.transId	= bt.transId
-					
-				INNER JOIN #SpecialDeleteBets_Single tmpmain 
-					ON	bt.refno 	= tmpmain.transid															
-			WHERE bt.bettype		= 901
-			AND tmpmain.betdaqid 	= 0
+			FROM #SpecialDeleteBets_Single tmpmain										
+				 INNER JOIN #BTTransActive sub
+						 ON tmpmain.transid = sub.refno															
+			WHERE tmpmain.betdaqid = 0
+			  AND sub.bettype = 901
 			
 			SET @CountSingle = @CountSingle + @@ROWCOUNT
 			
@@ -673,8 +691,7 @@ BEGIN
 		BEGIN
 			IF @CountSingle > 0
 			BEGIN
-				SELECT @KeyID = 1
-					 , @isExistOutright	= 0
+				SELECT @KeyID = 1					 
 					 , @isExistMatch = 1			 			 
 							
 				INSERT INTO #tblMatchProcess (matchid, KeyID)
@@ -687,13 +704,9 @@ BEGIN
 				
 			-------> Check concurrent single, parlay
 			EXEC dbo.NAP_Admin_CheckingProcess
-				  @IsReleased	= 0
-				
-				, @isExistOutright 	= @isExistOutright
-				, @isExistMatch		= @isExistMatch
-				
-				, @IsExistParlay	= @IsExistParlay
-				
+				  @IsReleased	= 0								
+				, @isExistMatch		= @isExistMatch				
+				, @IsExistParlay	= @IsExistParlay				
 				, @avaiableProcess 	= @AvaiableProcess OUTPUT
 				, @ErrCode			= @ErrorCode OUTPUT
 				, @ErrMsg			= @ErrorMsg OUTPUT				
@@ -774,9 +787,9 @@ BEGIN
 				,sub.checktime
 				,sub.matchid
 				,sub.bettype
-			FROM dbo.bettrans AS sub WITH (NOLOCK)
-				INNER JOIN #BTTransActive bt
-				ON sub.transId = bt.transId							
+			FROM #BTTransActive bt
+				INNER JOIN dbo.bettrans AS sub WITH (NOLOCK)
+				ON bt.transId = sub.transId							
 		END				
 		
 		--> backups for parlay	
@@ -810,6 +823,7 @@ BEGIN
 		INSERT INTO @tblBeforeBalance (custid, balance)
 		SELECT T.custid, SUM(T.balance) balance
 		FROM (
+				  -- normal and main bettrade
 				  SELECT t.custid
 						,SUM(t.balance) balance
 				  FROM #SpecialDeleteBets_Single t
@@ -817,12 +831,11 @@ BEGIN
 				  GROUP BY t.CustID
 				  -- bettrade
 				  UNION ALL
-				  SELECT sub.custid
-					    ,SUM(sub.winlost - sub.actual_stake + sub.playercomm) AS balance
-				  FROM dbo.bettrans sub WITH (NOLOCK)
-					   INNER JOIN #BTTransActive bt 
-							ON sub.transId = bt.transId					   
-				  GROUP BY sub.custid
+				  SELECT bt.custid
+					    ,SUM(bt.balance) AS balance
+				  FROM #BTTransActive bt 												   
+				  GROUP BY bt.custid
+				  -- parlay
 				  UNION ALL
 				  SELECT t.custid
 						,SUM(t.balance) balance
@@ -893,13 +906,11 @@ BEGIN
 			FROM dbo.bettrans AS sub WITH (ROWLOCK, UPDLOCK)
 				INNER JOIN #BTTransActive bt
 				ON sub.transId = bt.transId			
-			WHERE bt.bettype NOT IN (904)
 			
 			--Pre-CAL 904
 			DECLARE @CustIdsBT VARCHAR(MAX)
 			SET @CustIdsBT = STUFF((SELECT ',' + CAST(CustId AS VARCHAR(50))
-								    FROM #SpecialDeleteBets_Single tt
-								    WHERE tt.IsBetTrade = 1 AND tt.betdaqid = 0
+								    FROM @tblCustBT902 tt								    
 								    FOR XML PATH (''), ROOT('str'), TYPE ).value('/str[1]','VARCHAR(MAX)'), 1, 1, '')
 			EXEC dbo.NAP_Admin_Calculate_904 
 					@MatchId 	= @MatchID
@@ -970,8 +981,7 @@ BEGIN
 			AS(
 				SELECT	transid
 				FROM	#SpecialDeleteBets_Single 
-				WHERE	betdaqid = 0
-						AND IsBetTrade = 1 -- main ticket
+				WHERE	betdaqid = 0 -- main ticket
 			)
 			INSERT INTO dbo.BettradeAPI (
 					transid
@@ -1069,6 +1079,7 @@ BEGIN
 		INSERT INTO @tblAfterBalance (custid, balance)
 		SELECT T.custid, SUM(T.balance) balance
 		FROM (
+				-- normal and main bettrade
 				SELECT	t.custid
 						,SUM (b.winlost - b.actual_stake + b.playercomm) balance
 				FROM #SpecialDeleteBets_Single t	
@@ -1078,12 +1089,13 @@ BEGIN
 				GROUP BY t.CustID
 				-- bettrade
 				UNION ALL
-				SELECT sub.custid
+				SELECT bt.custid
 					  ,SUM(sub.winlost - sub.actual_stake + sub.playercomm) AS balance
 				FROM dbo.bettrans sub WITH (NOLOCK)
 					INNER JOIN #BTTransActive bt 
 						ON sub.transId = bt.transId					
-				GROUP BY sub.custid
+				GROUP BY bt.custid
+				-- parlay
 				UNION ALL
 				SELECT	t.custid
 						,SUM (b.winlost - b.actual_stake + b.playercomm) balance
@@ -1161,11 +1173,8 @@ BEGIN
 			 
 		-------> Release process
 		EXEC dbo.NAP_Admin_CheckingProcess
-			  @IsReleased		= 1
-			
-			, @isExistOutright 	= @isExistOutright
-			, @isExistMatch		= @isExistMatch
-			
+			  @IsReleased		= 1						
+			, @isExistMatch		= @isExistMatch			
 			, @isExistParlay  = @isExistParlay
 			
 		-------> write log		
@@ -1264,11 +1273,8 @@ BEGIN
 	BEGIN CATCH
 		-------> Release process
 		EXEC dbo.NAP_Admin_CheckingProcess
-			  @IsReleased		= 1
-			
-			, @isExistOutright 	= @isExistOutright
-			, @isExistMatch		= @isExistMatch
-			
+			  @IsReleased		= 1						
+			, @isExistMatch		= @isExistMatch			
 			, @isExistParlay  = @isExistParlay			  
 	
 		SELECT @ErrorCode = 100,
