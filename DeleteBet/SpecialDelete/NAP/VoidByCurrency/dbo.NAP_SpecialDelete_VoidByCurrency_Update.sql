@@ -142,10 +142,13 @@ BEGIN
 		, betdaqid		BIGINT
 	)
 	CREATE CLUSTERED INDEX IDX_BTTransActive_bettype_refno ON #BTTransActive(bettype, refno)
-	CREATE INDEX IDX_BTTransActive_bettype_custid_matchid ON #BTTransActive(bettype, custid, matchid)
+	CREATE INDEX IDX_BTTransActive_bettype_custid_matchid ON #BTTransActive(bettype, custid)
 	CREATE INDEX IDX_BTTransActive_custid_balance ON #BTTransActive(custid, balance) INCLUDE(transId)	
 			
-	DECLARE @tblCustBT902 TABLE (custid INT, matchid INT) --store BT's custid
+	DECLARE @tblCustBT902 TABLE 
+	(
+		custid INT	  
+	) --store BT's custid
 	
 	CREATE TABLE #t_CustID_501(custid INT PRIMARY KEY)
 		
@@ -553,8 +556,8 @@ BEGIN
 			SET @CountSingle = @CountSingle + @@ROWCOUNT
 			
 			--insert custBT 
-			INSERT INTO @tblCustBT902( custid, matchid )
-			SELECT DISTINCT bt.custid, bt.matchid
+			INSERT INTO @tblCustBT902( custid)
+			SELECT DISTINCT bt.custid
 			FROM #BTTransActive bt			
 			WHERE bt.bettype = 902				
 		END
@@ -737,7 +740,7 @@ BEGIN
 					main.winlostdate, main.betfrom, main.betcheck, main.checktime, main.matchid, main.bettype
 			FROM #SpecialDeleteBets_Single tmpmain
 				 INNER JOIN dbo.bettrans main WITH (nolock)
-					ON	tmpmain.transid = main.transid
+						 ON tmpmain.transid = main.transid
 			WHERE tmpmain.BetType NOT BETWEEN 901 AND 910
 			
 			-- backups for bettrade ticket
@@ -789,7 +792,7 @@ BEGIN
 				,sub.bettype
 			FROM #BTTransActive bt
 				INNER JOIN dbo.bettrans AS sub WITH (NOLOCK)
-				ON bt.transId = sub.transId							
+						ON bt.transId = sub.transId							
 		END				
 		
 		--> backups for parlay	
@@ -827,7 +830,7 @@ BEGIN
 				  SELECT t.custid
 						,SUM(t.balance) balance
 				  FROM #SpecialDeleteBets_Single t
-				  WHERE t.BetType NOT BETWEEN 901 AND 910					
+				  WHERE t.BetType NOT BETWEEN 901 AND 910
 				  GROUP BY t.CustID
 				  -- bettrade
 				  UNION ALL
@@ -857,7 +860,7 @@ BEGIN
 				  FROM	bettrans sub904 WITH (NOLOCK)
 					    INNER JOIN @tblCustBT902 temp
 								ON sub904.custid = temp.custid
-								   AND sub904.matchid = temp.matchid											
+								   AND sub904.matchid = @MatchID											
 				  WHERE sub904.bettype = 904
 				  GROUP BY sub904.custid
 			 ) AS T
@@ -1085,7 +1088,7 @@ BEGIN
 				FROM #SpecialDeleteBets_Single t	
 					INNER JOIN bettrans b WITH (NOLOCK) 
 							ON t.transid = b.transid
-				WHERE t.BetType NOT BETWEEN 901 AND 910															
+				WHERE t.BetType NOT BETWEEN 901 AND 910
 				GROUP BY t.CustID
 				-- bettrade
 				UNION ALL
@@ -1119,7 +1122,7 @@ BEGIN
 				FROM	bettrans sub904 WITH (NOLOCK)
 					INNER JOIN @tblCustBT902 temp
 					ON sub904.custid = temp.custid
-						AND sub904.matchid = temp.matchid											
+						AND sub904.matchid = @MatchID											
 				WHERE sub904.bettype = 904
 				GROUP BY sub904.custid
 			 )	AS T

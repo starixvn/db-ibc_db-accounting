@@ -226,6 +226,7 @@ BEGIN
 						sub.UserName,
 						sub.winlost - sub.actual_stake AS NetWinLost,
 						sub.srecommend,
+						sub.betdaqid,
 						ROW_NUMBER() OVER (PARTITION  BY sub.refno ORDER BY sub.transId DESC ) AS BTNo				
 				FROM #SpecialDeleteBets main
 					 INNER JOIN bettrans sub WITH (NOLOCK)
@@ -305,7 +306,7 @@ BEGIN
 					sub.NetWinLost,
 					sub.srecommend,
 					main.GroupName,
-					main.betdaqid,
+					sub.betdaqid,
 					CAST(1 AS BIT) AS IsBetTrade,
 					
 					NULL AS SubTransId,
@@ -320,17 +321,11 @@ BEGIN
 						 ON	main.TransId = sub.refno			 
 			WHERE sub.BTNo = 1
 			
-			-- update SoldId column: if main ticket is BT, update SoldId = transid of subticket(901)
-			;WITH CTE_BetTradeSold AS (
-				SELECT transid
-					, refno				
-				FROM #SpecialDeleteBets
-				WHERE STATUS = 'SOLD'
-			)
+			-- update SoldId column: if main ticket is BT, update SoldId = transid of subticket(901)			
 			UPDATE	main
 			SET main.SoldId = bt.transid
 			FROM #SpecialDeleteBets main 
-				INNER JOIN CTE_BetTradeSold bt
+				INNER JOIN #SpecialDeleteBets bt
 				ON main.transId = bt.refno					
 			WHERE main.betdaqid = 0 -- main ticket is BTrade
 		END
@@ -469,6 +464,7 @@ BEGIN
 			s.NetWinLost AS WinLost,			
 			s.GroupName,
 			s.SoldId,
+			s.betdaqid,
 			
 			s.SubTransId,
 			s.SubBetCheck,
@@ -476,7 +472,16 @@ BEGIN
 			s.SubBetType,
 			s.SubHdp1,
 			s.SubHdp2,
-			s.SubOdds
+			s.SubOdds,
+			ROW_NUMBER() OVER(ORDER BY CASE
+											WHEN s.GroupName = @MBCGroup_Name THEN 1
+											WHEN s.GroupName = @789y_Name THEN 2
+											ELSE 3
+									   END ASC
+									 , s.GroupName ASC
+									 , s.IsMixParlay ASC
+									 , s.TransId ASC) AS RowNum
+				INTO #Result								 
 	FROM #SpecialDeleteBets s			
 		 INNER JOIN CustDB.dbo.custInfo cr WITH(NOLOCK)
 				 ON s.creator = cr.custid
@@ -486,15 +491,56 @@ BEGIN
 												 WHERE d.custid = s.srecommend)
 											THEN 1
 									ELSE 0
-							 END AS IsDeposit) AS T1
-	ORDER BY CASE
-				WHEN s.GroupName = @MBCGroup_Name THEN 1
-				WHEN s.GroupName = @789y_Name THEN 2
-				ELSE 3
-			 END ASC
-		   , s.GroupName ASC
-		   , s.IsMixParlay ASC
-		   , s.TransId ASC		   
+							 END AS IsDeposit) AS T1	
+							 
+	UPDATE sub
+	SET RowNum = main.RowNum
+	FROM #Result main
+		 INNER JOIN #Result sub
+				 ON main.transid = sub.RefNo									 
+	WHERE main.betdaqid = 0	
+
+	SELECT 
+		s.Stake,
+		s.AwayId,
+		s.BetCheck,
+		s.BetId,
+		s.BetTeam,
+		s.BetType,
+		s.CurrencyCode,
+		s.Creator,
+		s.Hdp1,
+		s.Hdp2,
+		s.HomeId,
+		s.IsLiveIndicator,
+		s.IsNeutral,
+		s.IsSecondAcceptFlag,
+		s.LiveAwayScore,
+		s.LiveHomeScore,
+		s.Odds,
+		s.IsMixParlay,
+		s.IsCricket,
+		s.OddsType,
+		s.RefNo,
+		s.SportType,
+		s.Status,
+		s.TransDate,
+		s.TransDesc,
+		s.TransId,
+		s.UserName,
+		s.WinLost,			
+		s.GroupName,
+		s.SoldId,
+		
+		s.SubTransId,
+		s.SubBetCheck,
+		s.SubBetTeam,
+		s.SubBetType,
+		s.SubHdp1,
+		s.SubHdp2,
+		s.SubOdds
+	FROM #Result s
+	ORDER BY s.RowNum ASC, s.betdaqid ASC
 			
 	SET NOCOUNT OFF
 END
