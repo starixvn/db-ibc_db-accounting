@@ -31,7 +31,8 @@ AS
 		- 20151023@Patrick: Add more field sporttype to support Muay Thai
 		- 20151302@Kathy: add modds column 
 		- 20150712@Kathy: Database - Change datatype [Redmine: #48660]
-		- 20150119@Kathy: Changes for phase 1.2 of PH All in One: add new column transdesc [Redmine:#50932]	  
+		- 20150119@Kathy: Changes for phase 1.2 of PH All in One: add new column transdesc [Redmine:#50932]
+		- 20170104@Kent: Add Column SportType to output tables [Redmine:#69816]	  
 		
 	Param's Explanation:
 	- @Type: sports type
