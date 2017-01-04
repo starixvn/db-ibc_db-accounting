@@ -172,7 +172,7 @@ BEGIN
 				m.leagueid  as ChoiceLeagueId ,
 				m.sporttype as ChoiceSportType
 				,b.transdesc				
-				,CASE WHEN m.sporttype <> 44 THEN NULL ELSE 44 END AS SportType
+				,m.sporttype AS SportType
 		FROM		Bettrans b WITH (NOLOCK) 
 		INNER JOIN  match m WITH (NOLOCK) on b.matchid = m.matchid 		
 		WHERE		b.srecommend IN ( SELECT custid FROM Dep_CustSuper with(nolock) where site = @LicenseeName)
@@ -236,7 +236,7 @@ BEGIN
 				m.leagueid  as ChoiceLeagueId ,
 				m.sporttype as ChoiceSportType		
 				,b.transdesc		
-				,CASE WHEN m.sporttype <> 44 THEN NULL ELSE 44 END AS SportType
+				,m.sporttype AS SportType
 
 		FROM		translog b WITH (NOLOCK) 
 		INNER JOIN  match m WITH (NOLOCK) on b.eventid = m.matchid 	
@@ -306,7 +306,7 @@ BEGIN
 				m.leagueid  as ChoiceLeagueId ,
 				m.sporttype as ChoiceSportType
 				,b.transdesc
-				,CASE WHEN m.sporttype <> 44 THEN NULL ELSE 44 END AS SportType
+				,m.sporttype AS SportType
 		FROM		Bettrans b WITH (NOLOCK) 
 		INNER JOIN  match m WITH (NOLOCK) on b.matchid = m.matchid 	
 		WHERE		B.recommend NOT IN (SELECT CustID FROM #CustIDs WITH (NOLOCK) ) 
@@ -370,7 +370,7 @@ BEGIN
 				m.leagueid  as ChoiceLeagueId ,
 				m.sporttype as ChoiceSportType
 				,b.transdesc
-				,CASE WHEN m.sporttype <> 44 THEN NULL ELSE 44 END AS SportType
+				,m.sporttype AS SportType
 		FROM		Translog b WITH (NOLOCK) 
 		INNER JOIN  match m WITH (NOLOCK) on b.EventID = m.matchid 
 		LEFT JOIN bettrans bs WITH(NOLOCK) ON b.translogid = bs.refno AND b.gameid = bs.bettype			
@@ -439,7 +439,7 @@ BEGIN
 				m.leagueid  as ChoiceLeagueId ,
 				m.sporttype as ChoiceSportType	
 				,b.transdesc
-				,CASE WHEN m.sporttype <> 44 THEN NULL ELSE 44 END AS SportType
+				,m.sporttype AS SportType
 		FROM		Bettrans b WITH (NOLOCK)
 		INNER JOIN  match m WITH (NOLOCK) on b.matchid = m.matchid 		
 		WHERE		b.statusID NOT IN (101,102, 121)--('Void', 'Reject', 'Dummy') 
@@ -501,7 +501,7 @@ BEGIN
 				m.leagueid  as ChoiceLeagueId ,
 				m.sporttype as ChoiceSportType	
 				,b.transdesc
-				,CASE WHEN m.sporttype <> 44 THEN NULL ELSE 44 END AS SportType
+				,m.sporttype AS SportType
 		FROM		Translog b WITH (NOLOCK)
 		INNER JOIN  match m WITH (NOLOCK) on b.EventID = m.matchid 	
 		LEFT JOIN bettrans bs WITH(NOLOCK) ON b.translogid = bs.refno	AND b.gameid = bs.bettype	
