@@ -624,7 +624,7 @@ BEGIN
 				bm.liveindicator ChoiceLiveIndicator	,
 				m.leagueid  as ChoiceLeagueId ,
 				m.sporttype as ChoiceSportType,
-				NULL AS sporttype,
+				m.sporttype AS sporttype,
 				b.modds,
 				bm.transdesc ChoiceTransDesc
 		FROM	bettransm bm WITH (NOLOCK)	
@@ -690,7 +690,7 @@ BEGIN
 				bm.liveindicator ChoiceLiveIndicator,
 				m.leagueid  as ChoiceLeagueId ,
 				m.sporttype as ChoiceSportType		,
-				NULL AS sporttype,
+				m.sporttype AS sporttype,
 				b.modds,
 				bm.transdesc ChoiceTransDesc
 		FROM	Bettrans b WITH (NOLOCK) 
@@ -754,7 +754,7 @@ BEGIN
 				bm.liveindicator ChoiceLiveIndicator	,
 				m.leagueid  as ChoiceLeagueId ,
 				m.sporttype as ChoiceSportType,
-				NULL AS sporttype				,
+				m.sporttype AS sporttype				,
 				b.modds,
 				bm.transdesc ChoiceTransDesc
 		FROM	Bettrans b WITH (NOLOCK)	
