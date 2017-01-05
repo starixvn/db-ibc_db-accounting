@@ -31,7 +31,8 @@ AS
 		- 20151023@Patrick: Add more field sporttype to support Muay Thai
 		- 20151302@Kathy: add modds column 
 		- 20150712@Kathy: Database - Change datatype [Redmine: #48660]
-		- 20150119@Kathy: Changes for phase 1.2 of PH All in One: add new column transdesc [Redmine:#50932]	  
+		- 20150119@Kathy: Changes for phase 1.2 of PH All in One: add new column transdesc [Redmine:#50932]
+		- 20170104@Kent: Add Column SportType to output tables [Redmine:#69816]	  
 		
 	Param's Explanation:
 	- @Type: sports type
@@ -171,7 +172,7 @@ BEGIN
 				m.leagueid  as ChoiceLeagueId ,
 				m.sporttype as ChoiceSportType
 				,b.transdesc				
-				,CASE WHEN m.sporttype <> 44 THEN NULL ELSE 44 END AS SportType
+				,m.sporttype AS SportType
 		FROM		Bettrans b WITH (NOLOCK) 
 		INNER JOIN  match m WITH (NOLOCK) on b.matchid = m.matchid 		
 		WHERE		b.srecommend IN ( SELECT custid FROM Dep_CustSuper with(nolock) where site = @LicenseeName)
@@ -235,7 +236,7 @@ BEGIN
 				m.leagueid  as ChoiceLeagueId ,
 				m.sporttype as ChoiceSportType		
 				,b.transdesc		
-				,CASE WHEN m.sporttype <> 44 THEN NULL ELSE 44 END AS SportType
+				,m.sporttype AS SportType
 
 		FROM		translog b WITH (NOLOCK) 
 		INNER JOIN  match m WITH (NOLOCK) on b.eventid = m.matchid 	
@@ -305,7 +306,7 @@ BEGIN
 				m.leagueid  as ChoiceLeagueId ,
 				m.sporttype as ChoiceSportType
 				,b.transdesc
-				,CASE WHEN m.sporttype <> 44 THEN NULL ELSE 44 END AS SportType
+				,m.sporttype AS SportType
 		FROM		Bettrans b WITH (NOLOCK) 
 		INNER JOIN  match m WITH (NOLOCK) on b.matchid = m.matchid 	
 		WHERE		B.recommend NOT IN (SELECT CustID FROM #CustIDs WITH (NOLOCK) ) 
@@ -369,7 +370,7 @@ BEGIN
 				m.leagueid  as ChoiceLeagueId ,
 				m.sporttype as ChoiceSportType
 				,b.transdesc
-				,CASE WHEN m.sporttype <> 44 THEN NULL ELSE 44 END AS SportType
+				,m.sporttype AS SportType
 		FROM		Translog b WITH (NOLOCK) 
 		INNER JOIN  match m WITH (NOLOCK) on b.EventID = m.matchid 
 		LEFT JOIN bettrans bs WITH(NOLOCK) ON b.translogid = bs.refno AND b.gameid = bs.bettype			
@@ -438,7 +439,7 @@ BEGIN
 				m.leagueid  as ChoiceLeagueId ,
 				m.sporttype as ChoiceSportType	
 				,b.transdesc
-				,CASE WHEN m.sporttype <> 44 THEN NULL ELSE 44 END AS SportType
+				,m.sporttype AS SportType
 		FROM		Bettrans b WITH (NOLOCK)
 		INNER JOIN  match m WITH (NOLOCK) on b.matchid = m.matchid 		
 		WHERE		b.statusID NOT IN (101,102, 121)--('Void', 'Reject', 'Dummy') 
@@ -500,7 +501,7 @@ BEGIN
 				m.leagueid  as ChoiceLeagueId ,
 				m.sporttype as ChoiceSportType	
 				,b.transdesc
-				,CASE WHEN m.sporttype <> 44 THEN NULL ELSE 44 END AS SportType
+				,m.sporttype AS SportType
 		FROM		Translog b WITH (NOLOCK)
 		INNER JOIN  match m WITH (NOLOCK) on b.EventID = m.matchid 	
 		LEFT JOIN bettrans bs WITH(NOLOCK) ON b.translogid = bs.refno	AND b.gameid = bs.bettype	
@@ -624,7 +625,7 @@ BEGIN
 				bm.liveindicator ChoiceLiveIndicator	,
 				m.leagueid  as ChoiceLeagueId ,
 				m.sporttype as ChoiceSportType,
-				NULL AS sporttype,
+				m.sporttype AS sporttype,
 				b.modds,
 				bm.transdesc ChoiceTransDesc
 		FROM	bettransm bm WITH (NOLOCK)	
@@ -690,7 +691,7 @@ BEGIN
 				bm.liveindicator ChoiceLiveIndicator,
 				m.leagueid  as ChoiceLeagueId ,
 				m.sporttype as ChoiceSportType		,
-				NULL AS sporttype,
+				m.sporttype AS sporttype,
 				b.modds,
 				bm.transdesc ChoiceTransDesc
 		FROM	Bettrans b WITH (NOLOCK) 
@@ -754,7 +755,7 @@ BEGIN
 				bm.liveindicator ChoiceLiveIndicator	,
 				m.leagueid  as ChoiceLeagueId ,
 				m.sporttype as ChoiceSportType,
-				NULL AS sporttype				,
+				m.sporttype AS sporttype				,
 				b.modds,
 				bm.transdesc ChoiceTransDesc
 		FROM	Bettrans b WITH (NOLOCK)	
