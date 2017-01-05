@@ -440,8 +440,7 @@ BEGIN
 			s.BetId,
 			s.BetTeam,
 			s.BetType,
-			s.CurrencyCode,
-			cr.username AS Creator,
+			s.CurrencyCode,			
 			s.Hdp1,
 			s.Hdp2,
 			s.HomeId,
@@ -482,9 +481,7 @@ BEGIN
 									 , s.IsMixParlay ASC
 									 , s.TransId ASC) AS RowNum
 				INTO #Result								 
-	FROM #SpecialDeleteBets s			
-		 INNER JOIN CustDB.dbo.custInfo cr WITH(NOLOCK)
-				 ON s.creator = cr.custid
+	FROM #SpecialDeleteBets s					 
 		 CROSS APPLY (SELECT CASE
 									WHEN EXISTS (SELECT d.custid 
 												 FROM CustDB.dbo.Dep_CustSuper d WITH(NOLOCK) 
@@ -507,8 +504,7 @@ BEGIN
 		s.BetId,
 		s.BetTeam,
 		s.BetType,
-		s.CurrencyCode,
-		s.Creator,
+		s.CurrencyCode,		
 		s.Hdp1,
 		s.Hdp2,
 		s.HomeId,

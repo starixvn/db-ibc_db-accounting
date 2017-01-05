@@ -157,8 +157,7 @@ BEGIN
 			s.BetId,
 			s.BetTeam,
 			s.BetType,
-			s.CurrencyCode,
-			CAST('' AS VARCHAR(50)) AS Creator,
+			s.CurrencyCode,			
 			s.Hdp1,
 			s.Hdp2,			
 			s.IsLiveIndicator,
@@ -1197,8 +1196,7 @@ BEGIN
 				s.BetId,
 				s.BetTeam,
 				s.BetType,
-				s.CurrencyCode,
-				cr.username AS Creator,
+				s.CurrencyCode,				
 				s.Hdp1,
 				s.Hdp2,				
 				s.IsLiveIndicator,
@@ -1257,9 +1255,7 @@ BEGIN
 				SELECT CAST(0 AS BIT) AS IsMixParlay, * FROM #SpecialDeleteBets_Single
 				UNION ALL
 				SELECT CAST(1 AS BIT) AS IsMixParlay, * FROM #SpecialDeleteBets_Parlay
-			 ) s
-			 LEFT JOIN CustDB.dbo.custInfo cr WITH(NOLOCK)
-					 ON s.creator = cr.custid
+			 ) s			 
 			 LEFT JOIN CustDB.dbo.Customer sc WITH(NOLOCK)
 					 ON s.srecommend = sc.custid
 			 LEFT JOIN CustDB.dbo.Customer mc WITH(NOLOCK)
