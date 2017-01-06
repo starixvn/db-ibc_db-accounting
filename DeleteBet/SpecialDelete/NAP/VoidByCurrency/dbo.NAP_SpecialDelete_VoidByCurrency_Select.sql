@@ -231,6 +231,7 @@ BEGIN
 						sub.srecommend,
 						sub.betdaqid,
 						sub.status,
+						sub.bettype,
 						ROW_NUMBER() OVER (PARTITION  BY sub.refno ORDER BY sub.transId DESC ) AS BTNo				
 				FROM #SpecialDeleteBets main
 					 INNER JOIN bettrans sub WITH (NOLOCK)
@@ -285,9 +286,9 @@ BEGIN
 			SELECT  main.Stake,
 					main.AwayId,
 					main.BetCheck,
-					sub.BetId,
+					main.BetType AS BetId,
 					main.BetTeam,
-					main.BetType,
+					sub.BetType AS BetType,
 					main.CurrencyCode,
 					main.Creator,					
 					main.Hdp1,

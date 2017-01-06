@@ -102,7 +102,8 @@ BEGIN
 			custid				INT,
 			balance				MONEY,
 			betdaqid			BIGINT,	
-			IsBetTrade			BIT,
+			IsBetTrade			BIT,			
+			BettradeGroupID		BIGINT,
 			
 			SubTransId			BIGINT,
 			SubBetCheck			NVARCHAR(50),
@@ -320,7 +321,8 @@ BEGIN
 						custid,
 						balance,
 						betdaqid,
-						IsBetTrade,
+						IsBetTrade,						
+						BettradeGroupID,
 						
 						SubTransId,
 						SubBetCheck,
@@ -367,7 +369,8 @@ BEGIN
 					b.custid,
 					b.winlost - b.actual_stake + b.playercomm AS balance,
 					b.betdaqid,
-					CASE WHEN b.betdaqid = 0 THEN 1 ELSE 0 END AS IsBetTrade,
+					CASE WHEN b.betdaqid = 0 THEN 1 ELSE 0 END AS IsBetTrade,					
+					b.transid AS BettradeGroupID,
 					
 					NULL AS SubTransId,
 					NULL AS SubBetCheck,
@@ -494,7 +497,8 @@ BEGIN
 						custid,
 						balance,
 						betdaqid,
-						IsBetTrade,
+						IsBetTrade,						
+						BettradeGroupID,
 						
 						SubTransId,
 						SubBetCheck,
@@ -537,7 +541,8 @@ BEGIN
 					sub.custid,
 					sub.balance,
 					sub.betdaqid,
-					CAST(1 AS BIT) AS IsBetTrade,
+					CAST(1 AS BIT) AS IsBetTrade,					
+					sub.refno AS BettradeGroupID,
 					
 					NULL AS SubTransId,
 					NULL AS SubBetCheck,
@@ -598,7 +603,8 @@ BEGIN
 						custid,
 						balance,
 						betdaqid,
-						IsBetTrade,
+						IsBetTrade,						
+						BettradeGroupID,
 						
 						SubTransId,
 						SubBetCheck,
@@ -645,7 +651,8 @@ BEGIN
 					main.custid,
 					main.winlost - main.actual_stake + main.playercomm AS balance,
 					main.betdaqid,
-					CAST(0 AS BIT) AS IsBetTrade,
+					CAST(0 AS BIT) AS IsBetTrade,					
+					NULL AS BettradeGroupID,
 					
 					sub.transid AS SubTransId,
 					sub.betcheck AS SubBetCheck,
@@ -1267,7 +1274,8 @@ BEGIN
 										 AND sc.roleid = 4 
 											THEN 1
 									ELSE NULL
-								 END AS a) AS T2			 						  			 	
+								 END AS a) AS T2
+		ORDER BY s.IsMixParlay ASC, s.BettradeGroupID ASC, s.betdaqid ASC							 			 						  			 	
 	END TRY
 	BEGIN CATCH
 		-------> Release process
