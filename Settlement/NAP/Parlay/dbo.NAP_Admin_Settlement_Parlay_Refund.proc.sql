@@ -1,3 +1,10 @@
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Parlay_Refund]    Script Date: 1/6/2017 5:16:30 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Parlay_Refund] (
 	@MatchId 			INT
 	, @matchdate		SMALLDATETIME
@@ -22,10 +29,8 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	DECLARE @tempRefundBatch TABLE (transid BIGINT, refno BIGINT, statusId TINYINT)
-	CREATE TABLE #refundBettypes (bettype SMALLINT)
-
-	SELECT @ticketCount		= 0
+	DECLARE @tempRefundBatch TABLE (refno BIGINT, betcount INT)
+	CREATE TABLE #refundBettypes (bettype SMALLINT PRIMARY KEY)
 	
 	INSERT INTO #refundBettypes (bettype)
 	SELECT f.BetType
@@ -46,60 +51,56 @@ BEGIN
 			END
 		AND f.IsAuto = 0 --Exclude BetRadar, FM
 	
-	DECLARE @minTransId		BIGINT
-		,@maxTransId		BIGINT
-		,@fromTransId		BIGINT
+	DECLARE @fromTransId	INT
 		,@batchNo			INT
 		,@batchCount		INT
 		,@strTicket			VARCHAR(MAX)
 
-
-	SELECT  @minTransId 	= MIN(transid)
-		, @maxTransId 		= MAX(transid)
-		, @ticketCount		= COUNT(1)
-	FROM dbo.bettransm bm WITH(NOLOCK)
-		INNER JOIN #refundBettypes t 
-		ON bm.bettype		= t.bettype
-	
-	WHERE bm.matchId		= @matchId
-		AND bm.statusID		NOT IN (101, 102)	
-
-	SELECT @batchNo			= 10000
+	SELECT @batchNo			= 2000
 		, @batchCount		= 0
-		, @fromTransId		= @minTransId
-		
+		, @fromTransId		= 0
+		, @ticketCount		= 0
 	
+	DECLARE @tempRefno TABLE (refno BIGINT)
+	
+	INSERT INTO @tempRefno (refno)
+	SELECT bm.refno
+	FROM dbo.bettransm bm WITH(NOLOCK)
+		INNER JOIN #refundBettypes t ON bm.bettype = t.bettype
+
+	WHERE bm.matchid 	= @matchid
+		AND bm.statusID NOT IN (101,102)
+
+	--GROUP BY bm.refno
+
 	--DO REFUND parlay tickets
 	WHILE (1 = 1)
 	BEGIN
 		
 		DELETE @tempRefundBatch
 		
-		INSERT INTO @tempRefundBatch (transid, refno, statusId)
-		SELECT TOP(@batchNo)
-			bm.transid
-			,bm.refno
-			,103 AS statusId
-		FROM dbo.bettransm bm WITH(ROWLOCK)		
-		WHERE matchid 		= @matchid
-			AND bm.statusID NOT IN (101,102)
-			AND bm.transid 	BETWEEN @fromTransId AND @maxTransId
-			
-		ORDER BY bm.transid
+		DELETE TOP(@batchNo) t
+		OUTPUT deleted.refno INTO @tempRefundBatch(refno)
+		FROM @tempRefno t	
 		
-		SELECT @batchCount 		= @@ROWCOUNT
-			, @strTicket		= CAST((SELECT b.transid AS t
-											,b.refno AS r
-											,b.statusId AS s
-										FROM @tempRefundBatch b
-										FOR XML AUTO) AS VARCHAR(MAX)
-								)
+		SELECT @batchCount	= @@ROWCOUNT
+			,@ticketCount	+= @batchCount
+
+		SELECT @strTicket = CAST(
+			(SELECT TOP(@batchNo)
+				b.transid AS t
+				,b.refno AS r
+				,103 AS s
+			FROM @tempRefundBatch ref
+				INNER JOIN dbo.bettransm b WITH(NOLOCK) ON b.refno = ref.refno
+			WHERE b.matchid 	= @matchid
+			FOR XML AUTO) AS VARCHAR(MAX))
 		
-		select @matchid
-			,@matchdate
-			,@mode AS mode
-			,'REFUND' AS [action] 		
-			,@strTicket AS strTransIds
+		--select @matchid
+		--	,@matchdate
+		--	,@mode AS mode
+		--	,'REFUND' AS [action] 		
+		--	,@strTicket AS strTransIds
 		
 		IF(@strTicket IS NOT NULL)
 		BEGIN
@@ -111,16 +112,12 @@ BEGIN
 			,@strTransIds	= @strTicket
 		END
 		
-		SELECT @fromTransId = MAX(transid) + 1
-		FROM @tempRefundBatch
-		
-		IF(@batchCount < @batchNo OR @fromTransId = @maxTransId) BREAK
+		--BREAK;
+
+		IF(@batchCount = 0 OR @strTicket IS NULL) BREAK
 			
 	END
 	
 	DROP TABLE #refundBettypes
 	RETURN
 END
-GO
-
-			

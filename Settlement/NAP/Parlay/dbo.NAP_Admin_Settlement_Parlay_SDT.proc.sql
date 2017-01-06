@@ -1,3 +1,10 @@
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Parlay_SDT]    Script Date: 1/6/2017 3:31:58 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Parlay_SDT] (
 	@matchId 			INT
 	, @matchdate		SMALLDATETIME
@@ -109,111 +116,106 @@ BEGIN
 		AND f.IsAuto = 0 --Exclude BetRadar, FM
 	
 	BEGIN --SDT Process
-		DECLARE @tempBatch TABLE (transid BIGINT, refno BIGINT, StatusId TINYINT)
-		DECLARE @minTransId		BIGINT
-			,@maxTransId		BIGINT
-			,@fromTransId		BIGINT
+		DECLARE @tempBatch TABLE (refno BIGINT)
+		DECLARE @tempRefno TABLE (refno BIGINT)
+
+		DECLARE @fromTransId		BIGINT
 			,@batchNo			INT
 			,@batchCount		INT
-			,@loopCount			INT
 			,@strTicket			VARCHAR(MAX)
-
-
-		SELECT  @minTransId 	= MIN(transid)
-			, @maxTransId 		= MAX(transid)
-			, @ticketCount		= COUNT(1)
-			
+	
+		INSERT INTO @tempRefno (refno)
+		SELECT bm.refno
 		FROM dbo.bettransm bm WITH(NOLOCK)
-			INNER JOIN #SDTBettypes t 
-			ON bm.bettype		= t.bettype
-		
-		WHERE bm.matchId		= @matchId
-			AND bm.statusID		NOT IN (101, 102)	
+			INNER JOIN #SDTBettypes t ON bm.bettype = t.bettype
+
+		WHERE bm.matchid 	= @matchid
+			AND bm.statusID NOT IN (101,102)
 		
 		SELECT @batchNo			= 2000
 			, @batchCount		= 0
-			, @fromTransId		= @minTransId
+			, @fromTransId		= 0
+			, @ticketCount		= 0
 		
 		WHILE (1 = 1)
 		BEGIN
 		
 			DELETE @tempBatch
-		
-			INSERT INTO @tempBatch(transid, refno, StatusId)
-			SELECT TOP(@batchNo) 
-				bm.transid
-				, bm.refno
-				, CASE 
-					WHEN t.IsDetermined = 1 AND odds.modds IS NOT NULL THEN odds.StatusId 
-					ELSE 103 
-				END AS StatusId
-			FROM dbo.bettransm bm WITH(NOLOCK)
-				INNER JOIN #SDTBettypes t ON bm.bettype = t.bettype
-				OUTER APPLY
-				(
-					SELECT modds, StatusId 
-					FROM [dbo].[f_Set_Parlay_SDT_CalModds](
-						bm.bettype
-						, bm.betteam
-						, bm.hdp1
-						, bm.hdp2
-						, @hScore1H
-						, @aScore1H
-						, @hScore2H
-						, @aScore2H
-						, bm.transdesc
-						, @IsHT
-					)
-					WHERE StatusId IN (112,113)
-					UNION ALL
-					SELECT modds, StatusId 
-					FROM [dbo].[f_Set_Parlay_SDT_CalModds_Corner](
-						bm.bettype
-						, bm.betteam
-						, bm.hdp1
-						, bm.hdp2
-						, @totalConner
-						, @totalConner1H
-						, @ftFCorner
-						, @htFCorner
-						, @hthCorners
-						, @htaCorners
-						, @fthCorners
-						, @ftaCorners
-						, @IsHT
-					)
-					WHERE StatusId IN (112,113)
-					UNION ALL
-					SELECT modds, StatusId 
-					FROM [dbo].[f_Set_Parlay_SDT_CalModds_GoalRecord](
-						bm.bettype
-						, bm.betteam
-						, @GoalRecord
-						, @IsHT
-					)
-					WHERE StatusId IN (112,113)
-				
-				)  AS odds
-			WHERE bm.matchId = @matchId
-				AND bm.statusID NOT IN (101,102)
-				AND bm.transid BETWEEN @fromTransId AND @maxTransId
-
-			ORDER BY bm.transid
-		
-			SELECT @batchCount 	= @@ROWCOUNT
-				, @loopCount	+=  @batchCount
-				, @strTicket	= CAST((SELECT b.transid AS t
-											,b.refno AS r
-											,b.statusId AS s
-										FROM @tempBatch b
-										FOR XML AUTO) AS VARCHAR(MAX)
-									)
 			
-			select @matchid
-				,@matchdate
-				,@mode AS mode
-				,'REFUND' AS [action] 		
-				,@strTicket AS strTransIds
+			DELETE TOP(@batchNo) t
+			OUTPUT deleted.refno INTO @tempBatch(refno)
+			FROM @tempRefno t	
+		
+			SELECT @batchCount	= @@ROWCOUNT
+				,@ticketCount	+= @batchCount
+
+			--INSERT INTO @tempBatch(transid, refno, StatusId)
+			SELECT @strTicket =  CAST(
+				(SELECT TOP(@batchNo) 
+					b.transid AS t
+					, b.refno AS r
+					, CASE 
+						WHEN odds.modds IS NOT NULL THEN odds.StatusId 
+						ELSE 103 
+					END AS s
+				FROM @tempBatch ref 
+					INNER JOIN dbo.bettransm b WITH(NOLOCK) ON ref.refno = b.refno
+					--INNER JOIN #SDTBettypes t ON b.bettype = t.bettype
+					OUTER APPLY
+					(
+						SELECT modds, StatusId 
+						FROM [dbo].[f_Set_Parlay_SDT_CalModds](
+							b.bettype
+							, b.betteam
+							, b.hdp1
+							, b.hdp2
+							, @hScore1H
+							, @aScore1H
+							, @hScore2H
+							, @aScore2H
+							, b.transdesc
+							, @IsHT
+						)
+						WHERE StatusId IN (112,113)
+						UNION ALL
+						SELECT modds, StatusId 
+						FROM [dbo].[f_Set_Parlay_SDT_CalModds_Corner](
+							b.bettype
+							, b.betteam
+							, b.hdp1
+							, b.hdp2
+							, @totalConner
+							, @totalConner1H
+							, @ftFCorner
+							, @htFCorner
+							, @hthCorners
+							, @htaCorners
+							, @fthCorners
+							, @ftaCorners
+							, @IsHT
+						)
+						WHERE StatusId IN (112,113)
+						UNION ALL
+						SELECT modds, StatusId 
+						FROM [dbo].[f_Set_Parlay_SDT_CalModds_GoalRecord](
+							b.bettype
+							, b.betteam
+							, @GoalRecord
+							, @IsHT
+						)
+						WHERE StatusId IN (112,113)
+				
+					)  AS odds
+				
+				WHERE b.matchId = @matchId
+				FOR XML AUTO
+			) AS VARCHAR(MAX))
+					
+			--select @matchid
+			--	,@matchdate
+			--	,@mode AS mode
+			--	,'REFUND' AS [action] 		
+			--	,@strTicket AS strTransIds
 			
 			IF(@strTicket IS NOT NULL)
 			BEGIN
@@ -225,13 +227,12 @@ BEGIN
 					,@strTransIds	= @strTicket
 			END
 			
-			SELECT @fromTransId = MAX(transid) + 1
-			FROM @tempBatch
+			--BREAK;
 			
-			IF(@batchCount < @batchNo OR @fromTransId = @maxTransId) BREAK
+			IF(@batchCount < @batchNo) BREAK
 		
 		END
-		select @loopCount AS LoopCount_SDT
+		
 	END
 	
 	
@@ -240,6 +241,3 @@ BEGIN
 	
 	RETURN
 END
-GO
-
-			

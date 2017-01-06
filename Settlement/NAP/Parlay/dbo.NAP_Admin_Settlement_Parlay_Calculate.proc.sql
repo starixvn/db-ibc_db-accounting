@@ -1,3 +1,10 @@
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Parlay_Calculate]    Script Date: 1/6/2017 3:27:14 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Parlay_Calculate] (
 	@matchId 			INT
 	, @matchdate		SMALLDATETIME
@@ -94,7 +101,7 @@ BEGIN
         ,@ResourceIDsCAL        VARCHAR(MAX)= NULL
         ,@ResourceIDsREFUND        VARCHAR(MAX)= NULL
 
-	CREATE TABLE #bettypeCAL (bettype SMALLINT)
+	CREATE TABLE #bettypeCAL (bettype SMALLINT PRIMARY KEY)
 	
 	SELECT @FGLG1 				= ''
 			, @FGLG2 			= ''
@@ -241,136 +248,134 @@ BEGIN
 	
 	END
 	
-	DECLARE @minTransId		BIGINT
-		,@maxTransId		BIGINT
-		,@fromTransId		BIGINT
-
-	SELECT  @minTransId 	= MIN(transid)
-		, @maxTransId 		= MAX(transid)
-		, @ticketCount		= COUNT(1)
-	FROM dbo.bettransm bm WITH(NOLOCK)
-		INNER JOIN #bettypeCAL t ON bm.bettype = t.bettype
-		
-	WHERE bm.matchId = @matchId
-		AND bm.statusId NOT IN (101, 102)
-	
-	DECLARE @batchNo		INT
+	--Start process
+	DECLARE 
+		@fromTransId		INT
+		,@batchNo			INT
 		,@batchCount		INT
-		,@loopCount			INT = 0
 		,@strTicket			VARCHAR(MAX)
 	
-	DECLARE @tempBatch TABLE (transid BIGINT, refno BIGINT, modds SMALLMONEY, IsRefundGame BIT)
+	DECLARE @tempRefno TABLE (refno BIGINT)
+	DECLARE @tempBatch TABLE (refno BIGINT)
+
+	INSERT INTO @tempRefno (refno)
+	SELECT bm.refno
+	FROM dbo.bettransm bm WITH(NOLOCK)
+		INNER JOIN #bettypeCAL t ON bm.bettype = t.bettype
+
+	WHERE bm.matchid 	= @matchid
+		AND bm.statusID NOT IN (101,102)
+
+	
 	
 	SELECT @batchNo			= 2000
 		, @batchCount		= 0
-		, @fromTransId		= @minTransId
+		, @fromTransId		= 0
 		
 	WHILE (1 = 1)
 	BEGIN
 		
 		DELETE @tempBatch
 		
-		INSERT INTO @tempBatch(transid, refno, modds, IsRefundGame)
-		SELECT TOP(@batchNo) 
-			bm.transid
-			,bm.refno
-			,odds.modds
-			,odds.IsRefundGame
-		FROM dbo.bettransm bm WITH(ROWLOCK)
-			INNER JOIN #bettypeCAL t ON bm.bettype = t.bettype	
-			CROSS APPLY dbo.f_Set_Parlay_CalModds(
-				bm.bettype
-				, bm.betteam
-				, bm.betcheck
-				, bm.livehomescore
-				, bm.liveawayscore
-				, bm.hdp1
-				, bm.hdp2
-				, bm.transdesc
-				, @fth
-				, @fta
-				, @hth
-				, @hta
-				, @HT_FGLG1
-				, @HT_FGLG2
-				, @FGLG1
-				, @FGLG2
-				, @TennisTotal
-				, @TotalGameHomeMatch
-				, @TotalGameAwayMatch
-				, @homeScoreSet1
-				, @homeScoreSet2
-				, @homeScoreSet3
-				, @homeScoreSet4
-				, @homeScoreSet5
-				, @awayScoreSet1
-				, @awayScoreSet2
-				, @awayScoreSet3
-				, @awayScoreSet4
-				, @awayScoreSet5
-				, @SetxGameyHomeWON
-				, @SetxGameyAwayWON
-				, @SetxGameyDRAW
-				, @SetxGameyREFUND
-				, @SelectedSetCAL
-				, @SelectedSetREFUND
-				, @fthCorners
-				, @ftaCorners
-				, @hthCorners
-				, @htaCorners
-				, @FTFCorner
-				, @FTLCorner
-				, @HTFCorner
-				, @HTLCorner
-				, @penaltyshootout
-				, @matchDecidedMethod
-				, @first10Min1x2
-				, @firstGoalTime10Min
-				, @firstGoalTime15Min
-				, @WhoAdvancesNextRound
-				, @ExtraTimeandGoal
-				, @ExtraTimeYN
-				, @PlayerSentOff
-				, @HTPlayerSentOff
-				, @PlayerSentOffHome
-				, @HTPlayerSentOffHome
-				, @PlayerSentOffAway
-				, @HTPlayerSentOffAway
-				, @GoalScorerFirst
-				, @firstHNextGoal
-				, @NextGoal
-				, @NextGoalTime15Min
-				, @ExtraNextGoal
-				, @GoalScorerAnytime
-				, @FirstGoalMethod
-				, @WinFromBehind
-				, @FirstGoal
-				, @csHTFT
-				, @home_firstteam2goals
-				, @away_firstteam2goals
-				, @home_firstteam3goals
-				, @away_firstteam3goals
-			) AS odds
-		WHERE bm.matchId = @matchId
-			AND bm.statusId NOT IN (101, 102)
-			AND bm.transid BETWEEN @fromTransId AND @maxTransId
-		ORDER BY bm.transid
-		
+		DELETE TOP(@batchNo) t
+		OUTPUT deleted.refno INTO @tempBatch(refno)
+		FROM @tempRefno t	
+
 		SELECT @batchCount 	= @@ROWCOUNT
-			, @loopCount	+=  @batchCount
-			, @strTicket	= CAST((SELECT b.transid AS t
-											,b.refno AS r
-											,b.modds AS m
-											,b.IsRefundGame AS i
-										FROM @tempBatch b
-										FOR XML AUTO) AS VARCHAR(MAX)
-								)
+			, @ticketCount	+= @batchCount
+
+		--INSERT INTO @tempBatch(transid, refno, modds, IsRefundGame)
+		SELECT @strTicket = CAST(
+		(
+			SELECT TOP(@batchNo) 
+				b.transid AS t
+				,b.refno AS r
+				,odds.modds AS m
+				,odds.IsRefundGame AS i
+			FROM @tempBatch ref
+				INNER JOIN dbo.bettransm b WITH(NOLOCK) ON ref.refno = b.refno
+				--INNER JOIN #bettypeCAL t ON bm.bettype = t.bettype	
+				OUTER APPLY dbo.f_Set_Parlay_CalModds(
+					b.bettype
+					, b.betteam
+					, b.betcheck
+					, b.livehomescore
+					, b.liveawayscore
+					, b.hdp1
+					, b.hdp2
+					, b.transdesc
+					, @fth
+					, @fta
+					, @hth
+					, @hta
+					, @HT_FGLG1
+					, @HT_FGLG2
+					, @FGLG1
+					, @FGLG2
+					, @TennisTotal
+					, @TotalGameHomeMatch
+					, @TotalGameAwayMatch
+					, @homeScoreSet1
+					, @homeScoreSet2
+					, @homeScoreSet3
+					, @homeScoreSet4
+					, @homeScoreSet5
+					, @awayScoreSet1
+					, @awayScoreSet2
+					, @awayScoreSet3
+					, @awayScoreSet4
+					, @awayScoreSet5
+					, @SetxGameyHomeWON
+					, @SetxGameyAwayWON
+					, @SetxGameyDRAW
+					, @SetxGameyREFUND
+					, @SelectedSetCAL
+					, @SelectedSetREFUND
+					, @fthCorners
+					, @ftaCorners
+					, @hthCorners
+					, @htaCorners
+					, @FTFCorner
+					, @FTLCorner
+					, @HTFCorner
+					, @HTLCorner
+					, @penaltyshootout
+					, @matchDecidedMethod
+					, @first10Min1x2
+					, @firstGoalTime10Min
+					, @firstGoalTime15Min
+					, @WhoAdvancesNextRound
+					, @ExtraTimeandGoal
+					, @ExtraTimeYN
+					, @PlayerSentOff
+					, @HTPlayerSentOff
+					, @PlayerSentOffHome
+					, @HTPlayerSentOffHome
+					, @PlayerSentOffAway
+					, @HTPlayerSentOffAway
+					, @GoalScorerFirst
+					, @firstHNextGoal
+					, @NextGoal
+					, @NextGoalTime15Min
+					, @ExtraNextGoal
+					, @GoalScorerAnytime
+					, @FirstGoalMethod
+					, @WinFromBehind
+					, @FirstGoal
+					, @csHTFT
+					, @home_firstteam2goals
+					, @away_firstteam2goals
+					, @home_firstteam3goals
+					, @away_firstteam3goals
+				) AS odds
+			WHERE b.matchId = @matchId
+			FOR XML AUTO) AS VARCHAR(MAX))
 		
-		select @matchid
+		/*select @matchid
 			,@matchdate
 			,@mode AS mode
 			,'CAL' AS [action] 		
-			,@strTicket AS strTransIds
+			,@strTicket AS strTransIds*/
 			
 		IF(@strTicket IS NOT NULL)
 		BEGIN
@@ -381,17 +386,13 @@ BEGIN
 				,@action 		= 'CAL'
 				,@strTransIds	= @strTicket
 		END
-		
-		SELECT @fromTransId = MAX(transid) + 1
-		FROM @tempBatch
-			
-		IF(@batchCount < @batchNo OR @fromTransId = @maxTransId) BREAK
-	END
 	
-	select @loopCount AS LoopCount_CAL
+		--BREAK;
+			
+		IF(@batchCount < @batchNo) BREAK
+	END
 	
 	DROP TABLE #bettypeCAL
 	
 	RETURN
 END
-GO

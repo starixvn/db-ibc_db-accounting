@@ -23,20 +23,24 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-DECLARE @start 				DATETIME
-	, @stop 				DATETIME
-	, @ActionID 			INT
-	, @IsDetermined 		BIT
-	, @resultDetail_cb 		VARCHAR(MAX) = NULL -- for corners bets
-	, @resultDetail_ss 		VARCHAR(MAX)
-	, @SelectedSetCAL 		VARCHAR(50)
-	, @SelectedSetREFUND 	VARCHAR(50)
-	--ticket count
-	, @ticketCountTotal		INT		
-	, @ticketCountBetRadar	INT
-	, @ticketCountCAL		INT
-	, @ticketCountSDT		INT
-	, @ticketCountREFUND	INT
+	DECLARE @start 				DATETIME
+		, @stop 				DATETIME
+		, @ActionID 			INT
+		, @IsDetermined 		BIT
+		, @resultDetail_cb 		VARCHAR(MAX) = NULL -- for corners bets
+		, @resultDetail_ss 		VARCHAR(MAX)
+		, @SelectedSetCAL 		VARCHAR(50)
+		, @SelectedSetREFUND 	VARCHAR(50)
+		--ticket count
+		, @ticketCountTotal		INT		
+		, @ticketCountBetRadar	INT
+		, @ticketCountCAL		INT
+		, @ticketCountSDT		INT
+		, @ticketCountREFUND	INT
+	--------------------------------
+		,@minRefno				BIGINT
+		,@maxRefno				BIGINT
+		,@IsBetRadar			BIT
 	
 	DECLARE @TennisTotal INT = NULL, @TotalGameHomeMatch INT = NULL, @TotalGameAwayMatch INT = NULL
 
@@ -69,10 +73,10 @@ DECLARE @start 				DATETIME
 	SELECT	TOP(1)
 		@matchdate 		= eventdate
 		,@SportType 	= SportType
-		,@fthomescore 	= ISNULL(finalhomescore, 0)
-		,@ftawayscore 	= ISNULL(finalawayscore, 0)
-		,@hthomescore 	= ISNULL(hthomescore, 0)
-		,@htawayscore 	= ISNULL(htawayscore, 0)
+		,@fthomescore 	= finalhomescore
+		,@ftawayscore 	= finalawayscore
+		,@hthomescore 	= hthomescore
+		,@htawayscore 	= htawayscore
 		,@betstatus 	= ISNULL(betstatus,'')
 		,@GoalRecord 	= ISNULL(GoalRecord, '')
 		,@IsRefundHT 	= CASE WHEN @betstatus LIKE 'Refund HT%' THEN 1 ELSE 0 END
@@ -98,7 +102,11 @@ DECLARE @start 				DATETIME
 		IF @ErrCode > 0
 			RETURN
 			
-		IF (@fthomescore IS NULL OR @ftawayscore IS NULL OR @hthomescore IS NULL OR @htawayscore IS NULL) 
+		IF (
+			(@hthomescore IS NULL AND @htawayscore IS NULL) --HT scores
+			AND 
+			(@fthomescore IS NULL AND @ftawayscore IS NULL) --FT scores
+		)
 		BEGIN
 			SELECT	@ErrCode = 1000003
 					,@ErrMsg = 'This match has not been keyed in score yet'
@@ -126,19 +134,19 @@ DECLARE @start 				DATETIME
 	END
 	
 	BEGIN TRY
+	
+		SELECT TOP(1) @IsBetRadar = 1
+		FROM dbo.bettransm bm WITH (NOLOCK)
+			CROSS APPLY (
+				SELECT TOP 1 1 AS IsBetRadar
+				FROM dbo.f_Set_GetGroupBettypes() AS f 
+				WHERE BetType = bm.bettype AND f.GroupId = 8
+			) AS f
+		WHERE matchid 		= @matchId
+			AND statusID	NOT IN (101, 102)
+
 		--CHECK Auto-Bettype first if any
-		IF (EXISTS (
-				SELECT TOP 1 1
-				FROM dbo.bettransm bm (NOLOCK)
-				WHERE bm.matchid = @matchId
-					AND EXISTS (
-						SELECT TOP 1 1 
-						FROM dbo.f_Set_GetGroupBettypes() AS f 
-						WHERE f.GroupId 	= 8 
-							AND f.bettype 	= bm.bettype
-					)
-				)
-		)
+		IF (@IsBetRadar = 1)
 		BEGIN		
 			EXEC dbo.NAP_Admin_Settlement_Parlay_BetRadar
 				@MatchId			= @MatchId
