@@ -74,7 +74,8 @@ BEGIN
 			SubBetType			SMALLINT,
 			SubHdp1				SMALLMONEY,
 			SubHdp2				SMALLMONEY,
-			SubOdds				MONEY
+			SubOdds				MONEY,
+			SubStatus			NVARCHAR(10)
 		)			
 				
 	CREATE TABLE #t_LicenseeNames(LicenseeName VARCHAR(100), GroupName VARCHAR(10))
@@ -151,7 +152,8 @@ BEGIN
 					SubBetType,
 					SubHdp1,
 					SubHdp2,
-					SubOdds		
+					SubOdds,
+					SubStatus	
 				)
 		SELECT 	b.Stake,
 				m.AwayId,
@@ -195,7 +197,8 @@ BEGIN
 				NULL AS SubBetType,
 				NULL AS SubHdp1,
 				NULL AS SubHdp2,
-				NULL AS SubOdds		
+				NULL AS SubOdds,
+				b.status AS SubStatus		
 		FROM bettrans b WITH (NOLOCK)
 			 INNER JOIN #t_exchanges te WITH (NOLOCK)
 					 ON b.currency = te.exchangeid -- filter for @CurrencyCodes			 
@@ -227,6 +230,7 @@ BEGIN
 						sub.winlost - sub.actual_stake AS NetWinLost,
 						sub.srecommend,
 						sub.betdaqid,
+						sub.status,
 						ROW_NUMBER() OVER (PARTITION  BY sub.refno ORDER BY sub.transId DESC ) AS BTNo				
 				FROM #SpecialDeleteBets main
 					 INNER JOIN bettrans sub WITH (NOLOCK)
@@ -275,7 +279,8 @@ BEGIN
 						SubBetType,
 						SubHdp1,
 						SubHdp2,
-						SubOdds		
+						SubOdds,
+						SubStatus	
 					)
 			SELECT  main.Stake,
 					main.AwayId,
@@ -315,7 +320,8 @@ BEGIN
 					NULL AS SubBetType,
 					NULL AS SubHdp1,
 					NULL AS SubHdp2,
-					NULL AS SubOdds	
+					NULL AS SubOdds,
+					sub.status AS SubStatus
 			FROM #SpecialDeleteBets main
 				 INNER JOIN CTE_LastTransBT sub WITH (NOLOCK)
 						 ON	main.TransId = sub.refno			 
@@ -372,7 +378,8 @@ BEGIN
 					SubBetType,
 					SubHdp1,
 					SubHdp2,
-					SubOdds		
+					SubOdds,
+					SubStatus		
 				)
 		SELECT  main.Stake,
 				m.AwayId,
@@ -412,7 +419,8 @@ BEGIN
 				sub.bettype AS SubBetType,
 				sub.hdp1 AS SubHdp1,
 				sub.hdp2 AS SubHdp2,
-				sub.odds AS SubOdds		
+				sub.odds AS SubOdds,
+				sub.status AS SubStatus
 		FROM bettrans main WITH (NOLOCK)
 			 INNER JOIN #t_exchanges te WITH (NOLOCK)
 					 ON main.currency = te.exchangeid  -- filter for @CurrencyCodes
@@ -472,6 +480,7 @@ BEGIN
 			s.SubHdp1,
 			s.SubHdp2,
 			s.SubOdds,
+			s.SubStatus,
 			ROW_NUMBER() OVER(ORDER BY CASE
 											WHEN s.GroupName = @MBCGroup_Name THEN 1
 											WHEN s.GroupName = @789y_Name THEN 2
@@ -534,7 +543,8 @@ BEGIN
 		s.SubBetType,
 		s.SubHdp1,
 		s.SubHdp2,
-		s.SubOdds
+		s.SubOdds,
+		s.SubStatus
 	FROM #Result s
 	ORDER BY s.RowNum ASC, s.betdaqid ASC
 			
