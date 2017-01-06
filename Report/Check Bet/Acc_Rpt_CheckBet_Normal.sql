@@ -20,6 +20,7 @@ AS
 		- 20160427@Percy: Support ComboParlay [Redmine: #56572]
 		- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
 		- 20160830@Robert: Enhance System/Mix Parlay [RedmineID: #63022]
+		- 20161206@Percy: Integrate Fast Market [RedmineID: #56803]
 	Param's explanation:		
 	
 */
@@ -60,6 +61,7 @@ BEGIN
 				OR (bt.betteam<>b.betteam AND bt.bettype NOT IN (SELECT bettype FROM @SportBettype WHERE (ProductID=2) OR (ProductID=5 AND EventType =3)))----bt.bettype NOT IN (31,32,33,41,42,43, 1231,1232,1233,1237,1238))
 				OR ((bt.matchid<>b.matchid) AND ((s.ProductID=2) OR (s.ProductID = 1 AND s.EventType = 2)))-----bt.bettype IN (31,32,33,41,42,43,10))
 				OR ((bt.oddsid<>b.oddsid) AND (s.ProductID = 5 AND s.EventType = 3))---- bt.bettype IN (1231,1232,1233,1237,1238))
+				OR (bt.hdp2<>b.hdp2 AND bt.bettype BETWEEN 221 AND 225) -- Fast Market
                 )    
                 
 	DECLARE @Match TABLE (matchid int, homeid int, awayid int, matchcode nvarchar(50), type varchar(10))
@@ -124,6 +126,8 @@ BEGIN
 			case when ((s.ProductID=2) OR (s.ProductID = 1 AND s.EventType = 2)) then m2.matchcode else m1.matchcode end as OldMatchCode, ---bt.bettype IN (31,32,33,41,42,43,10)
 			bt.liveindicator,
 			bt.hdp1,
+			bt.hdp2 AS NewHdp2,
+			b.hdp2 AS OldHdp2,
 			bt.oddstype,
 			bt.tpositiontaking as NewPT, 
 			b.tpositiontaking as OldPT, 
@@ -152,7 +156,7 @@ BEGIN
 			bt.odds as NewOdds,
 			b.odds as OldOdds, 			
 			bt.betteam as NewBetteam,
-			bt.betteam as OldBetteam, 
+			bt.betteam as OldBetteam, -- don't use for HR, just keep same format
 			m1.homeid,
 			m1.awayid as NewAwayID,			
 			m2.awayid as OldAwayID,			
@@ -160,6 +164,8 @@ BEGIN
 			m2.matchcode as OldMatchCode,
 			bt.liveindicator,
 			bt.hdp1,
+			bt.hdp2 AS NewHdp2,
+			bt.hdp2 AS OldHdp2,
 			bt.oddstype,
 			bt.tpositiontaking as NewPT, 
 			b.tpositiontaking as OldPT, 
