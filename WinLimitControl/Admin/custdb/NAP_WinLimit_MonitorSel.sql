@@ -20,6 +20,7 @@ CREATE PROCEDURE NAP_WinLimit_MonitorSel @FromDate        DATETIME,
                                          @UserName        NVARCHAR(50) = '',
                                          @SiteId          INT          = 0,
                                          @CurrencyId      INT          = 0,
+                                         @LevelId         INT          = 0,
                                          @ExcludeTestData BIT          = 1
 AS
 
@@ -40,6 +41,7 @@ Parameters Explanation:
    @UserName: UserName
    @SiteId: Site ID
    @CurrencyId: Currency ID
+   @LevelId: Level Id
    
 Example:
 EXEC NAP_WinLimit_MonitorSel @FromDate = '20160101', @ToDate = '20161231'
@@ -108,7 +110,9 @@ EXEC NAP_WinLimit_MonitorSel @FromDate = '20160101', @ToDate = '20161231'
                            OR ci.currency NOT IN(20, 72)) -- UUS & YNG
                      AND ci.roleid = 1
                      AND (LEN(@UserName) = 0
-                          OR ci.username = @UserName);
+                          OR ci.username = @UserName)
+                     AND (@LevelId = 0
+                          OR cm.LevelID = @LevelId);
      END;
      BEGIN -- Query data
          SELECT m.CustId,
