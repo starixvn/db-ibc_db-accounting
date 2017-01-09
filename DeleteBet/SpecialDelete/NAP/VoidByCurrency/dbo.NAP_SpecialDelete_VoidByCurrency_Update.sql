@@ -652,7 +652,7 @@ BEGIN
 					main.winlost - main.actual_stake + main.playercomm AS balance,
 					main.betdaqid,
 					CAST(0 AS BIT) AS IsBetTrade,					
-					NULL AS BettradeGroupID,
+					main.transid AS BettradeGroupID,
 					
 					sub.transid AS SubTransId,
 					sub.betcheck AS SubBetCheck,
