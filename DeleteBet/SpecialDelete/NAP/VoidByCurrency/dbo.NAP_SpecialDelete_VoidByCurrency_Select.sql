@@ -191,7 +191,7 @@ BEGIN
 				b.betdaqid,	
 				CASE WHEN b.betdaqid = 0 THEN 1 ELSE 0 END AS IsBetTrade,			
 				
-				NULL AS SubTransId,
+				b.TransId AS SubTransId,
 				NULL AS SubBetCheck,
 				NULL AS SubBetTeam,
 				NULL AS SubBetType,
@@ -315,7 +315,7 @@ BEGIN
 					sub.betdaqid,
 					CAST(1 AS BIT) AS IsBetTrade,
 					
-					NULL AS SubTransId,
+					sub.TransId AS SubTransId,
 					NULL AS SubBetCheck,
 					NULL AS SubBetTeam,
 					NULL AS SubBetType,

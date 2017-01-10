@@ -10,7 +10,7 @@ ALTER PROCEDURE [dbo].[NAP_SpecialDelete_VoidByCurrency_Update]
 	@LicenseeNames	VARCHAR(MAX),
 	@TicketType		VARCHAR(100) = 'All',
 	@CurrencyIDs	VARCHAR(MAX),
-	@MainTransIDs	VARCHAR(MAX),
+	@TransIDs		VARCHAR(MAX),
 	@SoldTransIds	VARCHAR(MAX) = '', -- just for BetTrade's subticket (transid of bettype 901)		
 
 	@UserID			INT,  
@@ -56,7 +56,7 @@ BEGIN
 		  , @KeyID						INT
 		  , @AvaiableProcess			BIT = 1			  			  	  	  
 	
-	DECLARE @tblMainTransIds TABLE (transid BIGINT)
+	DECLARE @tblTransIds TABLE (transid BIGINT)
 	
 	DECLARE @tblBeforeBalance TABLE (custid INT PRIMARY KEY, balance MONEY)
 	
@@ -216,7 +216,7 @@ BEGIN
 				,@ErrorCode = 101  
 		
 		SELECT @LogData = 'Try to delete transaction for custid: ' + cast(@UserID AS VARCHAR(10)) + ' betlist: ' 
-							+ cast(@MainTransIDs AS VARCHAR(8000)) + ' - Username: ' + @username + ' - reason: ' + @reason  
+							+ cast(@TransIDs AS VARCHAR(8000)) + ' - Username: ' + @username + ' - reason: ' + @reason  
 		  
 		EXEC [dbo].[WriteLog_UserLog] @UserID = @UserID ,@Doing = @LogData
 		
@@ -247,9 +247,9 @@ BEGIN
 				 ON CAST(ss.val AS INT) = e.exchangeid	
 				 
 	-------> Parse @MainTransIds
-	INSERT INTO @tblMainTransIds(transid)
+	INSERT INTO @tblTransIds(transid)
 	SELECT ss.val AS transid
-	FROM dbo.strSplit(@MainTransIds, ',') ss
+	FROM dbo.strSplit(@TransIds, ',') ss
 	
 	IF @@ROWCOUNT = 0
 	BEGIN		
@@ -372,14 +372,14 @@ BEGIN
 					CASE WHEN b.betdaqid = 0 THEN 1 ELSE 0 END AS IsBetTrade,					
 					b.transid AS BettradeGroupID,
 					
-					NULL AS SubTransId,
+					b.TransId AS SubTransId,
 					NULL AS SubBetCheck,
 					NULL AS SubBetTeam,
 					NULL AS SubBetType,
 					NULL AS SubHdp1,
 					NULL AS SubHdp2,
 					NULL AS SubOdds		
-			FROM @tblMainTransIds t
+			FROM @tblTransIds t
 				 INNER JOIN bettrans b WITH (NOLOCK)
 						 ON t.transid = b.transid
 				 INNER JOIN #t_exchanges te WITH (NOLOCK)
@@ -544,7 +544,7 @@ BEGIN
 					CAST(1 AS BIT) AS IsBetTrade,					
 					sub.refno AS BettradeGroupID,
 					
-					NULL AS SubTransId,
+					sub.TransId AS SubTransId,
 					NULL AS SubBetCheck,
 					NULL AS SubBetTeam,
 					NULL AS SubBetType,
@@ -661,20 +661,20 @@ BEGIN
 					sub.hdp1 AS SubHdp1,
 					sub.hdp2 AS SubHdp2,
 					sub.odds AS SubOdds		
-			FROM @tblMainTransIds t
-				 INNER JOIN bettrans main WITH (NOLOCK)
-						 ON t.transid = main.transid
-				 INNER JOIN #t_exchanges te WITH (NOLOCK)
-						 ON main.currency = te.exchangeid  -- filter for @CurrencyCodes
-				 INNER JOIN CUSTDB.dbo.Customer c WITH (NOLOCK)
-						 ON main.recommend = c.custid
-				 INNER JOIN #t_LicenseeNames tl1 WITH (NOLOCK)
-						 ON tl1.LicenseeName = c.site -- filter for @LicenseeIDs				 						 			 				 					 
-				 
+			FROM @tblTransIds t				 				 						 			 				 					 				 
 				 INNER JOIN dbo.bettransm sub WITH (NOLOCK)	
-						 ON main.refno = sub.refno
+						 ON t.transid = sub.transid
 				 INNER JOIN match m WITH (NOLOCK)
 						 ON sub.matchid = m.matchid
+						 
+				INNER JOIN bettrans main WITH (NOLOCK)
+						 ON sub.refno = main.refno
+				INNER JOIN #t_exchanges te WITH (NOLOCK)
+					     ON main.currency = te.exchangeid  -- filter for @CurrencyCodes
+				INNER JOIN CUSTDB.dbo.Customer c WITH (NOLOCK)
+						 ON main.recommend = c.custid
+				INNER JOIN #t_LicenseeNames tl1 WITH (NOLOCK)
+						 ON c.site = tl1.LicenseeName -- filter for @LicenseeIDs						 
 			WHERE main.matchid IN (9, 29) AND main.bettype IN (9, 29) -- parlay
 				AND main.statusID NOT IN (101, 102) -- reject, void				
 				AND main.betfrom <> 'P' -- exclude phone betting
