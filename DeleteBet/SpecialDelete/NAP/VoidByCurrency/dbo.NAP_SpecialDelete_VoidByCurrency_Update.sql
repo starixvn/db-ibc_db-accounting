@@ -450,7 +450,8 @@ BEGIN
 					, sub.mrecommend
 					, sub.recommend	
 					, sub.winlost - sub.actual_stake + sub.playercomm AS balance	
-					, sub.betdaqid	
+					, sub.betdaqid
+					, sub.bettype	
 					, ROW_NUMBER() OVER ( PARTITION  BY sub.custid, sub.refno, sub.matchid, sub.bettype ORDER BY sub.transId DESC ) AS BTNo 
 					
 				FROM #SpecialDeleteBets_Single main
@@ -511,9 +512,9 @@ BEGIN
 			SELECT  tmpmain.Stake,
 					tmpmain.AwayId,
 					tmpmain.BetCheck,
-					sub.BetId,
+					tmpmain.bettype AS BetId, -- sub.BetId,
 					tmpmain.BetTeam,
-					tmpmain.BetType,
+					sub.bettype AS bettype, -- tmpmain.BetType,
 					tmpmain.CurrencyCode,
 					tmpmain.Creator,						
 					tmpmain.Hdp1,
