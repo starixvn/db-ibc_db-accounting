@@ -8,8 +8,8 @@ IF EXISTS
     DROP PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Game_Product_14];
 GO
 CREATE PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Game_Product_14] @StartDate  SMALLDATETIME,
-                                                             @EndDate    SMALLDATETIME,
-                                                             @CasinoType INT
+                                                                @EndDate    SMALLDATETIME,
+                                                                @CasinoType INT
 AS
 
 /*
@@ -72,7 +72,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Product_14] @EndDate='2020-01-01',@StartDate='
                        SuperId,
                        SUM(ExtraPT) AS ExtraPT
                 FROM bodb_ACC.dbo.Acc_GroupExtraPTSetting a WITH (NOLOCK)
-                WHERE @StartDate BETWEEN FromDate AND Todate                      
+                WHERE @StartDate BETWEEN FromDate AND Todate
                 GROUP BY ProductID,
                          SuperId;
      END;
@@ -110,7 +110,11 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Product_14] @EndDate='2020-01-01',@StartDate='
                            SUM(scomm * actualrate) Commission,
                            SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
                            SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover,
-                           SUM((winlost - actual_stake) * actualrate * ISNULL(e.ExtraPT, 0)) AS ExtraPT
+                           SUM(CASE
+                                   WHEN tpositiontaking = 1
+                                   THEN winlost - actual_stake
+                                   ELSE winlost - actual_stake + scomm / (1 - tpositiontaking)
+                               END * ISNULL(e.ExtraPT, 0)) AS ExtraPT
                     FROM bettrans14 AS b WITH (NOLOCK)
                          INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
                          LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId

@@ -24,7 +24,7 @@ Revisions:
 				   . Not use @EndDate because we get only one day on (bettrans/bettrans14 range) 
 
 Example:
-EXEC [Acc_Rpt_CompanyWinLoss_Game_Product] @EndDate='2020-01-01',@StartDate='2016-01-01', @CasinoType = 1
+EXEC [Acc_Rpt_CompanyWinLoss_Game_Product] @EndDate='2020-01-01',@StartDate='2017-01-05', @CasinoType = 1
 */
 
      SET NOCOUNT ON;
@@ -72,7 +72,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Product] @EndDate='2020-01-01',@StartDate='201
                        SuperId,
                        SUM(ExtraPT) AS ExtraPT
                 FROM bodb_ACC.dbo.Acc_GroupExtraPTSetting a WITH (NOLOCK)
-                WHERE @StartDate BETWEEN FromDate AND Todate                      
+                WHERE @StartDate BETWEEN FromDate AND Todate
                 GROUP BY ProductID,
                          SuperId;
      END;
@@ -110,7 +110,11 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Product] @EndDate='2020-01-01',@StartDate='201
                            SUM(scomm * actualrate) Commission,
                            SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS RealIncome,
                            SUM((1 - tpositiontaking) * ABS(stake) * actualrate) AS RealTurnover,
-                           SUM((winlost - actual_stake) * actualrate * ISNULL(e.ExtraPT, 0)) AS ExtraPT
+                           SUM(CASE
+                                   WHEN tpositiontaking = 1
+                                   THEN winlost - actual_stake
+                                   ELSE winlost - actual_stake + scomm / (1 - tpositiontaking)
+                               END * ISNULL(e.ExtraPT, 0)) AS ExtraPT
                     FROM bettrans AS b WITH (NOLOCK)
                          INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
                          LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
