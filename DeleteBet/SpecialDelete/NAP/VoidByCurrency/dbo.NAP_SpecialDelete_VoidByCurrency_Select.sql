@@ -215,6 +215,12 @@ BEGIN
 			AND b.betfrom <> 'P' -- exclude phone betting
 			AND b.matchid = @MatchID -- filer for @MatchID	
 			AND b.bettype <> 500 -- exclude charge comm
+			
+			AND b.username <> '12EU' --  12EU (Credit, email to IT support, 12EU list)
+			AND b.recommend NOT IN (11196380) -- Foobet (Email to IT support, Foobet list)
+			AND b.recommend NOT IN (13423967) -- OneExchange (Email to IT support)
+			AND b.custid NOT IN (SELECT CustID FROM  [f_GetBetDaqCustomer] (1)) -- For Special bets: betdaq
+			AND b.mrecommend NOT IN (105181, 118473, 105183) -- For member of master: MHCEU (105181), MHCRM (118473), MHCUS(105183)
 		
 		IF EXISTS (SELECT TOP 1 1
 				   FROM #SpecialDeleteBets
@@ -441,7 +447,13 @@ BEGIN
 			AND m.sporttype BETWEEN 1 AND 99 -- sportbook only			
 			AND sub.matchid = @matchid -- filer for @MatchID
 			AND sub.statusID NOT IN (101, 102) -- reject, void
-			AND sub.betfrom <> 'P' -- exclude phone betting				
+			AND sub.betfrom <> 'P' -- exclude phone betting		
+			
+			AND main.username <> '12EU' --  12EU (Credit, email to IT support, 12EU list)
+			AND main.recommend NOT IN (11196380) -- Foobet (Email to IT support, Foobet list)
+			AND main.recommend NOT IN (13423967) -- OneExchange (Email to IT support)
+			AND main.custid NOT IN (SELECT CustID FROM  [f_GetBetDaqCustomer] (1)) -- For Special bets: betdaq
+			AND main.mrecommend NOT IN (105181, 118473, 105183) -- For member of master: MHCEU (105181), MHCRM (118473), MHCUS(105183)		
 		
 	SELECT  s.Stake,
 			s.AwayId,

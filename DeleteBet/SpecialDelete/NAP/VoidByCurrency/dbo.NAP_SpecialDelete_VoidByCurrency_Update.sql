@@ -19,7 +19,8 @@ ALTER PROCEDURE [dbo].[NAP_SpecialDelete_VoidByCurrency_Update]
 	@Reason			NVARCHAR(500) = '',  
 	@IP				VARCHAR(15)  = '',  
 	@ErrorMsg		NVARCHAR(200) = '' OUTPUT,  
-	@ErrorCode		INT    = 0  OUTPUT  
+	@ErrorCode		INT  = 0  OUTPUT,
+	@InvalidTrans	VARCHAR(MAX) = '' OUTPUT -- invalid trans of BTrade 
 AS
 /*
 	Created: Kent
@@ -37,6 +38,8 @@ AS
 */
 BEGIN
 	SET NOCOUNT ON
+	
+	SET @InvalidTrans = ''
 	
 	DECLARE @MBCGroup_Name VARCHAR(50) = 'MBC Group'
 		  , @789y_Name	   VARCHAR(50) = '789y'		  
@@ -57,6 +60,8 @@ BEGIN
 		  , @AvaiableProcess			BIT = 1			  			  	  	  
 	
 	DECLARE @tblTransIds TABLE (transid BIGINT)
+	
+	DECLARE @tblInputSoldTransIds TABLE (transid BIGINT)
 	
 	DECLARE @tblBeforeBalance TABLE (custid INT PRIMARY KEY, balance MONEY)
 	
@@ -111,7 +116,7 @@ BEGIN
 			SubBetType			SMALLINT,
 			SubHdp1				SMALLMONEY,
 			SubHdp2				SMALLMONEY,
-			SubOdds				MONEY
+			SubOdds				MONEY						
 		)
 		
 	SELECT * INTO #SpecialDeleteBets_Single FROM #SpecialDeleteBets WHERE 1 = 0	
@@ -145,11 +150,15 @@ BEGIN
 	CREATE CLUSTERED INDEX IDX_BTTransActive_bettype_refno ON #BTTransActive(bettype, refno)
 	CREATE INDEX IDX_BTTransActive_bettype_custid_matchid ON #BTTransActive(bettype, custid)
 	CREATE INDEX IDX_BTTransActive_custid_balance ON #BTTransActive(custid, balance) INCLUDE(transId)	
-			
+	
+	-- store invalid BT transid
+	DECLARE @tblInvalidTrans TABLE (transid BIGINT) 
+	
+	--store BT's custid			
 	DECLARE @tblCustBT902 TABLE 
 	(
 		custid INT	  
-	) --store BT's custid
+	)
 	
 	CREATE TABLE #t_CustID_501(custid INT PRIMARY KEY)
 		
@@ -208,27 +217,13 @@ BEGIN
 	
 	CREATE TABLE #t_exchanges(exchangeid INT, currency NVARCHAR(50))
 	
-	CREATE TABLE #tblMatchProcess (matchid INT, KeyID TINYINT)
-	
-	IF NOT EXISTS (SELECT 1 FROM CustDB.dbo.Customer WITH(NOLOCK) WHERE userpwd = @UserPassword AND custid = @userId AND roleid >=5)
-	BEGIN
-		SELECT @ErrorMsg = 'Sorry. You cannot process void bets due to either wrong password or insufficient permission!'  
-				,@ErrorCode = 101  
-		
-		SELECT @LogData = 'Try to delete transaction for custid: ' + cast(@UserID AS VARCHAR(10)) + ' betlist: ' 
-							+ cast(@TransIDs AS VARCHAR(8000)) + ' - Username: ' + @username + ' - reason: ' + @reason  
-		  
-		EXEC [dbo].[WriteLog_UserLog] @UserID = @UserID ,@Doing = @LogData
-		
-		SELECT * FROM #t
-		
-		RETURN
-	END
+	CREATE TABLE #tblMatchProcess (matchid INT, KeyID TINYINT)		
 	
 	-------> Parse @LicenseeNames	
 	INSERT INTO #t_LicenseeNames(LicenseeName)
 	SELECT ss.val
-	FROM dbo.strSplit(@LicenseeNames, ',') ss
+	FROM dbo.f_SplitString(@LicenseeNames, ',') ss
+	OPTION (maxrecursion 0)
 	
 	DELETE FROM #t_LicenseeNames WHERE LicenseeName = @MBCGroup_Name
 	IF @@ROWCOUNT > 0
@@ -242,16 +237,47 @@ BEGIN
 	-------> Parse @CurrencyIDs	  
 	INSERT INTO #t_exchanges(exchangeid, currency)
 	SELECT e.exchangeid, e.currency
-	FROM dbo.strSplit(@CurrencyIDs, ',') ss
+	FROM dbo.f_SplitString(@CurrencyIDs, ',') ss
 		 INNER JOIN CustDB.dbo.exchange e WITH(NOLOCK)
-				 ON CAST(ss.val AS INT) = e.exchangeid	
+				 ON CAST(ss.val AS INT) = e.exchangeid
+	OPTION (maxrecursion 0)				 	
 				 
 	-------> Parse @MainTransIds
 	INSERT INTO @tblTransIds(transid)
 	SELECT ss.val AS transid
-	FROM dbo.strSplit(@TransIds, ',') ss
+	FROM dbo.f_SplitString(@TransIds, ',') ss
+	OPTION (maxrecursion 0)
 	
-	IF @@ROWCOUNT = 0
+	-------> Parse @SoldTransIds
+	INSERT INTO @tblInputSoldTransIds(transid)
+	SELECT ss.val AS transid
+	FROM dbo.f_SplitString(@SoldTransIds, ',') ss 
+	OPTION (maxrecursion 0)
+	
+	-------> Build string @CurrencyCodes
+	SET @CurrencyCodes = ''
+	SELECT @CurrencyCodes = @CurrencyCodes
+							+ CASE WHEN @CurrencyCodes <> '' THEN ',' ELSE '' END
+							+ currency
+	FROM #t_exchanges
+	
+	-------> Build @LogData	
+	SET @LogData = 'Void currency transaction for matchid ' + CONVERT(VARCHAR(20), @matchid) + ' for ' + @LicenseeNames + ' ' + @CurrencyCodes + ' IP=' + @IP + ' reason: ' + @Reason
+		
+	IF NOT EXISTS (SELECT 1 FROM CustDB.dbo.Customer WITH(NOLOCK) WHERE userpwd = @UserPassword AND custid = @userId AND roleid >=5)
+    BEGIN
+        SELECT @ErrorMsg = 'Sorry. You cannot process void bets due to either wrong password or insufficient permission!'  
+                ,@ErrorCode = 101  
+                
+        EXEC [dbo].[WriteLog_UserLog] @UserID = @UserID ,@Doing = @LogData
+        
+        SELECT * FROM #t
+        
+        RETURN
+    END
+	
+	IF NOT EXISTS (SELECT TOP 1 1
+				   FROM @tblTransIds)
 	BEGIN		
 		SELECT @ErrorCode = 99, @ErrorMsg = 'No ticket found.'
 		
@@ -272,17 +298,9 @@ BEGIN
 		SELECT * FROM #t										
 					 
 		RETURN		 
-	END			
+	END		
 	
-	-------> Build @LogData
-	SET @CurrencyCodes = ''
-	SELECT @CurrencyCodes = @CurrencyCodes
-							+ CASE WHEN @CurrencyCodes <> '' THEN ',' ELSE '' END
-							+ currency
-	FROM #t_exchanges
-	SET @LogData = 'Void currency transaction for matchid ' + CONVERT(VARCHAR(20), @matchid) + ' for ' + @LicenseeNames + ' ' + @CurrencyCodes + ' IP=' + @IP + ' reason: ' + @Reason
-	
-	BEGIN TRY
+	BEGIN TRY	
 		-------> Get tickets to void
 		--> Get single tickets		
 		IF @SearchSingle = 1
@@ -351,11 +369,7 @@ BEGIN
 					b.OddsType,
 					b.RefNo,
 					m.SportType,
-					CASE 
-						WHEN b.status = 'running' AND ISNULL(b.SecAcceptFlag, 0) = 1 AND ISNULL(b.checktime, CURRENT_TIMESTAMP) > CURRENT_TIMESTAMP 
-							THEN 'waiting'
-						ELSE b.status 
-					END AS STATUS,
+					b.status AS STATUS,
 					b.TransDate,
 					b.TransDesc,
 					b.TransId,
@@ -396,7 +410,13 @@ BEGIN
 				AND b.statusID NOT IN (101, 102) -- reject, void
 				AND b.betfrom <> 'P' -- exclude phone betting
 				AND b.matchid = @MatchID -- filer for @MatchID
-				AND b.bettype <> 500 -- exclude charge comm						
+				AND b.bettype <> 500 -- exclude charge comm	
+				
+				AND b.username <> '12EU' --  12EU (Credit, email to IT support, 12EU list)
+				AND b.recommend NOT IN (11196380) -- Foobet (Email to IT support, Foobet list)
+				AND b.recommend NOT IN (13423967) -- OneExchange (Email to IT support)
+				AND b.custid NOT IN (SELECT CustID FROM  [f_GetBetDaqCustomer] (1)) -- For Special bets: betdaq
+				AND b.mrecommend NOT IN (105181, 118473, 105183) -- For member of master: MHCEU (105181), MHCRM (118473), MHCUS(105183)					
 		
 			SET @CountSingle = @@ROWCOUNT
 			
@@ -413,22 +433,35 @@ BEGIN
 					AND sub.bettype 	= 901
 					AND EXISTS (
 						SELECT TOP 1 1 
-						FROM dbo.strSplit(@SoldTransIds,',') 
-						WHERE val = sub.transid
+						FROM @tblInputSoldTransIds 
+						WHERE transid = sub.transid
 					) 
 			END
 			
 			-- delete main ticket if it's BT but subticket is not exists in SOLD list
 			DELETE
-			FROM	#SpecialDeleteBets_Single			
+			FROM	#SpecialDeleteBets_Single
+			OUTPUT	DELETED.TransId
+			INTO	@tblInvalidTrans (transid)			
 			WHERE	betdaqid = 0 
 					AND transid NOT IN (SELECT grouptransid FROM #tblTransIdSolds)
+			SET @CountSingle = @CountSingle - @@ROWCOUNT					
 			
 			-- delete main ticket if it's not BT but have subticket in SOLD list
 			DELETE
-			FROM	#SpecialDeleteBets_Single			
+			FROM	#SpecialDeleteBets_Single
+			OUTPUT	DELETED.TransId
+			INTO	@tblInvalidTrans (transid)			
 			WHERE	betdaqid = -1 
-					AND transid IN (SELECT grouptransid FROM #tblTransIdSolds)								
+					AND transid IN (SELECT grouptransid FROM #tblTransIdSolds)	
+			SET @CountSingle = @CountSingle - @@ROWCOUNT					
+					
+			-- return invalid transId	
+			SELECT @InvalidTrans = @InvalidTrans + CAST(transid AS VARCHAR(20)) + ','
+			FROM @tblInvalidTrans
+			
+			IF @InvalidTrans <> ''
+				SET @InvalidTrans = 'Failed to void the ticket(s): ' + LEFT(@InvalidTrans,LEN(@InvalidTrans) -1)											
 			
 			--Insert multiple Bet trade transaction
 			INSERT INTO #BTTransActive (custid, refno, matchid, bettype, transId, awinlost
@@ -506,14 +539,14 @@ BEGIN
 						SubBetType,
 						SubHdp1,
 						SubHdp2,
-						SubOdds		
+						SubOdds
 					)
 			SELECT  tmpmain.Stake,
 					tmpmain.AwayId,
 					tmpmain.BetCheck,
-					tmpmain.bettype AS BetId, -- sub.BetId,
+					tmpmain.BetType AS BetId,
 					tmpmain.BetTeam,
-					sub.bettype AS bettype, -- tmpmain.BetType,
+					sub.BetType,
 					tmpmain.CurrencyCode,
 					tmpmain.Creator,						
 					tmpmain.Hdp1,
@@ -633,11 +666,7 @@ BEGIN
 					main.OddsType,
 					main.RefNo,
 					m.SportType,
-					CASE 
-						WHEN main.status = 'running' AND ISNULL(main.SecAcceptFlag, 0) = 1 AND ISNULL(main.checktime, CURRENT_TIMESTAMP) > CURRENT_TIMESTAMP 
-							THEN 'waiting'
-						ELSE main.status 
-					END AS STATUS,
+					main.status AS STATUS,
 					main.transdate AS TransDate,
 					sub.transdesc AS TransDesc,
 					main.transid AS TransId,
@@ -682,7 +711,13 @@ BEGIN
 				AND m.sporttype BETWEEN 1 AND 99 -- sportbook only				
 				AND sub.matchid = @matchid -- filer for @MatchID
 				AND sub.statusID NOT IN (101, 102) -- reject, void
-				AND sub.betfrom <> 'P' -- exclude phone betting				
+				AND sub.betfrom <> 'P' -- exclude phone betting	
+				
+				AND main.username <> '12EU' --  12EU (Credit, email to IT support, 12EU list)
+				AND main.recommend NOT IN (11196380) -- Foobet (Email to IT support, Foobet list)
+				AND main.recommend NOT IN (13423967) -- OneExchange (Email to IT support)
+				AND main.custid NOT IN (SELECT CustID FROM  [f_GetBetDaqCustomer] (1)) -- For Special bets: betdaq
+				AND main.mrecommend NOT IN (105181, 118473, 105183) -- For member of master: MHCEU (105181), MHCRM (118473), MHCUS(105183)					
 			
 			SET @CountParlay = @@ROWCOUNT
 		END				
@@ -690,7 +725,12 @@ BEGIN
 		-------> Check No ticket found
 		IF @CountSingle + @CountParlay = 0
 		BEGIN					
-			SELECT @ErrorCode = 99, @ErrorMsg = 'No ticket found.'
+			SET @ErrorCode = 99
+			
+			IF @InvalidTrans <> '' -- when all single tickets are deleted due to invalid bettrade
+				SET @ErrorMsg = @InvalidTrans
+			ELSE
+				SET @ErrorMsg = 'No ticket found.'
 			
 			SELECT * FROM #t		
 			
@@ -833,42 +873,48 @@ BEGIN
 		SELECT T.custid, SUM(T.balance) balance
 		FROM (
 				  -- normal and main bettrade
-				  SELECT t.custid
-						,SUM(t.balance) balance
-				  FROM #SpecialDeleteBets_Single t
-				  WHERE t.BetType NOT BETWEEN 901 AND 910
-				  GROUP BY t.CustID
-				  -- bettrade
-				  UNION ALL
-				  SELECT bt.custid
-					    ,SUM(bt.balance) AS balance
-				  FROM #BTTransActive bt 												   
-				  GROUP BY bt.custid
-				  -- parlay
-				  UNION ALL
-				  SELECT t.custid
-						,SUM(t.balance) balance
-				  FROM #SpecialDeleteBets_Parlay t					
-				  GROUP BY t.CustID
-				  -- Cricket charge comm
-				  UNION ALL
-				  SELECT b.custid, SUM(b.winlost - b.actual_stake + b.playercomm) balance
-				  FROM #t_CustID_501 t
-					   INNER JOIN dbo.bettrans b WITH (NOLOCK)
-							   ON t.custid = b.custid
-				  WHERE b.bettype = 500
-				    AND b.matchid = @MatchID					
-				  GROUP BY b.CustID
-				  -- BT-WLSharing
-				  UNION ALL
-				  SELECT sub904.custid
-						,SUM(sub904.winlost - sub904.actual_stake + sub904.playercomm) AS balance
-				  FROM	bettrans sub904 WITH (NOLOCK)
-					    INNER JOIN @tblCustBT902 temp
-								ON sub904.custid = temp.custid
-								   AND sub904.matchid = @MatchID											
-				  WHERE sub904.bettype = 904
-				  GROUP BY sub904.custid
+				SELECT	t.custid
+						,SUM (b.winlost - b.actual_stake + b.playercomm) balance
+				FROM #SpecialDeleteBets_Single t	
+					INNER JOIN bettrans b WITH (NOLOCK) 
+							ON t.transid = b.transid
+				WHERE t.BetType NOT BETWEEN 901 AND 910
+				GROUP BY t.CustID
+				-- bettrade
+				UNION ALL
+				SELECT bt.custid
+					  ,SUM(sub.winlost - sub.actual_stake + sub.playercomm) AS balance
+				FROM dbo.bettrans sub WITH (NOLOCK)
+					INNER JOIN #BTTransActive bt 
+						ON sub.transId = bt.transId					
+				GROUP BY bt.custid
+				-- parlay
+				UNION ALL
+				SELECT	t.custid
+						,SUM (b.winlost - b.actual_stake + b.playercomm) balance
+				FROM #SpecialDeleteBets_Parlay t	
+					INNER JOIN bettrans b WITH (NOLOCK) 
+							ON t.transid = b.transid																		
+				GROUP BY t.CustID
+				UNION ALL
+				-- Cricket charge comm			  
+			    SELECT b.custid, SUM(b.winlost - b.actual_stake + b.playercomm) balance
+				FROM #t_CustID_501 t
+					 INNER JOIN dbo.bettrans b WITH (NOLOCK)
+							 ON t.custid = b.custid
+				WHERE b.bettype = 500
+				  AND b.matchid = @MatchID					
+				GROUP BY b.CustID
+				-- BT-WLSharing
+				UNION ALL
+				SELECT	sub904.custid
+					   ,SUM(sub904.winlost - sub904.actual_stake + sub904.playercomm) AS balance
+				FROM	bettrans sub904 WITH (NOLOCK)
+					INNER JOIN @tblCustBT902 temp
+					ON sub904.custid = temp.custid
+						AND sub904.matchid = @MatchID											
+				WHERE sub904.bettype = 904
+				GROUP BY sub904.custid
 			 ) AS T
 		GROUP BY T.custid
 		
@@ -920,7 +966,7 @@ BEGIN
 			DECLARE @CustIdsBT VARCHAR(MAX)
 			SET @CustIdsBT = STUFF((SELECT ',' + CAST(CustId AS VARCHAR(50))
 								    FROM @tblCustBT902 tt								    
-								    FOR XML PATH (''), ROOT('str'), TYPE ).value('/str[1]','VARCHAR(MAX)'), 1, 1, '')
+								    FOR XML PATH (''), ROOT('str'), TYPE ).value('/str[1]','VARCHAR(MAX)'), 1, 1, '')											    
 			EXEC dbo.NAP_Admin_Calculate_904 
 					@MatchId 	= @MatchID
 					, @Action 	= 'VOID'
@@ -1275,7 +1321,7 @@ BEGIN
 											THEN 1
 									ELSE NULL
 								 END AS a) AS T2
-		ORDER BY s.IsMixParlay ASC, s.BettradeGroupID ASC, s.betdaqid ASC							 			 						  			 	
+		ORDER BY s.IsMixParlay ASC, s.BettradeGroupID ASC, s.betdaqid ASC									 			 						  			 	
 	END TRY
 	BEGIN CATCH
 		-------> Release process
@@ -1285,9 +1331,9 @@ BEGIN
 			, @isExistParlay  = @isExistParlay			  
 	
 		SELECT @ErrorCode = 100,
-				@ErrorMsg = @GeneralErrMsg
+				@ErrorMsg = @GeneralErrMsg							
 				
-		SELECT * FROM #t		
+		SELECT * FROM #t					
 							
 		RETURN				
 	END CATCH		
