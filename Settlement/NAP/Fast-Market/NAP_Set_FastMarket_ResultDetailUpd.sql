@@ -17,17 +17,16 @@ AS
 	Original:
 	
 	Revisions:
+		- 20170113@Kathy:  Enhancement for Fast Market [Redmine:#69951]
 
 	Param's Explanation:
 		
 */
-BEGIN
-	
+BEGIN	
 	SET NOCOUNT ON
 	
 	DECLARE @xmlData XML
 			,@ResultStatus TINYINT
-			,@id INT
 			
 	SET @xmlData = CONVERT(XML, @Results)
 	SET @ResultStatus = CASE 
@@ -38,84 +37,103 @@ BEGIN
 							ELSE 0
 						END	
 	
-	DECLARE @tblResults TABLE (
-		Id						INT IDENTITY (1,1)
-		,ResourceId				VARCHAR(20) -- 22X00
+	DECLARE @tblData TABLE (
+		ResourceId				VARCHAR(20) -- 22X00
 		,ResourceId_BetOption	VARCHAR(20) -- 22X01
 		,position				TINYINT
 		,betOption				TINYINT
 	)
 	
-	;WITH TmpData AS (
-		SELECT T.C.value('../@Id', 'SMALLINT') AS Bettype
-			, T.C.value('./@p', 'TINYINT') AS Position
-			, T.C.value('./@r', 'TINYINT') AS BetOption
-		FROM @xmlData.nodes('/r/b/r') AS T(C)
+	DECLARE @tblPosition TABLE(
+		ResourceId	VARCHAR(20)
+		,strPosHome	VARCHAR(200)
+		,strPosAway VARCHAR(200)
+		,strBetOptionHome	VARCHAR(1000)
+		,strBetOptionAway	VARCHAR(1000)
 	)
-	INSERT INTO @tblResults (ResourceId, ResourceId_BetOption, position, betOption)
+	
+	;WITH TmpData AS (
+		SELECT T.C.value('@Id', 'SMALLINT') AS Bettype
+			,X.C.value('@p','TINYINT') as Position
+			,X.C.value('@r','TINYINT') as BetOption
+		FROM @xmlData.nodes('/r/b') AS T(C)
+			CROSS APPLY
+				C.nodes('r') AS X(C)
+	)
+	INSERT INTO @tblData (ResourceId, ResourceId_BetOption, position, betOption)
 	SELECT	CAST(bettype * 100 AS VARCHAR(20)) ResourceId -- 22X00
 			,CAST(bettype * 100 + 1 AS VARCHAR(20)) ResourceId -- 22X01
 			,Position
 			,ISNULL(betOption,0)
 	FROM	TmpData
+	OPTION ( OPTIMIZE FOR ( @XmlData = NULL ) )
 	
-	SET @id = @@rowcount
-		
 	-- result status
 	INSERT INTO dbo.ResultDetail (MatchId, ResourceId, HomeValue, AwayValue, CreateBy, CreateDate, LastModifyBy, LastModifyDate)
 	SELECT	@matchId, t.ResourceId, REPLICATE('0', 50), REPLICATE('0', 50), @AdminId, GETDATE(), @AdminId, GETDATE()
-	FROM	@tblResults t
+	FROM	@tblData t
 	WHERE	NOT EXISTS (SELECT TOP 1 1 FROM dbo.ResultDetail WITH(NOLOCK) WHERE MatchId = @matchid AND t.ResourceId = ResourceId)
 	GROUP BY t.ResourceId
 	
 	-- betoption
 	INSERT INTO dbo.ResultDetail (MatchId, ResourceId, HomeValue, AwayValue, CreateBy, CreateDate, LastModifyBy, LastModifyDate)
 	SELECT	@matchId, t.ResourceId_BetOption, REPLICATE(CHAR('0'), 50), REPLICATE(CHAR('0'), 50), @AdminId, GETDATE(), @AdminId, GETDATE()
-	FROM	@tblResults t
+	FROM	@tblData t
 	WHERE	NOT EXISTS (SELECT TOP 1 1 FROM dbo.ResultDetail WITH(NOLOCK) WHERE MatchId = @matchid AND t.ResourceId_BetOption = ResourceId)
 	GROUP BY t.ResourceId_BetOption
 	
-	WHILE (@id > 0)
-	BEGIN 
-		UPDATE	r
-			SET	HomeValue = CASE 
-								WHEN t.Position <=44 THEN (SELECT TOP 1 data FROM dbo.f_Set_SetChar(r.HomeValue, t.Position, @ResultStatus)) 
-								ELSE HomeValue 
-							END
-				,AwayValue =CASE 
-								WHEN t.Position >44 THEN (SELECT TOP 1 data FROM dbo.f_Set_SetChar(r.AwayValue, t.Position - 45, @ResultStatus)) 
-								ELSE AwayValue 
-							END
+	INSERT INTO @tblPosition (ResourceId, strPosHome, strPosAway, strBetOptionHome, strBetOptionAway)
+	SELECT	t.ResourceId
+			,STUFF ((SELECT	',' + CAST(position AS VARCHAR(200))
+						FROM	@tblData	
+						WHERE	(ResourceId = t.ResourceId OR ResourceId_BetOption = t.ResourceId)
+								AND position <=44
+						FOR XML PATH ('')
+				),1,1,'') strPosHome
+			,STUFF ((SELECT	',' + CAST(position - 45 AS VARCHAR(200))
+						FROM	@tblData	
+						WHERE	(ResourceId = t.ResourceId OR ResourceId_BetOption = t.ResourceId)
+								AND position >=45
+						FOR XML PATH ('')
+				),1,1,'') strPosAway
+			,STUFF ((SELECT	',' + CAST(position AS VARCHAR(200)) + '|' + CAST(betOption AS VARCHAR(200))
+						FROM	@tblData	
+						WHERE	(ResourceId = t.ResourceId OR ResourceId_BetOption = t.ResourceId)
+								AND position <=44
+						FOR XML PATH ('')
+				),1,1,'') strBetOptionHome
+			,STUFF ((SELECT	',' + CAST(position - 45 AS VARCHAR(200)) + '|' + CAST(betOption AS VARCHAR(200))
+						FROM	@tblData	
+						WHERE	(ResourceId = t.ResourceId OR ResourceId_BetOption = t.ResourceId)
+								AND position >=45
+						FOR XML PATH ('')
+				),1,1,'') strBetOptionAway
+	FROM	dbo.ResultDetail t WITH(NOLOCK)
+	WHERE	t.MatchId = @matchid
+			AND t.ResourceId LIKE '22_0_'
+	
+	UPDATE	r 
+		SET	HomeValue = CASE WHEN ISNULL(p.strPosHome,'') <> '' THEN dbo.f_Set_SetChars(r.HomeValue, p.strPosHome, @ResultStatus) ELSE r.HomeValue END 
+			,AwayValue = CASE WHEN ISNULL(p.strPosAway,'') <> '' THEN dbo.f_Set_SetChars(r.AwayValue, p.strPosAway, @ResultStatus) ELSE r.AwayValue END
+			,LastModifyBy = @AdminId
+			,LastModifyDate = GETDATE()
+	FROM	dbo.ResultDetail r  WITH(ROWLOCK, UPDLOCK)
+		INNER JOIN @tblPosition p 
+			ON	r.MatchId = @matchid
+				AND r.ResourceId = p.ResourceId
+	WHERE	r.ResourceId LIKE '22_00'
+	
+	IF @Action IN ('CAL', 'UNDO') AND @IsAuto = 0
+		UPDATE r 
+			SET HomeValue = CASE WHEN ISNULL(p.strPosHome,'') <> '' THEN dbo.f_Set_SetBytes(r.HomeValue, p.strBetOptionHome) ELSE r.HomeValue END
+				,AwayValue = CASE WHEN ISNULL(p.strPosAway,'') <> '' THEN dbo.f_Set_SetBytes(r.AwayValue, p.strBetOptionAway) ELSE r.AwayValue END
 				,LastModifyBy = @AdminId
 				,LastModifyDate = GETDATE()
 		FROM	dbo.ResultDetail r WITH(ROWLOCK, UPDLOCK)
-			INNER JOIN @tblResults t
+			INNER JOIN @tblPosition p 
 				ON	r.MatchId = @matchid
-					AND r.ResourceId = t.ResourceId
-					AND t.Id = @id
-		
-		IF @Action IN ('CAL', 'UNDO') AND @IsAuto = 0
-		BEGIN
-			UPDATE	r
-				SET	HomeValue = CASE
-									WHEN t.Position <=44 THEN (SELECT TOP 1 data FROM dbo.f_Set_SetByte(r.HomeValue, t.Position, t.betOption))
-									ELSE HomeValue
-								END
-					,AwayValue = CASE
-									WHEN t.Position >44 THEN (SELECT TOP 1 data FROM dbo.f_Set_SetByte(r.AwayValue, t.Position - 45, t.betOption))
-									ELSE r.AwayValue
-								END
-					,LastModifyBy = @AdminId
-					,LastModifyDate = GETDATE()
-			FROM	dbo.ResultDetail r WITH(ROWLOCK, UPDLOCK)
-				INNER JOIN @tblResults t
-					ON r.MatchId = @matchid
-						AND r.ResourceId = t.ResourceId_BetOption
-						AND t.Id = @id
-		END
-		
-		SET @id = @id - 1
-	END			
+					AND r.ResourceId = p.ResourceId
+		WHERE	r.ResourceId LIKE '22_01'
 END
 
 GO

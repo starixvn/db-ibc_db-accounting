@@ -16,6 +16,7 @@ AS
     Original:
 
     Revisions:
+		- 20170113@Kathy:  Enhancement for Fast Market [Redmine:#69951]
 
     Param's Explanation:
 
@@ -29,30 +30,28 @@ BEGIN
 			,@commWinRate	SMALLMONEY
 			,@commLostRate	SMALLMONEY
 			,@xmlData		XML
-			,@Top			INT 
 
 	SET @xmlData = CONVERT(XML, @result)
-	SET @Top = 2147483647
 	
 	CREATE TABLE #tblTransIds(transid BIGINT PRIMARY KEY, BetOption TINYINT)	
 	
 	;WITH TmpData AS (
-		SELECT T.C.value('../@Id', 'SMALLINT') AS Bettype
-			, T.C.value('./@p', 'TINYINT') AS Position
-			, T.C.value('./@r', 'TINYINT') AS BetOption
-		FROM @xmlData.nodes('/r/b/r') AS T(C)
+		SELECT T.C.value('@Id', 'SMALLINT') AS Bettype
+			,X.C.value('@p','TINYINT') as Position
+			,X.C.value('@r','TINYINT') as BetOption
+		FROM @xmlData.nodes('/r/b') AS T(C)
+			CROSS APPLY
+				C.nodes('r') AS X(C)
 	)
 	INSERT INTO #tblTransIds (transid, BetOption)
 	SELECT	b.transid, t.BetOption
 	FROM	tmpData t
-		CROSS APPLY(
-			SELECT	TOP (@Top) b.transid
-			FROM	dbo.bettrans b WITH(ROWLOCK)
-			WHERE	b.matchid = @matchid
-					AND b.bettype = t.bettype
-					AND b.hdp1 = t.Position
-					AND b.statusID NOT IN (101, 102)
-		)b
+		INNER JOIN dbo.bettrans b WITH(ROWLOCK)
+			ON	b.matchid = @matchid
+				AND b.bettype = t.Bettype
+				AND b.hdp1 = t.Position
+	WHERE	b.statusID NOT IN (101, 102)
+	OPTION ( OPTIMIZE FOR ( @XmlData = NULL ) )	
 	
 	IF @action = 'CAL'
 	BEGIN		
