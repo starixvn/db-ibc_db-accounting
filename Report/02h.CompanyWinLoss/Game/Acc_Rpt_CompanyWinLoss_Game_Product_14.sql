@@ -114,7 +114,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Product_14] @EndDate='2020-01-01',@StartDate='
                                    WHEN tpositiontaking = 1
                                    THEN winlost - actual_stake
                                    ELSE winlost - actual_stake + scomm / (1 - tpositiontaking)
-                               END * ISNULL(e.ExtraPT, 0)) AS ExtraPT
+                               END * ISNULL(e.ExtraPT, 0)) * actualrate AS ExtraPT
                     FROM bettrans14 AS b WITH (NOLOCK)
                          INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
                          LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
@@ -152,7 +152,11 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Product_14] @EndDate='2020-01-01',@StartDate='
                            SUM(scomm * actualrate) Commission,
                            SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) RealIncome,
                            SUM((1 - tpositiontaking) * ABS(stake) * actualrate) RealTurnover,
-                           SUM((winlost - actual_stake) * actualrate * ISNULL(e.ExtraPT, 0)) AS ExtraPT
+                           SUM(CASE
+                                   WHEN tpositiontaking = 1
+                                   THEN winlost - actual_stake
+                                   ELSE winlost - actual_stake + scomm / (1 - tpositiontaking)
+                               END * ISNULL(e.ExtraPT, 0)) * actualrate AS ExtraPT
                     FROM bettransRnG14 b WITH (NOLOCK)
                          INNER JOIN #SportBetType sb ON sb.BetType = b.gameID
                          LEFT JOIN #DepositSuper dep ON b.srecommend = dep.custid
@@ -190,7 +194,12 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Product_14] @EndDate='2020-01-01',@StartDate='
                            SUM(scomm * actualrate) Commission,
                            SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) RealIncome,
                            SUM((1 - tpositiontaking) * ABS(stake) * actualrate) RealTurnover,
-                           SUM((winlost - actual_stake) * actualrate * ISNULL(e.ExtraPT, 0)) AS ExtraPT
+                           SUM((winlost - actual_stake) * actualrate * ISNULL(e.ExtraPT, 0)) AS ExtraPT,
+                           SUM(CASE
+                                   WHEN tpositiontaking = 1
+                                   THEN winlost - actual_stake
+                                   ELSE winlost - actual_stake + scomm / (1 - tpositiontaking)
+                               END * ISNULL(e.ExtraPT, 0)) * actualrate AS ExtraPT
                     FROM bettransLC14 b WITH (NOLOCK)
                          INNER JOIN #SportBetType sb ON sb.BetType = b.gameID
                          LEFT JOIN #DepositSuper dep ON b.srecommend = dep.custid
