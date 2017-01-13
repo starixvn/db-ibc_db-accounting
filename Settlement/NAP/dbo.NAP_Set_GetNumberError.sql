@@ -1,4 +1,10 @@
-ALTER PROCEDURE [NAP_Set_GetNumberError] @AdminId INT
+USE [bodb02]
+GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Set_GetNumberError] @AdminId INT
 	,@NumberError INT = 0 OUTPUT
 AS
 /*	Creator: Kathy
@@ -9,6 +15,8 @@ AS
 	History:
 		- 20140404@Kathy: Count notification messages for each group (Soccer, Other Sports)
 							Send email in case calculation got notify
+		- 20170112@Kathy: Add AdminId 111 into Soccer Team [Redmine:#70302]		
+							
 	Param's Explanation:
 		
 */
@@ -16,6 +24,9 @@ BEGIN
 	SET NOCOUNT ON
 	DECLARE @tblSoccerTeam TABLE (custid INT)
 	DECLARE @tblOtherSportTeam TABLE (custid INT)
+	
+	DECLARE	@IsSoccer			BIT = 0
+			,@IsOtherSport		BIT = 0
 
 	INSERT INTO @tblSoccerTeam
 	SELECT	14228954			-- Keyscore1	
@@ -23,8 +34,9 @@ BEGIN
 	UNION ALL SELECT 8068543	-- TRACY			
 	UNION ALL SELECT 384559		-- YONG 
 	UNION ALL SELECT 12978541	-- pgmHarris
-	UNION ALL SELECT 4338171	-- pgmKaka  
+	UNION ALL SELECT 4338171	-- pgmKaka  	
 	--UNION ALL SELECT 9503076	-- pgmJacob 
+	UNION ALL SELECT 111		-- Auto Settlement
 
 	INSERT INTO @tblOtherSportTeam
 	SELECT 462523 -- IRENE		
@@ -38,92 +50,63 @@ BEGIN
 	UNION ALL SELECT 4338171	-- pgmKaka 
 	--UNION ALL SELECT 9503076	-- pgmJacob 
 
-	SET @NumberError = ISNULL((
-				SELECT COUNT(1)
-				FROM Settled_Message s WITH (NOLOCK)
-				INNER JOIN match m WITH (NOLOCK) ON m.matchid = s.MatchId
-				WHERE IsRead = 0 
-					AND (
-							(
-								s.AdminId IN (
-									SELECT custid
-									FROM @tblSoccerTeam
-									) AND @AdminId IN (
-									SELECT custid
-									FROM @tblSoccerTeam
-									) AND m.sporttype = 1
-								) OR (
-								s.AdminId IN (
-									SELECT custid
-									FROM @tblOtherSportTeam
-									) AND @AdminId IN (
-									SELECT custid
-									FROM @tblOtherSportTeam
-									) AND m.sporttype <> 1
-								) OR (s.AdminId = @AdminId)
-							)
-					AND Message IS NOT NULL
-				), 0)
+	IF EXISTS (SELECT TOP 1 1 FROM @tblSoccerTeam WHERE custid = @AdminId)
+			SET @IsSoccer = 1
+	ELSE IF EXISTS (SELECT TOP 1 1 FROM @tblOtherSportTeam WHERE custid = @AdminId)
+		SET @IsOtherSport = 1
+			
+	DECLARE @tblTemp TABLE (
+		matchid INT
+		,matchcode NVARCHAR(50)
+		,homeid INT
+		,awayid INT
+		,sporttype SMALLINT
+		,IP VARCHAR(15)
+		,starttime DATETIME
+		,Action VARCHAR(10)
+		,Message VARCHAR(300)
+		,IsSent BIT
+		)
+		
+	INSERT INTO @tblTemp (matchid, matchcode, homeid, awayid, sporttype, IP, starttime, Action, Message, IsSent)
+	SELECT	m.matchid, m.matchcode, m.homeid, m.awayid, m.sporttype, s.IP, s.Starttime, s.Action, s.Message, s.IsSent
+	FROM	dbo.Settled_Message s WITH (NOLOCK)
+		INNER JOIN match m WITH (NOLOCK) 
+			ON	m.matchid = s.MatchId
+			WHERE IsRead = 0 
+				AND (
+						(s.AdminId IN (SELECT custid FROM @tblSoccerTeam) 
+						AND @IsSoccer = 1
+						AND m.sporttype = 1
+						) 
+					OR (
+							s.AdminId IN (SELECT custid FROM @tblOtherSportTeam) 
+							AND @IsOtherSport = 1
+							AND m.sporttype <> 1
+						) 
+					OR (s.AdminId = @AdminId)
+				)
+				AND Message IS NOT NULL
+				
+	SET @NumberError = @@rowcount
 
 	-- send email in case calculation got issues
-	SELECT m.matchid, m.matchcode, m.homeid, m.awayid, m.sporttype, s.IP, s.Starttime, s.Action, s.Message
-	FROM Settled_Message s with(NOLOCK) 
-	INNER JOIN match m WITH(NOLOCK) ON m.matchid = s.MatchId
-	WHERE (
-			(
-				s.AdminId IN (
-					SELECT custid
-					FROM @tblSoccerTeam
-					) AND @AdminId IN (
-					SELECT custid
-					FROM @tblSoccerTeam
-					) AND m.sporttype = 1
-				) OR (
-				s.AdminId IN (
-					SELECT custid
-					FROM @tblOtherSportTeam
-					) AND @AdminId IN (
-					SELECT custid
-					FROM @tblOtherSportTeam
-					) AND m.sporttype <> 1
-				) OR (s.AdminId = @AdminId)
-			)
-	AND IsSent = 0
-	AND s.Message IS NOT NULL
+	SELECT matchid, matchcode, homeid, awayid, sporttype, IP, starttime, Action, Message
+	FROM	@tblTemp
+	WHERE	IsSent = 0
 
-	UPDATE s
-	SET s.IsSent = 1
-	FROM Settled_Message s INNER JOIN match m ON m.matchid = s.MatchId
-	WHERE (
-			(
-				s.AdminId IN (
-					SELECT custid
-					FROM @tblSoccerTeam
-					) AND @AdminId IN (
-					SELECT custid
-					FROM @tblSoccerTeam
-					) AND m.sporttype = 1
-				) OR (
-				s.AdminId IN (
-					SELECT custid
-					FROM @tblOtherSportTeam
-					) AND @AdminId IN (
-					SELECT custid
-					FROM @tblOtherSportTeam
-					) AND m.sporttype <> 1
-				) OR (s.AdminId = @AdminId)
-			)
-	AND s.IsSent = 0
-	AND s.Message IS NOT NULL
-
+	UPDATE	s
+	SET		s.IsSent = 1
+	FROM	dbo.Settled_Message s 
+		INNER JOIN @tblTemp t
+			ON	s.MatchId = t.MatchId
+				AND s.Action = t.Action
+				AND s.Message = t.Message
+	WHERE	t.IsSent = 0
+				
 END
 
 GO
-
-GRANT EXECUTE ON [NAP_Set_GetNumberError] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[NAP_Set_GetNumberError] TO [bodbAdminNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [NAP_Set_GetNumberError] TO [vnteam] AS [dbo]
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[NAP_Set_GetNumberError] TO [vnteam] AS [dbo]
