@@ -33,12 +33,16 @@ AS
 		- 20161013@Percy: Apply NG2 [RedmineID: #64117]
 		- 20161222@Percy: Apply Fishing World [RedmineID: #65734]
 		- 20161227@Percy: Clean up code Cockfighting [RedmineID: #69446]
+		- 20170112@Percy: Change Extra PT formula [RedmineID: #70060]
 		
 	Explanation's Param:
 
 */
 BEGIN	
 	SET NOCOUNT ON
+
+	DECLARE @EffectedDate DATETIME -- 20160112@Percy: Applying date of changing extra PT formula [RedmineID: #70060]
+	SELECT  @EffectedDate = '2017-01-19'
 
 	DECLARE @DummyBalance AS TABLE (CustId INT, Product VARCHAR(50), seq TINYINT )
 	DECLARE @dummyExtraPT TABLE(CustId INT )
@@ -110,7 +114,7 @@ BEGIN
 	LEFT JOIN @DummyBalance d ON b.custid = d.custid
 	WHERE b.ruben = 1
 	   AND b.winlostdate = @winlostdate
-	   AND b.statusid NOT IN (101, 102, 103, 121) 
+	   AND b.statusid NOT IN (101, 102, 103, 121)
 	   AND b.bettype > 19000 
 	   AND (CASE WHEN b.CustId IN (SELECT CustId FROM @dummyExtraPT) AND Bettype IN (21001,21002) THEN 0 ELSE 1 END = 1)
 	GROUP BY CASE
@@ -361,7 +365,7 @@ BEGIN
 	   AND b.ruben = 1
 	   AND b.bettype in (31, 32, 33)
 	   AND b.matchid > 0
-	   AND statusid NOT IN (101, 102, 103, 121)
+	   AND b.statusid NOT IN (101, 102, 103, 121)
 	   AND b.winlostdate = @winlostdate
   
 	/*end calculating racing net income*/
@@ -380,9 +384,10 @@ BEGIN
 
 	CREATE TABLE #ExtraPTWL
 	(
-	    ProductId		INT,
-		ProductName		VARCHAR(50),
-		ExtraPTwinlost  MONEY
+	    ProductId			INT,
+		ProductName			VARCHAR(50),
+		ExtraPTwinlost		MONEY,
+		NewExtraPTwinlost	MONEY
 	)
 	----Non sportsbook
 	;WITH wl AS(
@@ -390,18 +395,19 @@ BEGIN
 			   0 AS Sporttype,
 			   s.ProductId,
 			   '' AS SubProduct,
-			   SUM(ISNULL(ISNULL(winlost, 0) - ISNULL(actual_stake, 0) ,0) * actualrate) as winlost 		 
+			   SUM((winlost - actual_stake) * actualrate) AS winlost,
+			   SUM((CASE WHEN tpositiontaking = 1 THEN winlost - actual_stake ELSE winlost - actual_stake + scomm / (1 - tpositiontaking) END) * actualrate) AS newwinlost
 		FROM dbo.bettrans14 b WITH(NOLOCK)
 		INNER JOIN @SportBettype s ON s.BetType = b.bettype
 		WHERE  b.winlostdate = @winlostdate
 		   --AND b.ruben = 1
-		   AND b.statusid NOT IN (101, 102, 103, 121)	  
+		   AND b.statusid NOT IN (101, 102, 103, 121)
 		   AND s.ProductID <> 1
 		GROUP BY b.srecommend,	      
 			   s.ProductId 
 			   )
-	INSERT INTO #ExtraPTWL (ProductId, ExtraPTwinlost) 
-	SELECT	w.ProductId, SUM (w.winlost *s.ExtraPT) AS ExtraPTwinlost
+	INSERT INTO #ExtraPTWL (ProductId, ExtraPTwinlost, NewExtraPTwinlost) 
+	SELECT	w.ProductId, SUM(w.winlost * s.ExtraPT), SUM(w.newwinlost * s.ExtraPT)
 	FROM	wl w
 	INNER JOIN bodb_Acc.dbo.Acc_GroupExtraPTSetting s WITH (NOLOCK)
 			ON w.srecommend = s.SuperId
@@ -432,14 +438,15 @@ BEGIN
 					WHEN b.liveindicator = 0 THEN 'SPNL'  								     
 				END	AS ProductName,
 			   CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss') THEN s.SubProduct ELSE '' END AS SubProduct,
-			   CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss') OR ISNULL(m.matchid, 0) <> 0 OR B.Bettype IN (10,9,29) THEN 2 ELSE b.liveindicator END AS liveindicator ,
-			   SUM(ISNULL(ISNULL(winlost, 0) - ISNULL(actual_stake, 0) , 0)* actualrate) as winlost 		 
+			   CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss') OR ISNULL(m.matchid, 0) <> 0 OR B.Bettype IN (10,9,29) THEN 2 ELSE b.liveindicator END AS liveindicator,
+			   SUM((winlost - actual_stake) * actualrate) AS winlost,
+			   SUM((CASE WHEN tpositiontaking = 1 THEN winlost - actual_stake ELSE winlost - actual_stake + scomm / (1 - tpositiontaking) END) * actualrate) AS newwinlost
 		FROM dbo.bettrans14 b WITH(NOLOCK)	
 		INNER JOIN @SportBettype s ON s.BetType = b.bettype
 		LEFT JOIN dbo.Match14 m WITH (NOLOCK) ON m.MatchId = b.MatchId AND m.eventdate = @Winlostdate AND m.Sporttype = 44
 		WHERE   b.winlostdate = @winlostdate
 			---AND b.ruben = 1
-			AND b.statusid NOT IN (101, 102, 103, 121)	
+			AND b.statusid NOT IN (101, 102, 103, 121)
 			AND s.ProductID = 1 		
 		GROUP BY b.srecommend,
 			   CASE WHEN ISNULL(m.Sporttype, 0) <> 0 THEN m.Sporttype ELSE 0 END,
@@ -455,8 +462,8 @@ BEGIN
 			   CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss') OR ISNULL(m.matchid, 0) <> 0 OR B.Bettype IN (10,9,29) THEN 2 ELSE b.liveindicator END
 			   )
 
-	INSERT INTO #ExtraPTWL ( ProductId, ProductName, ExtraPTwinlost) 
-	SELECT  w.ProductId, w.ProductName, SUM (w.winlost * s.ExtraPT) AS ExtraPTwinlost
+	INSERT INTO #ExtraPTWL ( ProductId, ProductName, ExtraPTwinlost, NewExtraPTwinlost) 
+	SELECT  w.ProductId, w.ProductName, SUM(w.winlost * s.ExtraPT), SUM(w.newwinlost * s.ExtraPT)
 	FROM	wl w
 	INNER JOIN bodb_Acc.dbo.Acc_GroupExtraPTSetting s WITH (NOLOCK)
 			ON w.srecommend = s.SuperId
@@ -491,13 +498,17 @@ BEGIN
 		
 	    SELECT dm.product,
 	           ROUND(ISNULL(w.winlost, 0), 2) AS winlost,
-			   ROUND(ISNULL(w.winlost, 0), 2) -  ROUND(ISNULL(e.ExtraPTwinlost, 0), 2) AS WinlostAfterExtraPT,
+			   ROUND(ISNULL(w.winlost, 0), 2) -  ROUND(ISNULL(CASE WHEN @winlostdate < @EffectedDate THEN e.ExtraPTwinlost ELSE e.NewExtraPTwinlost END, 0), 2) AS WinlostAfterExtraPT,
 			   ROUND(ISNULL(rs.reset, 0), 2) AS reset
 	    FROM @Winning w
 		FULL OUTER JOIN rs rs ON w.product = rs.product  
 		RIGHT JOIN @DummyBalance dm ON dm.product = ISNULL(w.product, rs.product)
 		LEFT JOIN #ExtraPTWL e ON e.ProductName = dm.product	 
 		---ORDER BY dm.seq
+
+		DROP TABLE #bettranstmp
+		DROP TABLE #ExtraPTWL
+		DROP TABLE #source
 END
 GO
 
