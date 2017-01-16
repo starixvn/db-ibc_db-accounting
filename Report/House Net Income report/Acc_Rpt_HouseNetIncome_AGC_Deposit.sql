@@ -7,7 +7,7 @@ ALTER PROCEDURE [dbo].[Acc_Rpt_HouseNetIncome_AGC_Deposit]
 AS  
 /*  
 	Created:	20161125@Harper  
-    Task :		House month-to-date Net Income report for AG Casino
+    Task :		House month-to-date Net Income report for AG Casino [RedmineID: #655445] 
     DB:			DBEXT/bodb02  
    
     Revisions:  
