@@ -55,7 +55,9 @@ BEGIN
 		, @htawayscore		TINYINT
 		, @FGNG				VARCHAR(50)		
 		, @GoalRecord		VARCHAR(50)
-		, @InstantKeyValue		VARCHAR(50)
+		, @InstantKeyValue	VARCHAR(50)
+		, @livehomescore	TINYINT
+		, @liveawayscore	TINYINT
 		
 	CREATE TABLE #instantBettype (bettype SMALLINT)
 	
@@ -105,6 +107,8 @@ BEGIN
 		, @isUnDecided		= ISNULL(mr.isUnDecided, 0)
 		, @hthomescore		= ISNULL(hthomescore, 0)
 		, @htawayscore		= ISNULL(htawayscore, 0)
+		, @livehomescore	= ISNULL(m.livehomescore,0)
+		, @liveawayscore	= ISNULL(m.liveawayscore,0)
     FROM dbo.match m WITH (NOLOCK)
 		INNER JOIN dbo.league l WITH (NOLOCK)
 		ON m.leagueid		= l.leagueid
@@ -118,12 +122,18 @@ BEGIN
 		OR CHARINDEX('hedge', @matchcode) > 0 -- does not allow doing Inst.C for hedge match
 		OR @isPending 	= 1
 		OR @isUnDecided = 1
+		OR (@hScore > @livehomescore OR  @aScore > @liveawayscore)
 	)
     BEGIN
 		IF(CHARINDEX('hedge', @matchcode) > 0)
 		BEGIN
 			SELECT @ErrCode = 1001004
-			, @ErrMsg   = 'The selected match is a hedge match. Therefore, it cannot be instantly calculated!'
+			, @ErrMsg   = 'The selected match is a hedge match. Therefore, it cannot be instantly calculated.'
+		END
+		ELSE IF(@hScore > @livehomescore OR  @aScore > @liveawayscore)
+		BEGIN
+			SELECT @ErrCode = 1001005
+			, @ErrMsg   = 'Instant Settlement cannot be executed because the Home/Away score which is used for Instant Settlement is greater than the current Home/Away score.'
 		END
 		ELSE
 		BEGIN
@@ -187,12 +197,7 @@ BEGIN
 			;WITH instantTicketCheck AS (
 				SELECT b.transid
 					, b.statusID
-					, CASE 
-						WHEN @totalGoal = 0 THEN 0 --abnormal case -> change from [x-y] to [0-0] -> reset all to running
-						WHEN ods.modds >= 0.5 THEN 112 --WON
-						WHEN ods.modds <= -0.5 THEN 113 --LOSE    
-						ELSE 0
-					END AS statusCheck
+					, ods.statusID AS statusCheck
 				FROM dbo.bettrans b WITH(NOLOCK)
 					CROSS APPLY [dbo].[f_Set_Instant_CalModds] (
 																b.bettype

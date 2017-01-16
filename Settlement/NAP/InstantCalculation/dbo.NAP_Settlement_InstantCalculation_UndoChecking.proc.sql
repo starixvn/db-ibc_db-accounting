@@ -36,8 +36,8 @@ BEGIN
 		,@aScore			INT
 		
 	
-	SELECT @ErrCode		= 0
-		, @ErrMsg		= ''
+	SELECT @ErrCode			= 0
+		, @ErrMsg			= ''
 		
 	SELECT TOP(1)
 		@evenstatus 			= m.eventstatus
@@ -72,7 +72,7 @@ BEGIN
 	-- OUTPUT the currenct scores and GoalRecord
 	IF(@ErrCode = 0)
 	BEGIN
-	
+		
 		SELECT TOP(1)
 			@homeScore 		= rs.HomeValue
 			,@awayScore 	= rs.AwayValue
@@ -90,13 +90,28 @@ BEGIN
 			) AS fgng
 		WHERE rs.matchid = @MatchId
 			AND rs.TypeId BETWEEN 101 AND 102 
-			--AND rs.IsConfirmed 		= 0
 			AND rs.ProviderResultDetailId = ISNULL(@InstantCheck, rs.ProviderResultDetailId)
 			
 		ORDER  BY rs.ProviderResultDetailId DESC
 	
-	
-		IF( @InstantCheck > 0 )
+		--double checking with latest scores
+		;WITH PRD_LatestScore AS (
+			SELECT TOP(1)
+				rs.HomeValue
+				, rs.AwayValue
+			FROM dbo.ProviderResultDetail rs WITH(NOLOCK)
+			WHERE rs.matchid = @MatchId
+				AND rs.TypeId BETWEEN 101 AND 102
+			ORDER BY ProviderResultDetailId DESC
+		)
+		SELECT @ErrCode		= 1001003
+			, @ErrMsg		= 'The current score has just been updated. Please double check the score and try again!' 
+		FROM PRD_LatestScore
+		WHERE HomeValue 	<> @homeScore
+			OR AwayValue 	<> @awayScore
+						
+		
+		IF( @ErrCode = 0 AND @InstantCheck > 0 )
 		BEGIN
 			SELECT @hScore		= CAST(@homeScore AS INT)
 				, @aScore		= CAST(@awayScore AS INT)
@@ -106,9 +121,8 @@ BEGIN
 				OR @aScore 		<> @liveawayscore
 			)
 			BEGIN
-				SELECT @ErrCode		= 1001003
-					, @ErrMsg		= 'The current score has just been updated. Are you sure you want to uncalculate Instant Settlement in comparison with the current score ' 
-									+ @HomeScore + '-' + @AwayScore + '[' + @GoalRecord + '] (' + CASE WHEN @IsHT = 1 THEN 'HT' ELSE 'FT' END + ')'
+				SELECT @ErrCode		= 1001004
+					, @ErrMsg		= 'Instant Settlement cannot be uncalculated due to an error of synchronizing.' 
 				
 			END
 		END

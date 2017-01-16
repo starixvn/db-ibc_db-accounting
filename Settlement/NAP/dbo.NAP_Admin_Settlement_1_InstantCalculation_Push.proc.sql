@@ -33,7 +33,7 @@ BEGIN
     DECLARE	@matchcode 		NVARCHAR(50)
 		, @sporttype 		INT
 		, @leagueid 		INT
-		, @procName 		NVARCHAR(50)
+		, @procName 		NVARCHAR(128)
 		, @sqlCommand 		NVARCHAR(1000)
 		, @CalculationType	TINYINT
 		, @InstantCompleted	BIT
@@ -96,7 +96,7 @@ BEGIN
 	BEGIN
 		SELECT @sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_1_InstantCalculation] @matchid = ' + CONVERT(NVARCHAR(50), @MatchId) 
                             + ', @Creator = ' + CONVERT(NVARCHAR(50), @AdminId) 
-                            + ', @Action = ''' + ISNULL(CONVERT(NVARCHAR(50), @Mode), 'NULL') + ''''
+                            + ', @Mode = ''' + ISNULL(CONVERT(NVARCHAR(50), @Mode), 'NULL') + ''''
 							+ ', @InstantKey = ' + ISNULL(CONVERT(NVARCHAR(50), @InstantKey), 'NULL') + ''
 							+ ', @HomeScore = ''' + ISNULL(CONVERT(NVARCHAR(50), @HomeScore), 'NULL') + ''''
 							+ ', @AwayScore = ''' + ISNULL(CONVERT(NVARCHAR(50), @AwayScore), 'NULL') + ''''
@@ -126,7 +126,7 @@ BEGIN
 	BEGIN
 		SELECT @sqlCommand = 'EXEC [dbo].[NAP_Admin_Settlement_1_InstantCalculation_Undo] @matchid = ' + CONVERT(NVARCHAR(50), @MatchId) 
                             + ', @Creator = ' + CONVERT(NVARCHAR(50), @AdminId) 
-                            + ', @Action = ''' + ISNULL(CONVERT(NVARCHAR(50), @Mode), 'NULL') + ''''
+                            + ', @Mode = ''' + ISNULL(CONVERT(NVARCHAR(50), @Mode), 'NULL') + ''''
 							+ ', @InstantKey = ' + ISNULL(CONVERT(NVARCHAR(50), @InstantKey), 'NULL') + ''
 							+ ', @HomeScore = ''' + ISNULL(CONVERT(NVARCHAR(50), @HomeScore), 'NULL') + ''''
 							+ ', @AwayScore = ''' + ISNULL(CONVERT(NVARCHAR(50), @AwayScore), 'NULL') + ''''
@@ -165,7 +165,7 @@ BEGIN
         INSERT INTO dbo.Single_Calculate_Queue (matchid, matchcode, IsCalculating, LeagueID, SportType
 			, AdminId, IP, Action, sqlCommand, execTime)
         SELECT @MatchId, @matchcode, 0 AS IsCalculating, @leagueid, @sporttype
-			, @AdminId, @IP, @Action, @sqlCommand, NULL
+			, @AdminId, @IP, @Mode, @sqlCommand, NULL
     END
 END
 

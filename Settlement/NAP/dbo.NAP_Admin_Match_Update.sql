@@ -453,13 +453,15 @@ BEGIN
 				,finalawayscore=0				
 		WHERE	matchid = @matchid
 	END
-	IF @Command = 'NAP_Admin_Settlement_1_InstantCalculation'
+	IF (
+		@Command = 'NAP_Admin_Settlement_1_InstantCalculation'
+		OR @Command = 'NAP_Admin_Settlement_1_InstantCalculation_Undo'
+	)
 	BEGIN
 		
 		SET @betstatus = ISNULL(@betstatus, '')
 		
 		SELECT @Sporttype	= sporttype
-			, @betstatus	= ISNULL(betstatus, '') + @betstatus
 		FROM dbo.match WITH(NOLOCK)
 		WHERE matchid = @matchid
 
@@ -469,14 +471,6 @@ BEGIN
 			SET betstatus 	= @betstatus
 			WHERE matchid	= @MatchID
 		END 
-	END
-	IF @Command = 'NAP_Admin_Settlement_1_InstantCalculation_Undo'
-	BEGIN		
-		SET @betstatus = ISNULL(@betstatus, '')
-		
-		UPDATE dbo.match WITH(ROWLOCK,UPDLOCK) 
-		SET betstatus 	= @betstatus
-		WHERE matchid	= @MatchID
 	END
 END
 
