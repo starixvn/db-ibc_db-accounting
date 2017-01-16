@@ -24,6 +24,9 @@ AS
 BEGIN
 	SET NOCOUNT ON
 	
+	DECLARE @EffectedDate DATETIME -- 20160112@Percy: Applying date of changing extra PT formula [RedmineID: #70208]
+	SELECT  @EffectedDate = '2017-01-19'
+	
 	------Get Sport Bettype Matrix------
 	-- Check SP Version	 
 	DECLARE @isTest BIT = 0
@@ -91,7 +94,8 @@ BEGIN
 						VirtualLineTotal MONEY, 
 						RealTurnover	MONEY, 
 						VirtualTurnover MONEY, 						
-						ExtraPT			MONEY
+						ExtraPT			MONEY,
+						NewExtraPT		MONEY
 					)
 
 
@@ -205,7 +209,7 @@ BEGIN
 			and s.ProductID = 2
 			and b.MatchId >0
 			and b.winlostdate = @StartDate 
-			and b.statusID not in (101,102,103,121)	
+			and b.statusID in (111, 112, 113)	
 	GROUP BY  case when dep.custid is null then 1 else 2 end
 
 	-------------------------------------- End of Racing -------------------------------------------------
@@ -253,7 +257,7 @@ BEGIN
 		INNER JOIN #Match m ON b.MatchId = m.MatchId 		
 	WHERE winlostdate = @StartDate
 		AND b.bettype < 19001
-		AND b.statusID NOT IN (101,102,103,121) 
+		AND b.statusID IN (111, 112, 113) 
 		AND b.ruben = 1	
 		AND m.type = CASE WHEN b.bettype = 10 THEN 1 ELSE 0 END 
 		AND s.productID = 1
@@ -292,7 +296,7 @@ BEGIN
 	WHERE  b.recommend = 5707545 
 		AND	b.winlostdate = @StartDate
 		AND b.bettype < 19001
-		AND b.statusID NOT IN (101,102,103,121) 
+		AND b.statusID IN (111, 112, 113) 
 		AND b.ruben = 1	
 		AND m.type = CASE WHEN b.bettype = 10 THEN 1 ELSE 0 END 
 		AND s.productID = 1
@@ -348,7 +352,7 @@ BEGIN
 		INNER JOIN #SportBettype s ON b.bettype = s.bettype
 	WHERE winlostdate = @StartDate
 		AND b.bettype < 19001
-		AND b.statusID NOT IN (101,102,103,121) 
+		AND b.statusID IN (111, 112, 113) 
 		AND b.ruben = 1	
 		AND	( ----s.productID NOT IN (1,6,17,22,21) ---- OW RNG(6), Microgaming - RNG Casino (17), Voidbridge (22),  Allbet (21)	
 			(s.productID <> 1 AND s.RefTable NOT IN (1,2))  ------ not have data detail in bettransRNG and BettransLC 
@@ -382,7 +386,7 @@ BEGIN
 	WHERE winlostdate = @StartDate
 		----AND s.ProductID IN (6,17,22) 	---- OW RNG(6), Microgaming - RNG Casino (17), Voidbridge (22)
 		AND s.RefTable = 1  --- Use Table BettransRNG
-		AND b.statusID NOT IN (0, 1, 101,102,103,121)
+		AND b.statusID IN (111, 112, 113) 
 	GROUP BY b.srecommend, s.ProductID, s.CasinoType
 			 
 	 	 
@@ -409,7 +413,7 @@ BEGIN
 	WHERE winlostdate = @StartDate
 		----AND s.ProductID = 21  ---- AllBet (21)
 		AND s.RefTable = 2  --- Use Table BettransLC
-		AND b.statusID NOT IN (0, 1, 101,102,103,121)
+		AND b.statusID IN (111, 112, 113) 
 	GROUP BY
 			b.srecommend, s.ProductID, s.CasinoType
 			 
@@ -427,7 +431,7 @@ BEGIN
 	---------------------------------------------------------		  
 	-------------Insert to Result table to get data----------
 	-----1. Soccer and Others
-	INSERT INTO #Result (ProductId, site, winlost, Position, Commission, RealLineTotal, VirtualLineTotal, RealTurnover, VirtualTurnover, ExtraPT)
+	INSERT INTO #Result (ProductId, site, winlost, Position, Commission, RealLineTotal, VirtualLineTotal, RealTurnover, VirtualTurnover, ExtraPT, NewExtraPT)
 	SELECT
 			CASE WHEN b.Sporttype = 1 THEN -5
 				 WHEN b.sporttype IN (2,44) THEN -4 				 
@@ -440,7 +444,8 @@ BEGIN
 			SUM(Linetotal_virtualrate) AS VirtualLineTotal,
 			SUM(turnover_actualrate) AS RealTurnover,
 			SUM(turnover_virtualrate) AS VirtualTurnover,
-			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE (winlost_actualrate + grosscomm_actualrate)* e.ExtraPT END) AS ExtraPT			
+			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE (winlost_actualrate)* e.ExtraPT END) AS ExtraPT,
+			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE (winlost_actualrate + grosscomm_actualrate)* e.ExtraPT END) AS NewExtraPT
 	FROM	#src b		
 		LEFT JOIN #ExtraPT_Sel e 
 			ON  b.srecommend = e.superID 
@@ -457,7 +462,7 @@ BEGIN
 
 			   
 	----METRIC GAMING -SUPER LIVE
-	INSERT INTO #Result (ProductId, site, winlost, Position, Commission, RealLineTotal, VirtualLineTotal, RealTurnover, VirtualTurnover, ExtraPT)
+	INSERT INTO #Result (ProductId, site, winlost, Position, Commission, RealLineTotal, VirtualLineTotal, RealTurnover, VirtualTurnover, ExtraPT, NewExtraPT)
 	SELECT
 			b.ProductID, site,
 			SUM(ISNULL(b.winlost_actualrate,0)) WinLost,
@@ -466,8 +471,9 @@ BEGIN
 			SUM(ISNULL(LineTotal_actualrate,0)) AS RealLineTotal,
 			SUM(ISNULL(Linetotal_virtualrate,0)) as VirtualLineTotal,	
 			SUM(ISNULL(turnover_actualrate,0)) RealTurnover,
-			SUM(ISNULL(turnover_virtualrate,0)) VirtualTurnover,			
-			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE (winlost_actualrate + grosscomm_actualrate)*e.ExtraPT END) AS ExtraPT 			
+			SUM(ISNULL(turnover_virtualrate,0)) VirtualTurnover,
+			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE (winlost_actualrate)* e.ExtraPT END) AS ExtraPT,
+			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE (winlost_actualrate + grosscomm_actualrate)* e.ExtraPT END) AS NewExtraPT
 	FROM	#src b		
 	LEFT JOIN #ExtraPT_Sel e 
 		ON  b.srecommend = e.superID 	
@@ -480,7 +486,7 @@ BEGIN
 
 	
 	--- Parlay			 
-	INSERT INTO #Result (ProductId, site, winlost, Position, Commission, RealLineTotal, VirtualLineTotal, RealTurnover, VirtualTurnover, ExtraPT)
+	INSERT INTO #Result (ProductId, site, winlost, Position, Commission, RealLineTotal, VirtualLineTotal, RealTurnover, VirtualTurnover, ExtraPT, NewExtraPT)
 	SELECT 
 			b.ProductId, site,
 			SUM(winlost_actualrate) WinLost,
@@ -490,7 +496,8 @@ BEGIN
 			SUM(Linetotal_virtualrate) AS VirtualLineTotal,	
 			SUM(turnover_actualrate) RealTurnover,
 			SUM(turnover_virtualrate) VirtualTurnover,
-			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE (winlost_actualrate + grosscomm_actualrate)*e.ExtraPT END) AS ExtraPT			
+			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE (winlost_actualrate)* e.ExtraPT END) AS ExtraPT,
+			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE (winlost_actualrate + grosscomm_actualrate)* e.ExtraPT END) AS NewExtraPT
 	FROM	#src b
 		LEFT JOIN #ExtraPT_Sel e 
 			ON  b.srecommend = e.superID 
@@ -502,7 +509,7 @@ BEGIN
 	GROUP BY b.ProductId, site
 	
 	----NUMBER GAME			
-	INSERT INTO #Result (ProductId, site, winlost, Position, Commission, RealLineTotal, VirtualLineTotal, RealTurnover, VirtualTurnover, ExtraPT)
+	INSERT INTO #Result (ProductId, site, winlost, Position, Commission, RealLineTotal, VirtualLineTotal, RealTurnover, VirtualTurnover, ExtraPT, NewExtraPT)
 	SELECT
 		    b.ProductId, site,
 			SUM(winlost_actualrate) WinLost,
@@ -512,7 +519,8 @@ BEGIN
 			SUM(Linetotal_virtualrate) AS VirtualLineTotal,	
 			SUM(turnover_actualrate) RealTurnover,
 			SUM(turnover_virtualrate) VirtualTurnover,
-			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE (winlost_actualrate + grosscomm_actualrate)*e.ExtraPT END) AS ExtraPT			
+			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE (winlost_actualrate)* e.ExtraPT END) AS ExtraPT,
+			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE (winlost_actualrate + grosscomm_actualrate)* e.ExtraPT END) AS NewExtraPT
 	FROM	#src b		
 	LEFT JOIN #ExtraPT_Sel e 
 			ON  b.srecommend = e.superID 
@@ -522,7 +530,7 @@ BEGIN
 
 
 	---Racing
-	INSERT INTO #Result (ProductId, site, winlost, Position, Commission, RealLineTotal, VirtualLineTotal, RealTurnover, VirtualTurnover, ExtraPT)
+	INSERT INTO #Result (ProductId, site, winlost, Position, Commission, RealLineTotal, VirtualLineTotal, RealTurnover, VirtualTurnover, ExtraPT, NewExtraPT)
 	SELECT	2 as ProductId,
 			site,
 			WinLost,
@@ -532,11 +540,12 @@ BEGIN
 			LineTotal AS VirtualLineTotal,
 			turnover AS RealTurnover,
 			0 VirtualTurnover,
-			0 ExtraPT  
+			0 ExtraPT,
+			0 NewExtraPT
 	FROM   @RBWinlost
 
 	---bettrade
-	INSERT INTO #Result (ProductId, site, winlost, Position, Commission, RealLineTotal, VirtualLineTotal, RealTurnover, VirtualTurnover, ExtraPT)
+	INSERT INTO #Result (ProductId, site, winlost, Position, Commission, RealLineTotal, VirtualLineTotal, RealTurnover, VirtualTurnover, ExtraPT, NewExtraPT)
 	SELECT
 			b.ProductId,
 			site,
@@ -547,7 +556,8 @@ BEGIN
 			SUM(ISNULL(LineTotal_actualrate,0)) as VirtualLineTotal,	
 			0 AS RealTurnover,
 			0 AS VirtualTurnover,
-			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE (winlost_actualrate + grosscomm_actualrate)*e.ExtraPT END) AS ExtraPT			
+			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE (winlost_actualrate)* e.ExtraPT END) AS ExtraPT,
+			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE (winlost_actualrate + grosscomm_actualrate)* e.ExtraPT END) AS NewExtraPT
 	FROM	#src b
 	LEFT JOIN #ExtraPT_Sel e 
 		ON  b.srecommend = e.superID
@@ -560,7 +570,7 @@ BEGIN
 
 	------------------------------------------
 	---Live casino and Casino and 3rd Party
-	INSERT INTO #Result (ProductId, site, winlost, Position, Commission, RealLineTotal, VirtualLineTotal, RealTurnover, VirtualTurnover, ExtraPT)
+	INSERT INTO #Result (ProductId, site, winlost, Position, Commission, RealLineTotal, VirtualLineTotal, RealTurnover, VirtualTurnover, ExtraPT, NewExtraPT)
 	SELECT	
 			--CASE WHEN b.ProductId IN (14) THEN 6   ---- Casino
 			--	ELSE CASE WHEN  b.ProductId IN (4,11,12,13) THEN 4  ---Live Casino
@@ -577,7 +587,8 @@ BEGIN
 			SUM(LineTotal_virtualrate) AS VirtualLineTotal,
 			SUM(turnover_actualrate) RealTurnover,
 			SUM(turnover_virtualrate) VirtualTurnover,
-			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE (winlost_actualrate + grosscomm_actualrate)*e.ExtraPT END) AS ExtraPT					
+			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE (winlost_actualrate)* e.ExtraPT END) AS ExtraPT,
+			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE (winlost_actualrate + grosscomm_actualrate)* e.ExtraPT END) AS NewExtraPT
 	FROM	#src b		
 	LEFT JOIN #ExtraPT_Sel e 
 		ON  b.srecommend = e.superID 
@@ -592,7 +603,7 @@ BEGIN
 				 ELSE b.ProductId END
 
 	 
-	INSERT INTO #Result (ProductId, site, winlost, Position, Commission, RealLineTotal, VirtualLineTotal, RealTurnover, VirtualTurnover, ExtraPT)
+	INSERT INTO #Result (ProductId, site, winlost, Position, Commission, RealLineTotal, VirtualLineTotal, RealTurnover, VirtualTurnover, ExtraPT, NewExtraPT)
 	SELECT	
 			--CASE WHEN b.ProductId IN (6,17,22) THEN 6  --- Casino
 			--	ELSE 4	--- Live Casino
@@ -608,8 +619,9 @@ BEGIN
 			SUM(LineTotal_actualrate) AS RealLineTotal,
 			SUM(LineTotal_virtualrate) AS VirtualLineTotal,
 			SUM(turnover_actualrate) RealTurnover,
-			SUM(turnover_virtualrate) VirtualTurnover,			
-			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE (winlost_actualrate + grosscomm_actualrate)*e.ExtraPT END) AS ExtraPT			
+			SUM(turnover_virtualrate) VirtualTurnover,
+			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE (winlost_actualrate)* e.ExtraPT END) AS ExtraPT,
+			SUM(CASE ISNULL(e.ExtraPT,0) WHEN 0 THEN 0 ELSE (winlost_actualrate + grosscomm_actualrate)* e.ExtraPT END) AS NewExtraPT
 	FROM	#srcDetail b			
 	LEFT JOIN #ExtraPT_Sel e 
 		ON  b.srecommend = e.superID 
@@ -624,7 +636,7 @@ BEGIN
 
 	-----2. Total ----------------------------------------------------------------
 	-- Get win lost of agent '8RM' , 'BARM'
-	INSERT INTO #Result (ProductId, site, winlost, Position, Commission, RealLineTotal, VirtualLineTotal, RealTurnover, VirtualTurnover, ExtraPT)
+	INSERT INTO #Result (ProductId, site, winlost, Position, Commission, RealLineTotal, VirtualLineTotal, RealTurnover, VirtualTurnover, ExtraPT, NewExtraPT)
 	SELECT	CASE WHEN m.Sporttype = 1 THEN -98				
 				 ELSE -99
 				 END AS ProductId,
@@ -637,14 +649,15 @@ BEGIN
 			-SUM (winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) VirtualLineTotal,
 			SUM ((1-tpositiontaking)*ABS(stake)) RealTurnover,
 			SUM ((1-tpositiontaking)*ABS(stake)) VirtualTurnover,	
-			0 as ExtraPT  
+			0 AS ExtraPT,
+			0 AS NewExtraPT
 	FROM bettrans b WITH (NOLOCK)
 		INNER JOIN #SportBettype s ON b.bettype = s.bettype  
 		INNER JOIN #Match m ON b.MatchId = m.MatchId   
 	WHERE  b.recommend IN (52466, 5707545)
 		AND	b.winlostdate = @StartDate
 		AND b.bettype < 19001
-		AND b.statusID NOT IN (101,102,103) 
+		AND b.statusID IN (111, 112, 113) 
 		AND b.ruben = 1	
 		AND m.type = CASE WHEN b.bettype = 10 THEN 1 ELSE 0 END 
 		AND s.productID = 1
@@ -719,9 +732,9 @@ BEGIN
                 SUM (d.VirtualLineTotal) AS VirtualIncome,
                 SUM (d.RealLineTotal - d.VirtualLineTotal) AS VarianceIncome,
                 SUM (d.RealTurnover) AS RealTurnover,
-                SUM (d.VirtualTurnover) AS VirtualTurnover, 
-				SUM (-d.extraPT) AS extraPT,
-				SUM (d.RealLineTotal - d.extraPT) AS AfterExtraPT 
+                SUM (d.VirtualTurnover) AS VirtualTurnover,
+				SUM (CASE WHEN @StartDate < @EffectedDate THEN -d.extraPT ELSE -d.NewExtraPT END) AS extraPT,
+				SUM (CASE WHEN @StartDate < @EffectedDate THEN d.RealLineTotal - d.extraPT ELSE d.RealLineTotal - d.NewExtraPT END) AS AfterExtraPT
         FROM #Result d   
 		GROUP BY CASE WHEN d.DisplayOrder IN (100,101) THEN 'RM' ELSE d.ProductName END,
                  CASE WHEN d.DisplayOrder IN (100,101) THEN d.ProductName
