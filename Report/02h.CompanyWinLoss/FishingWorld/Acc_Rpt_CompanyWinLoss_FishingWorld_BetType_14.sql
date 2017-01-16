@@ -74,7 +74,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_FishingWorld_BetType_14] @EndDate='2020-01-01',@Sta
               INNER JOIN #SportBetType sb ON sb.BetType = b.gameID
               LEFT JOIN #DepositSuper dep ON b.srecommend = dep.custid
          WHERE b.winlostdate = @StartDate
-               AND b.statusID NOT IN(0, 1, 101, 102, 103, 121)
+               AND b.statusID IN(111, 112, 113)
          GROUP BY sb.BetType,
                   sb.BetTypeName,
                   CASE

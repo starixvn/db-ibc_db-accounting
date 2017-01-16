@@ -79,7 +79,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_VirtualSports_SportType_14]	@StartDate='2016-01-01'
                       AND sb.EventType = 1
                       AND b.MatchId > 0
                       AND b.ruben = 1
-                      AND b.statusId NOT IN(101, 102, 103, 121)
+                      AND b.statusID IN(111, 112, 113)
                 GROUP BY m.sporttype,
                          CASE
                              WHEN dep.CustId IS NULL
@@ -109,7 +109,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_VirtualSports_SportType_14]	@StartDate='2016-01-01'
                       AND sb.EventType = 3
                       AND b.MatchId > 0
                       AND b.ruben = 1
-                      AND b.statusId NOT IN(101, 102, 103, 121)
+                      AND b.statusID IN(111, 112, 113)
                 GROUP BY r.sporttype,
                          CASE
                              WHEN dep.CustId IS NULL

@@ -123,7 +123,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Product] @EndDate='2020-01-01',@StartDate='201
                     WHERE b.winlostdate = @StartDate
                           AND sb.RefTable NOT IN(1, 2)
                          AND b.ruben = 1
-                         AND b.statusId NOT IN(101, 102, 103, 121)
+                         AND b.statusID IN(111, 112, 113)
                     GROUP BY sb.ProductId,
                              sb.ProductName,
                              CASE
@@ -164,7 +164,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Product] @EndDate='2020-01-01',@StartDate='201
                                                  AND sb.ProductId = e.ProductId
                     WHERE b.winlostdate = @StartDate
                           AND sb.RefTable = 1
-                          AND b.statusID NOT IN(0, 1, 101, 102, 103, 121)
+                          AND b.statusID IN(111, 112, 113)
                     GROUP BY sb.ProductId,
                              sb.ProductName,
                              CASE
@@ -206,7 +206,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Product] @EndDate='2020-01-01',@StartDate='201
                                                  AND sb.ProductId = e.ProductId
                     WHERE b.winlostdate = @StartDate
                           AND sb.RefTable = 2
-                          AND b.statusID NOT IN(0, 1, 101, 102, 103, 121)
+                          AND b.statusID IN(111, 112, 113)
                     GROUP BY sb.ProductId,
                              sb.ProductName,
                              CASE

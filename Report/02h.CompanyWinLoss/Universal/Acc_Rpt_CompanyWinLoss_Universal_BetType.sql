@@ -79,7 +79,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Universal_BetType] @StartDate='2016-09-13', @EndDat
                    AND (@IsLive = 2
                         OR b.liveindicator = @IsLive)
                    AND b.ruben = 1
-                   AND b.statusId NOT IN(101, 102, 103, 121)
+                   AND b.statusID IN(111, 112, 113)
              GROUP BY sb.BetType,
                       sb.BetTypeName,
                       CASE

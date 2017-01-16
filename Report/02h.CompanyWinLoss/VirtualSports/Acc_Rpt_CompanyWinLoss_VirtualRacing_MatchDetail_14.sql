@@ -56,7 +56,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_VirtualRacing_MatchDetail_14] @StartDate='2016-01-0
                       AND r.SportType = @SportType
                       AND b.MatchId > 0
                       AND b.ruben = 1
-                      AND b.statusId NOT IN(101, 102, 103, 121)
+                      AND b.statusID IN(111, 112, 113)
                 GROUP BY r.LeagueId,
                          r.EventTime;
      END;

@@ -188,14 +188,14 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_MatchDetail_14] @StartDate='2016-01-01', @En
                                    ELSE 0
                                END) AS TOPhum
                     FROM bettransm14 WITH (nolock)
-					WHERE Bettype = @Bettype
+                    WHERE Bettype = @Bettype
                     GROUP BY refno
                 ) AS bm ON b.transid = bm.refno
                 WHERE b.winlostdate = @StartDate
                       AND b.BetType = @BetType
                       AND b.MatchId > 0
                       AND b.ruben = 1
-                      AND b.statusId NOT IN(101, 102, 103, 121)
+                      AND b.statusID IN(111, 112, 113)
                 GROUP BY cs.MeetingId,
                          cs.Race;
      END;

@@ -51,7 +51,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_MetricGaming_MatchDetail] @EndDate='2020-01-01',@St
                        m.HomeId,
                        m.AwayId
                 FROM Match m WITH (NOLOCK)
-                WHERE EventDate = @StartDate
+                WHERE EventDate = @StartDate;
      END;
      BEGIN -- #Data
 
@@ -100,7 +100,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_MetricGaming_MatchDetail] @EndDate='2020-01-01',@St
                            OR b.liveindicator = @IsLive)
                       AND b.MatchId > 0
                       AND b.ruben = 1
-                      AND statusID NOT IN(101, 102, 103, 121)
+                      AND statusID IN(111, 112, 113)
                 GROUP BY b.MatchId,
                          m.MatchCode,
                          m.IsNeutral,

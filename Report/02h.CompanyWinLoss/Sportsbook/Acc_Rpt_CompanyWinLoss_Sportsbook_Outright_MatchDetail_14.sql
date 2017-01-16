@@ -82,7 +82,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_Outright_MatchDetail_14] @EndDate='2020-
                 WHERE b.winlostdate = @StartDate
                       AND b.BetType = 10
                       AND b.ruben = 1
-                      AND b.statusID NOT IN(101, 102, 103, 121)
+                      AND b.statusID IN(111, 112, 113)
                 GROUP BY m.MatchId,
                          m.MatchCode,
                          m.TeamId,
@@ -111,7 +111,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_Outright_MatchDetail_14] @EndDate='2020-
                 WHERE b.winlostdate = @StartDate
                       AND b.BetType = 10
                       AND b.ruben = 1
-                      AND b.statusID NOT IN(101, 102, 103, 121)
+                      AND b.statusID IN(111, 112, 113)
                      AND b.recommend IN(52466, 5707545)
                 GROUP BY CASE
                              WHEN b.recommend = 52466

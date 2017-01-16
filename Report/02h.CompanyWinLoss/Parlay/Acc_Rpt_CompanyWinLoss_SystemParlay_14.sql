@@ -1,10 +1,8 @@
-USE [bodb02]
+USE [bodb02];
 GO
-
-ALTER PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_SystemParlay_14]
-	@StartDate SMALLDATETIME,
-    @EndDate   SMALLDATETIME,
-    @Site      NVARCHAR(20)  = 'ALL'
+ALTER PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_SystemParlay_14] @StartDate SMALLDATETIME,
+                                                            @EndDate   SMALLDATETIME,
+                                                            @Site      NVARCHAR(20)  = 'ALL'
 AS
 
 /*
@@ -73,7 +71,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_SystemParlay_14] @EndDate='2020-01-01',@StartDate='
                           AND BetType = 29
                           AND betteam <> '1'
                           AND ruben = 1
-                          AND statusID NOT IN(101, 102, 103, 121)
+                          AND statusID IN(111, 112, 113)
                     GROUP BY 'System Parlay('+status+')',
                              CASE liveawayscore
                                  WHEN 1
@@ -112,7 +110,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_SystemParlay_14] @EndDate='2020-01-01',@StartDate='
                           AND BetType = 29
                           AND betteam <> '1'
                           AND ruben = 1
-                          AND statusID NOT IN(101, 102, 103, 121)
+                          AND statusID IN(111, 112, 113)
                     GROUP BY 'System Parlay('+status+')',
                              CASE liveawayscore
                                  WHEN 1
@@ -150,7 +148,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_SystemParlay_14] @EndDate='2020-01-01',@StartDate='
                           AND BetType = 29
                           AND betteam <> '1'
                           AND ruben = 1
-                          AND statusID NOT IN(101, 102, 103, 121)
+                          AND statusID IN(111, 112, 113)
                     AND NOT EXISTS
                     (
                         SELECT 1

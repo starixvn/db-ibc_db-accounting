@@ -8,8 +8,8 @@ IF EXISTS
     DROP PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Game_Product_14];
 GO
 CREATE PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Game_Product_14] @StartDate  SMALLDATETIME,
-                                                                @EndDate    SMALLDATETIME,
-                                                                @CasinoType INT
+                                                             @EndDate    SMALLDATETIME,
+                                                             @CasinoType INT
 AS
 
 /*
@@ -24,7 +24,7 @@ Revisions:
 				   . Not use @EndDate because we get only one day on (bettrans/bettrans14 range) 
 
 Example:
-EXEC [Acc_Rpt_CompanyWinLoss_Game_Product_14] @EndDate='2020-01-01',@StartDate='2016-01-01', @CasinoType = 1
+EXEC [Acc_Rpt_CompanyWinLoss_Game_Product_14] @EndDate='2020-01-01',@StartDate='2017-01-05', @CasinoType = 1
 */
 
      SET NOCOUNT ON;
@@ -123,7 +123,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Product_14] @EndDate='2020-01-01',@StartDate='
                     WHERE b.winlostdate = @StartDate
                           AND sb.RefTable NOT IN(1, 2)
                          AND b.ruben = 1
-                         AND b.statusId NOT IN(101, 102, 103, 121)
+                         AND b.statusID IN(111, 112, 113)
                     GROUP BY sb.ProductId,
                              sb.ProductName,
                              CASE
@@ -164,7 +164,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Product_14] @EndDate='2020-01-01',@StartDate='
                                                  AND sb.ProductId = e.ProductId
                     WHERE b.winlostdate = @StartDate
                           AND sb.RefTable = 1
-                          AND b.statusID NOT IN(0, 1, 101, 102, 103, 121)
+                          AND b.statusID IN(111, 112, 113)
                     GROUP BY sb.ProductId,
                              sb.ProductName,
                              CASE
@@ -194,7 +194,6 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Product_14] @EndDate='2020-01-01',@StartDate='
                            SUM(scomm * actualrate) Commission,
                            SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) RealIncome,
                            SUM((1 - tpositiontaking) * ABS(stake) * actualrate) RealTurnover,
-                           SUM((winlost - actual_stake) * actualrate * ISNULL(e.ExtraPT, 0)) AS ExtraPT,
                            SUM(CASE
                                    WHEN tpositiontaking = 1
                                    THEN winlost - actual_stake
@@ -207,7 +206,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Product_14] @EndDate='2020-01-01',@StartDate='
                                                  AND sb.ProductId = e.ProductId
                     WHERE b.winlostdate = @StartDate
                           AND sb.RefTable = 2
-                          AND b.statusID NOT IN(0, 1, 101, 102, 103, 121)
+                          AND b.statusID IN(111, 112, 113)
                     GROUP BY sb.ProductId,
                              sb.ProductName,
                              CASE

@@ -194,7 +194,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_SportType] @StartDate='2016-01-01', @EndDate
                                    ELSE 0
                                END) AS TOPhum
                     FROM bettransm bm WITH (nolock)
-					INNER JOIN #SportBetType AS sb ON sb.BetType = bm.BetType
+                         INNER JOIN #SportBetType AS sb ON sb.BetType = bm.BetType
                     GROUP BY refno
                 ) AS bm ON b.transid = bm.refno
                      LEFT JOIN
@@ -206,7 +206,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_SportType] @StartDate='2016-01-01', @EndDate
                 WHERE b.winlostdate = @StartDate
                       AND b.MatchId > 0
                       AND b.ruben = 1
-                      AND b.statusId NOT IN(101, 102, 103, 121)
+                      AND b.statusID IN(111, 112, 113)
                 GROUP BY cs.sporttype,
                          CASE
                              WHEN dep.CustId IS NULL

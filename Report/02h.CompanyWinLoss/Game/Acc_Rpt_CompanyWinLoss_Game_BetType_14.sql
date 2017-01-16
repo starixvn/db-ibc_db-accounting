@@ -91,7 +91,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_BetType_14] @EndDate='2020-01-01',@StartDate='
                     WHERE b.winlostdate = @StartDate
                           AND sb.RefTable NOT IN(1, 2)
                          AND b.ruben = 1
-                         AND b.statusId NOT IN(101, 102, 103, 121)
+                         AND b.statusID IN(111, 112, 113)
                     GROUP BY sb.BetType,
                              sb.BetTypeName,
                              CASE
@@ -125,7 +125,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_BetType_14] @EndDate='2020-01-01',@StartDate='
                          LEFT JOIN #DepositSuper dep ON b.srecommend = dep.custid
                     WHERE b.winlostdate = @StartDate
                           AND sb.RefTable = 1
-                          AND b.statusID NOT IN(0, 1, 101, 102, 103, 121)
+                          AND b.statusID IN(111, 112, 113)
                     GROUP BY sb.BetType,
                              sb.BetTypeName,
                              CASE
@@ -159,7 +159,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_BetType_14] @EndDate='2020-01-01',@StartDate='
                          LEFT JOIN #DepositSuper dep ON b.srecommend = dep.custid
                     WHERE b.winlostdate = @StartDate
                           AND sb.RefTable = 2
-                          AND b.statusID NOT IN(0, 1, 101, 102, 103, 121)
+                          AND b.statusID IN(111, 112, 113)
                     GROUP BY sb.BetType,
                              sb.BetTypeName,
                              CASE

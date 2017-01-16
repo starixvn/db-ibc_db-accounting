@@ -86,7 +86,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Bettrade_Site] @StartDate='2016-08-24', @EndDate='2
               INNER JOIN #Agent AS dep ON b.recommend = dep.CustId
          WHERE b.winlostdate = @StartDate
                AND b.ruben = 1
-               AND b.statusId NOT IN(101, 102, 103, 121)
+               AND b.statusID IN(111, 112, 113)
          GROUP BY Site
          ORDER BY RowName;
      END;
@@ -95,5 +95,5 @@ EXEC [Acc_Rpt_CompanyWinLoss_Bettrade_Site] @StartDate='2016-08-24', @EndDate='2
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_CompanyWinLoss_Bettrade_Site] TO [bodbAdminNet];
 GO
-GRANT VIEW DEFINITION ON[dbo].[Acc_Rpt_CompanyWinLoss_Bettrade_Site] TO[vnteam];
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_CompanyWinLoss_Bettrade_Site] TO [vnteam];
 GO
