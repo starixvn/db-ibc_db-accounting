@@ -290,7 +290,7 @@ BEGIN
 
 	SELECT @stop = CURRENT_TIMESTAMP
 
-	SELECT @logdata = 'NAP: Auto-Settlement (' + @action + ') for matchid:' + CAST(@matchid AS NVARCHAR(10)) 
+	SELECT @logdata = 'NAP: Fast Market (' + @action + ') for matchid:' + CAST(@matchid AS NVARCHAR(10)) 
 		+ '(' + CAST(DATEDIFF(MILLISECOND, @start, @stop) AS NVARCHAR(50)) + ' ms)'
 
 	EXEC dbo.WriteLog_UserLog @UserID = @AdminId, @Doing = @logdata
