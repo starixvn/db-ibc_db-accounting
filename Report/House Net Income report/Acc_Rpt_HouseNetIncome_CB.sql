@@ -112,7 +112,7 @@ BEGIN
 		AND b.ProductID = 15		
 		AND b.CurrencyId <> 20
 		AND b.CustomerCategory NOT IN (27, 28)
-		AND b.StatusId NOT IN (-1, 103) -- Exclude Reject, Void, Refund
+		AND b.StatusId NOT IN (-1, 101, 102, 103) -- Exclude Reject, Void, Refund
 	GROUP BY p.PartyID, b.rptDate, b.CurrencyId
 	
 	-- convert min/max amount to current currency

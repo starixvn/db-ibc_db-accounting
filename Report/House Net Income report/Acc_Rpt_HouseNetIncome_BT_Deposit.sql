@@ -83,7 +83,7 @@ BEGIN
 	WHERE b.rptDate BETWEEN @FDate AND @TDate
 		AND b.Bettype IN (903, 904) -- don't need to follow formula in LA Sys
 		AND b.CurrencyId <> 20
-		AND b.StatusId NOT IN (-1, 103)
+		AND b.StatusId NOT IN (-1, 101, 102, 103)
 		AND b.CustomerCategory IN (1001, 1002)
 	GROUP BY b.rptDate
 
