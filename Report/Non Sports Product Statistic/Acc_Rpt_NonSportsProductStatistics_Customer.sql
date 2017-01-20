@@ -4,7 +4,7 @@ GO
 ALTER PROCEDURE [dbo].[Acc_Rpt_NonSportsProductStatistics_Customer]
 	@WinlostDate	DATETIME,
 	@ProductId		VARCHAR(MAX) = '',
-	@Username		VARCHAR(5000) = '',
+	@Username		VARCHAR(MAX) = '',
 	@RoleID			TINYINT = 1,
 	@Site			VARCHAR(MAX) = 'ALL',	
 	@BetType		VARCHAR(MAX) = '',
@@ -63,7 +63,7 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	DECLARE @WLDate DATETIME, @UName VARCHAR(5000), @UrsName VARCHAR(5000)
+	DECLARE @WLDate DATETIME, @UName VARCHAR(MAX), @UrsName VARCHAR(MAX)
 	SELECT  @WLDate = @WinlostDate, @UrsName = @Username
 
 	CREATE TABLE #tmp_ProductID		(ProductID TINYINT)
@@ -224,6 +224,7 @@ BEGIN
 						INNER JOIN #CustUser cu ON c.recommend = cu.CustID
 					WHERE c.roleid = 1
 						AND EXISTS (SELECT 1 FROM #tmp_Company tc WHERE c.srecommend = tc.srecommend)
+						AND NOT EXISTS (SELECT 1 FROM #tmp_MemIDs m WHERE c.custId = m.CustID)
 				END
 				
 				IF @RoleID IN (0,3)
@@ -235,6 +236,7 @@ BEGIN
 						INNER JOIN #CustUser cu ON c.mrecommend = cu.CustID
 					WHERE c.roleid = 1
 						AND EXISTS (SELECT 1 FROM #tmp_Company tc WHERE c.srecommend = tc.srecommend)
+						AND NOT EXISTS (SELECT 1 FROM #tmp_MemIDs m WHERE c.custId = m.CustID)
 				END
 				
 				IF @RoleID IN (0,4)
@@ -246,6 +248,7 @@ BEGIN
 						INNER JOIN #CustUser cu ON c.srecommend = cu.CustID
 					WHERE c.roleid = 1
 						AND EXISTS (SELECT 1 FROM #tmp_Company tc WHERE c.srecommend = tc.srecommend)
+						AND NOT EXISTS (SELECT 1 FROM #tmp_MemIDs m WHERE c.custId = m.CustID)
 				END
 			END
 			ELSE -- @IsDrillDown = 1
@@ -324,6 +327,7 @@ BEGIN
 						dbo.Customer c WITH (NOLOCK)
 						INNER JOIN #CustUser cu ON c.recommend = cu.CustID
 					WHERE c.roleid = 1
+						AND NOT EXISTS (SELECT 1 FROM #tmp_MemIDs m WHERE c.custId = m.CustID)
 				END
 				
 				IF @RoleID IN (0,3)
@@ -334,6 +338,7 @@ BEGIN
 						dbo.Customer c WITH (NOLOCK)
 						INNER JOIN #CustUser cu ON c.mrecommend = cu.CustID
 					WHERE c.roleid = 1
+						AND NOT EXISTS (SELECT 1 FROM #tmp_MemIDs m WHERE c.custId = m.CustID)
 				END
 				
 				IF @RoleID IN (0,4)
@@ -344,6 +349,7 @@ BEGIN
 						dbo.Customer c WITH (NOLOCK)
 						INNER JOIN #CustUser cu ON c.srecommend = cu.CustID
 					WHERE c.roleid = 1
+						AND NOT EXISTS (SELECT 1 FROM #tmp_MemIDs m WHERE c.custId = m.CustID)
 				END
 			END
 			ELSE -- @IsDrillDown = 1
@@ -1398,9 +1404,30 @@ BEGIN
 			INNER JOIN dbo.Customer c WITH(NOLOCK) ON r.custId = c.custid
 		ORDER BY c.username
 	END
+	ELSE IF @RoleID = 0
+	BEGIN
+		SELECT
+			c.custid AS ReportById,
+			c.username AS ReportBy,
+			c.roleid AS RoleId,
+			CASE c.roleid WHEN 1 THEN 'Member' WHEN 2 THEN 'Agent' WHEN 3 THEN 'Master' WHEN 4 THEN 'Super' END AS RoleName,
+			r.BetCount,
+			e.exchangeid AS CurrencyId,
+			e.currency AS Currency,
+			r.TotalBetsBase AS TotalBets,
+			r.TotalWinsBase AS TotalWins,
+			r.TotalRefundBase AS TotalRefund,
+			r.CompanyTurnoverBase AS CompanyTurnover,
+			r.CompanyGrossIncomeBase AS CompanyGrossIncome,
+			r.CompanyCommBase AS CompanyComm,
+			r.HousePT AS HousePositionTaking
+		FROM #Result r
+			INNER JOIN dbo.Exchange e WITH(NOLOCK) ON r.CurrencyID = e.exchangeid
+			INNER JOIN dbo.Customer c WITH(NOLOCK) ON r.custId = c.custid
+		ORDER BY c.username
+	END
 	ELSE
 	BEGIN
-		
 		SELECT
 			SUM(r.BetCount) AS BetCount,
 			COUNT(DISTINCT r.custid) - @TotalRefundCust AS NoOfPlayers,

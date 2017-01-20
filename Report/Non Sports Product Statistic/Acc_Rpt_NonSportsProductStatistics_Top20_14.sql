@@ -1321,8 +1321,8 @@ BEGIN
 			GROUP BY custid, CurrencyID
 		), Result AS (
 			SELECT *,
-				ROW_NUMBER() OVER(ORDER BY TotalBets - TotalWins) AS RowNum1,
-				ROW_NUMBER() OVER(ORDER BY TotalWins - TotalBets) AS RowNum2
+				RANK() OVER(ORDER BY TotalBets - TotalWins) AS RowNum1,
+				RANK() OVER(ORDER BY TotalWins - TotalBets) AS RowNum2
 			FROM Result_1
 		)
 		INSERT INTO #Result
@@ -1405,7 +1405,7 @@ BEGIN
 			FROM #Result r
 				INNER JOIN dbo.Exchange e WITH(NOLOCK) ON r.CurrencyID = e.exchangeid
 				INNER JOIN dbo.Customer c WITH(NOLOCK) ON r.custId = c.custid
-			ORDER BY r.TopType, r.RowNum
+			ORDER BY r.TopType, r.RowNum, c.username
 
 			SELECT
 				CASE TopType WHEN 1 THEN 'Top 20 Winners' ELSE 'Top 20 Losers' END AS ReportBy,
