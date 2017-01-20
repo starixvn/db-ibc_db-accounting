@@ -23,6 +23,7 @@ AS
 	Original:
 	
 	Revisions:
+		- 20170113@Kathy:  Enhancement for Fast Market [Redmine:#69951]
 
 	Param's Explanation:
 		If @IsAuto = 0:
@@ -58,7 +59,6 @@ BEGIN
 				,@strFMBettypes	VARCHAR(MAX)
 				,@XmlData XML
 				,@rowcount	INT
-				,@top INT = 2147483647
 				
 	SET @XmlData =  CONVERT(XML, @Results)
 
@@ -107,10 +107,12 @@ BEGIN
 	CREATE INDEX IX_ResultDetail_Bettype ON #tblResultDetail (BetType)
 	
 	;WITH TmpData AS (
-		SELECT	T.C.value('../@Id', 'SMALLINT') AS Bettype
-				,T.C.value('./@p', 'TINYINT') AS Position
-				,T.C.value('./@r', 'TINYINT') AS BetOption
-		FROM	@XmlData.nodes('/r/b/r') AS T(C)
+		SELECT T.C.value('@Id', 'SMALLINT') AS Bettype
+			,X.C.value('@p','TINYINT') as Position
+			,X.C.value('@r','TINYINT') as BetOption
+		FROM @xmlData.nodes('/r/b') AS T(C)
+			CROSS APPLY
+				C.nodes('r') AS X(C)
 	)
 	INSERT INTO #tblResultDetail (
 		BetType
@@ -123,6 +125,7 @@ BEGIN
 			,Position
 			,ISNULL(BetOption,0)
 	FROM TmpData
+	OPTION ( OPTIMIZE FOR ( @XmlData = NULL ) )
 	-------------------------------------------------------------
 	---        CAPTURE value BALANCE before settlement        ---
 	---------------------------VVVV------------------------------
@@ -136,16 +139,10 @@ BEGIN
 	INSERT INTO	#BalanceBefore
 	SELECT	b.custid, SUM(b.winlost - b.actual_stake + b.playercomm)
 	FROM	#tblResultDetail r
-		CROSS APPLY (
-			 SELECT TOP (@top) b.custid
-					,b.winlost
-					,b.actual_stake
-					,b.playercomm
-			 FROM	dbo.bettrans b WITH (ROWLOCK)
-			 WHERE	b.matchid = @MatchId 
-					AND b.bettype = r.BetType
-					AND b.hdp1 = r.Position
-		) b
+		INNER JOIN dbo.bettrans b WITH(ROWLOCK)
+			ON	b.matchid = @matchid
+				AND b.bettype = r.BetType
+				AND b.hdp1 = r.Position
 	GROUP BY b.custid
 	
 	SET @rowcount = @@rowcount
@@ -174,16 +171,10 @@ BEGIN
 		INSERT INTO #BalanceAfter
 		SELECT	b.custid, SUM(b.winlost - b.actual_stake + b.playercomm)
 		FROM	#tblResultDetail r
-			CROSS APPLY (
-				 SELECT TOP (@top) b.custid
-						,b.winlost
-						,b.actual_stake
-						,b.playercomm
-				 FROM	dbo.bettrans b WITH (ROWLOCK)
-				 WHERE	b.matchid = @MatchId 
-						AND b.bettype = r.BetType
-						AND b.hdp1 = r.Position
-			) b
+			INNER JOIN dbo.bettrans b WITH(ROWLOCK)
+				ON	b.matchid = @matchid
+					AND b.bettype = r.BetType
+					AND b.hdp1 = r.Position
 		GROUP BY b.custid
 		-------------------------------------------------------------
 		---                   compare BALANCE                     ---
@@ -243,16 +234,10 @@ BEGIN
 	INSERT INTO #BalanceAfter
 	SELECT	b.custid, SUM(b.winlost - b.actual_stake + b.playercomm)
 	FROM	#tblResultDetail r
-		CROSS APPLY (
-			 SELECT TOP (@top) b.custid
-					,b.winlost
-					,b.actual_stake
-					,b.playercomm
-			 FROM	dbo.bettrans b WITH (ROWLOCK)
-			 WHERE	b.matchid = @MatchId 
-					AND b.bettype = r.BetType
-					AND b.hdp1 = r.Position
-		) b
+		INNER JOIN dbo.bettrans b WITH(ROWLOCK)
+			ON	b.matchid = @matchid
+				AND b.bettype = r.BetType
+				AND b.hdp1 = r.Position
 	GROUP BY b.custid
 	-------------------------------------------------------------
 	---                   compare BALANCE                     ---
@@ -305,7 +290,7 @@ BEGIN
 
 	SELECT @stop = CURRENT_TIMESTAMP
 
-	SELECT @logdata = 'NAP: Auto-Settlement (' + @action + ') for matchid:' + CAST(@matchid AS NVARCHAR(10)) 
+	SELECT @logdata = 'NAP: Fast Market (' + @action + ') for matchid:' + CAST(@matchid AS NVARCHAR(10)) 
 		+ '(' + CAST(DATEDIFF(MILLISECOND, @start, @stop) AS NVARCHAR(50)) + ' ms)'
 
 	EXEC dbo.WriteLog_UserLog @UserID = @AdminId, @Doing = @logdata

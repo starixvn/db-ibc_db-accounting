@@ -1,6 +1,9 @@
-USE bodb02
+USE [bodb02]
 GO
-
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_FGLG] @creator INT
 	, @matchid INT
 	, @action VARCHAR(10) = 'CAL-FT'
@@ -27,6 +30,7 @@ AS
 		- 20150807@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
 		- 20160315@Patrick: Auto payout [Redmine: #53262]
 		- 20160705@Kathy: PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
+		- 20170119@Kathy: Exclude Fast Market bettypes [Redmine:#56367]
 		
 	Param's Explanation:
 		+ @betstatus: FGLG status
@@ -40,18 +44,18 @@ BEGIN
 	DECLARE @ActionID INT
 			, @bettype INT
 			,@strFTBettypes VARCHAR(MAX)
-			,@strAutoBetRadarBettypes VARCHAR(MAX)
+			,@strAutoBettypes VARCHAR(MAX)
 
 	SELECT 	@strFTBettypes = COALESCE(@strFTBettypes + ',' + CAST(bettype AS NVARCHAR), CAST(bettype AS NVARCHAR))
 	FROM	dbo.f_Set_GetGroupBettypes() f 
 	WHERE  	f.IsUsedGoalRecordValue = 1
 			AND f.GroupId = 2 AND @IsAutoCalculatePage = 1
 
-	SELECT 	@strAutoBetRadarBettypes = COALESCE(@strAutoBetRadarBettypes + ',' + CAST(bettype AS NVARCHAR), CAST(bettype AS NVARCHAR))
+	SELECT 	@strAutoBettypes = COALESCE(@strAutoBettypes + ',' + CAST(bettype AS NVARCHAR), CAST(bettype AS NVARCHAR))
 	FROM	dbo.f_Set_GetGroupBettypes() f 
-	WHERE  	f.GroupId = 8
+	WHERE  	f.IsAuto = 1
 
-	SET @strAutoBetRadarBettypes = ',' + @strAutoBetRadarBettypes + ','
+	SET @strAutoBettypes = ',' + @strAutoBettypes + ','
 
 	CREATE TABLE #tmpTrans (transid BIGINT)
 	
@@ -102,7 +106,7 @@ BEGIN
 				AND b.bettype NOT BETWEEN 1501 AND 1599 -- Keno
 				AND b.bettype NOT BETWEEN 801 AND 899 --Metric Gaming 
 				AND 1 = CASE 
-							WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', @strAutoBetRadarBettypes) > 0 THEN 0 
+							WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', @strAutoBettypes) > 0 THEN 0 
 							ELSE 1 
 						END   --Auto settle Betradar
 		GROUP BY CASE WHEN CHARINDEX(',' + CAST(b.bettype AS VARCHAR) + ',', ',' + @strFTBettypes + ',') > 0 OR b.bettype IN (14, 127) THEN 1 ELSE 0 END
@@ -129,7 +133,7 @@ BEGIN
 		, @creator = @creator
 		, @FTDone = @AllDoneExceptFTFGLGBet
 
-	EXEC DBPRO.BODB02.dbo.[NAP_Admin_Result_Update_1s] @Command = 'NAP_Admin_Settlement_FGLG'
+				EXEC DBPRO.BODB02.dbo.[NAP_Admin_Result_Update_1s] @Command = 'NAP_Admin_Settlement_FGLG'
 		, @MatchID = @matchid
 		, @creator = @creator
 
