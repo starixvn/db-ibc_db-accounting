@@ -39,15 +39,14 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_LiveNonLive] @EndDate='2020-01-01',@StartDat
                 WHERE SubProduct NOT IN('MG-SuperLive', 'BT-Sold', 'BT-Bought', 'BT-Comm', 'BT-Winloss')
                 AND EventType IN(1, 2);
      END;
-      BEGIN -- #DepositSuper
+     BEGIN -- #DepositSuper
 
-		 CREATE TABLE #DepositSuper
+         CREATE TABLE #DepositSuper
          (CustId INT PRIMARY KEY
          );
          INSERT INTO #DepositSuper
                 SELECT CustId
                 FROM f_DepSuper_1('All');
-	 
      END;
      BEGIN -- #Match
 
@@ -96,7 +95,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_LiveNonLive] @EndDate='2020-01-01',@StartDat
          );
      END;
      BEGIN -- Live AND Non-Live
-			INSERT INTO #Data
+         INSERT INTO #Data
                 SELECT liveindicator AS GroupId,
                        CASE liveindicator
                            WHEN 1
@@ -126,7 +125,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_LiveNonLive] @EndDate='2020-01-01',@StartDat
                                        ELSE 'match'
                                    END
                       AND b.ruben = 1
-                      AND b.statusId NOT IN(101, 102, 103, 121)
+                      AND b.statusID IN(111, 112, 113)
                 GROUP BY liveindicator,
                          CASE liveindicator
                              WHEN 1
@@ -138,10 +137,10 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_LiveNonLive] @EndDate='2020-01-01',@StartDat
                              THEN 'Credit'
                              ELSE 'Deposit'
                          END;
-     END
+     END;
      BEGIN -- Sophia			
-			------ BARM (site only)
-			INSERT INTO #Data
+         ------ BARM (site only)
+         INSERT INTO #Data
                 SELECT liveindicator AS GroupId,
                        CASE liveindicator
                            WHEN 1
@@ -159,60 +158,105 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_LiveNonLive] @EndDate='2020-01-01',@StartDat
                 FROM bettrans AS b WITH (NOLOCK)
                      INNER JOIN #SportBetType AS sb ON sb.BetType = b.BetType
                      INNER JOIN #Match m ON b.MatchId = m.MatchId
-                WHERE b.recommend = 5707545 
-					  AND b.winlostdate = @StartDate
+                WHERE b.recommend = 5707545
+                      AND b.winlostdate = @StartDate
                       AND m.type = CASE
                                        WHEN b.BetType = 10
                                        THEN 'outright'
                                        ELSE 'match'
                                    END
                       AND b.ruben = 1
-                      AND b.statusId NOT IN(101, 102, 103, 121)
+                      AND b.statusID IN(111, 112, 113)
                 GROUP BY liveindicator,
                          CASE liveindicator
                              WHEN 1
                              THEN 'Soccer Live'
                              ELSE 'Soccer Non-Live'
-                         END
+                         END;
 	
-		--- set data default for 'Deposit' if there is no data
-		INSERT INTO #Data ( GroupId, GroupName, RowName, MemberWinLoss, SMAWinLoss, Commission, 
-							RealIncome, VirtualIncome, RealTurnover, VirtualTurnover)
-		SELECT	GroupId, GroupName, 'Deposit' AS RowName,
-				0 AS MemberWinLoss, 0 AS SMAWinLoss, 0 AS Commission, 
-				0 AS RealIncome, 0 AS VirtualIncome, 0 AS RealTurnover, 0 AS VirtualTurnover          
-		FROM (
-			SELECT	GroupId,
-					GroupName
-			FROM	#Data
-			WHERE	RowName = 'BARM'			
-			EXCEPT			
-			SELECT  GroupId,
-					GroupName
-			FROM	#Data
-			WHERE	RowName = 'Deposit'
-		)  D
+         --- set data default for 'Deposit' if there is no data
+         INSERT INTO #Data
+         (GroupId,
+          GroupName,
+          RowName,
+          MemberWinLoss,
+          SMAWinLoss,
+          Commission,
+          RealIncome,
+          VirtualIncome,
+          RealTurnover,
+          VirtualTurnover
+         )
+                SELECT GroupId,
+                       GroupName,
+                       'Deposit' AS RowName,
+                       0 AS MemberWinLoss,
+                       0 AS SMAWinLoss,
+                       0 AS Commission,
+                       0 AS RealIncome,
+                       0 AS VirtualIncome,
+                       0 AS RealTurnover,
+                       0 AS VirtualTurnover
+                FROM
+                (
+                    SELECT GroupId,
+                           GroupName
+                    FROM #Data
+                    WHERE RowName = 'BARM'
+                    EXCEPT
+                    SELECT GroupId,
+                           GroupName
+                    FROM #Data
+                    WHERE RowName = 'Deposit'
+                ) D;
 						 
-		---- Update Credit = Credit - BARM, Deposit = Deposit + BARM
-		UPDATE 	c
-		SET		c.MemberWinLoss = ISNULL(c.MemberWinLoss,0) + CASE WHEN c.RowName = 'Credit' THEN - ISNULL(d.MemberWinLoss,0) ELSE ISNULL(d.MemberWinLoss,0) END,
-				c.SMAWinLoss = ISNULL(c.SMAWinLoss,0) + CASE WHEN c.RowName = 'Credit' THEN - ISNULL(d.SMAWinLoss,0) ELSE ISNULL(d.SMAWinLoss,0) END,
-				c.Commission = ISNULL(c.Commission,0) + CASE WHEN c.RowName = 'Credit' THEN - ISNULL(d.Commission,0) ELSE ISNULL(d.Commission,0) END,
-				c.RealIncome = ISNULL(c.RealIncome,0) + CASE WHEN c.RowName = 'Credit' THEN - ISNULL(d.RealIncome,0) ELSE ISNULL(d.RealIncome,0) END,
-				c.VirtualIncome = ISNULL(c.VirtualIncome,0) + CASE WHEN c.RowName = 'Credit' THEN - ISNULL(d.VirtualIncome,0) ELSE ISNULL(d.VirtualIncome,0) END,
-				c.RealTurnover = ISNULL(c.RealTurnover,0) + CASE WHEN c.RowName = 'Credit' THEN - ISNULL(d.RealTurnover,0) ELSE ISNULL(d.RealTurnover,0) END,
-				c.VirtualTurnover = ISNULL(c.VirtualTurnover,0) + CASE WHEN c.RowName = 'Credit' THEN - ISNULL(d.VirtualTurnover,0) ELSE ISNULL(d.VirtualTurnover,0) END
-		FROM	#Data c
-		FULL JOIN  #Data d
-				ON	c.GroupId = d.GroupId					
-					AND d.RowName = 'BARM' 
-					AND c.RowName IN ('Credit', 'Deposit')
+         ---- Update Credit = Credit - BARM, Deposit = Deposit + BARM
+         UPDATE c
+           SET
+               c.MemberWinLoss = ISNULL(c.MemberWinLoss, 0)+CASE
+                                                                WHEN c.RowName = 'Credit'
+                                                                THEN-ISNULL(d.MemberWinLoss, 0)
+                                                                ELSE ISNULL(d.MemberWinLoss, 0)
+                                                            END,
+               c.SMAWinLoss = ISNULL(c.SMAWinLoss, 0)+CASE
+                                                          WHEN c.RowName = 'Credit'
+                                                          THEN-ISNULL(d.SMAWinLoss, 0)
+                                                          ELSE ISNULL(d.SMAWinLoss, 0)
+                                                      END,
+               c.Commission = ISNULL(c.Commission, 0)+CASE
+                                                          WHEN c.RowName = 'Credit'
+                                                          THEN-ISNULL(d.Commission, 0)
+                                                          ELSE ISNULL(d.Commission, 0)
+                                                      END,
+               c.RealIncome = ISNULL(c.RealIncome, 0)+CASE
+                                                          WHEN c.RowName = 'Credit'
+                                                          THEN-ISNULL(d.RealIncome, 0)
+                                                          ELSE ISNULL(d.RealIncome, 0)
+                                                      END,
+               c.VirtualIncome = ISNULL(c.VirtualIncome, 0)+CASE
+                                                                WHEN c.RowName = 'Credit'
+                                                                THEN-ISNULL(d.VirtualIncome, 0)
+                                                                ELSE ISNULL(d.VirtualIncome, 0)
+                                                            END,
+               c.RealTurnover = ISNULL(c.RealTurnover, 0)+CASE
+                                                              WHEN c.RowName = 'Credit'
+                                                              THEN-ISNULL(d.RealTurnover, 0)
+                                                              ELSE ISNULL(d.RealTurnover, 0)
+                                                          END,
+               c.VirtualTurnover = ISNULL(c.VirtualTurnover, 0)+CASE
+                                                                    WHEN c.RowName = 'Credit'
+                                                                    THEN-ISNULL(d.VirtualTurnover, 0)
+                                                                    ELSE ISNULL(d.VirtualTurnover, 0)
+                                                                END
+         FROM #Data c
+              FULL JOIN #Data d ON c.GroupId = d.GroupId
+                                   AND d.RowName = 'BARM'
+                                   AND c.RowName IN('Credit', 'Deposit');
 
  
-			-----Delete BARM row used for calculate
-		DELETE #Data WHERE RowName = 'BARM' 			 
-						 
-						 
+         -----Delete BARM row used for calculate
+         DELETE #Data
+         WHERE RowName = 'BARM';
      END;
      BEGIN -- RM   
 
@@ -243,7 +287,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Soccer_LiveNonLive] @EndDate='2020-01-01',@StartDat
                                        ELSE 'match'
                                    END
                       AND b.ruben = 1
-                      AND b.statusID NOT IN(101, 102, 103, 121)
+                      AND b.statusID IN(111, 112, 113)
                      AND b.recommend IN(52466, 5707545)
                 GROUP BY CASE
                              WHEN b.recommend = 52466

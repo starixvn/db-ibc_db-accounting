@@ -216,7 +216,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_Site] @StartDate='2016-01-01', @EndDate='202
                                    ELSE 0
                                END) AS TOPhum
                     FROM bettransm WITH (nolock)
-					WHERE Bettype = @Bettype
+                    WHERE Bettype = @Bettype
                     GROUP BY refno
                 ) AS bm ON b.transid = bm.refno
                      INNER JOIN #Agent AS dep ON b.recommend = dep.CustId
@@ -224,7 +224,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Racing_Site] @StartDate='2016-01-01', @EndDate='202
                       AND b.BetType = @BetType
                       AND b.MatchId > 0
                       AND b.ruben = 1
-                      AND b.statusId NOT IN(101, 102, 103, 121)
+                      AND b.statusID IN(111, 112, 113)
                 GROUP BY Site;
      END;
      BEGIN -- Query

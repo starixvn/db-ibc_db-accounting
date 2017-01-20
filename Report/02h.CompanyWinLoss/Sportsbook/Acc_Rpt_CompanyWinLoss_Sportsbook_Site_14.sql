@@ -145,7 +145,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Sportsbook_Site_14] @StartDate='2016-01-01', @EndDa
                                        ELSE 'match'
                                    END
                       AND b.ruben = 1
-                      AND b.statusID NOT IN(101, 102, 103, 121)
+                      AND b.statusID IN(111, 112, 113)
                 GROUP BY ag.site;
      END;
      BEGIN -- Query

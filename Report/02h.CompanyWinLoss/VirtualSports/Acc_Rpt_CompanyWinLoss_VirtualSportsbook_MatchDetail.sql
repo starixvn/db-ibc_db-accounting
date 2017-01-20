@@ -43,7 +43,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_VirtualSportsbook_MatchDetail] @StartDate='2016-01-
            AND m.SportType = @SportType
            AND b.MatchId > 0
            AND b.ruben = 1
-           AND statusId NOT IN(101, 102, 103, 121)
+           AND statusID IN(111, 112, 113)
      GROUP BY m.MatchId,
               m.MatchCode,
               m.HomeId,

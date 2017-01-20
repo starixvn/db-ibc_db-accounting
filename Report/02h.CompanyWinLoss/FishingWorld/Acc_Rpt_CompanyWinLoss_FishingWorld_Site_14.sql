@@ -8,10 +8,10 @@ IF EXISTS
     DROP PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_FishingWorld_Site_14];
 GO
 CREATE PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_FishingWorld_Site_14] @StartDate SMALLDATETIME,
-                                                               @EndDate   SMALLDATETIME,
-                                                               @BetType   INT,
-                                                               @Site      NVARCHAR(50),
-                                                               @IsLive    INT           = 2
+                                                                  @EndDate   SMALLDATETIME,
+                                                                  @BetType   INT,
+                                                                  @Site      NVARCHAR(50),
+                                                                  @IsLive    INT           = 2
 AS
 
 /*
@@ -89,7 +89,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_FishingWorld_Site_14] @BetType = 1011,@EndDate='202
               JOIN #Agent dep ON b.recommend = dep.custid
          WHERE b.winlostdate = @StartDate
                AND b.gameId = @BetType
-               AND b.statusID NOT IN(0, 1, 101, 102, 103, 121)
+               AND b.statusID IN(111, 112, 113)
          GROUP BY dep.Site
          ORDER BY RowName;
      END;

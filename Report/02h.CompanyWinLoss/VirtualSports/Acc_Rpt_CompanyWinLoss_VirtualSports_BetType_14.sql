@@ -77,7 +77,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_VirtualSports_BetType_14] @StartDate='2016-01-01', 
                    AND m.sporttype = @SportType
                    AND b.MatchId > 0
                    AND b.ruben = 1
-                   AND b.statusId NOT IN(101, 102, 103, 121)
+                   AND b.statusID IN(111, 112, 113)
              GROUP BY sb.BetType,
                       sb.BetTypeName,
                       CASE
@@ -110,7 +110,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_VirtualSports_BetType_14] @StartDate='2016-01-01', 
                    AND r.sporttype = @SportType
                    AND b.MatchId > 0
                    AND b.ruben = 1
-                   AND b.statusId NOT IN(101, 102, 103, 121)
+                   AND b.statusID IN(111, 112, 113)
              GROUP BY sb.BetType,
                       sb.BetTypeName,
                       CASE

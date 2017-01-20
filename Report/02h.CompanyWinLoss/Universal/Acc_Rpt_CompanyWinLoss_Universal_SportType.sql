@@ -78,7 +78,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Universal_SportType] @StartDate='2016-11-07', @EndD
               LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
          WHERE b.winlostdate = @FDate
                AND b.ruben = 1
-               AND b.statusId NOT IN(101, 102, 103, 121)
+               AND b.statusID IN(111, 112, 113)
          GROUP BY sb.SportType,
                   sb.SportName,
                   CASE

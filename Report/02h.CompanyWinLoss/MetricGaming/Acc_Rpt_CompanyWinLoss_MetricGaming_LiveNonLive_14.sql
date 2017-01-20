@@ -82,7 +82,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_MetricGaming_LiveNonLive_14] @EndDate='2020-01-01',
                      LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
                 WHERE b.winlostdate = @StartDate
                       AND b.ruben = 1
-                      AND b.statusID NOT IN(101, 102, 103, 121)
+                      AND b.statusID IN(111, 112, 113)
                 GROUP BY liveindicator,
                          CASE liveindicator
                              WHEN 1

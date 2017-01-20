@@ -56,7 +56,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_NumberGame_MatchDetail_14] @BetType=81,@IsLive=0,@S
                       AND b.liveindicator = @IsLive
                       AND b.MatchId > 0
                       AND b.ruben = 1
-                      AND statusId NOT IN(101, 102, 103, 121)
+                      AND statusID IN(111, 112, 113)
                 GROUP BY m.MatchCode,
                          m.LeagueId;
      END;

@@ -27,11 +27,9 @@ EXEC [Acc_Rpt_CompanyWinLoss_Bettrade_BetType] @StartDate='2016-01-01', @EndDate
      BEGIN --#SportBetType     
          DECLARE @isTest BIT= 0;
          SELECT @isTest = dbo.f_CheckSPVersion(@@PROCID);
-         CREATE TABLE #SportBetType
-         (BetType     INT          
-         );
+         CREATE TABLE #SportBetType(BetType INT);
          INSERT INTO #SportBetType
-                SELECT BetType                       
+                SELECT BetType
                 FROM dbo.f_SportBetTypeMatrix_Sel(1, 0, 0, 2, 'BT-Comm', '', @isTest)
                 UNION
                 SELECT BetType
@@ -65,7 +63,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Bettrade_BetType] @StartDate='2016-01-01', @EndDate
               LEFT JOIN #DepositSuper AS dep ON b.srecommend = dep.CustId
          WHERE b.winlostdate = @StartDate
                AND b.ruben = 1
-               AND b.statusId NOT IN(101, 102, 103, 121)
+               AND b.statusID IN(111, 112, 113)
          GROUP BY CASE
                       WHEN dep.CustId IS NULL
                       THEN 'Credit'
@@ -79,5 +77,5 @@ EXEC [Acc_Rpt_CompanyWinLoss_Bettrade_BetType] @StartDate='2016-01-01', @EndDate
 GO
 GRANT EXECUTE ON [dbo].[Acc_Rpt_CompanyWinLoss_Bettrade_BetType] TO [bodbAdminNet];
 GO
-GRANT VIEW DEFINITION ON[dbo].[Acc_Rpt_CompanyWinLoss_Bettrade_BetType] TO[vnteam];
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_CompanyWinLoss_Bettrade_BetType] TO [vnteam];
 GO

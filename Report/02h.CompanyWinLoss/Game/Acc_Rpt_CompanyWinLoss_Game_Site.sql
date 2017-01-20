@@ -107,7 +107,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Site] @BetType = 2101,@EndDate='2020-01-01',@S
                     WHERE b.winlostdate = @StartDate
                           AND b.BetType = @BetType
                           AND b.ruben = 1
-                          AND b.statusId NOT IN(101, 102, 103, 121)
+                          AND b.statusID IN(111, 112, 113)
                     GROUP BY dep.Site;
          END;
      IF EXISTS -- bettransRNG
@@ -129,7 +129,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Site] @BetType = 2101,@EndDate='2020-01-01',@S
                          JOIN #Agent dep ON b.recommend = dep.custid
                     WHERE b.winlostdate = @StartDate
                           AND b.gameId = @BetType
-                          AND b.statusID NOT IN(0, 1, 101, 102, 103, 121)
+                          AND b.statusID IN(111, 112, 113)
                     GROUP BY dep.Site;
          END;
      IF EXISTS -- bettransLC
@@ -151,7 +151,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Game_Site] @BetType = 2101,@EndDate='2020-01-01',@S
                          JOIN #Agent dep ON b.recommend = dep.custid
                     WHERE b.winlostdate = @StartDate
                           AND b.gameId = @BetType
-                          AND b.statusID NOT IN(0, 1, 101, 102, 103, 121)
+                          AND b.statusID IN(111, 112, 113)
                     GROUP BY dep.Site;
          END;
      BEGIN -- Query

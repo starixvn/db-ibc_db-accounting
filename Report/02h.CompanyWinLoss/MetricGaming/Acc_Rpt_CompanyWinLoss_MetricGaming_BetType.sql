@@ -88,7 +88,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_MetricGaming_BetType] @EndDate='2020-01-01',@StartD
                       AND (@IsLive > 1
                            OR b.liveindicator = @IsLive)
                       AND b.ruben = 1
-                      AND b.statusId NOT IN(101, 102, 103, 121)
+                      AND b.statusID IN(111, 112, 113)
                 GROUP BY sb.BetType,
                          sb.BetTypeName,
                          CASE

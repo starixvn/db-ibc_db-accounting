@@ -1,9 +1,7 @@
-USE [bodb02]
+USE [bodb02];
 GO
-
-ALTER PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Parlay]
-	@StartDate SMALLDATETIME,
-    @EndDate   SMALLDATETIME
+ALTER PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_Parlay] @StartDate SMALLDATETIME,
+                                                      @EndDate   SMALLDATETIME
 AS
 
 /*
@@ -78,7 +76,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_Parlay] @EndDate='2020-01-01',@StartDate='2016-01-0
                 WHERE b.winlostdate = @StartDate
                       AND BetType IN(9, 29)
                      AND b.ruben = 1
-                     AND b.statusID NOT IN(101, 102, 103, 121)
+                     AND b.statusID IN(111, 112, 113)
                 GROUP BY CASE
                              WHEN bettype = 9
                                   OR (bettype = 29

@@ -14,8 +14,8 @@ CREATE PROCEDURE [dbo].[Acc_Rpt_CompanyWinLoss_VirtualSports_Site_14] @StartDate
                                                                    @Site      VARCHAR(20)
 AS
 
-/*
-Creator: Jacob
+/*Creator:
+Jacob;
 Date: 2016-03-01
 Task:  Casino Integration Improvement - Implement Company Winloss By Products report [#48448]
 DB: DBACC/bodb02
@@ -86,7 +86,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_VirtualSports_Site_14] @StartDate='2016-01-01', @En
                    AND m.sporttype = @SportType
                    AND b.MatchId > 0
                    AND b.ruben = 1
-                   AND b.statusId NOT IN(101, 102, 103, 121)
+                   AND b.statusID IN(111, 112, 113)
              GROUP BY Site
              ORDER BY RowName;
          END;
@@ -106,7 +106,7 @@ EXEC [Acc_Rpt_CompanyWinLoss_VirtualSports_Site_14] @StartDate='2016-01-01', @En
                    AND r.sporttype = @SportType
                    AND b.MatchId > 0
                    AND b.ruben = 1
-                   AND b.statusId NOT IN(101, 102, 103, 121)
+                   AND b.statusID IN(111, 112, 113)
              GROUP BY Site
              ORDER BY RowName;
          END;
