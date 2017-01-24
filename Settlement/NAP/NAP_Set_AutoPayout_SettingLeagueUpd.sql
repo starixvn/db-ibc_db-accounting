@@ -7,7 +7,8 @@ SET QUOTED_IDENTIFIER ON
 GO
 ALTER PROCEDURE dbo.NAP_Set_AutoPayout_SettingLeagueUpd 
 	@LeagueId 			INT
-	, @AutoSetting 		TINYINT
+	, @AutoType			TINYINT
+	, @IsEnabled		BIT 
 	, @IsApplyAll 		BIT
 	, @AdminId 			INT
 	, @IP 				VARCHAR(20) = ''
@@ -21,6 +22,7 @@ AS
 	Revisions:
 		- 20160930@Bobby: #65003 - Merge Auto Payout and Inst CAL setting
 		- 20161212@Bobby: #67760 - Implement IS for FGLG bet types
+		- 20170123@Kathy: Allow user to Enable/Disable Auto Settlement of Fast Market [Redmine:#69949]
 		
 	Param's Explanation:
 		- @IsApplyAll: 0: only update on league
@@ -29,100 +31,84 @@ AS
 		- @AutoType: TINYINT 
 			+ 1: Auto Payout
 			+ 2: Inst Calculation
+			+ 3: Fast Market
  
 */
 BEGIN
 	SET NOCOUNT ON
-	DECLARE @AutoSetting_Old 	TINYINT
-		, @StarTime 			DATETIME
-		, @EndTime 				DATETIME
-		, @Remark 				VARCHAR(1024)
-		, @AutoType				TINYINT
-		, @bitChanged			TINYINT
-		, @actionLogId			INT
-	
-	SELECT @AutoSetting = ISNULL(@AutoSetting, 0), @StarTime = GETDATE()
-
-	SELECT @AutoSetting_Old = ISNULL(AutoSetting, 0)
-	FROM dbo.League l WITH(NOLOCK) 
-	WHERE leagueid = @LeagueId
-	
-	SELECT @AutoType			= CASE 
-									WHEN (1 & @AutoSetting_Old <> 1 & @AutoSetting) THEN 1 --AutoPayout
-									WHEN (2 & @AutoSetting_Old <> 2 & @AutoSetting) THEN 2 --InstCalc
-									ELSE 0 
-								END
-			,@bitChanged		= CASE 
-									WHEN @AutoType = 1 THEN 1 & @AutoSetting
-									WHEN @AutoType = 2 THEN 2 & @AutoSetting
-								END
-			, @actionLogId		= CASE 
+	DECLARE @AutoSettingForLeague 		TINYINT
+		, @StarTime 					DATETIME
+		, @EndTime 						DATETIME
+		, @Remark 						VARCHAR(1024)
+		, @actionLogId					INT
+		, @AutoSetting					TINYINT
+		
+	SELECT	@StarTime = GETDATE()
+			,@actionLogId = CASE 
 									WHEN @AutoType = 1 THEN 159 
 									WHEN @AutoType = 2 THEN 180
+									WHEN @AutoType = 3 THEN 183
 									ELSE -1 
 								END
-								
-	--check concurrency users
-	IF (
-		@AutoSetting = @AutoSetting_Old
-	)
+
+	SELECT @AutoSettingForLeague = ISNULL(AutoSetting, 0)
+	FROM dbo.League l WITH(NOLOCK) 
+	WHERE leagueid = @LeagueId
+		
+	-- update setting for matches do not have any setting
+	UPDATE	m
+		SET AutoSetting = @AutoSettingForLeague
+	FROM	dbo.match m WITH(UPDLOCK, ROWLOCK)
+	WHERE	m.leagueid = @LeagueId 
+			AND sporttype = 1 
+			AND AutoSetting IS NULL
+	
+	SELECT	@AutoSettingForLeague =  CASE 
+										WHEN @IsEnabled = 1 THEN @AutoSettingForLeague | POWER(2,@AutoType - 1) 
+										ELSE CASE WHEN @AutoSettingForLeague >= (POWER(2,@AutoType - 1)) THEN @AutoSettingForLeague ^ (POWER(2,@AutoType - 1))  ELSE @AutoSettingForLeague END
+									END
+	
+	--update setting on league
+	UPDATE	dbo.League WITH(ROWLOCK, UPDLOCK)
+		SET AutoSetting = @AutoSettingForLeague
+	WHERE	leagueid = @LeagueId
+
+	IF @@ERROR > 0
 	BEGIN
+		SELECT	@ErrCode = 1001018
+				,@ErrMsg = 'Cannot update auto setting on this league. Please try again.'
+				
 		RETURN
 	END
-
+								
 	IF @IsApplyAll = 1
 	BEGIN
 		--update running match
 		UPDATE m
-		SET AutoSetting = CASE 
-							WHEN @AutoType = 1 THEN @bitChanged + (2 & ISNULL(m.AutoSetting, 0))
-							WHEN @AutoType = 2 THEN (1 & ISNULL(m.AutoSetting, 0)) + @bitChanged
-							ELSE m.AutoSetting
-						END
-		FROM dbo.match m WITH(UPDLOCK, ROWLOCK)
-		WHERE m.leagueid 	= @LeagueId 
+			SET @AutoSetting = ISNULL(m.AutoSetting,0)
+				,AutoSetting = CASE 
+									WHEN @IsEnabled = 1 THEN @AutoSetting | POWER(2,@AutoType - 1) 
+									ELSE CASE WHEN @AutoSetting  >= (POWER(2,@AutoType - 1)) THEN @AutoSetting ^ (POWER(2,@AutoType - 1))  ELSE @AutoSetting END
+								END
+		FROM	dbo.match m WITH(UPDLOCK, ROWLOCK)
+		WHERE	m.leagueid 	= @LeagueId 
 				AND sporttype 	= 1 
 				AND 1 = CASE 
-					WHEN @AutoType = 1 AND eventstatus <> 'completed' THEN 1
-					WHEN @AutoType = 2 AND eventstatus IN ('running', 'closed') THEN 1
-					ELSE 0 
-				END
+							WHEN @AutoType = 1 AND eventstatus <> 'completed' THEN 1
+							WHEN @AutoType = 2 AND eventstatus IN ('running', 'closed') THEN 1
+							WHEN @AutoType = 3 THEN 1
+							ELSE 0 
+						END
 				
 		IF @@ERROR > 0
 		BEGIN
-			SELECT @ErrCode = 1001019, @ErrMsg = 'Cannot update auto setting on this match. Please try again.'
+			SELECT @ErrCode = 1001019, @ErrMsg = 'Cannot update auto setting on match. Please try again.'
 			RETURN
 		END
-	END
-
-	IF EXISTS (SELECT TOP 1 1 
-				FROM dbo.match m WITH(NOLOCK)
-				WHERE m.leagueid = @LeagueId AND sporttype = 1 AND AutoSetting IS NULL)
-	BEGIN
-		UPDATE m
-		SET AutoSetting = @AutoSetting_Old
-		FROM dbo.match m WITH(UPDLOCK, ROWLOCK)
-		WHERE m.leagueid = @LeagueId AND sporttype = 1 AND AutoSetting IS NULL
-
-		IF @@ERROR > 0
-		BEGIN
-			SELECT @ErrCode = 1001019, @ErrMsg = 'Cannot update auto setting on this match. Please try again.'
-			RETURN
-		END
-	END
-
-	--update setting league
-	UPDATE dbo.League WITH(ROWLOCK, UPDLOCK)
-	SET AutoSetting = @AutoSetting
-	WHERE leagueid = @LeagueId
-
-	IF @@ERROR > 0
-	BEGIN
-		SELECT @ErrCode = 1001018, @ErrMsg = 'Cannot update auto setting on this league. Please try again.'
-		RETURN
 	END
 
 	SELECT @EndTime = GETDATE()
+	
 	SELECT @Remark = 'NAP: Update auto setting on league:' + CAST(@LeagueId AS NVARCHAR(10)) 
 		+ ' AutoSetting:' + CAST(ISNULL(@AutoSetting, 0) AS NVARCHAR(10))
 		+ ' AutoType:' + CAST(ISNULL(@AutoType, 0) AS NVARCHAR(10))

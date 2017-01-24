@@ -5,9 +5,14 @@ SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE dbo.NAP_Set_AutoPayout_SettingMatchUpd 
 	@MatchId 			INT
-	, @AutoSetting 		TINYINT
+	, @AutoType			TINYINT
+	, @IsEnabled		BIT 
 	, @AdminId 			INT
 	, @IP 				VARCHAR(20) = ''
 	, @ErrCode 			INT = 0 OUTPUT
@@ -20,55 +25,47 @@ AS
 	Revisions:
 		- 20160930@Bobby: #65003 - Merge Auto Payout and Inst CAL setting
 		- 20161212@Bobby: #67760 - Implement IS for FGLG bet types
+		- 20170123@Kathy: Allow user to Enable/Disable Auto Settlement of Fast Market [Redmine:#69949]
 		
 	Param's Explanation:
 		- @AutoType: TINYINT 
 			+ 1: Auto Payout
 			+ 2: Inst Calculation
+			+ 3: Fast Market
 */
 BEGIN
 	SET NOCOUNT ON
-	DECLARE @AutoSetting_Old 	TINYINT
+	DECLARE @AutoSetting 		TINYINT
 		, @StarTime 			DATETIME
 		, @EndTime 				DATETIME
 		, @Remark 				VARCHAR(1024)
 		, @LeagueId 			INT
-		, @AutoType				TINYINT
 		, @actionLogId			INT
 	
-	SELECT @AutoSetting 		= ISNULL(@AutoSetting, 0)
-		, @StarTime 			= GETDATE()
-		
+	SELECT	@StarTime 			= GETDATE()
+			,@actionLogId = CASE 
+									WHEN @AutoType = 1 THEN 160
+									WHEN @AutoType = 2 THEN 181
+									WHEN @AutoType = 3 THEN 184
+									ELSE -1 
+								END
 	
-	SELECT @AutoSetting_Old = AutoSetting, @LeagueId = leagueid
-	FROM dbo.match m WITH(NOLOCK)
-	WHERE m.matchid = @MatchId
+	SELECT	@AutoSetting = AutoSetting
+			,@LeagueId = leagueid
+	FROM	dbo.match m WITH(NOLOCK)
+	WHERE	m.matchid = @MatchId
 	
-	IF @AutoSetting_Old IS NULL
+	IF @AutoSetting IS NULL
 	BEGIN
-		SELECT @AutoSetting_Old = ISNULL(AutoSetting, 0)
+		SELECT @AutoSetting = ISNULL(AutoSetting, 0)
 		FROM dbo.League l WITH(NOLOCK)
 		WHERE LeagueId = @LeagueId
 	END
 	
-	SELECT @AutoType			= CASE 
-									WHEN (1 & @AutoSetting_Old <> 1 & @AutoSetting) THEN 1 
-									WHEN (2 & @AutoSetting_Old <> 2 & @AutoSetting) THEN 2 
-									ELSE 0 
-								END
-			, @actionLogId		= CASE 
-									WHEN @AutoType = 1 THEN 160 
-									WHEN @AutoType = 2 THEN 181
-									ELSE -1 
-								END
-								
-	--check concurrency users
-	IF (
-		@AutoSetting = @AutoSetting_Old
-	)
-	BEGIN
-		RETURN
-	END
+	SELECT	@AutoSetting =  CASE 
+								WHEN @IsEnabled = 1 THEN @AutoSetting | POWER(2,@AutoType - 1) 
+								ELSE CASE WHEN @AutoSetting >= (POWER(2,@AutoType - 1)) THEN @AutoSetting ^ (POWER(2,@AutoType - 1))  ELSE @AutoSetting END
+							END
 
 	--check match <> running
 	IF EXISTS (

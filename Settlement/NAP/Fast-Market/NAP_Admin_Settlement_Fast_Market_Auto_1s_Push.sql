@@ -24,6 +24,7 @@ AS
 	
 	Revisions:
 			- 20170113@Kathy:  Enhancement for Fast Market [Redmine:#69951]
+			- 20170123@Kathy: Checking auto settlement FM setting of match before settling  [Redmine:#69949]
 			
 	Param's Explanation:
 		- @Result = '<BetTypes>
@@ -45,6 +46,7 @@ BEGIN
 			,@xmlData		XML
 			,@rowcount		INT = 0
 			,@subErrMsg		VARCHAR(MAX) = ''
+			,@AutoSetting	TINYINT
 			
 	DECLARE @tblData TABLE (
 		bettype					SMALLINT
@@ -64,6 +66,7 @@ BEGIN
 	SELECT	@matchcode = m.matchcode
 			,@sporttype = m.sporttype
 			,@leagueid = m.leagueid
+			,@AutoSetting = m.AutoSetting
 	FROM	dbo.match m WITH(NOLOCK)
 	WHERE	m.matchid = @MatchId
 
@@ -90,6 +93,7 @@ BEGIN
 		
 		RETURN
 	END
+	
 			
 	SET @xmlData = CONVERT(XML, @Results)
 	
@@ -126,6 +130,19 @@ BEGIN
 
 			RETURN
 		END
+		
+		IF @AutoSetting IS NULL
+			SELECT @AutoSetting = ISNULL(AutoSetting,0)
+			FROM	dbo.League WITH(NOLOCK)
+			WHERE	leagueid = @leagueid
+	
+		IF @AutoSetting & 4 < 4  -- 100 -- setting of Fast Market
+		BEGIN
+			SELECT	@ErrCode = 1001017
+					,@ErrMsg = 'The auto-settlement failed due to OFF setting.'
+			
+			RETURN
+		END	
 		
 		UPDATE t
 		SET	BetOption = (SELECT TOP 1 byte 

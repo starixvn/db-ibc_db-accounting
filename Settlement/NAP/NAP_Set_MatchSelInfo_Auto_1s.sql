@@ -14,7 +14,8 @@ AS
 	Original: 
 	
 	Revisions:
-
+		- 20170123@Kathy:  Allow user to Enable/Disable Auto Settlement of Fast Market [Redmine:#69949]
+		
 	Param's Explanation:
 */
 BEGIN
@@ -37,7 +38,7 @@ BEGIN
 	SELECT	@IsCalRefund = calrefund
 	FROM	dbo.match_remark WITH(NOLOCK)
 	WHERE	matchid = @matchId
-		
+	
 	-- Match Info 
 	SELECT	m.LeagueID
 			,m.MatchID
@@ -55,6 +56,8 @@ BEGIN
 			,@IsExistFgLg AS IsExistFgLg
             ,@IsExistHtFgLg AS IsExistHtFgLg
             ,@IsCalRefund AS IsCalRefund
+            ,m.AutoSetting
+            ,(SELECT AutoSetting FROM dbo.League WITH(NOLOCK) WHERE leagueid = m.leagueid) AS AutoSettingForLeague
 	FROM	dbo.Match m WITH (NOLOCK)
 	WHERE	MatchID = @MatchID
 
