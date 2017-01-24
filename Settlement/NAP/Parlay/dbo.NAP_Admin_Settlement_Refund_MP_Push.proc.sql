@@ -29,7 +29,7 @@ BEGIN
 		,@leagueid      		INT		
 		,@IsNested      		BIT
 		,@ActionId        		INT
-		,@procName      		NVARCHAR(50)
+		,@procName      		NVARCHAR(128)
 		,@sqlCommand			NVARCHAR(1000)
 		,@IsExistNetPosition	BIT = 0
 		,@Mode					VARCHAR(20)
@@ -80,6 +80,8 @@ BEGIN
 
         RETURN
     END
+	
+	SELECT @procName = OBJECT_NAME(@@PROCID)
 	
 	IF @procName LIKE '%_xtest' or @procName LIKE '%_xpre' OR @procName LIKE '%_UAT_' -- UAT1 -->UAT9
 	BEGIN

@@ -148,48 +148,52 @@ BEGIN
 			,@ticketCount	+= @batchCount
 		
 		SELECT @strTicket =  CAST(
-		(SELECT TOP(@batchNo)
-			b.transid AS t
-			, b.refno AS r
-			, CASE 
-				WHEN odds.modds IS NULL THEN 103 --REFUND
-				ELSE odds.StatusId --settle determined
-			END AS s
-		FROM @tempBatch ref
-			INNER JOIN dbo.bettransm b WITH(NOLOCK) ON ref.refno = b.refno
-			--INNER JOIN #autoBettypes t ON bm.bettype = t.bettype	
-			OUTER APPLY [dbo].[f_Set_Parlay_SDT_CalModds_BetRadar](
-					b.bettype
-					, b.betteam
-					, b.betcheck
-					, @PenaltyShootout
-					, @MatchDecidedMethod
-					, @First10Min1x2
-					, @FirstGoalTime10Min
-					, @FirstGoalTime15Min
-					, @WhoAdvancesNextRound
-					, @ExtraTimeandGoal
-					, @ExtraTimeYN
+		(
+			SELECT *
+			FROM (
+				SELECT TOP(@batchNo)
+					b.transid AS t
+					, b.refno AS r
+					, CASE 
+						WHEN odds.modds IS NULL THEN 103 --REFUND
+						ELSE odds.StatusId --settle determined
+					END AS s
+				FROM @tempBatch ref
+					INNER JOIN dbo.bettransm b WITH(NOLOCK) ON ref.refno = b.refno
+					--INNER JOIN #autoBettypes t ON bm.bettype = t.bettype	
+					OUTER APPLY [dbo].[f_Set_Parlay_SDT_CalModds_BetRadar](
+							b.bettype
+							, b.betteam
+							, b.betcheck
+							, @PenaltyShootout
+							, @MatchDecidedMethod
+							, @First10Min1x2
+							, @FirstGoalTime10Min
+							, @FirstGoalTime15Min
+							, @WhoAdvancesNextRound
+							, @ExtraTimeandGoal
+							, @ExtraTimeYN
 
-					, @PlayerSentOff
-					, @PlayerSentOff1H
-					, @PlayerSentOffHome
-					, @PlayerSentOffHome1H
-					, @PlayerSentOffAway
-					, @PlayerSentOffAway1H
-					, @GoalScorerFirst
+							, @PlayerSentOff
+							, @PlayerSentOff1H
+							, @PlayerSentOffHome
+							, @PlayerSentOffHome1H
+							, @PlayerSentOffAway
+							, @PlayerSentOffAway1H
+							, @GoalScorerFirst
 						
-					, @NextGoal1H
-					, @NextGoal
-					, @NextGoalTime15Min
-					, @ExtraNextGoal
-					, @GoalScorerAnytime
+							, @NextGoal1H
+							, @NextGoal
+							, @NextGoalTime15Min
+							, @ExtraNextGoal
+							, @GoalScorerAnytime
 					
-					, @FirstGoalMethod
-					, @IsHT
-				)  AS odds
-		WHERE b.matchid = @matchid
-		FOR XML AUTO) AS VARCHAR(MAX))
+							, @FirstGoalMethod
+							, @IsHT
+						)  AS odds
+				WHERE b.matchid = @matchid 
+			) AS b FOR XML AUTO
+		) AS VARCHAR(MAX))
 		
 		--select @matchid
 		--	,@matchdate

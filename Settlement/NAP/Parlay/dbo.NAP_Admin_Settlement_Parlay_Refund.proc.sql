@@ -87,20 +87,18 @@ BEGIN
 			,@ticketCount	+= @batchCount
 
 		SELECT @strTicket = CAST(
-			(SELECT TOP(@batchNo)
-				b.transid AS t
-				,b.refno AS r
-				,103 AS s
-			FROM @tempRefundBatch ref
-				INNER JOIN dbo.bettransm b WITH(NOLOCK) ON b.refno = ref.refno
-			WHERE b.matchid 	= @matchid
-			FOR XML AUTO) AS VARCHAR(MAX))
-		
-		--select @matchid
-		--	,@matchdate
-		--	,@mode AS mode
-		--	,'REFUND' AS [action] 		
-		--	,@strTicket AS strTransIds
+		(
+			SELECT *
+			FROM (
+				SELECT TOP(@batchNo)
+					b.transid AS t
+					,b.refno AS r
+					,103 AS s
+				FROM @tempRefundBatch ref
+					INNER JOIN dbo.bettransm b WITH(NOLOCK) ON b.refno = ref.refno
+				WHERE b.matchid 	= @matchid
+			) AS b FOR XML AUTO
+		) AS VARCHAR(MAX))
 		
 		IF(@strTicket IS NOT NULL)
 		BEGIN

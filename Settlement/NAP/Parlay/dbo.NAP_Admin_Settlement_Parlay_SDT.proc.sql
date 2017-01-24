@@ -102,7 +102,10 @@ BEGIN
 	
 	SELECT @totalConner			= CASE WHEN @IsHT = 1 THEN (@hthCorners + @htaCorners) ELSE (@fthCorners + @ftaCorners) END
 		, @totalConner1H 		= (@hthCorners + @htaCorners)
-
+		--------reset FT conners results
+		, @fthCorners			= CASE WHEN @IsHT = 1 THEN @hthCorners 	ELSE @fthCorners END
+		, @ftaCorners			= CASE WHEN @IsHT = 1 THEN @htaCorners 	ELSE @ftaCorners END
+		, @ftFCorner			= CASE WHEN @IsHT = 1 THEN @htFCorner 	ELSE @ftFCorner END
 	
 	INSERT INTO #SDTBettypes (bettype, IsDetermined)
 	SELECT f.BetType
@@ -151,64 +154,67 @@ BEGIN
 
 			--INSERT INTO @tempBatch(transid, refno, StatusId)
 			SELECT @strTicket =  CAST(
-				(SELECT TOP(@batchNo) 
-					b.transid AS t
-					, b.refno AS r
-					, CASE 
-						WHEN odds.modds IS NOT NULL THEN odds.StatusId 
-						ELSE 103 
-					END AS s
-				FROM @tempBatch ref 
-					INNER JOIN dbo.bettransm b WITH(NOLOCK) ON ref.refno = b.refno
-					--INNER JOIN #SDTBettypes t ON b.bettype = t.bettype
-					OUTER APPLY
-					(
-						SELECT modds, StatusId 
-						FROM [dbo].[f_Set_Parlay_SDT_CalModds](
-							b.bettype
-							, b.betteam
-							, b.hdp1
-							, b.hdp2
-							, @hScore1H
-							, @aScore1H
-							, @hScore2H
-							, @aScore2H
-							, b.transdesc
-							, @IsHT
-						)
-						WHERE StatusId IN (112,113)
-						UNION ALL
-						SELECT modds, StatusId 
-						FROM [dbo].[f_Set_Parlay_SDT_CalModds_Corner](
-							b.bettype
-							, b.betteam
-							, b.hdp1
-							, b.hdp2
-							, @totalConner
-							, @totalConner1H
-							, @ftFCorner
-							, @htFCorner
-							, @hthCorners
-							, @htaCorners
-							, @fthCorners
-							, @ftaCorners
-							, @IsHT
-						)
-						WHERE StatusId IN (112,113)
-						UNION ALL
-						SELECT modds, StatusId 
-						FROM [dbo].[f_Set_Parlay_SDT_CalModds_GoalRecord](
-							b.bettype
-							, b.betteam
-							, @GoalRecord
-							, @IsHT
-						)
-						WHERE StatusId IN (112,113)
-				
-					)  AS odds
-				
-				WHERE b.matchId = @matchId
-				FOR XML AUTO
+			(
+				SELECT *
+				FROM (
+					SELECT TOP(@batchNo) 
+						b.transid AS t
+						, b.refno AS r
+						, CASE 
+							WHEN odds.modds IS NOT NULL THEN odds.StatusId 
+							ELSE 103 
+						END AS s
+					FROM @tempBatch ref 
+						INNER JOIN dbo.bettransm b WITH(NOLOCK) ON ref.refno = b.refno
+						--INNER JOIN #SDTBettypes t ON b.bettype = t.bettype
+						OUTER APPLY
+						(
+							SELECT modds, StatusId 
+							FROM [dbo].[f_Set_Parlay_SDT_CalModds](
+								b.bettype
+								, b.betteam
+								, b.hdp1
+								, b.hdp2
+								, @hScore1H
+								, @aScore1H
+								, @hScore2H
+								, @aScore2H
+								, b.transdesc
+								, @IsHT
+							)
+							WHERE StatusId IN (112,113)
+							UNION ALL
+							SELECT modds, StatusId 
+							FROM [dbo].[f_Set_Parlay_SDT_CalModds_Corner](
+								b.bettype
+								, b.betteam
+								, b.hdp1
+								, b.hdp2
+								, @totalConner
+								, @totalConner1H
+								, @ftFCorner
+								, @htFCorner
+								, @hthCorners
+								, @htaCorners
+								, @fthCorners
+								, @ftaCorners
+								, @IsHT
+							)
+							WHERE StatusId IN (112,113)
+							UNION ALL
+							SELECT modds, StatusId 
+							FROM [dbo].[f_Set_Parlay_SDT_CalModds_GoalRecord](
+								b.bettype
+								, b.betteam
+								, @GoalRecord
+								, @IsHT
+							)
+							WHERE StatusId IN (112,113)
+					
+						)  AS odds
+					
+					WHERE b.matchId = @matchId
+				) AS b FOR XML AUTO
 			) AS VARCHAR(MAX))
 					
 			--select @matchid

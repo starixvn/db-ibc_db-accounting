@@ -287,89 +287,92 @@ BEGIN
 		--INSERT INTO @tempBatch(transid, refno, modds, IsRefundGame)
 		SELECT @strTicket = CAST(
 		(
-			SELECT TOP(@batchNo) 
-				b.transid AS t
-				,b.refno AS r
-				,odds.modds AS m
-				,odds.IsRefundGame AS i
-			FROM @tempBatch ref
-				INNER JOIN dbo.bettransm b WITH(NOLOCK) ON ref.refno = b.refno
-				--INNER JOIN #bettypeCAL t ON bm.bettype = t.bettype	
-				OUTER APPLY dbo.f_Set_Parlay_CalModds(
-					b.bettype
-					, b.betteam
-					, b.betcheck
-					, b.livehomescore
-					, b.liveawayscore
-					, b.hdp1
-					, b.hdp2
-					, b.transdesc
-					, @fth
-					, @fta
-					, @hth
-					, @hta
-					, @HT_FGLG1
-					, @HT_FGLG2
-					, @FGLG1
-					, @FGLG2
-					, @TennisTotal
-					, @TotalGameHomeMatch
-					, @TotalGameAwayMatch
-					, @homeScoreSet1
-					, @homeScoreSet2
-					, @homeScoreSet3
-					, @homeScoreSet4
-					, @homeScoreSet5
-					, @awayScoreSet1
-					, @awayScoreSet2
-					, @awayScoreSet3
-					, @awayScoreSet4
-					, @awayScoreSet5
-					, @SetxGameyHomeWON
-					, @SetxGameyAwayWON
-					, @SetxGameyDRAW
-					, @SetxGameyREFUND
-					, @SelectedSetCAL
-					, @SelectedSetREFUND
-					, @fthCorners
-					, @ftaCorners
-					, @hthCorners
-					, @htaCorners
-					, @FTFCorner
-					, @FTLCorner
-					, @HTFCorner
-					, @HTLCorner
-					, @penaltyshootout
-					, @matchDecidedMethod
-					, @first10Min1x2
-					, @firstGoalTime10Min
-					, @firstGoalTime15Min
-					, @WhoAdvancesNextRound
-					, @ExtraTimeandGoal
-					, @ExtraTimeYN
-					, @PlayerSentOff
-					, @HTPlayerSentOff
-					, @PlayerSentOffHome
-					, @HTPlayerSentOffHome
-					, @PlayerSentOffAway
-					, @HTPlayerSentOffAway
-					, @GoalScorerFirst
-					, @firstHNextGoal
-					, @NextGoal
-					, @NextGoalTime15Min
-					, @ExtraNextGoal
-					, @GoalScorerAnytime
-					, @FirstGoalMethod
-					, @WinFromBehind
-					, @FirstGoal
-					, @csHTFT
-					, @home_firstteam2goals
-					, @away_firstteam2goals
-					, @home_firstteam3goals
-					, @away_firstteam3goals
-				) AS odds
-			WHERE b.matchId = @matchId
-			FOR XML AUTO) AS VARCHAR(MAX))
+			SELECT *
+			FROM (
+				SELECT TOP(@batchNo) 
+					b.transid AS t
+					,b.refno AS r
+					,odds.modds AS m
+					,odds.IsRefundGame AS i
+				FROM @tempBatch ref
+					INNER JOIN dbo.bettransm b WITH(NOLOCK) ON ref.refno = b.refno
+					--INNER JOIN #bettypeCAL t ON bm.bettype = t.bettype	
+					OUTER APPLY dbo.f_Set_Parlay_CalModds(
+						b.bettype
+						, b.betteam
+						, b.betcheck
+						, b.livehomescore
+						, b.liveawayscore
+						, b.hdp1
+						, b.hdp2
+						, b.transdesc
+						, @fth
+						, @fta
+						, @hth
+						, @hta
+						, @HT_FGLG1
+						, @HT_FGLG2
+						, @FGLG1
+						, @FGLG2
+						, @TennisTotal
+						, @TotalGameHomeMatch
+						, @TotalGameAwayMatch
+						, @homeScoreSet1
+						, @homeScoreSet2
+						, @homeScoreSet3
+						, @homeScoreSet4
+						, @homeScoreSet5
+						, @awayScoreSet1
+						, @awayScoreSet2
+						, @awayScoreSet3
+						, @awayScoreSet4
+						, @awayScoreSet5
+						, @SetxGameyHomeWON
+						, @SetxGameyAwayWON
+						, @SetxGameyDRAW
+						, @SetxGameyREFUND
+						, @SelectedSetCAL
+						, @SelectedSetREFUND
+						, @fthCorners
+						, @ftaCorners
+						, @hthCorners
+						, @htaCorners
+						, @FTFCorner
+						, @FTLCorner
+						, @HTFCorner
+						, @HTLCorner
+						, @penaltyshootout
+						, @matchDecidedMethod
+						, @first10Min1x2
+						, @firstGoalTime10Min
+						, @firstGoalTime15Min
+						, @WhoAdvancesNextRound
+						, @ExtraTimeandGoal
+						, @ExtraTimeYN
+						, @PlayerSentOff
+						, @HTPlayerSentOff
+						, @PlayerSentOffHome
+						, @HTPlayerSentOffHome
+						, @PlayerSentOffAway
+						, @HTPlayerSentOffAway
+						, @GoalScorerFirst
+						, @firstHNextGoal
+						, @NextGoal
+						, @NextGoalTime15Min
+						, @ExtraNextGoal
+						, @GoalScorerAnytime
+						, @FirstGoalMethod
+						, @WinFromBehind
+						, @FirstGoal
+						, @csHTFT
+						, @home_firstteam2goals
+						, @away_firstteam2goals
+						, @home_firstteam3goals
+						, @away_firstteam3goals
+					) AS odds
+				WHERE b.matchId = @matchId
+			) AS b FOR XML AUTO
+		) AS VARCHAR(MAX))
 		
 		/*select @matchid
 			,@matchdate
