@@ -3,9 +3,11 @@ GO
 SET ANSI_NULLS ON 
 GO
 
+/****** Object:  Stored Procedure dbo.Acc_Rpt_Letstalk_DCWL    Script Date: 2/3/2017 2:21:16 PM ******/
+
 /****** Object:  Stored Procedure dbo.Acc_Rpt_Letstalk_DCWL    Script Date: 11/8/2016 3:28:07 PM ******/
 
-ALTER PROCEDURE [dbo].[Acc_Rpt_Letstalk_DCWL]
+CREATE PROCEDURE [dbo].[Acc_Rpt_Letstalk_DCWL]
 	@WinlostDate	DATETIME
 
 AS
@@ -15,6 +17,8 @@ AS
 	DB:		DBACC/bodb02
 	Original: Acc_Rpt_NonSportsProductStatistics_Daily
 	Revisions:
+	
+		- 20170203@Sophia: Remove SLI Live Casino. Now show only for RNG Casino  [Redmine: #71013]
 
 	Param's Explanation:
 			 - @username:  + Search by keyword, member only
@@ -49,9 +53,6 @@ exec Acc_Rpt_NonSportsProductStatistics_Daily @TotalBetValue=0.0000,@IsDrillDown
 @GameTableId='22994,22995,22996,23618,23751,26120,26121,28680,28681,28682,28683,32157',@Currency=-1,@Site='All'
 
  
-
-
-
 exec Acc_Rpt_Letstalk_DCWL @WinlostDate='2016-11-03 00:00:00' 
 
 */
@@ -61,26 +62,27 @@ BEGIN
 SET NOCOUNT ON 
 
 DECLARE
-	@ProductId		VARCHAR(MAX) = '4,6',
-	@Username		VARCHAR(50) = '',
-	@Site			VARCHAR(MAX) = 'ALL',	
-	@BetType		VARCHAR(MAX) = '',
-	@LeagueId		VARCHAR(MAX) = '',
-	@Sporttype		VARCHAR(MAX) = '',
-	@GameTableId	VARCHAR(MAX) = '',
+	@ProductId		VARCHAR(MAX) = '6',
+	--@Username		VARCHAR(50) = '',
+	--@Site			VARCHAR(MAX) = 'ALL',	
+	--@BetType		VARCHAR(MAX) = '',
+	--@LeagueId		VARCHAR(MAX) = '',
+	--@Sporttype		VARCHAR(MAX) = '',
+	--@GameTableId	VARCHAR(MAX) = '',
 	@Currency		SMALLINT = 0,	
 	@Device			VARCHAR(200) = '',
-	@ExcludeTest	BIT = 1, 
-	@TotalBetType	SMALLINT = 0,
-	@TotalBetValue  MONEY = NULL,
-	@GameIncomeType	SMALLINT = 0,
-	@GameIncomeValue MONEY = NULL,	 
-	@HousePTType	SMALLINT = 0,
-	@HousePTValue   MONEY = 0,
-	@IsDrillDown	BIT = 0
+	@ExcludeTest	BIT = 1
+	--@TotalBetType	SMALLINT = 0,
+	--@TotalBetValue  MONEY = NULL,
+	--@GameIncomeType	SMALLINT = 0,
+	--@GameIncomeValue MONEY = NULL,	 
+	--@HousePTType	SMALLINT = 0,
+	--@HousePTValue   MONEY = 0,
+	--@IsDrillDown	BIT = 0
 
 
-	DECLARE @WLDate DATETIME , @IsMBC BIT, @IsSite BIT
+	DECLARE @WLDate DATETIME 
+	---, @IsMBC BIT, @IsSite BIT
 	SELECT @WLDate = @WinlostDate
 
 	CREATE TABLE #Data (   ReportBy NVARCHAR(1000), ProductID INT , BetFrom VARCHAR(1),
@@ -106,21 +108,21 @@ DECLARE
 	--CREATE TABLE #Temp_MemIDs (
  --       CustID int
  --   )
-	CREATE TABLE #tmpProductID (
-        ProductID int
-    )  
-    CREATE TABLE #tmpBetType (
-        Bettype INT
-    )
-	CREATE TABLE #tmpLeagueId (
-        LeagueId INT
-    )  
-	CREATE TABLE #tmpSporttype (
-        Sporttype INT
-    )
-	CREATE TABLE #tmpGameTableId (
-        GameTableID INT
-    )
+	--CREATE TABLE #tmpProductID (
+ --       ProductID int
+ --   )  
+    --CREATE TABLE #tmpBetType (
+    --    Bettype INT
+    --)
+	--CREATE TABLE #tmpLeagueId (
+ --       LeagueId INT
+ --   )  
+	--CREATE TABLE #tmpSporttype (
+ --       Sporttype INT
+ --   )
+	--CREATE TABLE #tmpGameTableId (
+ --       GameTableID INT
+ --   )
 	--CREATE TABLE #tmpAllDepSuper (
  --       Srecommend INT
  --   )
@@ -134,37 +136,37 @@ DECLARE
         Betfrom NVARCHAR(2)
     )	 
 
-	IF @ProductID <> ''
-    BEGIN
-		INSERT INTO #tmpProductID (ProductID)
-		SELECT val FROM [dbo].strSplit(@ProductID, ',')
-	END
+	--IF @ProductID <> ''
+ --   BEGIN
+	--	INSERT INTO #tmpProductID (ProductID)
+	--	SELECT val FROM [dbo].strSplit(@ProductID, ',')
+	--END
 	
 
 
-	IF @Bettype <> ''
-    BEGIN
-		INSERT INTO #tmpBetType (Bettype)
-		SELECT val FROM [dbo].strSplit(@Bettype, ',')
-	END
+	--IF @Bettype <> ''
+ --   BEGIN
+	--	INSERT INTO #tmpBetType (Bettype)
+	--	SELECT val FROM [dbo].strSplit(@Bettype, ',')
+	--END
 
-	IF @LeagueId <> ''
-    BEGIN
-		INSERT INTO #tmpLeagueId (LeagueId)
-		SELECT val FROM [dbo].strSplit(@LeagueId, ',')
-	END
+	--IF @LeagueId <> ''
+ --   BEGIN
+	--	INSERT INTO #tmpLeagueId (LeagueId)
+	--	SELECT val FROM [dbo].strSplit(@LeagueId, ',')
+	--END
 
-	IF @Sporttype <> ''
-    BEGIN
-		INSERT INTO #tmpSporttype (Sporttype)
-		SELECT val FROM [dbo].strSplit(@Sporttype, ',')
-	END
+	--IF @Sporttype <> ''
+ --   BEGIN
+	--	INSERT INTO #tmpSporttype (Sporttype)
+	--	SELECT val FROM [dbo].strSplit(@Sporttype, ',')
+	--END
 		
-	IF @GameTableID <> ''
-    BEGIN
-		INSERT INTO #tmpGameTableId (GameTableID)
-		SELECT val FROM [dbo].strSplit(@GameTableID, ',')
-	END
+	--IF @GameTableID <> ''
+ --   BEGIN
+	--	INSERT INTO #tmpGameTableId (GameTableID)
+	--	SELECT val FROM [dbo].strSplit(@GameTableID, ',')
+	--END
 
 	IF @Device <> ''
     BEGIN
@@ -186,8 +188,10 @@ DECLARE
             s.SubProduct,
 			s.RefTable
      FROM dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest) s
-		INNER JOIN #tmpProductID p 
-				ON p.ProductId = s.ProductId	
+    	--INNER JOIN #tmpProductID p 
+		--		ON p.ProductId = s.ProductId	
+	 WHERE s.ProductID = @ProductId
+		 
 
 	--DELETE	s
 	--FROM	#SportBettype s
@@ -338,7 +342,7 @@ DECLARE
 			INNER JOIN #SportBettype s 
 				ON s.Bettype = b.GameId 
 		WHERE b.WinlostDate = @WLDate
-			AND s.ProductID NOT IN (3,4,5)   --- NumberGame, SLI-Live Casino, Virtual Sport 
+			--AND s.ProductID NOT IN (3,4,5)   --- NumberGame, SLI-Live Casino, Virtual Sport 
 			AND s.RefTable = 1
 			AND ((b.Currency <> 20 AND @ExcludeTest = 1) OR @ExcludeTest = 0)
 			AND (b.currency = @currency OR @currency IN (0,-1)) 			
@@ -411,72 +415,72 @@ DECLARE
 
 
 	----2. NumberGame & Live Casino & VirtualSport (Soccer) 
-		INSERT INTO #Data ( ReportBy, ProductID, BetFrom,
-						BetCount, CurrencyId , 
-						TotalBets, TotalBetsBase, 
-						TotalWins, TotalWinsBase, 
-						TotalRefund, TotalRefundBase,
-						CompanyTurnover, CompanyTurnoverBase,  
-						CompanyGrossIncome, CompanyGrossIncomeBase, 
-						CompanyComm, CompanyCommBase							   
-					   )
+		--INSERT INTO #Data ( ReportBy, ProductID, BetFrom,
+		--				BetCount, CurrencyId , 
+		--				TotalBets, TotalBetsBase, 
+		--				TotalWins, TotalWinsBase, 
+		--				TotalRefund, TotalRefundBase,
+		--				CompanyTurnover, CompanyTurnoverBase,  
+		--				CompanyGrossIncome, CompanyGrossIncomeBase, 
+		--				CompanyComm, CompanyCommBase							   
+		--			   )
 	
-		SELECT  CONVERT(VARCHAR(20),b.WinlostDate,107) AS ReportBy, s.ProductID, b.BetFrom,
-				COUNT(CASE WHEN StatusID IN (111,112,113) THEN b.TransId ELSE NULL END) AS BetCount, b.Currency, 
+		--SELECT  CONVERT(VARCHAR(20),b.WinlostDate,107) AS ReportBy, s.ProductID, b.BetFrom,
+		--		COUNT(CASE WHEN StatusID IN (111,112,113) THEN b.TransId ELSE NULL END) AS BetCount, b.Currency, 
 
-				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) AS TotalBets,
-				SUM((CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) * actualrate)  AS TotalBetsBase,
+		--		SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) AS TotalBets,
+		--		SUM((CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE actual_stake END) * actualrate)  AS TotalBetsBase,
 
-				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE winlost END) AS TotalWins,
-				SUM((CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE winlost END) * actualrate) AS TotalWinsBase,
+		--		SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE winlost END) AS TotalWins,
+		--		SUM((CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE winlost END) * actualrate) AS TotalWinsBase,
 
-				SUM(CASE WHEN b.statusID IN (101,102,103) THEN actual_stake ELSE 0 END) AS TotalRefund,
-				SUM((CASE WHEN b.statusID IN (101,102,103) THEN actual_stake ELSE 0 END)  * actualrate) AS TotalRefundBase,
+		--		SUM(CASE WHEN b.statusID IN (101,102,103) THEN actual_stake ELSE 0 END) AS TotalRefund,
+		--		SUM((CASE WHEN b.statusID IN (101,102,103) THEN actual_stake ELSE 0 END)  * actualrate) AS TotalRefundBase,
 
-				SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE (1- b.tpositiontaking) * b.stake END) AS CompanyTurnover,	
-				SUM((CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE (1- b.tpositiontaking) * b.stake END) * actualrate) AS CompanyTurnoverBase,		
+		--		SUM(CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE (1- b.tpositiontaking) * b.stake END) AS CompanyTurnover,	
+		--		SUM((CASE WHEN b.statusID IN (101,102,103) THEN 0 ELSE (1- b.tpositiontaking) * b.stake END) * actualrate) AS CompanyTurnoverBase,		
 								
-				- SUM(winlost - actual_stake + awinlost + mwinlost + swinlost) AS CompanyGrossIncome,
-				- SUM((winlost - actual_stake + awinlost + mwinlost + swinlost)* actualrate) AS CompanyGrossIncomeBase,
+		--		- SUM(winlost - actual_stake + awinlost + mwinlost + swinlost) AS CompanyGrossIncome,
+		--		- SUM((winlost - actual_stake + awinlost + mwinlost + swinlost)* actualrate) AS CompanyGrossIncomeBase,
 
-				- SUM(scomm) AS CompanyComm,
-				- SUM(scomm *actualrate) AS CompanyCommBase
-		FROM  dbo.Bettrans b WITH (NOLOCK)
-			INNER JOIN #SportBettype s 
-				ON s.Bettype = b.bettype 
-			INNER JOIN Match m WITH (NOLOCK) 
-				ON m.MatchId = b.matchid
-		WHERE b.WinlostDate = @WLDate
-			AND s.ProductID IN (3,4,5) --- NumberGame, SLI-Live Casino, VirtualSport
-			AND s.Eventtype = 1
-			AND (
-					(
-						(EXISTS (SELECT 1 From #tmpLeagueId l WHERE l.LeagueId = m.leagueid) AND s.ProductID = 3)
-						OR (@LeagueId = '' AND s.ProductID = 3)
-					)
-				OR (
-						(EXISTS (SELECT 1 From #tmpGameTableId g WHERE g.GameTableID = m.leagueid) AND s.ProductID = 4)
-						OR (@GameTableId = '' AND s.ProductID = 4)
-					)
-				OR (
-						(EXISTS (SELECT 1 From #tmpSporttype sp WHERE sp.Sporttype = m.sporttype) AND s.ProductID = 5)
-						OR (@Sporttype = '' AND s.ProductID = 5)
-					)
-				)
-			AND ((b.Currency <> 20 AND @ExcludeTest = 1) OR @ExcludeTest = 0)
-			AND (b.currency = @currency OR @currency IN (0,-1)) 			
-			--AND (EXISTS (SELECT 1 From #Temp_MemIDs m WHERE m.CustID = b.custId) OR @Username = '')
-			AND (EXISTS (SELECT 1 From #tmpDevice f WHERE f.betfrom = b.betfrom) OR @Device = '')
-			--AND ( @Site = 'ALL'
-			--	  OR (EXISTS (SELECT 1 From #tmpSiteSuper s WHERE s.srecommend = b.srecommend) AND @IsSite = 1)
-			--	  OR (NOT EXISTS (SELECT 1 From #tmpAllDepSuper d WHERE d.srecommend = b.srecommend) AND @IsMBC = 1)
-			--	)
-			--AND (	
-			--		(@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue)
-			--	 OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
-			--	 OR @HousePTType = 0 
-			--	 )
-		GROUP BY  b.WinlostDate,  b.Currency, s.ProductID, b.BetFrom
+		--		- SUM(scomm) AS CompanyComm,
+		--		- SUM(scomm *actualrate) AS CompanyCommBase
+		--FROM  dbo.Bettrans b WITH (NOLOCK)
+		--	INNER JOIN #SportBettype s 
+		--		ON s.Bettype = b.bettype 
+		--	INNER JOIN Match m WITH (NOLOCK) 
+		--		ON m.MatchId = b.matchid
+		--WHERE b.WinlostDate = @WLDate
+		--	AND s.ProductID IN (3,4,5) --- NumberGame, SLI-Live Casino, VirtualSport
+		--	AND s.Eventtype = 1
+		--	AND (
+		--			(
+		--				(EXISTS (SELECT 1 From #tmpLeagueId l WHERE l.LeagueId = m.leagueid) AND s.ProductID = 3)
+		--				OR (@LeagueId = '' AND s.ProductID = 3)
+		--			)
+		--		OR (
+		--				(EXISTS (SELECT 1 From #tmpGameTableId g WHERE g.GameTableID = m.leagueid) AND s.ProductID = 4)
+		--				OR (@GameTableId = '' AND s.ProductID = 4)
+		--			)
+		--		OR (
+		--				(EXISTS (SELECT 1 From #tmpSporttype sp WHERE sp.Sporttype = m.sporttype) AND s.ProductID = 5)
+		--				OR (@Sporttype = '' AND s.ProductID = 5)
+		--			)
+		--		)
+		--	AND ((b.Currency <> 20 AND @ExcludeTest = 1) OR @ExcludeTest = 0)
+		--	AND (b.currency = @currency OR @currency IN (0,-1)) 			
+		--	--AND (EXISTS (SELECT 1 From #Temp_MemIDs m WHERE m.CustID = b.custId) OR @Username = '')
+		--	AND (EXISTS (SELECT 1 From #tmpDevice f WHERE f.betfrom = b.betfrom) OR @Device = '')
+		--	--AND ( @Site = 'ALL'
+		--	--	  OR (EXISTS (SELECT 1 From #tmpSiteSuper s WHERE s.srecommend = b.srecommend) AND @IsSite = 1)
+		--	--	  OR (NOT EXISTS (SELECT 1 From #tmpAllDepSuper d WHERE d.srecommend = b.srecommend) AND @IsMBC = 1)
+		--	--	)
+		--	--AND (	
+		--	--		(@HousePTType = -1 AND b.tpositiontaking <= @HousePTValue)
+		--	--	 OR (@HousePTType = 1 AND b.tpositiontaking >= @HousePTValue)
+		--	--	 OR @HousePTType = 0 
+		--	--	 )
+		--GROUP BY  b.WinlostDate,  b.Currency, s.ProductID, b.BetFrom
 
 
 	------3.  VirtualSport (HR) 
@@ -651,7 +655,7 @@ DECLARE
 		INSERT INTO @ProductData 
 
 		SELECT  P.ProductId, 
-				CASE WHEN p.ProductId = 4 THEN 'SLI Live Casino' ELSE P.ProductName END AS ProductName, 
+				P.ProductName, 
 				A.BetFrom
 		FROM dbo.Products P WITH (NOLOCK) 
 		CROSS APPLY 
@@ -659,7 +663,7 @@ DECLARE
 			UNION ALL
 			SELECT 'Desktop' AS BetFrom
 		) A
-		WHERE P.ProductID IN (4,6)
+		WHERE P.ProductID IN (6)
 
 
 
@@ -673,15 +677,15 @@ DECLARE
 		LEFT  JOIN 
 		(
 		SELECT  D.ProductId, 
-				CASE WHEN p.ProductId = 4 THEN 'SLI Live Casino' ELSE P.ProductName END AS ProductName, 
+				P.ProductName, 
 				CASE WHEN BetFrom IN ('i','d','e','a','u','j') THEN 'Desktop' ELSE 'Mobile' END  As BetFrom,  
 				SUM (TotalBetsBase) AS CompanyTurnoverBase , 
 				SUM (CompanyGrossIncomeBase) + SUM (CompanyCommBase) AS CompanyNetIncomeBase
 		FROM	#Data D
 			INNER JOIN dbo.Products P WITH (NOLOCK) ON P.ProductID = D.ProductID
 		WHERE BetFrom IN ('i','d','e','a','u','j','p','h','n','s','l','w','m') 
-		GROUP BY D.ProductId, 				
-				CASE WHEN p.ProductId = 4 THEN 'SLI Live Casino' ELSE P.ProductName END,  
+		GROUP BY D.ProductId, 
+				P.ProductName, 
 				CASE WHEN BetFrom IN ('i','d','e','a','u','j') THEN 'Desktop' ELSE 'Mobile' END ) A
 				
 			ON A.ProductID = P.ProductID AND A.BetFrom = P.Betfrom
@@ -753,17 +757,18 @@ DECLARE
 	DROP TABLE #SportBettype
 	--DROP TABLE #Temp_MemIDs
 	--DROP TABLE #tmpAllDepSuper
-	DROP TABLE #tmpBetType
+	--DROP TABLE #tmpBetType
 	DROP TABLE #tmpDevice
-	DROP TABLE #tmpGameTableId
-	DROP TABLE #tmpLeagueId
-	DROP TABLE #tmpProductID
+	--DROP TABLE #tmpGameTableId
+	--DROP TABLE #tmpLeagueId
+	--DROP TABLE #tmpProductID
 	--DROP TABLE #tmpSite
 	--DROP TABLE #tmpSiteSuper
-	DROP TABLE #tmpSporttype
+	--DROP TABLE #tmpSporttype
 
 
 END 
+
 
 GO
 
