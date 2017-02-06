@@ -106,7 +106,7 @@ EXEC [NAP_WinLimit_CurrencySettingSel] @ProductId = 6, @SiteId = 30
                 ISNULL(s.IsBlockedTransfer, 0) AS IsBlockedTransfer
          FROM #ProductSiteCurrencySetting pc
               INNER JOIN @Products p ON p.ProductId = pc.ProductId
-              LEFT JOIN dbo.WinLimit_ProductSettingDetail s WITH (NOLOCK) ON s.ProductID = p.ProductId
+              INNER JOIN dbo.WinLimit_ProductSettingDetail s WITH (NOLOCK) ON s.ProductID = p.ProductId
                                                                              AND s.LevelID = p.LevelId
                                                                              AND s.SiteID = pc.SiteId
                                                                              AND s.ExchangeID = pc.CurrencyId
