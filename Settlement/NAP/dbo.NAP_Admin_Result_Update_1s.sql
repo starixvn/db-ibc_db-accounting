@@ -422,7 +422,7 @@ BEGIN
 		UNION ALL
 		SELECT '01', CAST(@hth AS VARCHAR(50)), CAST(@hta AS VARCHAR(50))
 		UNION ALL
-		SELECT '04', NULL, NULL 
+		SELECT '04', CAST(@hthCorners AS VARCHAR(50)), CAST(@htaCorners AS VARCHAR(50))
 		WHERE @isExistTotalCorner = 1
 			OR EXISTS (
 				SELECT 1 FROM dbo.ResultDetail WITH(NOLOCK)
@@ -438,7 +438,7 @@ BEGIN
 					AND ResourceID 	= '05'
 			)
 		UNION ALL 
-		SELECT '206', NULL, 'NA' 
+		SELECT '206', @htFCorner, 'NA' 
 		WHERE @isExistFTFCorner = 1 
 			OR EXISTS (
 				SELECT 1 FROM dbo.ResultDetail WITH(NOLOCK)
