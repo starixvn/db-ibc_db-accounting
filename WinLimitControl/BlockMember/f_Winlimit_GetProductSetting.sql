@@ -10,6 +10,7 @@ AS
 		- 20151224@Patrick: Support RnG Casino [Redmine: #49803]
 		- 20160511@Dominic: Support Voidbridge [Redmine: #57151]
 		- 20160524@Helen: Support OneRnG [Redmine: #57680]
+		- 20161019@Winnie: Fishing World [Redmine:#62547]
 
 	Parameters Explanation:	
 */
@@ -26,7 +27,8 @@ BEGIN
 			SELECT 13, 2001, 0, 1 UNION ALL
 			SELECT 17, 2008, 0, 1 UNION ALL
 			SELECT 22, 4001, 1, 1 UNION ALL
-			SELECT 21, 2401, 1, 1
+			SELECT 21, 2401, 1, 1 UNION ALL
+			SELECT 24, 1011, 1, 0 -- Fishing World
 			
 		) a INNER JOIN DBPRO.bodb02.dbo.Products p WITH(NOLOCK) ON a.ProductId = p.ProductID
 	)
