@@ -76,6 +76,7 @@ Revisions:
 	- 20160329@Francis: Change to use inline function instead of table variable to enhance performance
 	- 20160412@Percy: support Voidbridge single wallet [Redmine: #55258]
 	- 20161019@Percy: Support show OTP info [RedmineID: #64871]
+	- 20161028@Percy: Support Fishing World [RedmineID: #65734]
 	
 Param's Explanation:
 	@username: username want to get all info related
@@ -174,37 +175,13 @@ BEGIN
 	
 	/* Get sport bettype */
 	-- Check SP Version
-	DECLARE @isTest BIT = 0
+	DECLARE @isTest BIT
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
 	
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT, EventType INT, SubProduct VARCHAR(500), IsUsedBettrans BIT DEFAULT 0, IsRunningTranslog BIT DEFAULT 0)
-	INSERT INTO @SportBettype (ProductID, Bettype, EventType, SubProduct)
-	SELECT ProductID, Bettype, EventType, SubProduct FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
+	CREATE TABLE #SportBettypeMatrix (ProductID INT, Bettype INT, RefTable TINYINT)
+	INSERT INTO #SportBettypeMatrix (ProductID, Bettype, RefTable)
+	SELECT ProductID, Bettype, RefTable FROM dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest)
 	/* End get sport bettype */
-	
-	DELETE @SportBettype
-	WHERE ProductID
-		NOT IN ( 6  -- RNG Casino
-				,11 -- AG-Casino
-				,13 -- MGC-LC
-				,17 -- MGC-RNG
-				,19 -- Cock Fighting
-				,21 -- AllBet
-				,22 -- Voidbridge
-				)
-			AND (ProductId <> 1 OR SubProduct <> 'MG-Superlive') -- MG-Superlive
-	
-	DELETE @SportBettype WHERE ProductID = 6 AND SubProduct = '' -- Old RNG Casino: 71, 72
-
-	-- Tickets not in bettrans: RNG Casino, AG-Casino, MGC-RNG, AllBet
-	UPDATE @SportBettype
-	SET IsUsedBettrans = 1
-	WHERE ProductID NOT IN (6, 11, 17, 21, 22)
-	
-	-- Tickets running in translog: MG-Superlive, MGC-LC, Cockfighting
-	UPDATE @SportBettype
-	SET IsRunningTranslog = 1
-	WHERE ProductId IN (1, 13, 19)
 	
     --Get CustID FROM DB06, WHERE got index on Username AND Username2
     EXEC @custid = DBACC.bodb02.dbo.f_GetCustIDFromUsername @username
@@ -677,7 +654,7 @@ BEGIN
 			@todayCustCash = ISNULL(SUM(winlost-actual_stake+playercomm),0)
 	    FROM bettrans WITH(NOLOCK)
 	    WHERE custid = @custid
-			AND ruben = 1 AND bettype < 19001 AND bettype NOT IN (SELECT bettype FROM @Sportbettype WHERE IsUsedbettrans = 0)
+			AND ruben = 1 AND bettype < 19001 AND bettype NOT IN (SELECT bettype FROM #SportBettypeMatrix WHERE RefTable NOT IN (0,3))
 		    AND CONVERT(DATE, winlostdate) = @today
 		
 		SELECT	ISNULL(Balance.Cash,0) + @yesterdayCustCashRNG + @yesterdayCustCashLC + @todayCustCashRNG + @todayCustCashLC Cash,
@@ -692,11 +669,11 @@ BEGIN
 		    FROM dbo.bettrans WITH(NOLOCK)
 			WHERE custid = @custid
 				AND (
-						(ruben = 0 AND bettype NOT IN (SELECT bettype FROM @SportBettype WHERE IsRunningTranslog = 1 OR IsUsedBettrans = 0))
+						(ruben = 0 AND bettype NOT IN (SELECT bettype FROM #SportBettypeMatrix WHERE RefTable <> 0))
 						OR ruben <> 0
 					)
 				AND (
-						(CONVERT(DATE, winlostdate) >=  @yesterday AND bettype NOT IN (SELECT bettype FROM @SportBettype WHERE IsUsedBettrans = 0))
+						(CONVERT(DATE, winlostdate) >=  @yesterday AND bettype NOT IN (SELECT bettype FROM #SportBettypeMatrix WHERE RefTable NOT IN (0,3)))
 						OR CONVERT(DATE, winlostdate) < @yesterday
 					)
 	    ) Balance
@@ -743,7 +720,7 @@ BEGIN
 			@todayCustCash  = ISNULL(SUM(CASE WHEN custid<>recommend AND ruben=1 THEN winlost-actual_stake+playercomm ELSE 0 END),0)
 	    FROM bettrans WITH(NOLOCK)
 	    WHERE recommend = @custid
-			AND bettype < 19001 AND bettype NOT IN (SELECT bettype FROM @Sportbettype WHERE IsUsedbettrans = 0)
+			AND bettype < 19001 AND bettype NOT IN (SELECT bettype FROM #SportBettypeMatrix WHERE RefTable NOT IN (0,3))
 		    AND CONVERT(DATE, winlostdate) = @today
 
 	    SELECT		
@@ -765,11 +742,11 @@ BEGIN
 		    FROM dbo.bettrans WITH(NOLOCK)
 			WHERE recommend = @custid
 				AND (
-						(ruben = 0 AND bettype NOT IN (SELECT bettype FROM @SportBettype WHERE IsRunningTranslog = 1 OR IsUsedBettrans = 0))
+						(ruben = 0 AND bettype NOT IN (SELECT bettype FROM #SportBettypeMatrix WHERE RefTable <> 0))
 						OR ruben <> 0
 					)
 				AND (
-						(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT IN (SELECT bettype FROM @SportBettype WHERE IsUsedBettrans = 0))
+						(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT IN (SELECT bettype FROM #SportBettypeMatrix WHERE RefTable NOT IN (0,3)))
 						OR CONVERT(DATE, winlostdate) < @yesterday
 					)
 	    )Balance 
@@ -825,7 +802,7 @@ BEGIN
 			@todayCustCash   = ISNULL(SUM(CASE WHEN custid<>recommend AND custid<>mrecommend AND ruben=1 THEN winlost-actual_stake+playercomm ELSE 0 END),0)
 	    FROM bettrans WITH(NOLOCK)
 	    WHERE mrecommend = @custid
-		    AND bettype < 19001 AND bettype NOT IN (SELECT bettype FROM @Sportbettype WHERE IsUsedbettrans = 0)
+		    AND bettype < 19001 AND bettype NOT IN (SELECT bettype FROM #SportBettypeMatrix WHERE RefTable NOT IN (0,3))
 		    AND CONVERT(DATE, winlostdate) = @today
 		
 		SELECT	ISNULL(Balance.masterCash,0) + @yesterdayMasterCashRNG + @yesterdayMasterCashLC + @todayMasterCashRNG + @todayMasterCashLC masterCash,
@@ -849,11 +826,11 @@ BEGIN
 		    FROM dbo.bettrans WITH(NOLOCK)
 			WHERE mrecommend = @custid
 				AND (
-						(ruben = 0 AND bettype NOT IN (SELECT bettype FROM @SportBettype WHERE IsRunningTranslog = 1 OR IsUsedBettrans = 0))
+						(ruben = 0 AND bettype NOT IN (SELECT bettype FROM #SportBettypeMatrix WHERE RefTable <> 0))
 						OR ruben <> 0
 					)
 				AND (
-						(CONVERT(DATE, winlostdate) >=  @yesterday AND bettype NOT IN (SELECT bettype FROM @SportBettype WHERE IsUsedBettrans = 0))
+						(CONVERT(DATE, winlostdate) >=  @yesterday AND bettype NOT IN (SELECT bettype FROM #SportBettypeMatrix WHERE RefTable NOT IN (0,3)))
 						OR CONVERT(DATE, winlostdate) < @yesterday
 					)
 	    )Balance 
@@ -910,7 +887,7 @@ BEGIN
 			@todayCustCash = ISNULL(SUM(CASE WHEN custid<>recommend AND custid<>mrecommend AND custid<>srecommend AND ruben=1 THEN winlost-actual_stake+playercomm ELSE 0 END),0)
 	    FROM bettrans WITH(NOLOCK)
 	    WHERE srecommend = @custid
-		    AND bettype < 19001 AND bettype NOT IN (SELECT bettype FROM @Sportbettype WHERE IsUsedbettrans = 0)
+		    AND bettype < 19001 AND bettype NOT IN (SELECT bettype FROM #SportBettypeMatrix WHERE RefTable NOT IN (0,3))
 		    AND CONVERT(DATE, winlostdate) = @today
   
 	    SELECT	ISNULL(Balance.superCash ,0) + @yesterdaySuperCashRNG + @yesterdaySuperCashLC + @todaySuperCashRNG + @todaySuperCashLC superCash,
@@ -936,11 +913,11 @@ BEGIN
 		     FROM dbo.bettrans WITH(NOLOCK)
 			WHERE srecommend = @custid
 				AND (
-						(ruben = 0 AND bettype NOT IN (SELECT bettype FROM @SportBettype WHERE IsRunningTranslog = 1 OR IsUsedBettrans = 0))
+						(ruben = 0 AND bettype NOT IN (SELECT bettype FROM #SportBettypeMatrix WHERE RefTable <> 0))
 						OR ruben <> 0
 					)
 				AND (
-						(CONVERT(DATE, winlostdate) >=  @yesterday AND bettype NOT IN (SELECT bettype FROM @SportBettype WHERE IsUsedBettrans = 0))
+						(CONVERT(DATE, winlostdate) >=  @yesterday AND bettype NOT IN (SELECT bettype FROM #SportBettypeMatrix WHERE RefTable NOT IN (0,3)))
 						OR CONVERT(DATE, winlostdate) < @yesterday
 					)
 		    )Balance 
@@ -957,7 +934,7 @@ BEGIN
 		    @TotalMemberActive MemberActive,
 		    @TotalMemberClosed MemberClosed,
 		    @TotalMemberSuspended MemberSuspended
-
+	DROP TABLE #SportBettypeMatrix
 	-- For sportbook2
 	EXEC Acc_CustSetting_StatusSettingSelect @CustID = @custid,@roleid = @roleid		    
 END
