@@ -16,6 +16,7 @@ ALTER FUNCTION [dbo].[f_GetSettingProductExtraPTGroup]
 		- 20160907@Percy: Add setting of new Group: ACCMMK [RedmineID: #63726]
 		- 20161117@Percy: Reset setting of NG2 [RedmineID: #67219]
 		- 20170113@Percy: Update setting of ACCTHAI2, ACCTHAI56, ACCTHAI99, BC group [RedmineID: #70060]
+		- 20170213@Percy: Remove SLI [RedmineID: #70036]
 */
 
 RETURNS @ExtraPTGroup TABLE (GroupId INT, GroupName VARCHAR(50), ProductID TINYINT, Sporttype SMALLINT, SubProduct VARCHAR(500), ExtraPT DECIMAL(9, 8))
@@ -226,6 +227,7 @@ BEGIN
 	SELECT GroupId, GroupName, ProductID, Sporttype, SubProduct, ExtraPT
 	FROM @AllExtraPTGroup
 	WHERE GroupName = COALESCE(@GroupName, GroupName)
+		AND ProductID <> 4 -- Remove SLI
 
 	RETURN
 END
