@@ -113,6 +113,13 @@ BEGIN
 			,@FirstGoalMethod		= ISNULL(MAX(CASE WHEN ResourceID='424' THEN HomeValue ELSE '' END),'')
 	FROM	@tmpResultDetail
 	
+	SELECT @NextGoal				= @NextGoal + CASE WHEN ResourceID LIKE '160__' THEN ResourceID + HomeValue +',' ELSE '' END 
+		,@ExtraNextGoal				= @ExtraNextGoal +  CASE WHEN ResourceID LIKE '164__' THEN ResourceID + HomeValue +',' ELSE '' END 
+		,@NextGoalTime15Min			= @NextGoalTime15Min + CASE WHEN ResourceID LIKE '169__' THEN ResourceID + HomeValue +',' ELSE '' END 
+		,@NextGoal1H				= @NextGoal1H + CASE WHEN ResourceID LIKE '180__' THEN ResourceID + HomeValue +',' ELSE '' END 
+		,@GoalScorerAnytime			= @GoalScorerAnytime + CASE WHEN ResourceID LIKE '216__' THEN ISNULL(HomeValue,'') +',' ELSE '' END 
+	FROM @tmpResultDetail
+	
 	
 	DECLARE @tempBatch TABLE (refno BIGINT)
 	DECLARE @tempRefno TABLE (refno BIGINT)

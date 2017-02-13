@@ -260,13 +260,14 @@ BEGIN
 				,@matchdate		= @matchdate
 				
 			--do refund-ht FGLG 	
-			EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
+			/*EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
 				,@action 		= 'REFUND-FGLG'
 				,@mode 			= 'REFUND-HT'
 				,@LGOnly 		= 0
 				,@matchdate 	= @matchdate
 				,@IsExcludeBetdaq	= @IsExcludeBetdaq
 				,@IsExcludeBetfair  = @IsExcludeBetfair
+			*/
 		
 		-- BetTrade Winlost Sharing
 		IF EXISTS (SELECT TOP 1 1 FROM dbo.bettrans WITH(NOLOCK) WHERE matchid = @matchid AND bettype BETWEEN 901 AND 910)

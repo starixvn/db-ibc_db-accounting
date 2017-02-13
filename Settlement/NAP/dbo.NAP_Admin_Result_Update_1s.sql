@@ -47,11 +47,15 @@ AS
 BEGIN
 	SET NOCOUNT ON 
 
-	DECLARE	@sporttype		INT
-		,@OtherInfo			VARCHAR(50)
+	DECLARE	@sporttype			INT
+		,@OtherInfo				VARCHAR(50)
+		,@GoalSequence			VARCHAR(50)
+		,@betstatus				NVARCHAR(50) 
+		,@SettlementStatusID	TINYINT 
 
-	SELECT	@sporttype = Sporttype 
-	FROM	Match WITH (NOLOCK)
+	SELECT	@sporttype 			= Sporttype 
+		,@GoalSequence 			= GoalRecord
+	FROM dbo.Match WITH (NOLOCK)
 	WHERE	MatchID = @MatchID
 
 	IF @sporttype <> 1 RETURN -- Apply for Soccer ONLY
@@ -62,10 +66,6 @@ BEGIN
 		,HomeValue		VARCHAR(50)
 		,AwayValue		VARCHAR(50)
 	)
-
-	DECLARE	 @GoalSequence	VARCHAR(50)
-			,@betstatus		NVARCHAR(50) 
-			,@SettlementStatusID	TINYINT 
 
 	DECLARE	@tmpResourceIDs	TABLE(
 		 ID			INT IDENTITY(1,1)
@@ -468,6 +468,8 @@ BEGIN
 				WHERE matchid 		= @matchid 
 					AND ResourceID 	= '209'
 			)
+		UNION ALL 
+		SELECT '08', @GoalSequence, 'NA' 
 								
 		MERGE	dbo.ResultDetail AS TARGET
 		USING	@tmpResultDetail AS SOURCE ON (TARGET.MatchID = @MatchID AND TARGET.ResourceID = SOURCE.ResourceID)
@@ -628,7 +630,9 @@ BEGIN
 				WHERE matchid 	= @matchid 
 				AND ResourceID 	= '208'
 			)
-
+		UNION ALL 
+		SELECT '08', @GoalSequence, 'NA'
+			
 		MERGE	dbo.ResultDetail AS TARGET
 		USING	@tmpResultDetail AS SOURCE ON (TARGET.MatchID = @MatchID AND TARGET.ResourceID = SOURCE.ResourceID)
 		WHEN	MATCHED THEN				 

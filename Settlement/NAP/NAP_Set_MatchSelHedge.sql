@@ -7,6 +7,7 @@ AS
      
  Revisions:    
     - 20161219@bobby: #67952 - Check the match whether or not having Over/Under bettypes 
+	- 20170210@bobby: #71292 - Check sporttype for hedge match
 	
  Param's Explanation:     
 */
@@ -27,7 +28,7 @@ BEGIN
 
 	SELECT m.matchid
 		, m.matchcode
-		, ISNULL(sdt.IsDeterminedHedgeMatch, 0 ) AS IsDeterminedHedgeMatch
+		, CASE WHEN ISNULL(sdt.IsDeterminedHedgeMatch, 0 ) = 1 AND m.sporttype = 1 THEN 1 ELSE 0 END AS IsDeterminedHedgeMatch
 	FROM dbo.match m WITH (NOLOCK)
 		OUTER APPLY (
 			SELECT TOP 1 CAST(1 AS BIT) AS IsDeterminedHedgeMatch

@@ -28,7 +28,7 @@ AS
 		- 20160429@Kathy: Enhance performance [Redmine:#52426]
 		- 20160714@Kathy: Add checking SystemSettings before doing Parlay Settlement on UAT
 		- 20160801@Patrick: Auto Payout - User can cal MP before calculating FT FGLG [Redmine: #61767]
-		- 20161125@Bobby: @#67822 - check single and parlay ticket for AUTO bet types
+		- 20161125@Bobby: #67822 - check single and parlay ticket for AUTO bet types
 
 	Param's Explanation:		
 		
@@ -121,7 +121,7 @@ BEGIN
 				OR matchid IN (SELECT matchid FROM @tblRunningAutoSettle)
 	END
 
-	--have running tickets of 14 & 127 on bettrans & bettransm for auto payout
+	--have running tickets of 14 & 127 on bettrans for auto payout
 	DECLARE @Tmp TABLE(MatchId INT, matchcode VARCHAR(100))
 	IF EXISTS (SELECT TOP 1 1
 				FROM dbo.bettrans WITH(NOLOCK)
@@ -140,28 +140,12 @@ BEGIN
 							AND statusID = 0)
 	END
 
-	IF EXISTS (SELECT TOP 1 1
-					FROM dbo.bettransm WITH(NOLOCK)
-					WHERE matchid IN (SELECT matchid FROM @match)
-						AND bettype IN (14,127)
-						AND statusID = 0
-		)
-	BEGIN
-		DELETE m
-		OUTPUT DELETED.matchid, DELETED.matchcode INTO @Tmp(MatchId, matchcode)
-		FROM @match m
-		WHERE EXISTS (SELECT 1 FROM dbo.bettransm b WITH(NOLOCK)
-						WHERE m.matchid = b.matchid
-							AND bettype IN (14,127)
-							AND statusID = 0)
-	END
-
 	IF EXISTS (SELECT TOP 1 1 FROM @Tmp)
 	BEGIN
 		SELECT @NotKeyScoreList = COALESCE(@NotKeyScoreList + ',' + matchcode, matchcode)
 		FROM @Tmp
 	END
-	--End: have running tickets of 14 & 127 on bettrans & bettransm for auto payout
+	--End: have running tickets of 14 & 127 on bettrans for auto payout
 
 	IF EXISTS (SELECT 1
 				FROM @match

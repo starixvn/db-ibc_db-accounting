@@ -26,6 +26,7 @@ AS
 		- 20161118@Kathy: Changes on Auto Settlement [Redmine:#67328]
 		- 20161222@Kathy: Check match in queue in 10mins instead of 1 hour [Redmine:68890]
 		- 20160509@Kathy: Fast Market integration [Remine:#56367]
+		- 20170208@Bobby: Correct IsMissingAutoResult case [Remine:#67952]
 	
 	Param's explanation:  
 		
@@ -214,8 +215,9 @@ BEGIN
 				FROM	#tblBetStatus b
 					INNER JOIN #tblBettype c
 						ON b.bettype = c.bettype
-				WHERE	IsParLay = 1		
+				WHERE	b.IsParLay = 1		
 						AND NOT EXISTS (SELECT TOP 1 1 FROM #tblResultDetail WHERE b.matchid = MatchId AND ResourceId LIKE c.ResourceId)
+						AND c.GroupId = 8
 				GROUP BY b.matchid
 		) t
 			ON m.matchid = t.matchid

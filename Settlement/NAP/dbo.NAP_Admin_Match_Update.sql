@@ -198,25 +198,36 @@ BEGIN
 		SET @betstatus = ISNULL(@betstatus, '')
 		
 		SELECT @Sporttype = sporttype
+			,@betstatus = CASE 
+									WHEN CHARINDEX('Refund HT',betstatus) > 0 THEN 
+										'Refund;' + CASE 
+											WHEN CHARINDEX('Refund;',@betstatus) > 0 THEN REPLACE(@betstatus,'Refund;','')
+											WHEN CHARINDEX('Refund FT;',@betstatus) > 0 THEN REPLACE(@betstatus,'Refund FT;','')
+											WHEN CHARINDEX('Refund HT;',@betstatus)>0 THEN REPLACE(@betstatus,'Refund HT;','')
+											ELSE @betstatus
+										END
+									ELSE 'Abandoned 1H;' + CASE 
+											WHEN CHARINDEX('Abandoned 2H;',@betstatus) > 0 THEN REPLACE(@betstatus,'Abandoned 2H;','')
+											WHEN CHARINDEX('Abandoned 1H;',@betstatus) > 0 THEN REPLACE(@betstatus,'Abandoned 1H;','')
+											ELSE @betstatus
+										END
+								END
 		FROM match with(NOLOCK)
 		WHERE matchid = @matchid
 
 		IF @sporttype =  1 
 		BEGIN
+			
 			UPDATE match WITH(ROWLOCK,UPDLOCK) 
 			SET eventstatus='Completed'
 				, ruben				= 1
-				, finalhomescore	= NULL
-				, finalawayscore	= NULL
-				, hthomescore 		= @HTHome
-				, htawayscore 		= @HTAway
-				, betstatus 		= 'Abandoned 1H;' + CASE 
-											WHEN CHARINDEX('Abandoned 2H;',@betstatus) > 0 THEN REPLACE(@betstatus,'Abandoned 2H;','')
-											WHEN CHARINDEX('Abandoned 1H;',@betstatus) > 0 THEN REPLACE(@betstatus,'Abandoned 1H;','')
-											ELSE @betstatus
-										END
-				,GoalRecord = @GoalRecord
-				,changetime = GETDATE(), settleTime = GETDATE()
+				, finalhomescore	= CASE WHEN CHARINDEX('Refund',@betstatus) > 0 THEN @FTHome ELSE NULL END
+				, finalawayscore	= CASE WHEN CHARINDEX('Refund',@betstatus) > 0 THEN @FTAway ELSE NULL END
+				, hthomescore 		= CASE WHEN CHARINDEX('Abandoned',@betstatus) > 0 THEN @HTHome ELSE hthomescore END
+				, htawayscore 		= CASE WHEN CHARINDEX('Abandoned',@betstatus) > 0 THEN @HTAway ELSE htawayscore END
+				, betstatus 		= @betstatus
+				, GoalRecord 		= @GoalRecord
+				, changetime 		= GETDATE(), settleTime = GETDATE()
 			WHERE matchid=@MatchID
 		END 
 	END
@@ -270,9 +281,6 @@ BEGIN
 			,settleTime = GETDATE()
 			,GoalRecord = @GoalRecord
 		WHERE matchid=@MatchID 
-			  AND (@HTDone = 1 
-					OR	@HTNoneCornerBetDone = 1 
-				  )
 
 		--- get rowcount
 		SET @RowCount = @@ROWCOUNT
