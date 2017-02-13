@@ -34,6 +34,7 @@ AS
         - 20150401@Kathy: Add checking ticket status before performing settlement [Redmine:#33493
         - 20150422@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212] 
         - 20151005@Kathy: add more UAT version for testing (UAT1,UAT2,UAT3,UAT4)
+		- 20160905@Bobby: #63553 - Include FGLG (14,127) bet types
     
     Param's Explanation:
     • @matchid: matchid of match to Refund HT
