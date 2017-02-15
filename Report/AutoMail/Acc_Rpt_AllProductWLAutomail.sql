@@ -28,6 +28,7 @@ AS
 		- 20161013@Percy: Apply NG2 [RedmineID: #64117]
 		- 20161222@Percy: Apply Fishing World [RedmineID: #65734]
 		- 20161227@Percy: Clean up code Cockfighting [RedmineID: #69446]
+		- 20170213@Percy: Remove SLI [RedmineID: #70036]
 		 
 	Param's Explanation:
 	
@@ -211,7 +212,7 @@ BEGIN
 							WHEN bettype IN(9,29 ) THEN 6911913
 							WHEN bettype = 10 THEN 6911914
 							WHEN bettype IN (71,72) OR bettype BETWEEN 2101 AND 2399 THEN 6911916
-							WHEN bettype BETWEEN 1101 AND 1199 THEN 6911917
+							--WHEN bettype BETWEEN 1101 AND 1199 THEN 6911917
 							WHEN bettype BETWEEN 81 AND 120 THEN 6911918
 							WHEN bettype IN (31,32,33) THEN 6911919							
 							WHEN bettype BETWEEN 1201 AND 1299 THEN 8158305
@@ -244,7 +245,7 @@ BEGIN
 							WHEN bettype IN(9,29 ) THEN 12005470
 							WHEN bettype = 10 THEN 12005483
 							WHEN bettype IN (71,72) OR bettype BETWEEN 2101 AND 2399 THEN 12017095
-							WHEN bettype BETWEEN 1101 AND 1199 THEN 12962878
+							--WHEN bettype BETWEEN 1101 AND 1199 THEN 12962878
 							WHEN bettype BETWEEN 81 AND 120 THEN 13062600
 							WHEN bettype IN (31,32,33) THEN 13062602
 							WHEN bettype BETWEEN 1201 AND 1299 THEN 13062615

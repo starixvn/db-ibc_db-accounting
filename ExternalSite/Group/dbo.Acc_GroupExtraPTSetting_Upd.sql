@@ -133,10 +133,12 @@ BEGIN
 		END
 		ELSE
 		BEGIN
-			UPDATE dbo.Acc_GroupExtraPTSetting WITH(ROWLOCK, UPDLOCK)
-			SET ToDate = '99991231'
-			WHERE SuperId = @CustID AND GroupName IN (SELECT GroupName FROM @Curr_Primary WHERE IsDeleted = 0)
-				AND @today BETWEEN FromDate AND ToDate
+			UPDATE s
+			SET s.ToDate = '99991231'
+			FROM dbo.Acc_GroupExtraPTSetting s WITH(ROWLOCK, UPDLOCK)
+			WHERE s.SuperId = @CustID AND s.GroupName IN (SELECT GroupName FROM @Curr_Primary WHERE IsDeleted = 0)
+				AND @today BETWEEN s.FromDate AND s.ToDate
+				AND EXISTS (SELECT 1 FROM dbo.f_GetSettingProductExtraPTGroup('') ss WHERE ss.GroupName = s.GroupName AND ss.ProductID = s.ProductId)
 		END
 	END
 	ELSE -- remove @CustID from @GroupName
@@ -160,15 +162,19 @@ BEGIN
 				WHERE SuperId = @CustID AND GroupName = 'BC' AND FromDate > @today
 			END
 
-			UPDATE dbo.Acc_GroupExtraPTSetting
-			SET ToDate = '99991231'
-			WHERE SuperId = @CustID AND @today BETWEEN FromDate AND ToDate
+			UPDATE s
+			SET s.ToDate = '99991231'
+			FROM dbo.Acc_GroupExtraPTSetting s WITH(ROWLOCK, UPDLOCK)
+			WHERE s.SuperId = @CustID AND @today BETWEEN s.FromDate AND s.ToDate
+				AND EXISTS (SELECT 1 FROM dbo.f_GetSettingProductExtraPTGroup('') ss WHERE ss.GroupName = s.GroupName AND ss.ProductID = s.ProductId)
 
 			IF EXISTS (SELECT TOP 1 1 FROM dbo.Acc_GroupExtraPTSetting WITH(NOLOCK) WHERE SuperId = @CustID AND @today BETWEEN FromDate AND ToDate AND GroupName IN ('ACCTHAI2','ACCTHAI56','ACCTHAI99'))
 			BEGIN
-				UPDATE dbo.Acc_GroupExtraPTSetting
-				SET ToDate = '99991231'
-				WHERE SuperId = @CustID AND GroupName = 'BC' AND @today BETWEEN FromDate AND ToDate
+				UPDATE s
+				SET s.ToDate = '99991231'
+				FROM dbo.Acc_GroupExtraPTSetting s WITH(ROWLOCK, UPDLOCK)
+				WHERE s.SuperId = @CustID AND s.GroupName = 'BC' AND @today BETWEEN s.FromDate AND s.ToDate
+					AND EXISTS (SELECT 1 FROM dbo.f_GetSettingProductExtraPTGroup('BC') ss WHERE ss.GroupName = s.GroupName AND ss.ProductID = s.ProductId)
 			END
 		END
 	END
