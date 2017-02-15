@@ -21,6 +21,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Parlay_Calculate] (
 	, @TotalGameAwayMatch INT = NULL
 	, @resultDetail_cb 	VARCHAR(MAX) = NULL
 	, @resultDetail_ss 	VARCHAR(MAX) = NULL
+	, @IsRefundHT		BIT  = 0
 	, @ticketCount		INT = 0 OUTPUT
 	, @ErrCode 			INT = 0 OUTPUT
 	, @ErrMsg 			NVARCHAR(200) = '' OUTPUT
@@ -188,12 +189,12 @@ BEGIN
 	WHERE	1 = CASE 
 					WHEN @Mode IN ('REFUND-HT') THEN 
 						CASE 
-							WHEN f.Is3x30 = 0 THEN 1 
+							WHEN f.Is3x30 = 0 THEN 1
 							ELSE 0
 						END
 					WHEN @Mode IN ('REFUND-FT', 'ABANDONED-2H') THEN 
 						CASE 
-							WHEN f.GroupId IN (1,3,5,7) THEN 1 
+							WHEN f.GroupId IN (1,3,5,7) AND @IsRefundHT = 0 THEN 1 
 							ELSE 0
 						END
 					WHEN @Mode IN ('CAL') THEN 1

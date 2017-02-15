@@ -17,6 +17,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Parlay_SDT] (
 	, @betstatus		NVARCHAR(50)
 	, @goalRecord		VARCHAR(50)	
 	, @ticketCount		INT = 0 OUTPUT
+	, @IsRefundHT		BIT  = 0
 	, @ErrCode 			INT = 0 OUTPUT
 	, @ErrMsg 			NVARCHAR(200) = '' OUTPUT
 )
@@ -112,8 +113,13 @@ BEGIN
 		, f.IsDetermined
 	FROM dbo.f_Set_GetGroupBettypes() f
 	WHERE 1 = CASE 
-				WHEN @IsHT = 0 AND f.GroupId IN (2,4,6)  THEN 1 -- FT, FT corner, HTFT-FGLG
 				WHEN @IsHT = 1 THEN 1
+				WHEN @IsHT = 0 THEN  -- FT, FT corner, HTFT-FGLG
+					CASE 
+						WHEN @IsRefundHT = 0 AND f.GroupId IN (2,4,6) THEN 1
+						WHEN @IsRefundHT = 1 AND f.GroupId IN (2,4,6) AND f.Is3x30 = 0 THEN 1
+						ELSE 0
+					END
 				ELSE 0
 			END
 		AND f.IsAuto = 0 --Exclude BetRadar, FM

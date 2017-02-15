@@ -150,7 +150,7 @@ BEGIN
 			SELECT 1
 			FROM @match
 			WHERE 1 = CASE 
-						WHEN (betstatus LIKE 'Abandoned 1H%' AND (hth IS NULL OR hta IS NULL)) THEN 1
+						WHEN betstatus LIKE 'Abandoned 1H%' THEN CASE WHEN (hth IS NULL OR hta IS NULL) THEN 1 ELSE 0 END
 						WHEN (fth IS NULL OR fta IS NULL OR hth IS NULL OR hta IS NULL) THEN 1
 						ELSE 0
 					END

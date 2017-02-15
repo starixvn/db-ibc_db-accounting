@@ -156,7 +156,9 @@ BEGIN
 		END	
 		
 		--CHECK for CAL fisrt
-		IF(@action IN ('REFUND-HT', 'ABANDONED-2H', 'REFUND-FT'))
+		IF(
+			@action IN ('REFUND-HT', 'ABANDONED-2H','REFUND-FT')
+		)
 		BEGIN
 			/*IF(@action IN ('REFUND-HT')) --REFUND Is3x30 AND CAL the REST
 			BEGIN
@@ -181,6 +183,7 @@ BEGIN
 				,@GoalSequence 		= @GoalRecord
 				,@resultDetail_cb	= @resultDetail_cb
 				,@resultDetail_ss	= @resultDetail_ss
+				,@IsRefundHT		= @IsRefundHT
 				,@ticketCount		= @ticketCountCAL OUTPUT
 				
 		END
@@ -200,18 +203,17 @@ BEGIN
 				,@Sporttype			= @Sporttype
 				,@betstatus 		= @betstatus
 				,@GoalRecord 		= @GoalRecord
+				,@IsRefundHT		= @IsRefundHT
 				,@ticketCount		= @ticketCountSDT OUTPUT
 		END
-		ELSE
-		BEGIN
-			--REFUND all tickets
-			EXEC dbo.NAP_Admin_Settlement_Parlay_Refund
-				@MatchId			= @MatchId
-				,@matchdate			= @matchdate
-				,@mode				= @Action
-				,@IsRefundHT		= @IsRefundHT
-				,@ticketCount		= @ticketCountREFUND OUTPUT
-		END
+
+		--REFUND the REST
+		EXEC dbo.NAP_Admin_Settlement_Parlay_Refund
+			@MatchId			= @MatchId
+			,@matchdate			= @matchdate
+			,@mode				= @Action
+			,@IsRefundHT		= @IsRefundHT
+			,@ticketCount		= @ticketCountREFUND OUTPUT
 		
 		/*
 		SELECT @ticketCountBetRadar	AS TC_BetRadar

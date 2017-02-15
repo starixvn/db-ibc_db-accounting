@@ -44,7 +44,13 @@ BEGIN
 					END
 				WHEN @Mode = 'REFUND-FT' THEN 
 					CASE 
-						WHEN GroupId IN (2,4,6) THEN 1
+						WHEN @IsRefundHT = 1 THEN 1
+						WHEN @IsRefundHT = 0 AND f.GroupId IN (2,4,6) THEN 1
+						ELSE 0
+					END
+				WHEN @Mode = 'ABANDONED-2H' THEN 
+					CASE 
+						WHEN (@IsRefundHT = 1 AND (f.GroupId IN (1,3,5,7) OR f.Is3x30 = 1)) THEN 1
 						ELSE 0
 					END
 				ELSE 0 
