@@ -9,7 +9,7 @@ AS
 	DB: DBACC/bodb02
  
 	Revisions:	
-
+		- 20170215@Percy: Integrate Fishing World [RedmineID: #71616]
 */
  
 BEGIN
@@ -28,7 +28,7 @@ SET NOCOUNT ON
 	FROM	dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest) s
 	INNER JOIN dbo.Bettype b ON s.Bettype = B.TypeId 
 	WHERE  CasinoType IN (1,2) 
-		   OR ProductID IN (8) 	 
+		   OR ProductID IN (8, 24) 	 
 
 	
 	--- ProductID = 3 - Number Game get LeagueId

@@ -28,7 +28,8 @@ AS
 	Task	: #62430_Non Sports Product Statistic - Product Report
 	DB		: DBACC/bodb02
 	
-	Revision:
+	Revisions:
+		- 20170215@Percy: Remove hardcode product to support Fishing World [RedmineID: #71616]
 
 	Param's Explanation:
 		- @username:  + Search by keyword, member only
@@ -560,6 +561,11 @@ BEGIN
 	-- Get Product Name
 	IF @CasinoType = -1 -- Group in Product Group
 	BEGIN
+		UPDATE d
+		SET d.ProductName = p.ProductName
+		FROM #Data d
+			INNER JOIN dbo.Products p ON d.ProductID = p.ProductID
+
 		UPDATE s
 		SET s.ProductID = 1,
 			s.ProductName = 'RNG Casino'		
@@ -571,12 +577,6 @@ BEGIN
 			s.ProductName = 'Live Casino'	
 		FROM #Data s
 		WHERE EXISTS (SELECT 1 FROM dbo.Products p WITH (NOLOCK) WHERE p.CasinoType = 2 AND s.ProductID = p.ProductID)
-
-		UPDATE d
-		SET d.ProductName = p.ProductName
-		FROM #Data d
-			INNER JOIN dbo.Products p ON d.ProductID = p.ProductID
-		WHERE p.ProductID IN (3, 5, 8)
 	END
 	ELSE -- @CasinoType <> -1
 	BEGIN

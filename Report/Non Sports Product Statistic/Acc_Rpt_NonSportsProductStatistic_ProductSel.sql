@@ -8,7 +8,9 @@ AS
 	Task : Get Product applied for Non Sports Statistic Report
 	DB: DBACC/bodb02
 	
-	Revisions:	
+	Revisions:
+		- 20170215@Percy: Integrate Fishing World [RedmineID: #71616]
+
 	Param Explaination:
 		* Live Casino:
 					SLI - Live Casino
@@ -35,7 +37,7 @@ SET NOCOUNT ON
 	SELECT ProductId, CASE WHEN ProductId = 4 THEN 'SLI' ELSE ProductName END AS ProductName, CasinoType
 	FROM  dbo.Products WITH (NOLOCK)
 	WHERE CasinoType IN (1,2) 
-		 OR ProductID IN (3, 5, 8)
+		 OR ProductID IN (3, 5, 8, 24)
 	ORDER BY ProductName 
 
 END 
