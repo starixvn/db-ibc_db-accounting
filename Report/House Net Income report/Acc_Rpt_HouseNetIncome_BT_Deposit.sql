@@ -14,7 +14,7 @@ AS
 	
 	Param's Explanation:   
 
-	EXEC Acc_Rpt_HouseNetIncome_BT_Deposit '20160801', '20160830'
+	EXEC Acc_Rpt_HouseNetIncome_BT_Deposit '20161230', '20161230'
 */  
 BEGIN  
 	SET NOCOUNT ON  
@@ -76,7 +76,8 @@ BEGIN
 		SUM(ISNULL(b.MemberWL, 0) * e.Rate) AS MemberWL
 	FROM bodb_LicenseeReport.dbo.rpt_BettingByProduct b WITH (NOLOCK)
 		INNER JOIN #ExchangeOANDA e ON e.ExchangeDate = b.rptDate AND e.ExchangeID = b.CurrencyId
-		INNER JOIN @PartyChargeInfo ci ON b.ProductID = ci.ProductID
+		INNER JOIN (SELECT DISTINCT ProductID, LicenseeId, FromDate, ToDate, Bettype 
+					FROM @PartyChargeInfo) ci ON b.ProductID = ci.ProductID
 													AND ci.LicenseeId = b.SiteId
 													AND (b.rptDate BETWEEN ci.FromDate AND ci.ToDate)
 													AND (ci.Bettype = -1 OR ci.Bettype = b.Bettype)

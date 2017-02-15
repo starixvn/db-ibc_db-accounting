@@ -14,7 +14,7 @@ AS
 	
 	Param's Explanation:   
 
-	EXEC Acc_Rpt_HouseNetIncome_MGC_Deposit '20160901', '20160930'
+	EXEC Acc_Rpt_HouseNetIncome_MGC_Deposit_xtest '20161201', '20161210'
 */  
 BEGIN  
 	SET NOCOUNT ON  
@@ -83,8 +83,8 @@ BEGIN
 		ProductId			INT,
 		BettypeRef			INT,
 		Rate				MONEY,
-		FromDate			DATETIME,
-		ToDate				DATETIME)
+		FromDate			DATE,
+		ToDate				DATE)
 
 	INSERT INTO @PartyChargeInfo (ChargeId, PartyId, LicenseeId, ProductID, BettypeRef, Rate, Fromdate, Todate)
 	SELECT DISTINCT ci.ChargeID, ci.PartyID, LicenseeID, ci.ProductID, ci.Bettype, DI_Rate, ci.Fromdate, ci.Todate
@@ -145,23 +145,26 @@ BEGIN
 
 	-- Region: Caculate PayToSupplier value
 	DECLARE @ProductChargeInfo AS TABLE (
-			ParentId		INT, 
-			ProductId		INT, 
+			ParentId		INT, 			
 			BettypeRef		INT, 
 			ChargeType		INT, 
 			Rate			MONEY, 
 			MinAmount		MONEY, 
 			MaxAmount		MONEY, 
 			CurrencyId		INT, 
-			CurrencyCode	VARCHAR(3))
+			CurrencyCode	VARCHAR(3),
+			FromDate		DATE,
+			ToDate			DATE)
 	
-	INSERT INTO @ProductChargeInfo (ParentId, ProductId, BettypeRef, ChargeType, Rate, MinAmount, MaxAmount, CurrencyId, CurrencyCode)
-	SELECT DISTINCT a.FromParty, a.ProductId, a.BettypeRef, a.ChargeType, a.Rate, 
+	INSERT INTO @ProductChargeInfo (ParentId, BettypeRef, ChargeType, Rate, MinAmount, MaxAmount, CurrencyId, CurrencyCode, FromDate, ToDate)
+	SELECT DISTINCT a.FromParty, a.BettypeRef, a.ChargeType, a.Rate, 
 					CASE WHEN a.ChargeType = 4 THEN a.MinAmount * ex.MYR ELSE 0 END MinAmount,
 					CASE WHEN a.ChargeType = 4 THEN a.MaxAmount * ex.MYR ELSE 0 END MaxAmount,
-					2, 'MYR' -- Convert to MYR to compare
+					2, 'MYR', -- Convert to MYR to compare
+					a.FromDate, a.ToDate
 	FROM (
-			SELECT DISTINCT tp.ProductId, ci2.ChargeID, cis.FromParty, cis.BettypeRef, cis.ChargeType, cis.Rate, cis.MinAmount, cis.MaxAmount, cis.BaseCurrencyId
+			SELECT DISTINCT ci2.ChargeID, cis.FromParty, cis.BettypeRef, cis.ChargeType, 
+							cis.Rate, cis.MinAmount, cis.MaxAmount, cis.BaseCurrencyId, cis.FromDate, cis.ToDate
 			FROM @PartyChargeInfo tp
 				INNER JOIN bodb_licensee.dbo.OAS_ChargeInfo ci WITH (NOLOCK) ON tp.ChargeId = ci.ChargeID
 				LEFT JOIN bodb_licensee.dbo.OAS_ChargeInfo ci2 WITH (NOLOCK) ON ci.ToParty = ci2.FromParty AND ci2.ProductID = tp.ProductID
@@ -169,86 +172,20 @@ BEGIN
 			WHERE tp.ChargeId > 0
 		) a	
 	LEFT JOIN #ExchangeOANDA ex ON a.BaseCurrencyId = ex.ExchangeID
-
-	DECLARE @RateForPayToSupplier AS TABLE (			
-			BettypeRef			INT,			
-			Rate				FLOAT,
-			PayToSupplier		MONEY,
-			BonusValue			MONEY )
-	SELECT b.BettypeRef, SUM(b.LicenseeNetWin * e.MYR) AS LicenseeNetWin
-					FROM #TempDataMGC b
-						INNER JOIN #ExchangeOANDA e ON e.ExchangeDate = b.RptDate AND e.ExchangeID = b.CurrencyId	
-					GROUP BY b.BettypeRef
-	; WITH sums AS 
-				(	SELECT b.BettypeRef, SUM(b.LicenseeNetWin * e.MYR) AS LicenseeNetWin
-					FROM #TempDataMGC b
-						INNER JOIN #ExchangeOANDA e ON e.ExchangeDate = b.RptDate AND e.ExchangeID = b.CurrencyId	
-					GROUP BY b.BettypeRef
-				)
-	--INSERT INTO @RateForPayToSupplier (BettypeRef, PayToSupplier, Rate, BonusValue)
-	SELECT s.BettypeRef, 			 
-			CASE 
-				WHEN (ChargeType = 4 AND s.LicenseeNetWin BETWEEN MinAmount AND MaxAmount) 
-				THEN CASE 
-						WHEN MinAmount = 0 THEN (s.LicenseeNetWin - 0) * Rate 
-						WHEN MinAmount > 0 THEN (s.LicenseeNetWin - MinAmount) * Rate 
-						ELSE 0 END
-				ELSE 0 END +
-			CASE 
-				WHEN (ChargeType = 4 AND s.LicenseeNetWin > MaxAmount) 
-				THEN CASE 
-						WHEN MinAmount = 0 THEN (MaxAmount - 0) * Rate						 
-						ELSE 0 END
-				ELSE 0 END +
-			CASE 
-				WHEN (ChargeType = 1) 
-				THEN CASE WHEN s.LicenseeNetWin <= 0 THEN 0 ELSE s.LicenseeNetWin * Rate END
-				ELSE 0 END 
-			AS PayToSupplier,
-
-			CASE 
-				WHEN r.ChargeType = 1 THEN r.Rate
-				WHEN r.ChargeType = 4 AND s.LicenseeNetWin BETWEEN r.MinAmount AND r.MaxAmount THEN r.Rate
-				ELSE 0 
-			END AS Rate,
-
-			CASE WHEN r.ChargeType = 1 THEN 0
-			     WHEN r.ChargeType = 4 AND s.LicenseeNetWin BETWEEN MinAmount AND MaxAmount
-				 THEN CASE WHEN MinAmount = 0 THEN 0
-						   WHEN MinAmount > 0 THEN ((r.MinAmount * (SELECT DISTINCT Rate FROM @ProductChargeInfo WHERE ChargeType = 4 AND MinAmount = 0)) - (r.MinAmount * r.Rate))
-				 ELSE 0 END
-			END AS BonusValue
-	FROM sums s
-		INNER JOIN ( SELECT DISTINCT BettypeRef, ChargeType, Rate, MinAmount, MaxAmount FROM @ProductChargeInfo) r ON s.BettypeRef = r.BettypeRef
-	
-	DECLARE @PayToSupplier MONEY
-	SELECT @PayToSupplier = SUM (PayToSupplier) FROM @RateForPayToSupplier
+			
+	CREATE TABLE #FinalResult (
+		RptDate				VARCHAR(10),
+		LicenseeWL			MONEY,
+		PayToSupplier		MONEY
+	)
 
 	DECLARE @HouseNetIncome MONEY
 	SELECT @HouseNetIncome = SUM(CASE WHEN s.SumByProduct <= 0 THEN 0 ELSE s.SumByProduct END) 
 						  FROM ( SELECT SUM (HouseIncomeDaily) AS SumByProduct 
-									   FROM #TempDataMGC GROUP BY ProductId) s
-
-	-- Region: Full Range	
-	CREATE TABLE #FinalResult (
-		RptDate			VARCHAR(10),
-		LicenseeWL			MONEY,
-		PayToSupplier		MONEY
-	)							
-	INSERT INTO #FinalResult (RptDate, LicenseeWL, PayToSupplier)
-	SELECT 'FullRange', @HouseNetIncome, (-1) * @PayToSupplier
-	
-	-- Handle daily data
-	DECLARE @DailyPayAmt TABLE (RptDate DATE, AmountDaily MONEY)
-	
-	INSERT INTO @DailyPayAmt (RptDate, AmountDaily)
-	SELECT b.RptDate, SUM(b.LicenseeNetWin * r.Rate + r.BonusValue)
-	FROM #TempDataMGC b
-		INNER JOIN @RateForPayToSupplier r ON b.BettypeRef = r.BettypeRef
-	GROUP BY b.RptDate
-
-
-	--SELECT * FROM @RateForPayToSupplier
+									   FROM #TempDataMGC GROUP BY ProductId, BettypeRef) s
+									   								
+	INSERT INTO #FinalResult (RptDate, LicenseeWL)
+	SELECT 'FullRange', @HouseNetIncome	
 
 	-- Processing daily data
 	DECLARE @tmpDate DATE, @DateList VARCHAR(200)
@@ -256,16 +193,77 @@ BEGIN
 
 	WHILE @tmpDate <= @TDate
 	BEGIN
-		INSERT INTO #FinalResult (RptDate, LicenseeWL, PayToSupplier)
+		INSERT INTO #FinalResult (RptDate, LicenseeWL)
 		SELECT CONVERT(VARCHAR(2), @tmpDate, 106), 
-			(SELECT ISNULL(SUM(HouseIncomeDaily), 0) FROM #TempDataMGC WHERE RptDate = @tmpDate), -- LicenseeWL
-			(SELECT ISNULL(SUM(AmountDaily), 0) FROM @DailyPayAmt WHERE RptDate = @tmpDate)		-- PayToSupplier
+			(SELECT ISNULL(SUM(HouseIncomeDaily), 0) FROM #TempDataMGC WHERE RptDate = @tmpDate) -- LicenseeWL		
 
 		SELECT @tmpDate = DATEADD(DAY, 1, @tmpDate)
 	END
 
 	SELECT @DateList = COALESCE(@DateList + ',', '') + '[' + CONVERT(VARCHAR(10), RptDate) + ']' FROM #FinalResult 
-	-- End region
+	
+	-- PayToSupplier		
+	; WITH sums AS 
+				(	SELECT b.BettypeRef, CONVERT(VARCHAR(2), b.RptDate, 106) AS rptDate, b.RptDate AS FullDate
+						, SUM(b.LicenseeNetWin * e.MYR) AS LicenseeNetWin
+					FROM #TempDataMGC b
+						INNER JOIN #ExchangeOANDA e ON e.ExchangeDate = b.RptDate AND e.ExchangeID = b.CurrencyId	
+					GROUP BY b.BettypeRef, CONVERT(VARCHAR(2), b.RptDate, 106), b.RptDate
+				),
+	MicrogamingFee AS
+	(
+		SELECT s.BettypeRef, s.rptDate, s.FullDate,		 
+				CASE 
+					WHEN (ChargeType = 4 AND (s.LicenseeNetWin < 0 AND r.MinAmount = 0) OR (s.LicenseeNetWin BETWEEN r.MinAmount AND r.MaxAmount)) 
+					THEN CASE 						
+							WHEN MinAmount = 0 THEN s.LicenseeNetWin * r.Rate
+							WHEN MinAmount > 0 THEN ((s.LicenseeNetWin - MinAmount) * Rate) + (r.MinAmount * 0.1)
+							ELSE 0 END
+					ELSE 0 END +			
+				CASE 
+					WHEN ChargeType = 1 THEN s.LicenseeNetWin * Rate ELSE 0 END
+				AS PayToSupplier
+		FROM sums s INNER JOIN  @ProductChargeInfo r
+				ON s.BettypeRef = r.BettypeRef AND s.FullDate BETWEEN r.FromDate AND r.ToDate
+	),
+	AmtByDate AS
+	(
+		SELECT f.rptDate, SUM(f.PayToSupplier) AS PayToSupplierByDate
+		FROM MicrogamingFee f
+		GROUP BY f.rptDate
+	)
+	UPDATE r
+	SET r.PayToSupplier = m.PayToSupplierByDate
+	FROM AmtByDate m INNER JOIN #FinalResult r ON r.RptDate = m.rptDate
+
+	-- Monthly
+	; WITH sums AS 
+				(	SELECT b.BettypeRef
+						, SUM(b.LicenseeNetWin * e.MYR) AS LicenseeNetWin
+						, ci.Rate, ci.FromDate, ci.ToDate, ci.MinAmount, ci.MaxAmount, ci.ChargeType
+					FROM #TempDataMGC b
+						INNER JOIN #ExchangeOANDA e ON e.ExchangeDate = b.RptDate AND e.ExchangeID = b.CurrencyId
+						INNER JOIN @ProductChargeInfo ci ON b.RptDate BETWEEN ci.FromDate AND ci.ToDate AND b.BettypeRef = ci.BettypeRef	
+					GROUP BY b.BettypeRef, ci.Rate, ci.FromDate, ci.ToDate, ci.MinAmount, ci.MaxAmount, ci.ChargeType
+				),
+	AmtByMonth AS
+	(
+		SELECT s.BettypeRef,
+			CASE 
+					WHEN (ChargeType = 4 AND (s.LicenseeNetWin BETWEEN s.MinAmount AND s.MaxAmount)) 
+					THEN CASE 						
+							WHEN MinAmount = 0 THEN s.LicenseeNetWin * s.Rate
+							WHEN MinAmount > 0 THEN ((s.LicenseeNetWin - MinAmount) * Rate) + (s.MinAmount * 0.1)
+							ELSE 0 END
+					ELSE 0 END +
+				CASE 
+					WHEN ChargeType = 1 AND s.LicenseeNetWin > 0 THEN s.LicenseeNetWin * Rate ELSE 0 END
+				AS PayToSupplier
+		FROM sums s
+	)
+	UPDATE #FinalResult
+	SET PayToSupplier = (SELECT SUM(PayToSupplier) FROM AmtByMonth)
+	WHERE RptDate LIKE 'FullRange'
 
 	---------------------------------------------------- Select the output -------------------------------------------------------
 	DECLARE @SQL VARCHAR(1000)

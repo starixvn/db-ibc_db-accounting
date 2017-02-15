@@ -30,7 +30,7 @@ BEGIN
 	FROM bodb02.dbo.LA_f_ExchangeDailySel(@FDate, @TDate, 'MYR')
 
 	-- Commission Share & Cash in share charge rate
-	DECLARE @CBShareRate AS TABLE (
+	/*DECLARE @CBShareRate AS TABLE (
 		Rate			MONEY,
 		MinAmount		MONEY,
 		MaxAmount		MONEY,
@@ -61,7 +61,8 @@ BEGIN
 			OR @ToDate BETWEEN ci.FromDate AND ci.ToDate
 			OR ci.FromDate BETWEEN @FDate AND @TDate
 			OR ci.ToDate BETWEEN @FDate AND @TDate) 
-	
+	*/
+
 	-- Get active Licensees
 	DECLARE @tmpParty TABLE (PartyID INT, IsDeposit BIT, LicenseeID INT)
 
@@ -89,7 +90,8 @@ BEGIN
 		rptDate			DATETIME,
 		CurrencyID		INT,
 		TurnOver		MONEY,		
-		CashInAmount	MONEY
+		CashInAmount	MONEY,
+		IsDeposit		BIT
 	)
 
 	INSERT INTO #TempDataCB
@@ -98,13 +100,15 @@ BEGIN
 	          rptDate ,
 	          CurrencyID ,
 	          TurnOver ,	         
-	          CashInAmount
+	          CashInAmount,
+			  IsDeposit
 	        )
 	SELECT p.PartyId,
 		b.rptDate,
 		b.CurrencyID,				
 		SUM(b.Turnover * e.Rate) Turnover,		
-		SUM(ISNULL(b.BuyBackAmount,0) * e.Rate) CashInAmount
+		SUM(ISNULL(b.BuyBackAmount,0) * e.Rate) CashInAmount,
+		p.IsDeposit
 	FROM bodb_LicenseeReport.dbo.rpt_BettingByProduct b WITH (NOLOCK)
 		INNER JOIN @tmpParty p ON b.SiteID = p.LicenseeID
 		INNER JOIN #ExchangeOANDA e ON b.CurrencyId = e.ExchangeID AND b.rptDate = e.ExchangeDate
@@ -113,42 +117,36 @@ BEGIN
 		AND b.CurrencyId <> 20
 		AND b.CustomerCategory NOT IN (27, 28)
 		AND b.StatusId NOT IN (-1, 101, 102, 103) -- Exclude Reject, Void, Refund
-	GROUP BY p.PartyID, b.rptDate, b.CurrencyId
+	GROUP BY p.PartyID, b.rptDate, b.CurrencyId, p.IsDeposit
 	
-	-- convert min/max amount to current currency
-	UPDATE s SET
-		MinAmountEx = MinAmount * e.Rate,
-		MaxAmountEx = MaxAmount * e.Rate
-	FROM @CBShareRate s
-	INNER JOIN #ExchangeOANDA e ON s.BaseCurrencyId = e.ExchangeID AND e.ExchangeDate = s.ToDate
-
 	-- Final Result
 	CREATE TABLE #ResultByDate (
 		RptDate				DATETIME,
 		Commission			MONEY,
 		CashInShare			MONEY,
 		TurnOver			MONEY,
-		CashInAmount		MONEY
+		CashInAmount		MONEY,
+		IsDeposit			BIT	
 	)
 
 	INSERT INTO #ResultByDate
 	        ( RptDate ,	          
 	          TurnOver ,
-	          CashInAmount
+	          CashInAmount,
+			  IsDeposit
 	        )
 	SELECT rptDate, 
 		SUM (TurnOver) AS TurnOver,
-		SUM (CashInAmount) AS CashInAmount
+		SUM (CashInAmount) AS CashInAmount,
+		IsDeposit
 	FROM #TempDataCB
-	GROUP BY rptDate
+	GROUP BY rptDate, IsDeposit
 	
 	UPDATE f
-	SET f.Commission = f.TurnOver * cm.Rate,
-		f.CashInShare = f.CashInAmount * cs.Rate		
+	SET f.Commission = f.TurnOver * CASE WHEN IsDeposit = 0 THEN 0.062 ELSE 0.0405 END,
+		f.CashInShare = f.CashInAmount * CASE WHEN IsDeposit = 0 THEN 0.225 ELSE 0.15 END		
 	FROM #ResultByDate f
-		INNER JOIN @CBShareRate cm ON cm.TypeID = 6 AND (f.RptDate BETWEEN cm.FromDate AND cm.ToDate) AND f.TurnOver >= ISNULL(cm.MinAmountEx, 0) AND (cm.MaxAmountEx IS NULL OR f.Turnover < cm.MaxAmountEx)
-		INNER JOIN @CBShareRate cs ON cs.TypeId = 7 AND (f.RptDate BETWEEN cs.FromDate AND cs.ToDate) AND  f.CashInAmount >= ISNULL(cs.MinAmountEx, 0) AND (cs.MaxAmountEx IS NULL OR f.CashInAmount < cs.MaxAmountEx)
-	
+		
 	-- Collect data
 	CREATE TABLE #FinalResult (
 		RptDate				VARCHAR(10),
