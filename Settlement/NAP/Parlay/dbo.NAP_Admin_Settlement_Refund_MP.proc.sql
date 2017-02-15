@@ -79,7 +79,15 @@ BEGIN
 		,@htawayscore 	= htawayscore
 		,@betstatus 	= ISNULL(betstatus,'')
 		,@GoalRecord 	= ISNULL(GoalRecord, '')
-		,@IsRefundHT 	= CASE WHEN @betstatus LIKE 'Refund HT%' THEN 1 ELSE 0 END
+		,@IsRefundHT 	= CASE 
+							WHEN @action IN ('ABANDONED-2H', 'REFUND-FT') THEN 
+								CASE 
+									WHEN @betstatus LIKE 'Refund HT%' OR @betstatus LIKE 'Refund%' THEN 1  --CASE refund 30x30 then refund FT(SDT)
+									ELSE 0 
+								END
+							WHEN @betstatus LIKE 'Refund HT%' THEN 1 
+							ELSE 0 
+						END
 	FROM dbo.Match WITH(ROWLOCK)
 	WHERE matchid = @matchid
 	

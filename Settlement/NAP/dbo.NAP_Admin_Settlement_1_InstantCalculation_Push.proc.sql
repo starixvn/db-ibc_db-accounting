@@ -63,7 +63,7 @@ BEGIN
 	ELSE IF (@Action = 'UNDO')
 	BEGIN
 		--DOUBLE CHECK match status
-		EXEC dbo.NAP_Settlement_InstantCalculation_UndoChecking
+		EXEC DBPRO.bodb02.dbo.NAP_Settlement_InstantCalculation_UndoChecking
 		@MatchId			= @MatchId
 		, @InstantCheck		= @InstantKey
 		, @ErrCode 			= @ErrCode OUTPUT
@@ -133,6 +133,7 @@ BEGIN
                             + ', @IP = ''' + CONVERT(NVARCHAR(50), @IP) + '''' 
                             + ', @ErrCode = @ErrCode OUTPUT' 
                             + ', @ErrMsg = @ErrMsg OUTPUT'
+			, @mode = 'INST-UNDO'
 	END
 	
 	IF LEN(@sqlCommand) > 1000 --Max Field 

@@ -23,6 +23,7 @@ BEGIN
 		, @fth INT, @fta INT, @hth INT, @hta INT, @goalrecord NVARCHAR(50), @betstatus NVARCHAR(50)
 
 	SELECT @Mode = CASE 
+						WHEN CHARINDEX('NAP_Admin_Settlement_1_InstantCalculation_Undo', @sqlCommand) > 0 THEN 7
 						WHEN (
 							CHARINDEX('NAP_Admin_Settlement_1_InstantCalculation', @sqlCommand) > 0 
 							AND 

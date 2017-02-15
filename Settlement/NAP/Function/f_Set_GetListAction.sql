@@ -17,6 +17,7 @@ AS
 			   4: For Parlay - Manual
 			   5: For Single ticket - Auto payout
 			   6: For Single ticket - Instant Calculation
+			   7: For Single ticket - UNDO Instant Calculation
 
 			   
 */
@@ -55,7 +56,8 @@ RETURN (
 	
 	--Instant Calculation
 	SELECT 6 AS Mode, 'INST-HT' AS ActionName, 178 AS ActionId UNION ALL
-	SELECT 6 AS Mode, 'INST-FT' AS ActionName, 179 AS ActionId
+	SELECT 6 AS Mode, 'INST-FT' AS ActionName, 179 AS ActionId UNION ALL
+	SELECT 7 AS Mode, 'INST-UNDO' AS ActionName, 182 AS ActionId
 )
 GO
 
