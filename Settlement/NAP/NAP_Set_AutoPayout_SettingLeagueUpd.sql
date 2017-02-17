@@ -5,7 +5,7 @@ SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-ALTER PROCEDURE dbo.NAP_Set_AutoPayout_SettingLeagueUpd 
+ALTER PROCEDURE [dbo].[NAP_Set_AutoPayout_SettingLeagueUpd] 
 	@LeagueId 			INT
 	, @AutoType			TINYINT
 	, @IsEnabled		BIT 
@@ -94,9 +94,8 @@ BEGIN
 		WHERE	m.leagueid 	= @LeagueId 
 				AND sporttype 	= 1 
 				AND 1 = CASE 
-							WHEN @AutoType = 1 AND eventstatus <> 'completed' THEN 1
+							WHEN @AutoType IN (1,3) AND eventstatus <> 'completed' THEN 1
 							WHEN @AutoType = 2 AND eventstatus IN ('running', 'closed') THEN 1
-							WHEN @AutoType = 3 THEN 1
 							ELSE 0 
 						END
 				
@@ -145,6 +144,6 @@ BEGIN
 	END CATCH 
 
 END
+
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_AutoPayout_SettingLeagueUpd] TO [bodbAdminNet] AS [dbo]
-GO
