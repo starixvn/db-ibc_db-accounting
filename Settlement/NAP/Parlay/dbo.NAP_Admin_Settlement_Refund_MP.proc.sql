@@ -82,7 +82,7 @@ BEGIN
 		,@IsRefundHT 	= CASE 
 							WHEN @action IN ('ABANDONED-2H', 'REFUND-FT') THEN 
 								CASE 
-									WHEN @betstatus LIKE 'Refund HT%' OR @betstatus LIKE 'Refund%' THEN 1  --CASE refund 30x30 then refund FT(SDT)
+									WHEN @betstatus LIKE 'Refund HT%' OR @betstatus LIKE 'Refund;%' THEN 1  --CASE refund 30x30 then refund FT(SDT)
 									ELSE 0 
 								END
 							WHEN @betstatus LIKE 'Refund HT%' THEN 1 
