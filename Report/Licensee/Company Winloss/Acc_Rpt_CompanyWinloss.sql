@@ -1,3 +1,6 @@
+USE [bodb02]
+GO
+
 ALTER PROCEDURE dbo.Acc_Rpt_CompanyWinloss
 	  @FromDate SMALLDATETIME
 	, @ToDate SMALLDATETIME
@@ -23,6 +26,7 @@ AS
 		- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model [RedmineID: #55589]
 		- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
 		- 20160919@Robert: Licensee / Company Win Loss: Missing data of Bettrade when generating report for All Products [RedmineID: #64312]
+		- 20160909@Robert: Offer Colossus Bets for Cash Model (#63144)
 		- 20161022@Jim:move table to bodb_licenseereport [RedmineID :#60449]
 		- 20161129@Robert: NAP Reports - Integrate Fishing World Product [RedmindID: #67757]
 
@@ -173,6 +177,16 @@ BEGIN
 	   SELECT typeid
 	   FROM bodb02.dbo.bettype WITH (NOLOCK)
 	   WHERE typeid BETWEEN 4001 AND 7999
+    END
+	ELSE IF @ProductPrefix = 'CB'
+    BEGIN
+	   INSERT INTO @SportTypeList(SportType, IsBA)	   
+	   SELECT 204, 0
+
+	   INSERT INTO @BetTypeList(BetType)
+	   SELECT typeid
+	   FROM bodb02.dbo.bettype WITH (NOLOCK)
+	   WHERE typeid = 18000
     END
     ELSE IF @ProductPrefix = 'FW'
     BEGIN
