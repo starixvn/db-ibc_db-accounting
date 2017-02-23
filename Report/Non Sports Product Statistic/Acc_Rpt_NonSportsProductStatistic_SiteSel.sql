@@ -9,7 +9,9 @@ AS
 	Task : Get Company dropdown by ProductId [Redmine: #62430]
 	DB: DBACC/bodb02
 	
-	Revisions:	
+	Revisions:
+		- 20170215@Percy: Integrate Fishing World [RedmineID: #71616]
+
 	Param Explaination:
 
 
@@ -36,7 +38,7 @@ SET NOCOUNT ON
 		SELECT	ProductID
 		FROM	dbo.Products WITH (NOLOCK)
 		WHERE   CasinoType IN (1,2) 
-				OR ProductID IN (3, 5, 8)
+				OR ProductID IN (3, 5, 8, 24)
 	END 
 
 	
@@ -56,7 +58,7 @@ SET NOCOUNT ON
 	GROUP BY l.LicenseeID, l.Licenseename
 	ORDER BY SortID, [Site]
 
-
+	DROP TABLE #tmpProductID
 END 
  
 
