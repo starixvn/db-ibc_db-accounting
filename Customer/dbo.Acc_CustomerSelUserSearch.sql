@@ -1,7 +1,6 @@
 ﻿USE [bodb02]
 GO
 
-
 ALTER PROCEDURE [dbo].[Acc_CustomerSelUserSearch]
 	@custid				int,
 	@username			nvarchar(30),
@@ -22,7 +21,8 @@ Revisions:
 	- 20101119@Johnson: Get super from Acc_CustGroup if system is not accounting
 	- 20120324@Thien: replace "where username like '%' + @username + '%'" (index scan) by "where username like @username + '%'" (index seek)
 	- 20130916@Jamie: Change DB06 to DBACC 
-	- 20170120@Percy: add @RoleId to support search by super/master/agent/username [RedmineID: #69445]
+	- 20170120@Percy: add @RoleId to support search by super/master/agent/member [RedmineID: #69445]
+	- 20170227@Percy: don't show username including ',' and ';' (super/master/agent/member) [RedmineID: #71342]
 
 Param's Explanation:
 	• @custid: User who are logging in.
@@ -53,6 +53,7 @@ BEGIN
 			FROM dbo.custSearch cs WITH(NOLOCK)
 				INNER JOIN dbo.CustInfo ci WITH(NOLOCK) ON cs.username = ci.username
 			WHERE userid=@custid AND cs.username LIKE '%' + @username  + '%'
+				AND cs.username NOT LIKE '%[,;]%'
 				AND ci.roleid = @RoleId
 			ORDER BY [searchcount] DESC
 		END
@@ -65,6 +66,7 @@ BEGIN
 			WHERE roleid < 5
 				AND (@RoleId = 0 OR @RoleId = roleid)
 				AND username LIKE @username  + '%'
+				AND username NOT LIKE '%[,;]%'
 			ORDER BY username
 		END
 	END
@@ -124,6 +126,8 @@ BEGIN
 			INNER JOIN dbo.custInfo ci WITH(NOLOCK) ON cs.username = ci.username
 		WHERE userid=@custid 
 				AND cs.username LIKE '%' + @username  + '%'
+				AND cs.username NOT LIKE '%[,;]%'
+				AND ci.roleid = @RoleId
 				AND groupname = @system
 		ORDER BY [searchcount] DESC
 	END
@@ -136,6 +140,7 @@ BEGIN
 		WHERE roleid < 5
 			and (@RoleId = 0 OR @RoleId = roleid)
 			AND username LIKE @username  + '%'
+			AND username NOT LIKE '%[,;]%'
 			AND srecommend IN (SELECT custid FROM bodb_AGE.dbo.Acc_CustGroup WITH(NOLOCK) WHERE GroupName = @System)
 		ORDER BY username
 	END

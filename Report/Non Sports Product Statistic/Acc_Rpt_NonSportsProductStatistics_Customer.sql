@@ -31,6 +31,8 @@ AS
 	Task: Risk and Control - Non-Sport Game Statistics Report - Report by Super/Master/Agent/Username
 
 	Revisions:
+		- 20170215@Percy: Remove hardcode product to support Fishing World [RedmineID: #71616]
+		- 20170227@Percy: support search multiple username [RedmineID: #71342]
 
 	Param's Explanation:
 		- @username: search keyword
@@ -63,8 +65,47 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	DECLARE @WLDate DATETIME, @UName VARCHAR(MAX), @UrsName VARCHAR(MAX)
-	SELECT  @WLDate = @WinlostDate, @UrsName = @Username
+	IF @Username IS NULL -- invalid username
+	BEGIN
+		SELECT TOP 0 *
+		FROM (
+			SELECT
+				NULL AS ReportById,
+				NULL AS ReportBy,
+				NULL AS RoleId,
+				NULL AS RoleName,
+				NULL AS BetCount,
+				NULL AS NoOfPlayers,
+				NULL AS CurrencyId,
+				NULL AS Currency,
+				NULL AS TotalBets,
+				NULL AS TotalWins,
+				NULL AS TotalRefund,
+				NULL AS CompanyTurnover,
+				NULL AS CompanyGrossIncome,
+				NULL AS CompanyComm,
+				NULL AS HousePositionTaking
+		) A
+
+		-- Grand Total
+		SELECT
+			'GrandTotal' AS ReportBy,
+			NULL AS BetCount,
+			NULL AS NoOfPlayers,
+			-1 AS CurrencyId,
+			'RM' AS Currency,
+			NULL AS TotalBets,
+			NULL AS TotalWins,
+			NULL AS TotalRefund,
+			NULL AS CompanyTurnover,		
+			NULL AS CompanyGrossIncome,
+			NULL AS CompanyComm
+		
+		RETURN
+	END
+
+	DECLARE @WLDate DATETIME
+	SELECT  @WLDate = @WinlostDate
 
 	CREATE TABLE #tmp_ProductID		(ProductID TINYINT)
 	CREATE TABLE #tmp_BetType		(Bettype SMALLINT)
@@ -72,6 +113,7 @@ BEGIN
 	CREATE TABLE #tmp_SportType		(Sporttype SMALLINT)
 	CREATE TABLE #tmp_GameTableID	(GameTableID INT)
 	CREATE TABLE #tmp_Devide		(Betfrom NVARCHAR(2))
+	CREATE TABLE #tmp_Username		(Username VARCHAR(50))
 
 	-- Get Info from Pars list
 	IF @ProductId <> ''
@@ -109,6 +151,12 @@ BEGIN
 		INSERT INTO #tmp_Devide (Betfrom)
 		SELECT val FROM dbo.strSplit(@Device, ',')
 	END
+
+	IF @Username <> ''
+	BEGIN
+		INSERT INTO #tmp_Username (Username)
+		SELECT val FROM dbo.strSplit(@Username, ',')
+	END
 	-- End Info from Pars list
 
 	-- Get Sport Bettype Matrix --
@@ -139,10 +187,6 @@ BEGIN
 	CREATE TABLE #tmp_Site (Site VARCHAR(50))
 	CREATE TABLE #tmp_Company (SiteName VARCHAR(50), srecommend INT)
 	CREATE TABLE #tmp_MemIDs (CustID INT PRIMARY KEY, roleID TINYINT)
-	
-	SELECT  @UrsName = LTRIM(RTRIM(@UrsName))
-	SELECT  @UName = '''' + REPLACE(@UrsName, ',', ''',''') + ''''
-	DECLARE @SQL NVARCHAR(MAX)
 
 	DECLARE @CID INT, @IsFilterCust BIT
 	SELECT  @IsFilterCust = 0
@@ -150,29 +194,31 @@ BEGIN
 	CREATE TABLE #CustUser (CustID INT, roleID TINYINT)
 	IF @IsDrillDown = 1
 	BEGIN
-		SELECT @CID = custid FROM dbo.Customer WITH(NOLOCK) WHERE username = @UrsName AND roleid = @RoleID
+		SELECT @CID = custid FROM dbo.Customer WITH(NOLOCK) WHERE username = @Username AND roleid = @RoleID
 		SELECT @IsFilterCust = 1
 	END
 	ELSE IF @RoleID = 0 -- click associated accounts link
 	BEGIN
-		
-		SELECT  @SQL = N'INSERT INTO #CustUser (CustID, roleID)
-						SELECT custid, roleid FROM dbo.Customer WITH(NOLOCK)
-						WHERE username IN (' + @UName + ')'
-		EXEC sp_executesql @SQL
+		INSERT INTO #CustUser (CustID, roleID)
+		SELECT custid, roleid FROM dbo.Customer c WITH(NOLOCK)
+		WHERE EXISTS (SELECT 1 FROM #tmp_Username u WHERE c.username = u.Username)
 		
 		SELECT @IsFilterCust = 1
 	END
 	ELSE
 	BEGIN
-		IF @UrsName <> ''
+		IF @Username <> ''
 		BEGIN
 			INSERT INTO #CustUser (CustID)
-			SELECT custid FROM dbo.Customer WITH(NOLOCK) WHERE username LIKE @UrsName + '%' AND roleid = @RoleID
-
+			SELECT c.custid FROM dbo.Customer c WITH(NOLOCK)
+			WHERE EXISTS (SELECT 1 FROM #tmp_Username u WHERE c.username = u.Username)
+				AND c.roleid = @RoleID
+		
 			SELECT @IsFilterCust = 1
 		END
 	END
+
+	DROP TABLE #tmp_Username
 	
 	IF @Site <> 'ALL'
 	BEGIN
@@ -200,7 +246,7 @@ BEGIN
 			WHERE c.roleid = 4 AND ss.isDeposit = 1
 		END
 
-		IF @UrsName <> ''
+		IF @Username <> ''
 		BEGIN
 			IF @IsDrillDown = 0
 			BEGIN
@@ -213,6 +259,7 @@ BEGIN
 						INNER JOIN #CustUser cu ON c.custid = cu.CustID
 					WHERE c.roleid = 1
 						AND EXISTS (SELECT 1 FROM #tmp_Company tc WHERE c.srecommend = tc.srecommend)
+						AND NOT EXISTS (SELECT 1 FROM #tmp_MemIDs m WHERE c.custId = m.CustID)
 				END
 				
 				IF @RoleID IN (0,2)
@@ -303,7 +350,7 @@ BEGIN
 	END
 	ELSE
 	BEGIN
-		IF @UrsName <> ''
+		IF @Username <> ''
 		BEGIN
 			SELECT @IsFilterCust = 1
 
@@ -317,6 +364,7 @@ BEGIN
 						dbo.Customer c WITH (NOLOCK)
 						INNER JOIN #CustUser cu ON c.custid = cu.CustID
 					WHERE c.roleid = 1
+						AND NOT EXISTS (SELECT 1 FROM #tmp_MemIDs m WHERE c.custId = m.CustID)
 				END
 				
 				IF @RoleID IN (0,2)

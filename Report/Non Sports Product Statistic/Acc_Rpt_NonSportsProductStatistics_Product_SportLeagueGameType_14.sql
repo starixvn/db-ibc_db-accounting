@@ -4,7 +4,7 @@ GO
 ALTER PROCEDURE [dbo].[Acc_Rpt_NonSportsProductStatistics_Product_SportLeagueGameType_14]
 	@WinlostDate	DATETIME,
 	@ProductId		VARCHAR(MAX) = '',
-	@Username		VARCHAR(50) = '',
+	@Username		VARCHAR(MAX) = '',
 	@Site			VARCHAR(MAX) = 'ALL',	
 	@BetType		VARCHAR(MAX) = '',
 	@LeagueId		VARCHAR(MAX) = '',
@@ -28,6 +28,7 @@ AS
 	DB		: DBACC/bodb02
 	
 	Revision:
+		- 20170227@Percy: support search multiple username [RedmineID: #71342]
 
 	Param's Explanation:
 		- @username:  + Search by keyword, member only
@@ -66,6 +67,42 @@ AS
 */
 BEGIN
 	SET NOCOUNT ON
+
+	IF @Username IS NULL -- invalid username
+	BEGIN
+		SELECT TOP 0 *
+		FROM (
+			SELECT
+				NULL AS ReportById,
+				NULL AS ReportBy,
+				NULL AS NoOfPlayers,
+				NULL AS BetCount,
+				NULL AS CurrencyId,
+				NULL AS Currency,
+				NULL AS TotalBets,
+				NULL AS TotalWins,
+				NULL AS TotalRefund,
+				NULL AS CompanyTurnOver,
+				NULL AS CompanyGrossIncome,
+				NULL AS CompanyComm
+		) A
+		
+		-- Grand total
+		SELECT
+			NULL AS ReportBy,
+			NULL AS NoOfPlayers,
+			NULL AS BetCount,
+			NULL AS CurrencyId, 
+			NULL AS Currency,
+			NULL AS TotalBets,
+			NULL AS TotalWins,
+			NULL AS TotalRefund,
+			NULL AS CompanyTurnOver,
+			NULL AS CompanyGrossIncome,
+			NULL AS CompanyComm
+
+		RETURN
+	END
 	
 	DECLARE @WLDate DATETIME
 	SELECT @WLDate = @WinlostDate
@@ -98,7 +135,8 @@ BEGIN
 	CREATE TABLE #tmp_GameTableID	(GameTableID INT)
 	CREATE TABLE #tmp_Devide		(Betfrom NVARCHAR(2))
 	CREATE TABLE #tmp_Site			(Site VARCHAR(50))
-	CREATE TABLE #tmp_MemIDs		(CustID INT)	
+	CREATE TABLE #tmp_MemIDs		(CustID INT)
+	CREATE TABLE #tmp_Username		(Username VARCHAR(50))
 
 	-- Get Info from Pars list
 	IF @ProductId <> ''
@@ -144,11 +182,16 @@ BEGIN
 	-- Get Cust Info
 	IF @Username <> ''
 	BEGIN
+		INSERT INTO #tmp_Username (Username)
+		SELECT val FROM dbo.strSplit(@Username, ',')
+
 		INSERT INTO #tmp_MemIDs (CustID)
-		SELECT custid 
-		FROM dbo.custInfo WITH (NOLOCK)
-		WHERE username LIKE + @Username + '%' AND roleid = 1
+		SELECT custid FROM dbo.Customer c WITH(NOLOCK)
+		WHERE EXISTS (SELECT 1 FROM #tmp_Username u WHERE u.Username = c.username)
+			AND roleID = 1
 	END
+
+	DROP TABLE #tmp_Username
 	-- End Cust Info
 
 	-- Get Sport Bettype Matrix
