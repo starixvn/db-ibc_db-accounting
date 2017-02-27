@@ -99,7 +99,7 @@ BEGIN
 				SELECT TOP(@batchNo)
 					b.transid AS t
 					,b.refno AS r
-					,103 AS s
+					,0 AS m
 				FROM @tempRefundBatch ref
 					INNER JOIN dbo.bettransm b WITH(NOLOCK) ON b.refno = ref.refno
 				WHERE b.matchid 	= @matchid

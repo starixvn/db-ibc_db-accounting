@@ -41,20 +41,40 @@ BEGIN
 		--UPDATE bettransm
 		UPDATE bm
 		SET winlostdate 	= @matchdate
-			,[status] 		= CASE 
+			/*,[status] 		= CASE 
 				WHEN t.statusID = 113 THEN N'LOSE'
 				WHEN t.statusID = 112 THEN N'WON'
 				WHEN t.statusID = 103 THEN N'Refund'
 				ELSE bm.[status]
+			END*/
+			,[status] 	= CASE 
+				WHEN t.modds = 0 THEN 'Refund'
+				WHEN t.modds < 0 THEN 'LOSE'
+				WHEN t.modds > 0 THEN 'WON'
+				ELSE bm.[status]
 			END
-			,statuswinlost = CASE 
+			--,statusID 	= t.statusID
+			,statusID = CASE 
+				WHEN t.modds = 0 THEN 103 
+				WHEN t.modds < 0 THEN 113
+				WHEN t.modds > 0 THEN 112
+				ELSE bm.statusID
+			END
+			/*,statuswinlost = CASE 
 				WHEN t.statusID = 113 THEN 4 -- LOSE
 				WHEN t.statusID = 112 THEN 2 -- WON
 				WHEN t.statusID = 103 THEN 0 -- REFUND
 				ELSE bm.statuswinlost
-				END
+			END*/
+			,statuswinlost = CASE 
+				WHEN t.modds > 0.25 THEN 2 -- WON
+				WHEN t.modds = 0.25 THEN 1 -- Half WON
+				WHEN t.modds = - 0.25 THEN 3 -- Half LOSE
+				WHEN t.modds < - 0.25 THEN 4 -- LOSE
+				ELSE bm.statuswinlost
+			END
 			,ruben 		= 1
-			,statusID 	= t.statusID
+			
 		OUTPUT INSERTED.transid
 				,INSERTED.refno
 				,INSERTED.statusID
@@ -97,14 +117,14 @@ BEGIN
 				WHEN t.modds = 0 AND t.IsRefundGame = 1 THEN 103 
 				WHEN t.modds < 0 THEN 113
 				WHEN t.modds > 0 THEN 112
-				END
+			END
 			,statuswinlost = CASE 
-				WHEN t.modds <= - 0.5 THEN 4 -- LOSE
-				WHEN t.modds >= 0.5 THEN 2 -- WIN
-				WHEN t.modds > 0 THEN 1 -- Half WIN
-				WHEN t.modds < 0 THEN 3 -- Half LOSE
+				WHEN t.modds > 0.25 THEN 2 -- WON
+				WHEN t.modds = 0.25 THEN 1 -- Half WON
+				WHEN t.modds = - 0.25 THEN 3 -- Half LOSE
+				WHEN t.modds < - 0.25 THEN 4 -- LOSE
 				ELSE 0 -- DRAW
-				END
+			END
 		OUTPUT INSERTED.transid
 				,INSERTED.refno
 				,INSERTED.statusID
@@ -125,35 +145,7 @@ BEGIN
 			AND pd.RefNo 	= r.refno
 	END
 	
-	--UNDO Process
-	/*IF(@action = 'UNDO')
-	BEGIN
-		--UNDO bettransm
-		UPDATE bm
-		SET winlostdate 	= @matchdate
-			,[status] 		= 'running'
-			,statuswinlost 	= 0
-			,ruben 			= 0
-			,statusID 		= 0
-		OUTPUT INSERTED.transid, INSERTED.refno 
-		INTO #parlayOutput(transid, refno)
-		FROM dbo.bettransm bm WITH(ROWLOCK, UPDLOCK)
-			INNER JOIN #parlayTicket t
-			ON bm.transid = t.transid
-		
-		--UNDO BetParlayDetail
-		UPDATE pd
-		SET winlostdate 	= @matchdate
-			,statuswinlost 	= 0
-			,statusID 		= 0
-		FROM dbo.BetParlayDetail pd WITH(ROWLOCK, UPDLOCK)
-			INNER JOIN #parlayOutput r
-				ON pd.transid 	= r.transid
-				AND pd.RefNo 	= r.refno
-	END*/
-	
 	DROP TABLE #parlayTicket;
 	DROP TABLE #parlayOutput
 	RETURN;
-	
 END

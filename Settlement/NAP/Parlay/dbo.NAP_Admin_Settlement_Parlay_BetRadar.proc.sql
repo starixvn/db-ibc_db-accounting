@@ -161,13 +161,9 @@ BEGIN
 				SELECT TOP(@batchNo)
 					b.transid AS t
 					, b.refno AS r
-					, CASE 
-						WHEN odds.modds IS NULL THEN 103 --REFUND
-						ELSE odds.StatusId --settle determined
-					END AS s
+					, ISNULL(odds.modds, 0) AS s
 				FROM @tempBatch ref
 					INNER JOIN dbo.bettransm b WITH(NOLOCK) ON ref.refno = b.refno
-					--INNER JOIN #autoBettypes t ON bm.bettype = t.bettype	
 					OUTER APPLY [dbo].[f_Set_Parlay_SDT_CalModds_BetRadar](
 							b.bettype
 							, b.betteam

@@ -166,13 +166,9 @@ BEGIN
 					SELECT TOP(@batchNo) 
 						b.transid AS t
 						, b.refno AS r
-						, CASE 
-							WHEN odds.modds IS NOT NULL THEN odds.StatusId 
-							ELSE 103 
-						END AS s
+						, ISNULL(odds.modds, 0) AS m
 					FROM @tempBatch ref 
 						INNER JOIN dbo.bettransm b WITH(NOLOCK) ON ref.refno = b.refno
-						--INNER JOIN #SDTBettypes t ON b.bettype = t.bettype
 						OUTER APPLY
 						(
 							SELECT modds, StatusId 
@@ -188,7 +184,7 @@ BEGIN
 								, b.transdesc
 								, @IsHT
 							)
-							WHERE StatusId IN (112,113)
+							WHERE modds IS NOT NULL
 							UNION ALL
 							SELECT modds, StatusId 
 							FROM [dbo].[f_Set_Parlay_SDT_CalModds_Corner](
@@ -206,7 +202,7 @@ BEGIN
 								, @ftaCorners
 								, @IsHT
 							)
-							WHERE StatusId IN (112,113)
+							WHERE modds IS NOT NULL
 							UNION ALL
 							SELECT modds, StatusId 
 							FROM [dbo].[f_Set_Parlay_SDT_CalModds_GoalRecord](
@@ -215,8 +211,7 @@ BEGIN
 								, @GoalRecord
 								, @IsHT
 							)
-							WHERE StatusId IN (112,113)
-					
+							WHERE modds IS NOT NULL
 						)  AS odds
 					
 					WHERE b.matchId = @matchId

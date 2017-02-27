@@ -297,7 +297,6 @@ BEGIN
 					,odds.IsRefundGame AS i
 				FROM @tempBatch ref
 					INNER JOIN dbo.bettransm b WITH(NOLOCK) ON ref.refno = b.refno
-					--INNER JOIN #bettypeCAL t ON bm.bettype = t.bettype	
 					OUTER APPLY dbo.f_Set_Parlay_CalModds(
 						b.bettype
 						, b.betteam
