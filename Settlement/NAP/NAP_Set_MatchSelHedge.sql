@@ -1,8 +1,15 @@
+/*<info serverAlias="DBPRO-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
+USE [bodb02]
+GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [NAP_Set_MatchSelHedge] @matchid INT
 AS
 /* Created: 20140114@Kathy
  Task: Select hedging matches correlative real matches    
- DB: DB02.bodb02    
+ DB: DBPRO.bodb02    
  Original SP: [Acc_Set_MatchSelHedge]
      
  Revisions:    

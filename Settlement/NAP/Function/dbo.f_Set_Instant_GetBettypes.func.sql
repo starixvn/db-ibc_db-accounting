@@ -1,13 +1,10 @@
+/*<info serverAlias="DBTXN-bodb02" executers="" viewers="vnteam" isFunction="1"></info>*/
 USE [bodb02]
 GO
-/****** Object:  UserDefinedFunction [dbo].[f_Set_GetGroupBettypes]    Script Date: 11/29/2016 2:46:29 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-/****** Object:  User Defined Function dbo.f_Set_GetGroupBettypes    Script Date: 16/09/2016 9:08:44 AM ******/
-
-/****** Object:  User Defined Function dbo.f_Set_GetGroupBettypes    Script Date: 13/09/2016 2:08:16 PM ******/
 
 ALTER FUNCTION [dbo].[f_Set_Instant_GetBettypes] ()
 RETURNS TABLE

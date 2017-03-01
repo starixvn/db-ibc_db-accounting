@@ -1,4 +1,12 @@
-ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_3] @matchid INT
+/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
+USE [bodb02]
+GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_3] 
+	@matchid INT
     , @mode VARCHAR(6) = 'CAL'
     , @isExcludeCorner BIT = 0 
 	, @IsAutoCalculatePage BIT = 0

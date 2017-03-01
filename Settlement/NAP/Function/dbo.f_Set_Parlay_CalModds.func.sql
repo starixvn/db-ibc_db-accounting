@@ -1,6 +1,6 @@
+/*<info serverAlias="DBTXN-bodb02" executers="" viewers="vnteam" isFunction="1"></info>*/
 USE [bodb02]
 GO
-/****** Object:  UserDefinedFunction [dbo].[f_Set_Parlay_CalModds]    Script Date: 09/19/2016 13:21:35 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON

@@ -1,6 +1,6 @@
-USE [bodb02]
+/*<info serverAlias="DBPRO-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
+USE bodb02
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Settlement_InstantCalculation_UndoChecking]    Script Date: 12/2/2016 3:46:07 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON

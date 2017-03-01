@@ -1,3 +1,10 @@
+/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
+USE [bodb02]
+GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 USE [bodb02]
 GO
 /****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Parlay_SDT]    Script Date: 1/6/2017 3:31:58 PM ******/

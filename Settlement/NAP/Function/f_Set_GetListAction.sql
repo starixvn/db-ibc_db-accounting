@@ -1,4 +1,9 @@
-USE bodb02
+/*<info serverAlias="DBTXN-bodb02" executers="" viewers="vnteam" isFunction="1"></info>*/
+USE [bodb02]
+GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
 GO
 ALTER FUNCTION dbo.f_Set_GetListAction ()
 RETURNS TABLE

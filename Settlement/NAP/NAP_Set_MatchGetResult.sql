@@ -1,4 +1,12 @@
-ALTER PROCEDURE [dbo].[NAP_Set_MatchGetResult] @Date DATETIME
+/*<info serverAlias="DBPRO-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
+USE [bodb02]
+GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Set_MatchGetResult] 
+	@Date DATETIME
 	,@LeagueID INT = 0
 	,@sporttype SMALLINT = 0
 	,@statusid TINYINT = 0
