@@ -73,7 +73,7 @@ BEGIN
 
 	INSERT INTO #TempDataBT (rptDate, MemberWL)
 	SELECT b.rptDate,
-		SUM(ISNULL(b.MemberWL, 0) * e.Rate) AS MemberWL
+		SUM((ISNULL(b.MemberWL, 0) + ISNULL(b.GrossWL, 0)) * e.Rate) AS MemberWL
 	FROM bodb_LicenseeReport.dbo.rpt_BettingByProduct b WITH (NOLOCK)
 		INNER JOIN #ExchangeOANDA e ON e.ExchangeDate = b.rptDate AND e.ExchangeID = b.CurrencyId
 		INNER JOIN (SELECT DISTINCT ProductID, LicenseeId, FromDate, ToDate, Bettype 
@@ -95,7 +95,7 @@ BEGIN
 	)
 
 	INSERT INTO #FinalResult (rptDate, MemberWL, PayToSupplier)
-	SELECT 'FullRange', SUM(MemberWL), 0
+	SELECT 'FullRange', -SUM(MemberWL), 0
 	FROM #TempDataBT
 
 	DECLARE @tmpDate DATE, @DateList VARCHAR(200)
@@ -105,7 +105,7 @@ BEGIN
 	BEGIN
 		INSERT INTO #FinalResult (RptDate, MemberWL, PayToSupplier)
 		SELECT CONVERT(VARCHAR(2), @tmpDate, 106), 
-			(SELECT ISNULL(SUM(MemberWL), 0) FROM #TempDataBT WHERE rptDate = @tmpDate), -- LicenseeWL
+			(SELECT ISNULL(-SUM(MemberWL), 0) FROM #TempDataBT WHERE rptDate = @tmpDate), -- LicenseeWL
 			0 -- PayToSupplier
 		SELECT @tmpDate = DATEADD(DAY, 1, @tmpDate)
 	END
@@ -118,15 +118,13 @@ BEGIN
 					'FROM	(SELECT ProductCode, [Order], [RptDate], Figure, ISNULL(value, 0) value FROM #FinalResult' + CHAR(13) +
 							'CROSS APPLY' + CHAR(13) +
 							'(SELECT ''BT'', 1, ''House Income'', MemberWL' + CHAR(13) +
-							'UNION ALL' + CHAR(13) +
-							'SELECT ''BT'', 4, ''Pay to supplier'', PayToSupplier) c (ProductCode, [Order], Figure, value)) a' + CHAR(13) +
+							') c (ProductCode, [Order], Figure, value)) a' + CHAR(13) +
 					'PIVOT' + CHAR(13) +
 					'(' + CHAR(13) +
 						'MAX(value)' + CHAR(13) +
 						'FOR [RptDate] in (' + @DateList + ')' + CHAR(13) +
 					') piv' + CHAR(13) +
-					'ORDER BY [Order]'
-
+					'ORDER BY [Order]'	
 	EXEC(@SQL)
 
 	-- Region: Drop tmp table
