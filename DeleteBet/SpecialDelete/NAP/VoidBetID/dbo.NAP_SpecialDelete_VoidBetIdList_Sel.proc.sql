@@ -36,6 +36,7 @@ AS
 		- 20160914@Kent: Add logic for suporting void system parlay [Redmine:#63202]	
 		- 20161013@Kathy: Exclude phone betting tickets [Redmine:#63211]
 		- 20161124@Kent: Include phone betting tickets and add new GroupName "Phone Betting" [Redmine:#67751]
+		- 20170302@Kent: Fix show time for virtual sport [Redmine:#72475]
 		
 	Param's Explanation:
 		+ @CustID NOT NULL: Search by CustID
