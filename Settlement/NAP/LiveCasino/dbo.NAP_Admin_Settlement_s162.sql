@@ -1,8 +1,8 @@
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_s162]    Script Date: 12/17/2015 14:53:05 ******/
 SET ANSI_NULLS ON
 GO
+
 SET QUOTED_IDENTIFIER ON
 GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_s162]
@@ -137,7 +137,7 @@ BEGIN
 					,@Matchid	= @matchid
 					,@creator	= @AdminID
 					
-				EXEC NAP_Admin_Calculate_1101G
+								EXEC NAP_Admin_Calculate_1101G
 					@matchid	= @matchid  
 					,@betteam	= @betstatus 
 					,@CommRate	= @CommRate 
@@ -157,7 +157,7 @@ BEGIN
 				FROM	MappingTable  with (rowlock) 
 				WHERE	Ballno = @betstatus
 						
-				EXEC NAP_Admin_Calculate_1101G
+								EXEC NAP_Admin_Calculate_1101G
 					@matchid	= @matchid  
 					,@betteam	= @Newbetstatus 
 					,@CommRate	= @CommRate 
@@ -440,12 +440,6 @@ BEGIN
 		END CATCH
 	END
 END
+GO
 
-GO
-GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_s162] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_s162] TO [Dot_Casino] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_s162] TO [vnteam] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_s162] TO [vnteam] AS [dbo]
+
