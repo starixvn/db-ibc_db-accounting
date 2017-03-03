@@ -19,7 +19,8 @@ CREATE FUNCTION [dbo].[f_SportBettypeMatrixByProduct_Sel]
 	DB: DBAGE.bodb02
 		
 	Revisions:
-		
+		- 20170220@Paul: Return more columns [RedmineID: #68723]
+
 	Paramters Explanation:
  		@ProductID: list of products
 		@IsTest:
@@ -28,9 +29,12 @@ CREATE FUNCTION [dbo].[f_SportBettypeMatrixByProduct_Sel]
 */
 RETURNS TABLE
 RETURN
-SELECT DISTINCT
-	 ma.ProductID
-	,ma.BetType
+SELECT	DISTINCT ma.ProductID,
+		ma.BetType,
+		ma.EventType,
+		ma.SubProduct,
+		ma.RefTable,
+		p.CasinoType
 FROM dbo.SportBettypeMatrix ma WITH(NOLOCK)
 	INNER JOIN dbo.Products p WITH(NOLOCK) ON p.ProductID = ma.ProductID
 WHERE ',' + @ProductID + ',' LIKE '%,' + cast(p.ProductID as varchar(3)) + ',%'
