@@ -1,16 +1,9 @@
-
-SET QUOTED_IDENTIFIER ON 
-GO
-SET ANSI_NULLS ON 
+USE [bodb02]
 GO
 
-/****** Object:  Stored Procedure dbo.Acc_DailyCreatedCustomer    Script Date: 10/7/2014 10:42:40 AM ******/
-/****** Object:  Stored Procedure dbo.Acc_DailyCreatedCustomer    Script Date: 11/13/2013 10:23:56 PM ******/  
-/****** Object:  Stored Procedure dbo.Acc_DailyCreatedCustomer    Script Date: 11/11/2013 10:43:06 AM ******/  
-/****** Object:  Stored Procedure dbo.Acc_DailyCreatedCustomer    Script Date: 1/5/2010 2:52:56 PM ******/  
- CREATE PROCEDURE [dbo].[Acc_DailyCreatedCustomer]  
+ALTER PROCEDURE [dbo].[Acc_DailyCreatedCustomer]  
     @fromdate DATETIME
-  , @todate DATETIME  
+   ,@todate DATETIME  
 AS  
   
 /* Creator: Simon  
@@ -22,6 +15,7 @@ AS
     - 20130224@Lukas: move table Acc_CustDirect to new database bodb_ACC  
     - 20131106@Kathy: Calculator amount of Master, Agent, Member [Redmine:#6837]
     - 20140930@Logan:    Use f_DirectAgencyList instead of Acc_CustDirect [Redmine: #15267]
+	- 20170302@Percy: Hotfix missing data [RedmineID: #72563]
 */   
 BEGIN 
     SET NOCOUNT ON  
@@ -116,7 +110,9 @@ BEGIN
      ISNULL(age.Amount, 0) AmountAgent,  
      ISNULL(mem.Amount, 0) AmountMember  
     FROM   
-     (SELECT CreateDate FROM @tmpSAg UNION SELECT CreateDate FROM @tmpMAg UNION SELECT CreateDate FROM @tmpAg) main  
+     (SELECT CreateDate FROM @tmpSAg UNION SELECT CreateDate FROM @tmpMAg UNION SELECT CreateDate FROM @tmpAg
+	 UNION
+	 SELECT CreateDate FROM @tmpMaster UNION SELECT CreateDate FROM @tmpAgent UNION SELECT CreateDate FROM @tmpMember) main  
      LEFT JOIN @tmpSAg S ON main.CreateDate=S.CreateDate  
      LEFT JOIN @tmpMAg M ON main.CreateDate=M.CreateDate  
      LEFT JOIN @tmpAg A ON main.CreateDate=A.CreateDate  
@@ -127,14 +123,7 @@ BEGIN
 END
 GO
 
-SET QUOTED_IDENTIFIER OFF 
-GO
-SET ANSI_NULLS ON 
-GO
-
-
+GRANT VIEW DEFINITION ON [dbo].[Acc_DailyCreatedCustomer] TO [vnteam]
 GO 
- GRANT VIEW DEFINITION ON [dbo].[Acc_DailyCreatedCustomer] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[Acc_DailyCreatedCustomer] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_DailyCreatedCustomer] TO [bodbAdminNet]
 GO 
