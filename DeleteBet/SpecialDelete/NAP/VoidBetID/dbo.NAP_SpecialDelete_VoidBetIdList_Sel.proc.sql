@@ -381,7 +381,7 @@ BEGIN
 			,leagueid 	= m.leagueid
 			,sporttype 	= m.sporttype
 			,IsNeutral 	= ISNULL(m.IsNeutral, CONVERT(BIT, 0))
-			,showtime	= ISNULL(CONVERT(NVARCHAR(50), m.kickofftime, 113), '')  
+			,showtime	= ISNULL(CONVERT(NVARCHAR(20), m.kickofftime, 113), '')  
 			
 		FROM #Data d
 			INNER JOIN dbo.match m WITH (NOLOCK) 
