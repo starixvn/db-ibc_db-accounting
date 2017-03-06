@@ -28,6 +28,8 @@ BEGIN
 		, ModifiedBy 
 		, CreatedBy 
 		, WinlostDate 
+		, MaxWinLimitSetting
+		, TotalWinAmt_RM
 	INTO #TempData   
 	FROM OPENXML(@_hdoc,'/root/r', 2)   
 	WITH (CustId INT 'a1'
@@ -43,15 +45,17 @@ BEGIN
 		, ModifiedBy INT  'a11'
 		, CreatedBy  INT 'a12'
 		, WinlostDate DATETIME  'a13'
+		, MaxWinLimitSetting XML 'a14/node()'
+		, TotalWinAmt_RM MONEY 'a15'
 	)   
 	
 	EXEC sp_xml_removedocument @_hdoc  
 
 	INSERT INTO WinLimit_CustGameMonitoring_History( CustId, ProductId,BettypeID, MaxWinLimit, TotalWinAmt,WinAmt,LevelID,ActionID,ModifiedDate
-		, IsNotified, ModifiedBy, CreatedBy, WinlostDate)
+		, IsNotified, ModifiedBy, CreatedBy, WinlostDate,MaxWinLimitSetting,TotalWinAmt_RM)
 
 	SELECT CustId, ProductId,BettypeID, MaxWinLimit, TotalWinAmt,WinAmt,LevelID,ActionID,ModifiedDate
-		, IsNotified, ModifiedBy, CreatedBy, WinlostDate
+		, IsNotified, ModifiedBy, CreatedBy, WinlostDate,MaxWinLimitSetting,TotalWinAmt_RM
 
 	FROM #TempData
 	
