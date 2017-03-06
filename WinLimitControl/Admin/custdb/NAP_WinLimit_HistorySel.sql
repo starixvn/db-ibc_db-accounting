@@ -9,124 +9,107 @@ IF EXISTS
 )
     DROP PROCEDURE [dbo].[NAP_WinLimit_HistorySel];
 GO
-
 GO
 SET ANSI_NULLS ON;
 GO
 SET QUOTED_IDENTIFIER ON;
 GO
-CREATE PROCEDURE [dbo].[NAP_WinLimit_HistorySel] @ProductId  INT,
-                                                 @CustId     INT,
-                                                 @SiteId     INT,
-                                                 @CurrencyId INT
+CREATE PROCEDURE [dbo].[NAP_WinLimit_HistorySel] @ProductId INT,
+                                                 @CustId    INT
 AS
 
 /*
-	Created: Franklin	
-	Date: 2016-06-29
-	Task: #57722 - Implement Game Win Limit Control phase2
-	
-	DB: DBCUST/CustDB
-	
-	Revisions:
-	
-	Parameters Explanation:	
-	   @ProductId: Product ID
-	   @CustId: Cust ID
-	   @SiteId: Site ID
-	   @CurrencyId: Currency ID
+Created: Franklin	
+Date: 2016-06-22
+Task: #57722 - Implement Game Win Limit Control phase2
+
+DB: DBCUST/CustDB
+
+Revisions:
+20160923@Jacob: Risk & Control - Phase 3 [#61220].
+
+Parameters Explanation:	
+   @ProductId: Product ID
+   @CustId: Cust ID
+Example:
+EXEC [NAP_WinLimit_HistorySel] @ProductId = 4, @CustId = 1368173
 */
 
-     BEGIN
-         SET NOCOUNT ON;
-         BEGIN -- temp table data
-             CREATE TABLE #WinLimitHistory
-             (ReachedLimitLevel        SMALLINT,
-              MaxWinLimit              MONEY,
-              TotalWinAmount           MONEY,
-              WinAmount                MONEY,
-              ActionName               NVARCHAR(50),
-              ModifiedDate             DATETIME,
-              ModifiedBy               INT,
-              CreatedBy                INT,
-              CurrencyMaxWinLimitLevel SMALLINT,
-              CurrencyMaxWinLimit      MONEY,
-              PlayerMaxWinLimitLevel   SMALLINT,
-              PlayerMaxWinLimit        MONEY
-             );
-             INSERT INTO #WinLimitHistory
-             (ReachedLimitLevel,
-              MaxWinLimit,
-              TotalWinAmount,
-              WinAmount,
-              ActionName,
-              ModifiedDate,
-              ModifiedBy,
-              CreatedBy,
-              CurrencyMaxWinLimitLevel,
-              CurrencyMaxWinLimit,
-              PlayerMaxWinLimitLevel,
-              PlayerMaxWinLimit
-             )
-                    SELECT wlcgmh.LevelID,
-                           wlcgmh.MaxWinLimit,
-                           wlcgmh.TotalWinAmt,
-                           wlcgmh.WinAmt,
-                           was.ActionName,
-                           wlcgmh.ModifiedDate,
-                           wlcgmh.ModifiedBy,
-                           wlcgmh.CreatedBy,
-                           wlpsd.LevelID,
-                           wlpsd.MaxWinLimit,
-                           wlcgs.LevelID,
-                           wlcgs.MaxWinLimit
-                    FROM dbo.WinLimit_CustGameMonitoring_History wlcgmh WITH (NOLOCK)
-                         INNER JOIN dbo.WinLimit_ProductSettingDetail wlpsd WITH (NOLOCK) ON wlpsd.ProductID = wlcgmh.ProductID
-                                                                                             AND wlpsd.BettypeID = wlcgmh.BettypeID
-                         LEFT JOIN dbo.WinLimit_CustGameSetting wlcgs WITH (NOLOCK) ON wlcgs.CustID = wlcgmh.CustID
-                                                                                       AND wlcgs.ProductID = wlcgmh.ProductID
-                                                                                       AND wlcgs.BettypeID = wlcgmh.BettypeID
-                         INNER JOIN dbo.Winlimit_ActionSetting was WITH (NOLOCK) ON was.ActionID = wlcgmh.ActionID
-                    WHERE wlcgmh.ProductID = @ProductId
-                          AND wlcgmh.CustID = @CustId
-                          AND wlpsd.ExchangeID = @CurrencyId
-                          AND wlpsd.SiteID = @SiteId;
-         END;
-         BEGIN -- Query data
-             SELECT DISTINCT
-                    wlh.ModifiedDate,
-                    ISNULL(wlh.PlayerMaxWinLimitLevel, wlh.CurrencyMaxWinLimitLevel) AS Level,
-                    CASE
-                        WHEN(wlh.PlayerMaxWinLimit IS NULL)
-                        THEN CASE
-                                 WHEN wlh.CurrencyMaxWinLimitLevel = wlh.ReachedLimitLevel
-                                 THEN wlh.MaxWinLimit
-                                 ELSE wlh.CurrencyMaxWinLimit
-                             END
-                        ELSE CASE
-                                 WHEN wlh.PlayerMaxWinLimitLevel = wlh.ReachedLimitLevel
-                                 THEN wlh.MaxWinLimit
-                                 ELSE wlh.PlayerMaxWinLimit
-                             END
-                    END AS MaxWinLimit,
-                    wlh.TotalWinAmount,
-                    wlh.ReachedLimitLevel,
-                    wlh.ActionName,
-                    CASE
-                        WHEN wlh.ModifiedBy IS NULL
-                        THEN 'System'
-                        ELSE
-             (
-                 SELECT ci.username
-                 FROM dbo.custInfo ci WITH (NOLOCK)
-                 WHERE ci.custid = wlh.ModifiedBy
-             )
-                    END AS ProceededBy
-             FROM #WinLimitHistory wlh
-             ORDER BY wlh.ModifiedDate DESC;
-         END;
-         DROP TABLE #WinLimitHistory;
+
+     SET NOCOUNT ON;
+     BEGIN -- Currency
+         DECLARE @CurrencyCode VARCHAR(20);
+         SELECT @CurrencyCode = e.Currency
+         FROM dbo.Customer c WITH (NOLOCK)
+              INNER JOIN dbo.exchange e WITH (NOLOCK) ON c.Currency = e.ExchangeId
+         WHERE c.CustId = @CustId;
      END;
+     BEGIN -- temp table data
+         CREATE TABLE #WinLimitHistory
+         (BetTypeId          INT,
+          GroupId            INT,
+          ReachedLimitLevel  SMALLINT,
+          TotalWinAmount     MONEY,
+          TotalWinAmountRM   MONEY,
+          MaxWinLimitSetting XML,
+          ActionName         NVARCHAR(50),
+          ModifiedDate       DATETIME,
+          ModifiedBy         INT,
+          CreatedBy          INT
+         );
+         INSERT INTO #WinLimitHistory
+         (BetTypeId,
+          GroupId,
+          ReachedLimitLevel,
+          TotalWinAmount,
+          TotalWinAmountRM,
+          MaxWinLimitSetting,
+          ActionName,
+          ModifiedDate,
+          ModifiedBy,
+          CreatedBy
+         )
+                SELECT h.BetTypeId,
+                       gs.GroupId,
+                       h.LevelID,
+                       h.TotalWinAmt,
+                       h.TotalWinAmt_RM,
+                       h.MaxWinLimitSetting,
+                       a.ActionName,
+                       h.ModifiedDate,
+                       h.ModifiedBy,
+                       h.CreatedBy
+                FROM dbo.WinLimit_CustGameMonitoring_History h WITH (NOLOCK)
+                     INNER JOIN dbo.WinLimit_GameGroupSetting gs WITH (NOLOCK) ON h.BettypeID = gs.BetTypeID
+                                                                                  AND h.ProductID = gs.ProductID
+                     INNER JOIN dbo.Winlimit_ActionSetting a WITH (NOLOCK) ON a.ActionID = h.ActionID
+                WHERE h.ProductID = @ProductId
+                      AND h.CustID = @CustId;
+     END;
+     BEGIN -- Query data
+         SELECT h.GroupId,
+                h.BetTypeId,
+                h.ModifiedDate,
+                h.MaxWinLimitSetting,
+                h.TotalWinAmount,
+                @CurrencyCode Currency,
+                h.TotalWinAmountRM,
+                h.ReachedLimitLevel,
+                h.ActionName,
+                CASE
+                    WHEN h.ModifiedBy IS NULL
+                    THEN 'System'
+                    ELSE
+         (
+             SELECT c.username
+             FROM dbo.custInfo c WITH (NOLOCK)
+             WHERE c.custid = h.ModifiedBy
+         )
+                END AS ProceededBy
+         FROM #WinLimitHistory h
+         ORDER BY h.ModifiedDate DESC;
+     END;
+     DROP TABLE #WinLimitHistory;
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_HistorySel] TO [bodbAdminNet];
 GO

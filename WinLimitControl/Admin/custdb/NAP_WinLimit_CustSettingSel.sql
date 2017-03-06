@@ -19,85 +19,67 @@ GO
 SET QUOTED_IDENTIFIER ON;
 GO
 CREATE PROCEDURE [dbo].[NAP_WinLimit_CustSettingSel] @UserName            NVARCHAR(100) = '',
-                                                     @SiteID              INT           = NULL,
-                                                     @CurrencyID          INT           = NULL,
-                                                     @ProductID           TINYINT       = NULL,
-                                                     @ExcludeTestCurrency BIT           = 1
+                                                           @SiteID              INT           = 0,
+                                                           @CurrencyID          INT           = 0,
+                                                           @ProductID           TINYINT       = 0
 AS
 	
 /*
-Created: Jacob	
-Date: 2016-06-30
-Task: #57722 - CWL - Phase 2 - Support RED and Yellow level
+Created: Franklin	
+Date: 2016-06-22
+Task: #57722 - Implement Game Win Limit Control phase2
 
-DB: DBCUST/CustDB		
+DB: DBCUST/CustDB
+
 Revisions:
-	
-Parameters Explanation:	
+20160923@Jacob: Risk & Control - Phase 3 [#61220].
+
+Parameters Explanation:
 
 Example: 
-EXEC [NAP_WinLimit_CustSettingSel] @ExcludeTestCurrency = 0
+EXEC [NAP_WinLimit_CustSettingSel]
 
 */
 
      SET NOCOUNT ON;
-     BEGIN -- #ProductSetting
-         CREATE TABLE #ProductSetting
+     BEGIN -- @Products
+         DECLARE @Products TABLE
          (ProductId TINYINT,
-          BettypeId SMALLINT
+          LevelId   TINYINT
          );
-         INSERT INTO #ProductSetting
+         INSERT INTO @Products
          (ProductId,
-          BettypeId
+          LevelId
          )
                 SELECT DISTINCT
-                       fps.ProductId,
-                       fps.BettypeId
-                FROM dbo.f_Nap_WinLimit_ProductSettingSel(@ProductId) fps;
+                       ProductId,
+                       LevelId
+                FROM dbo.f_Nap_WinLimit_ProductSettingSel(@ProductId);
      END;
      BEGIN -- Query
          SELECT c.CustID,
-                c.username AS UserName,
-                c.currency AS CurrencyId,
-                s.Site,
-                ps.ProductId AS ProductId,
-                ps.BetTypeId AS BetTypeId,
-                ps.LevelID AS LevelID,
-                ISNULL(cs.MaxWinLimit, 0) PlayerWinLimit,
-                ISNULL(pd.MaxWinLimit, 0) CurrencyWinLimit
-         FROM dbo.Winlimit_ProductSetting ps WITH (NOLOCK)
-              INNER JOIN dbo.WinLimit_CustGameSetting cs WITH (NOLOCK) ON ps.ProductID = cs.ProductID
-                                                                          AND ps.BettypeID = cs.BettypeID
-                                                                          AND ps.LevelID = cs.LevelID
+                c.username,
+                c.currency CurrencyId,
+                s.SiteId,
+                p.ProductId,
+                cs.GroupId,
+                cs.LevelID,
+                ISNULL(cs.MaxWinLimit_RM, 0) MaxWinLimit
+         FROM dbo.WinLimit_CustGameSetting cs WITH (NOLOCK)
+              INNER JOIN @Products p ON cs.ProductId = p.ProductId
+                                        AND cs.LevelId = p.LevelId
               INNER JOIN dbo.custInfo c WITH (NOLOCK) ON cs.CustID = c.custid
               INNER JOIN dbo.customer a WITH (NOLOCK) ON a.custid = c.recommend
                                                          AND a.roleid = 2
               INNER JOIN dbo.[Site] s WITH (NOLOCK) ON s.[site] = a.[site]
-              LEFT JOIN dbo.WinLimit_ProductSettingDetail pd WITH (NOLOCK) ON ps.ProductID = pd.ProductID
-                                                                              AND ps.BettypeID = pd.BettypeID
-                                                                              AND ps.LevelID = pd.LevelID
-                                                                              AND pd.SiteId = s.SiteId
-                                                                              AND pd.ExchangeId = c.currency
-         WHERE EXISTS
-         (
-             SELECT 1
-             FROM #ProductSetting ps_tmp
-             WHERE ps_tmp.ProductId = PS.ProductID
-                   AND ps_tmp.BettypeId = ps.BettypeID
-         )
-               AND (ISNULL(@UserName, '') = ''
-                    OR c.username = @UserName)
-               AND (@CurrencyID IS NULL
-                    OR c.currency = @CurrencyID)
-               AND (@ProductID IS NULL
-                    OR ps.ProductID = @ProductID)
-               AND (@ExcludeTestCurrency = 0
-                    OR c.currency NOT IN(20, 27, 28))
-              AND (@SiteID IS NULL
+         WHERE(@UserName = ''
+               OR c.username = @UserName)
+              AND (@CurrencyID = 0
+                   OR c.currency = @CurrencyID)
+              AND (@SiteID = 0
                    OR @SiteID = S.siteid)
          ORDER BY c.Username;
      END;
-     DROP TABLE #ProductSetting;
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustSettingSel] TO [bodbAdminNet];
 GO

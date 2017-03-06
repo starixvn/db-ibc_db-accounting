@@ -18,54 +18,58 @@ SET ANSI_NULLS ON;
 GO
 SET QUOTED_IDENTIFIER ON;
 GO
-CREATE PROCEDURE [dbo].[NAP_WinLimit_CustSettingDel] @CustID    INT,
-                                                           @ProductID TINYINT,
-                                                           @BetTypeId INT,
-                                                           @UserID    INT         = 0,
-                                                           @IP        VARCHAR(20) = ''
+CREATE PROCEDURE [dbo].[NAP_WinLimit_CustSettingDel] @CustID       INT,
+                                                     @ProductID    TINYINT,
+                                                     @GroupId      INT,
+                                                     @UserID       INT           = 0,
+                                                     @IP           VARCHAR(20)   = '',
+                                                     @ErrorCode    INT           = 0 OUTPUT,
+                                                     @ErrorMessage NVARCHAR(200) = '' OUTPUT
 AS
 
-
 /*
-	Created: Jacob	
-	Date: 2016-06-30
-	Task: #38608 - Implement function to control Player's Win Limit on specific Product
-	
-	DB: DBCust/CustDB
-	
-	Revisions:
-	
-	Parameters Explanation:	
-	
+Created: Franklin	
+Date: 2016-06-22
+Task: #57722 - Implement Game Win Limit Control phase2
+
+DB: DBCUST/CustDB
+
+Revisions:
+20160923@Jacob: Risk & Control - Phase 3 [#61220].
+
+Parameters Explanation:	
+
+Example: 	
+EXEC [NAP_WinLimit_CustSettingDel] @CustId = 1, @ProductId = 1, @GroupId = 1, @UserId = 0, @IP = ''
 */
 
      SET NOCOUNT ON;
      DECLARE @StartRun DATETIME, @EndRun DATETIME, @Duration INT;
      DECLARE @MaxWinLimitOld1 MONEY, @MaxWinLimitOld2 MONEY, @MaxWinLimitOld3 MONEY;
-     DECLARE @ErrCode INT= 0, @ErrMsg NVARCHAR(200)= '';
      SELECT @StartRun = GETDATE();
      BEGIN -- SAVE Old State
          DECLARE @OldState TABLE
          (LevelId     INT,
-          MaxWinLimit MONEY
+          MaxWinLimit_RM MONEY
          );
          INSERT INTO @OldState
                 SELECT LevelId,
-                       MaxWinLimit
+                       MaxWinLimit_RM
                 FROM dbo.WinLimit_CustGameSetting WITH (NOLOCK)
                 WHERE CustID = @CustID
                       AND ProductID = @ProductID
-                      AND BetTypeId = @BetTypeId;
+                      AND GroupId = @GroupId;
      END;
      BEGIN -- Delete
          BEGIN TRY
              DELETE dbo.WinLimit_CustGameSetting
              WHERE CustID = @CustID
-                   AND ProductID = @ProductID;
+                   AND ProductID = @ProductID
+                   AND GroupId = @GroupId;
          END TRY
          BEGIN CATCH
-             SELECT 2 AS ErrorCode,
-                    'This setting cannot be deleted because of an database internal error.' AS ErrorMessage;
+             SELECT @ErrorCode = 2,
+                    @ErrorMessage = 'This setting cannot be deleted because of an database internal error.';
              RETURN;
          END CATCH;
      END;
@@ -77,7 +81,7 @@ AS
          SET @LogSPData = '<NAP_WinLimit_CustSettingDel ';
          SET @LogSPData = @LogSPData+'" CustID ="'+CONVERT(VARCHAR(20), @CustID);
          SET @LogSPData = @LogSPData+'" ProductID="'+CONVERT(VARCHAR(20), @ProductID);
-         SET @LogSPData = @LogSPData+'" BetTypeId="'+CONVERT(VARCHAR(20), @BetTypeId);
+         SET @LogSPData = @LogSPData+'" GroupId="'+CONVERT(VARCHAR(20), @GroupId);
          WHILE EXISTS
          (
              SELECT 1
@@ -85,12 +89,11 @@ AS
          )
              BEGIN
                  SELECT @LevelId = LevelId,
-                        @MaxWinLimitOld = MaxWinLimit
+                        @MaxWinLimitOld = MaxWinLimit_RM
                  FROM @OldState;
                  SET @LogSPData = @LogSPData+'" MaxWinLimitLevel'+CONVERT(VARCHAR(20), @LevelId)+'="'+CONVERT(VARCHAR(20), @MaxWinLimitOld);
                  DELETE @OldState
                  WHERE LevelId = @LevelId
-                       AND MaxWinLimit = @MaxWinLimitOld;
              END;
          SET @LogSPData = @LogSPData+'" UserId="'+CONVERT(VARCHAR(20), @UserId);
          SET @LogSPData = @LogSPData+'" IP="'+COALESCE(CAST(@IP AS VARCHAR(15)), SPACE(1))+'" />';
@@ -105,8 +108,8 @@ AS
          BEGIN CATCH
          END CATCH;
      END;
-     SELECT @ErrCode AS ErrorCode,
-            @ErrMsg AS ErrorMessage;
+     SELECT @ErrorCode = 0,
+            @ErrorMessage = '';
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustSettingDel] TO [bodbAdminNet];
 GO
