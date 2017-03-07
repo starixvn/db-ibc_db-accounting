@@ -1004,8 +1004,8 @@ BEGIN
 													WHEN betteam = 'y' AND @hta + @hth > 1.5 THEN -1
 													WHEN betteam = 'n' AND @hta + @hth > 1.5 THEN 1
 													------
-													WHEN betteam = 'y' AND @hta + @hth < 1.5 AND (@fth2H + @fta2H > 1.5) THEN 1
-													WHEN betteam = 'n' AND @hta + @hth < 1.5 AND (@fth2H + @fta2H > 1.5) THEN -1
+													WHEN betteam = 'y' AND @hta + @hth < 1.5 AND (@fth2H + @fta2H > 1.5) THEN -1
+													WHEN betteam = 'n' AND @hta + @hth < 1.5 AND (@fth2H + @fta2H > 1.5) THEN 1
                                                 END
 											WHEN 434 THEN 
                                                 CASE 
@@ -1020,8 +1020,8 @@ BEGIN
 													WHEN betteam = 'y' AND @hta + @hth > 1.5 THEN -1
 													WHEN betteam = 'n' AND @hta + @hth > 1.5 THEN 1
 													------
-													WHEN betteam = 'y' AND @hta + @hth < 1.5 AND (@fth2H + @fta2H > 1.5) THEN 1
-													WHEN betteam = 'n' AND @hta + @hth < 1.5 AND (@fth2H + @fta2H > 1.5) THEN -1
+													WHEN betteam = 'y' AND @hta + @hth < 1.5 AND (@fth2H + @fta2H > 1.5) THEN -1
+													WHEN betteam = 'n' AND @hta + @hth < 1.5 AND (@fth2H + @fta2H > 1.5) THEN 1
                                                 END
 											--#67462
                                          END 
