@@ -1,6 +1,10 @@
-USE bodb02
+/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
+USE [bodb02]
 GO
-
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_RefundHT] @matchid INT
     ,@adminid INT
     ,@IsExcludeBetdaq BIT = 0
@@ -260,13 +264,14 @@ BEGIN
 				,@matchdate		= @matchdate
 				
 			--do refund-ht FGLG 	
-			EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
+			/*EXEC dbo.NAP_Admin_Calculate_Main @matchid = @matchid
 				,@action 		= 'REFUND-FGLG'
 				,@mode 			= 'REFUND-HT'
 				,@LGOnly 		= 0
 				,@matchdate 	= @matchdate
 				,@IsExcludeBetdaq	= @IsExcludeBetdaq
 				,@IsExcludeBetfair  = @IsExcludeBetfair
+			*/
 		
 		-- BetTrade Winlost Sharing
 		IF EXISTS (SELECT TOP 1 1 FROM dbo.bettrans WITH(NOLOCK) WHERE matchid = @matchid AND bettype BETWEEN 901 AND 910)

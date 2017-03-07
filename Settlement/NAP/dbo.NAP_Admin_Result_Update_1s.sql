@@ -1,4 +1,9 @@
-﻿USE [bodb02]
+﻿/*<info serverAlias="DBPRO-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
+USE [bodb02]
+GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
 GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Result_Update_1s]
   @Command						VARCHAR(100) 
@@ -26,6 +31,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Result_Update_1s]
  ,@Action						VARCHAR(10) = 'CAL'
  ,@IsAuto						BIT			= 0 
  ,@creator						INT			= 0 
+ ,@SDTRecord					TINYINT		= 0
 AS 
 /*
 	Created by: Jamie
@@ -38,15 +44,23 @@ AS
 		- 20150618@Jamie: Offer the option Exclude Corner tickets [Feature #38099]
 		- 20150928@Johnson: update result of corner without single corner ticket [Redmine: #44415]
 		- 20160705@Kathy: PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
+		- 20161118@Bobby: #67551 - Update changes for refunding SDT - ABANDONED match
+		
 	Param's Explanation: 
 		@Results: 'H,1,X,NL,...'  NL: Blank result of Bettype 216 
 */
 BEGIN
 	SET NOCOUNT ON 
 
-	DECLARE	@sporttype INT
-	SELECT	@sporttype = Sporttype 
-	FROM	Match WITH (NOLOCK)
+	DECLARE	@sporttype			INT
+		,@OtherInfo				VARCHAR(50)
+		,@GoalSequence			VARCHAR(50)
+		,@betstatus				NVARCHAR(50) 
+		,@SettlementStatusID	TINYINT 
+
+	SELECT	@sporttype 			= Sporttype 
+		,@GoalSequence 			= GoalRecord
+	FROM dbo.Match WITH (NOLOCK)
 	WHERE	MatchID = @MatchID
 
 	IF @sporttype <> 1 RETURN -- Apply for Soccer ONLY
@@ -57,10 +71,6 @@ BEGIN
 		,HomeValue		VARCHAR(50)
 		,AwayValue		VARCHAR(50)
 	)
-
-	DECLARE	 @GoalSequence	VARCHAR(50)
-			,@betstatus		NVARCHAR(50) 
-			,@SettlementStatusID	TINYINT 
 
 	DECLARE	@tmpResourceIDs	TABLE(
 		 ID			INT IDENTITY(1,1)
@@ -409,6 +419,120 @@ BEGIN
 				);	 
 	END 
 	/* END - @Command = 'NAP_Admin_Settlement_Refund_All' */
+	ELSE IF @Command ='NAP_Admin_Settlement_Refund_All-ABANDONED'
+	BEGIN
+		
+		INSERT INTO @tmpResultDetail(ResourceID,HomeValue,AwayValue)
+		SELECT '00', NULL, NULL
+		UNION ALL
+		SELECT '01', CAST(@hth AS VARCHAR(50)), CAST(@hta AS VARCHAR(50))
+		UNION ALL
+		SELECT '04', CAST(@hthCorners AS VARCHAR(50)), CAST(@htaCorners AS VARCHAR(50))
+		WHERE @isExistTotalCorner = 1
+			OR EXISTS (
+				SELECT 1 FROM dbo.ResultDetail WITH(NOLOCK)
+				WHERE matchid 		= @matchid 
+					AND ResourceID 	= '04'
+			) 
+		UNION ALL
+		SELECT '05', CAST(@hthCorners AS VARCHAR(50)), CAST(@htaCorners AS VARCHAR(50))
+		WHERE @isExistTotalCorner = 1 
+			OR EXISTS (
+				SELECT 1 FROM dbo.ResultDetail WITH(NOLOCK)
+				WHERE matchid 		= @matchid 
+					AND ResourceID 	= '05'
+			)
+		UNION ALL 
+		SELECT '206', @htFCorner, 'NA' 
+		WHERE @isExistFTFCorner = 1 
+			OR EXISTS (
+				SELECT 1 FROM dbo.ResultDetail WITH(NOLOCK)
+					WHERE matchid = @matchid AND ResourceID = '206'
+			)
+		UNION ALL 
+		SELECT '207', @htFCorner, 'NA'
+		WHERE @isExistHTFCorner = 1 
+			OR EXISTS (
+				SELECT 1 FROM dbo.ResultDetail WITH(NOLOCK)
+				WHERE matchid 		= @matchid 
+					AND ResourceID 	= '207'
+			)
+		UNION ALL 
+		SELECT '208', NULL, 'NA' 
+		WHERE @isExistFTLCorner = 1 
+			OR EXISTS (
+				SELECT 1 FROM dbo.ResultDetail WITH(NOLOCK)
+				WHERE matchid 		= @matchid 
+					AND ResourceID 	= '208'
+			)	
+		UNION ALL 
+		SELECT '209', NULL, 'NA' 
+		WHERE @isExistHTLCorner = 1 
+			OR EXISTS (
+				SELECT 1 FROM ResultDetail WITH(NOLOCK)
+				WHERE matchid 		= @matchid 
+					AND ResourceID 	= '209'
+			)
+		UNION ALL 
+		SELECT '08', @GoalSequence, 'NA' 
+								
+		MERGE	dbo.ResultDetail AS TARGET
+		USING	@tmpResultDetail AS SOURCE ON (TARGET.MatchID = @MatchID AND TARGET.ResourceID = SOURCE.ResourceID)
+		WHEN	MATCHED THEN				 
+				UPDATE SET
+					TARGET.HomeValue			= CASE WHEN SOURCE.HomeValue  = 'NA' THEN TARGET.HomeValue ELSE SOURCE.HomeValue END
+					,TARGET.AwayValue			= CASE WHEN SOURCE.AwayValue  = 'NA' THEN TARGET.AwayValue ELSE SOURCE.AwayValue END
+					,TARGET.OtherInfo			= CASE WHEN SOURCE.ResourceID  = '01' THEN TARGET.OtherInfo ELSE NULL END
+					,TARGET.ResultStatusID		= 5		-- Manual Settlement 
+					,TARGET.SettlementStatusID	= 5		-- ABANDONED 1H
+					,TARGET.LastModifyBy		= @Creator 
+					,TARGET.LastModifyDate		= GETDATE() 
+		WHEN	NOT MATCHED BY TARGET THEN 
+				INSERT(
+					 MatchID
+					,ResourceID
+					,HomeValue
+					,AwayValue
+					,OtherInfo 
+					,ResultStatusID
+					,SettlementStatusID
+					,CreateBy
+					,CreateDate
+					,LastModifyBy
+					,LastModifyDate
+				)
+				VALUES(
+					 @MatchID
+					,SOURCE.ResourceID
+					,CASE WHEN SOURCE.HomeValue = 'NA' THEN NULL ELSE SOURCE.HomeValue END
+					,CASE WHEN SOURCE.AwayValue = 'NA' THEN NULL ELSE SOURCE.AwayValue END
+					,NULL 
+					,5 -- Manual Settlement 
+					,5 -- ABANDONED 1H
+					,@Creator
+					,GETDATE()
+					,@Creator
+					,GETDATE()
+				);	 		
+		
+		-- UPDATE OtherInfo
+		SELECT @OtherInfo = ISNULL(OtherInfo,'')
+		FROM dbo.ResultDetail WITH(NOLOCK)
+		WHERE matchid 		= @matchid 
+			AND ResourceID 	= '01' --HT
+		
+		SET @OtherInfo = CASE 
+							WHEN CHARINDEX('SDT:',@OtherInfo) > 0 THEN REPLACE(@OtherInfo,SUBSTRING(@OtherInfo,CHARINDEX('SDT:',@OtherInfo) + 4, 1),CAST(ISNULL(@SDTRecord,0) AS VARCHAR(50))) 
+							ELSE @OtherInfo + 'SDT:' + CAST(ISNULL(@SDTRecord,0) AS VARCHAR(50)) + ';'  
+						END
+		
+		UPDATE dbo.ResultDetail WITH(ROWLOCK,UPDLOCK)
+		SET OtherInfo 		=  @OtherInfo
+		WHERE matchid 		= @matchid 
+			AND ResourceID 	= '01' -- ABANDONED 1H
+			
+	END
+	/* END - @Command = 'NAP_Admin_Settlement_Refund_All-ABANDONED' */
 	ELSE IF @Command ='NAP_Admin_Settlement_RefundFT'
 	BEGIN
 		SELECT	 @fth			= finalhomescore
@@ -480,8 +604,97 @@ BEGIN
 					,@Creator
 					,GETDATE()
 				);	 
-	END 
+	END	
 	/* END - @Command = ''NAP_Admin_Settlement_RefundFT' */
+	ELSE IF @Command ='NAP_Admin_Settlement_RefundFT-ABANDONED'
+	BEGIN
+				
+		INSERT INTO @tmpResultDetail(ResourceID,HomeValue,AwayValue)
+		--SELECT '00', 'NA', 'NA'
+		SELECT'00', CAST(@fth AS VARCHAR(50)), CAST(@fta AS VARCHAR(50)) 
+		UNION ALL 
+		SELECT '04', CAST(@fthCorners AS VARCHAR(50)), CAST(@ftaCorners AS VARCHAR(50))
+		WHERE @isExistTotalCorner = 1 
+			OR EXISTS (
+				SELECT 1 FROM dbo.ResultDetail WITH(NOLOCK)
+				WHERE matchid 		= @matchid 
+					AND ResourceID 	= '04'
+			)
+		UNION ALL 
+		SELECT '206', @ftFCorner, 'NA' 
+		WHERE @isExistFTFCorner = 1 
+			OR EXISTS (
+				SELECT 1 FROM dbo.ResultDetail WITH(NOLOCK)
+				WHERE matchid = @matchid AND ResourceID = '206'
+			)
+		UNION ALL 
+		SELECT '208', NULL, 'NA'
+		WHERE @isExistFTLCorner = 1 
+			OR EXISTS (
+				SELECT 1 FROM dbo.ResultDetail WITH(NOLOCK)
+				WHERE matchid 	= @matchid 
+				AND ResourceID 	= '208'
+			)
+		UNION ALL 
+		SELECT '08', @GoalSequence, 'NA'
+			
+		MERGE	dbo.ResultDetail AS TARGET
+		USING	@tmpResultDetail AS SOURCE ON (TARGET.MatchID = @MatchID AND TARGET.ResourceID = SOURCE.ResourceID)
+		WHEN	MATCHED THEN				 
+				UPDATE SET
+					TARGET.HomeValue			= CASE WHEN SOURCE.HomeValue  = 'NA' THEN TARGET.HomeValue ELSE SOURCE.HomeValue END
+					,TARGET.AwayValue			= CASE WHEN SOURCE.AwayValue  = 'NA' THEN TARGET.AwayValue ELSE SOURCE.AwayValue END
+					,TARGET.OtherInfo			= CASE WHEN SOURCE.ResourceID  = '00' THEN TARGET.OtherInfo ELSE NULL END
+					,TARGET.ResultStatusID		= 5		-- Manual Settlement 
+					,TARGET.SettlementStatusID	= 6		-- ABANDONED 2H
+					,TARGET.LastModifyBy		= @Creator 
+					,TARGET.LastModifyDate		= GETDATE() 
+		WHEN	NOT MATCHED BY TARGET THEN 
+				INSERT(
+					 MatchID
+					,ResourceID
+					,HomeValue
+					,AwayValue
+					,OtherInfo 
+					,ResultStatusID
+					,SettlementStatusID
+					,CreateBy
+					,CreateDate
+					,LastModifyBy
+					,LastModifyDate
+				)
+				VALUES(
+					 @MatchID
+					,SOURCE.ResourceID
+					,CASE WHEN SOURCE.HomeValue = 'NA' THEN NULL ELSE SOURCE.HomeValue END
+					,CASE WHEN SOURCE.AwayValue = 'NA' THEN NULL ELSE SOURCE.AwayValue END
+					,NULL 
+					,5 -- Manual Settlement 
+					,6 -- ABANDONED 2H
+					,@Creator
+					,GETDATE()
+					,@Creator
+					,GETDATE()
+				);	
+		
+		--UPDATE OtherInfo
+		SELECT @OtherInfo = ISNULL(OtherInfo,'')
+		FROM dbo.ResultDetail WITH(NOLOCK)
+		WHERE matchid 		= @matchid 
+			AND ResourceID 	= '00' --FT
+		
+		SET @OtherInfo = CASE 
+							WHEN CHARINDEX('SDT:',@OtherInfo) > 0 THEN REPLACE(@OtherInfo,SUBSTRING(@OtherInfo,CHARINDEX('SDT:',@OtherInfo) + 4, 1),CAST(ISNULL(@SDTRecord,0) AS VARCHAR(50))) 
+							ELSE @OtherInfo + 'SDT:' + CAST(ISNULL(@SDTRecord,0) AS VARCHAR(50)) + ';'  
+						END
+		
+		UPDATE dbo.ResultDetail WITH(ROWLOCK,UPDLOCK)
+		SET OtherInfo 		= @OtherInfo
+		WHERE matchid 		= @matchid 
+			AND ResourceID 	= '00' -- ABANDONED 2H
+			
+	END
+	/* END - @Command = 'NAP_Admin_Settlement_RefundFT-ABANDONED' */
 	ELSE IF @Command ='NAP_Admin_Settlement_RefundHT'
 	BEGIN
 		SELECT	 @hth			= hthomescore
@@ -670,3 +883,4 @@ GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Result_Update_1s] TO [bodbAdminNet] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Result_Update_1s] TO [vnteam] AS [dbo]
+GO

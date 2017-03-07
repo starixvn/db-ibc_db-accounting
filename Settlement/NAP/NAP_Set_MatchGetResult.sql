@@ -1,4 +1,12 @@
-ALTER PROCEDURE [dbo].[NAP_Set_MatchGetResult] @Date DATETIME
+/*<info serverAlias="DBPRO-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
+USE [bodb02]
+GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Set_MatchGetResult] 
+	@Date DATETIME
 	,@LeagueID INT = 0
 	,@sporttype SMALLINT = 0
 	,@statusid TINYINT = 0
@@ -14,11 +22,12 @@ AS
 		- 20141008@Jamie: Sportting Solution settlement [Redmine: #23034]
 		- 20150403@Jamie: Auto Settlement Betradar phase 2 [Redmine: #27212]
 		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
+		- 20170209@Bobby: Add filtering Abandoned status [Redmine: #71284]
 
 	Param explanation:  
 		@sporttype: show info of particular sport
 		@LeagueID: = 0: show info of all leagues    	
-		@statusid: 0: all, 1: running; 2: closed; 3: completed; 4: refund;   
+		@statusid: 0: all, 1: running; 2: closed; 3: completed; 4: refund; 6: abandoned   
   
 */
 BEGIN
@@ -31,10 +40,12 @@ BEGIN
 			WHEN 1 THEN 'running'
 			WHEN 2 THEN 'closed'
 			WHEN 3 THEN 'completed'
+			WHEN 6 THEN 'completed'
 			ELSE ''
 			END
 		,@isRefund = CASE @statusid
 			WHEN 4 THEN 1
+			WHEN 6 THEN 1
 			WHEN 0 THEN NULL
 			ELSE 0
 			END
@@ -101,8 +112,10 @@ BEGIN
 			WHEN m.betstatus LIKE 'Refund FT%' THEN 'Refund FT'
 			WHEN m.betstatus LIKE 'Refund HT%' THEN 'Refund HT'
 			WHEN m.betstatus LIKE 'Refund%' THEN 'Refund'
+			WHEN m.betstatus LIKE 'Abandoned 1H%' THEN 'Abandoned 1H'
+			WHEN m.betstatus LIKE 'Abandoned 2H%' THEN 'Abandoned 2H'
 			ELSE m.eventstatus
-			END AS eventstatus
+		END AS eventstatus
 		,'' AS Foddsstatus
 		,m.sporttype
 		,ISNULL(m.isNeutral, CONVERT(BIT, 0)) AS IsNeutral
@@ -144,8 +157,17 @@ BEGIN
 			AND m.sporttype = CASE WHEN @sporttype = 0 THEN m.sporttype ELSE @sporttype END 
 			AND (@eventstatus = '' OR eventstatus IN (@eventstatus, 'internal')) 
 			AND (@isRefund IS NULL 
-				OR (m.sporttype <> 5 AND @isRefund = 1 AND betstatus LIKE 'Refund%') 
-				OR (m.sporttype <> 5 AND @isRefund = 0 AND ISNULL(betstatus, '') NOT LIKE 'Refund%')
+				OR (
+					m.sporttype <> 5 AND @isRefund = 1 
+					AND ( 
+						1 = CASE 
+								WHEN @statusid = 4 AND betstatus LIKE 'Refund%' THEN 1
+								WHEN @statusid = 6 AND betstatus LIKE 'Abandoned%' THEN 1
+								ELSE 0
+							END
+					)
+				) 
+				OR (m.sporttype <> 5 AND @isRefund = 0 AND ISNULL(betstatus, '') NOT LIKE 'Refund%' AND ISNULL(betstatus, '') NOT LIKE 'Abandoned%')
 				OR (m.sporttype = 5 AND @isRefund = 1 AND ISNULL(r.SettlementStatusID,0) BETWEEN 1 AND 3)
 				OR (m.sporttype = 5 AND @isRefund = 0 AND ISNULL(r.SettlementStatusID,0) NOT BETWEEN 1 AND 3)
 			)

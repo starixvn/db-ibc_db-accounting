@@ -1,8 +1,10 @@
-SET QUOTED_IDENTIFIER ON 
+/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
+USE [bodb02]
 GO
-SET ANSI_NULLS ON 
+SET ANSI_NULLS ON
 GO
-
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_Set_WaitingSel] @MatchCode NVARCHAR(50) = ''
 	, @SportType SMALLINT = 0
 	, @LeagueId INT = 0 -- 0 for ALL Leagues
@@ -26,6 +28,7 @@ AS
 		- 20161118@Kathy: Changes on Auto Settlement [Redmine:#67328]
 		- 20161222@Kathy: Check match in queue in 10mins instead of 1 hour [Redmine:68890]
 		- 20160509@Kathy: Fast Market integration [Remine:#56367]
+		- 20170208@Bobby: Correct IsMissingAutoResult case [Remine:#67952]
 	
 	Param's explanation:  
 		
@@ -214,8 +217,9 @@ BEGIN
 				FROM	#tblBetStatus b
 					INNER JOIN #tblBettype c
 						ON b.bettype = c.bettype
-				WHERE	IsParLay = 1		
+				WHERE	b.IsParLay = 1		
 						AND NOT EXISTS (SELECT TOP 1 1 FROM #tblResultDetail WHERE b.matchid = MatchId AND ResourceId LIKE c.ResourceId)
+						AND c.GroupId = 8
 				GROUP BY b.matchid
 		) t
 			ON m.matchid = t.matchid
@@ -238,10 +242,12 @@ BEGIN
 		, ISNULL(mr.IsHTCal, 0) AS IsHalfTimeCal
 		, ISNULL(mr.isPending, 0) AS IsPending
 		, ISNULL(mr.isUndecided, 0) AS IsUndecided
-		, CAST(CASE WHEN hthomescore IS NOT NULL 
-				AND htawayscore IS NOT NULL 
-				AND finalhomescore IS NOT NULL 
-				AND finalawayscore IS NOT NULL THEN 1 ELSE 0 END AS BIT) AS IsKeyscore
+		,CASE 
+			WHEN (betstatus LIKE 'Abandoned 1H%' AND (hthomescore IS NOT NULL AND htawayscore IS NOT NULL)) THEN 1
+			WHEN (betstatus LIKE 'Abandoned 2H%' AND (finalhomescore IS NOT NULL AND finalawayscore IS NOT NULL)) THEN 1
+			WHEN (hthomescore IS NOT NULL AND htawayscore IS NOT NULL AND finalhomescore IS NOT NULL AND finalawayscore IS NOT NULL) THEN 1
+			ELSE 0
+		END IsKeyscore
 		, IsExistFGLG
 		, IsExistHTFGLG
 		, tm.SingleStatus AS IsCalculatingSingle

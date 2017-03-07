@@ -1,4 +1,5 @@
-﻿USE [bodb02]
+﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
+USE [bodb02]
 GO
 SET ANSI_NULLS ON
 GO
@@ -89,8 +90,9 @@ BEGIN
 			AND matchid = @matchid 
 			AND f.IsDetermined = 1
 			AND f.IsAuto = 0
-			AND statusID NOT IN (101, 102) AND ruben = 0
-			)
+			AND statusID NOT IN (101, 102, 103) 
+			AND ruben = 0
+		)
 	BEGIN
 		SELECT @IsSettleAbandonedMatchBetfair = 1
 

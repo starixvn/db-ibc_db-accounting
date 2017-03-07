@@ -1,6 +1,10 @@
-USE bodb02
+/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
+USE [bodb02]
 GO
-
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_FGLG_Push] @AdminId INT
 	, @action VARCHAR(10) = 'CAL-FT' -- CAL-FT, CAL-HT
 	, @MatchId INT
@@ -25,6 +29,7 @@ AS
 		- 20140825@Kathy: Support 1H FGLG (127) for Apollo [Redmine:#16276]
 		- 20151005@Kathy: add more UAT version for testing (UAT1,UAT2,UAT3,UAT4)
 		- 20160315@Patrick: Auto payout [Redmine: #53262]
+		- 20160905@Bobby: #63553 - Include FGLG (14,127) bet types
 		
 	Param's Explanation:
 		+ @betstatus: FGLG status

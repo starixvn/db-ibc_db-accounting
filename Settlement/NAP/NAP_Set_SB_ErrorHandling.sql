@@ -1,4 +1,9 @@
+/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
 USE [bodb02]
+GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
 GO
 
 ALTER PROCEDURE dbo.NAP_Set_SB_ErrorHandling @Action VARCHAR(20)
@@ -23,7 +28,12 @@ BEGIN
 		, @fth INT, @fta INT, @hth INT, @hta INT, @goalrecord NVARCHAR(50), @betstatus NVARCHAR(50)
 
 	SELECT @Mode = CASE 
-						WHEN CHARINDEX('NAP_Admin_Settlement_1_InstantCalculation', @sqlCommand) > 0 THEN 6
+						WHEN CHARINDEX('NAP_Admin_Settlement_1_InstantCalculation_Undo', @sqlCommand) > 0 THEN 7
+						WHEN (
+							CHARINDEX('NAP_Admin_Settlement_1_InstantCalculation', @sqlCommand) > 0 
+							AND 
+							CHARINDEX('NAP_Admin_Settlement_1_InstantCalculation_Undo', @sqlCommand) = 0 -- dont count undo-instant process
+						) THEN 6
 						WHEN CHARINDEX('NAP_Admin_Settlement_1_AutoPayout', @sqlCommand) > 0 THEN 5
 						WHEN CHARINDEX('NAP_Admin_Settlement_FGLG', @sqlCommand) > 0
 							OR CHARINDEX('NAP_Admin_Settlement_Refund_FGLG', @sqlCommand) > 0 THEN 2

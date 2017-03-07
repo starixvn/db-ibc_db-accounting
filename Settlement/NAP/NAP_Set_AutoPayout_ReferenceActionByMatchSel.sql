@@ -1,6 +1,10 @@
-USE bodb_CustomerLog
+/*<info serverAlias="DBLOG-bodb_CustomerLog" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
+USE [bodb_CustomerLog]
 GO
-
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE dbo.NAP_Set_AutoPayout_ReferenceActionByMatchSel @MatchIds VARCHAR(MAX)
 	, @ActionIds VARCHAR(1024)
 AS
@@ -11,6 +15,7 @@ AS
 	
 	Revision:	
 		- 20160930@Bobby: #65002 - Add HomeScore & AwayScore info
+		- 20161221@Bobby: #69159 - Correct HomeScore & AwayScore info
       
 	Param's Explanation:
 		
@@ -28,12 +33,12 @@ BEGIN
 	)
 
 	SELECT LogId, MatchID, ActionID, CASE WHEN Remark LIKE 'Failed%' THEN 1 ELSE 0 END AS IsFailed
-		, CASE 	WHEN ActionID = 178 THEN hthomescore 
-				WHEN ActionID = 179 THEN finalhomescore 
+		, CASE 	WHEN ActionID IN (178, 102) THEN hthomescore 
+				WHEN ActionID IN (179, 101, 100) THEN finalhomescore 
 				ELSE 0 
 		END AS HomeScore
-		, CASE 	WHEN ActionID = 178 THEN htawayscore 
-				WHEN ActionID = 179 THEN finalawayscore 
+		, CASE 	WHEN ActionID IN (178, 102) THEN htawayscore 
+				WHEN ActionID IN (179, 101, 100) THEN finalawayscore 
 				ELSE 0 
 		END AS AwayScore
 		

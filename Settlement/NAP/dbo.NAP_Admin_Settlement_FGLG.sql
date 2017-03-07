@@ -1,3 +1,4 @@
+/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
 USE [bodb02]
 GO
 SET ANSI_NULLS ON
@@ -31,6 +32,7 @@ AS
 		- 20160315@Patrick: Auto payout [Redmine: #53262]
 		- 20160705@Kathy: PH-AIO phase 2 (67 bettypes ) [Redmine:#53154]
 		- 20170119@Kathy: Exclude Fast Market bettypes [Redmine:#56367]
+		- 20160905@Bobby: #63553 - Include FGLG (14,127) bet types
 		
 	Param's Explanation:
 		+ @betstatus: FGLG status

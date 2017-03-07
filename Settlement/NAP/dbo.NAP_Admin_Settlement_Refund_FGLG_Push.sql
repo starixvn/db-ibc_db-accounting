@@ -1,14 +1,11 @@
-
-SET QUOTED_IDENTIFIER ON 
+/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
+USE [bodb02]
 GO
-SET ANSI_NULLS ON 
+SET ANSI_NULLS ON
 GO
-
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Refund_FGLG_Push    Script Date: 06/10/2015 11:21:40 AM ******/
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Refund_FGLG_Push    Script Date: 4/8/2015 1:48:10 AM ******/
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Refund_FGLG_Push    Script Date: 06/04/2015 1:01:55 PM ******/
-
-CREATE PROCEDURE [dbo].[NAP_Admin_Settlement_Refund_FGLG_Push] 
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Refund_FGLG_Push] 
 	@MatchId				INT
 	,@action				VARCHAR(10) 	= 'REFUND' -- REFUND, REFUND-FT, REFUND-HT
 	,@AdminId				INT

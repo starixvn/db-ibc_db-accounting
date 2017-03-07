@@ -1,4 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[NAP_Set_MatchGetResultDetail]
+﻿/*<info serverAlias="DBPRO-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
+USE [bodb02]
+GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[NAP_Set_MatchGetResultDetail]
 	@MatchID	INT 
 AS
 /*
@@ -9,6 +16,7 @@ AS
 
 	Revisions:  	
 		- 20150406@Jamie: Settlement Betradar phase 2 [Redmine: #27212]
+		- 20170209@Bobby: Add filtering Abandoned status [Redmine: #71284]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -26,11 +34,13 @@ BEGIN
 			,m.finalawayscore
 			,m.eventstatus
 			,CASE 
-					WHEN m.betstatus LIKE 'Refund FT%' THEN 'Refund FT'
-					WHEN m.betstatus LIKE 'Refund HT%' THEN 'Refund HT'
-					WHEN m.betstatus LIKE 'Refund%' THEN 'Refund'
-					ELSE m.eventstatus
-					END AS eventstatus
+				WHEN m.betstatus LIKE 'Refund FT%' THEN 'Refund FT'
+				WHEN m.betstatus LIKE 'Refund HT%' THEN 'Refund HT'
+				WHEN m.betstatus LIKE 'Refund%' THEN 'Refund'
+				WHEN m.betstatus LIKE 'Abandoned 1H%' THEN 'Abandoned 1H'
+				WHEN m.betstatus LIKE 'Abandoned 2H%' THEN 'Abandoned 2H'
+				ELSE m.eventstatus
+			END AS eventstatus
 			,m.betstatus
 			,m.GoalRecord
 			,ISNULL(mr.IsHTCal, 0) AS IsHTCal

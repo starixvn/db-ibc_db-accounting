@@ -1,6 +1,6 @@
+/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
 USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Calculate_4]    Script Date: 10/27/2016 13:25:55 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -49,6 +49,8 @@ AS
 		- 20160824@Bobby: #62921 - Include FGLG (14,127) bet types into settle determindable
 		- 20161021@Kathy: Using new non-clustered index (match_bettype) to update BetParlayDetail [Redmine:#65990]
 		- 20161025@Kathy:  Avoid deadlock issue [Redmine:#65990]
+		- 20161121@Bobby: #67462 - Remove code SDT for parlay bet types 14,127 when doing refund single SDT
+		
 	Param's Explanation:
 		
 		
@@ -141,8 +143,8 @@ BEGIN
 					ELSE 1 END,--'s','m'
 			
 				WinLost = CASE
-					WHEN @modds >  0.25	THEN actual_stake + stake * (case when odds<0 then 1 else (case when bettype in (4,30,1302,405,413,414) then odds-1 else odds end) end)
-					WHEN @modds =  0.25	THEN actual_stake + stake * (case when odds<0 then 1 else (case when bettype in (4,30,1302,405,413,414) then odds-1 else odds end) end) * 0.5
+					WHEN @modds >  0.25	THEN actual_stake + stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,165,166,1204,1235,1302,1317,405,413,414) then odds-1 else odds end) end)
+					WHEN @modds =  0.25	THEN actual_stake + stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,165,166,1204,1235,1302,1317,405,413,414) then odds-1 else odds end) end) * 0.5
 					WHEN @modds =  0	THEN actual_stake
 					WHEN @modds = -0.25	THEN actual_stake * 0.5
 					WHEN @modds < -0.25	THEN 0
@@ -150,24 +152,24 @@ BEGIN
 					END,
 
 				aWinLost = CASE
-					WHEN @modds >  0.25	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,30,1302,405,413,414) then odds-1 else odds end) end) * -apositiontaking
-					WHEN @modds =  0.25	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,30,1302,405,413,414) then odds-1 else odds end) end) * -apositiontaking * 0.5
+					WHEN @modds >  0.25	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,165,166,1204,1235,1302,1317,405,413,414) then odds-1 else odds end) end) * -apositiontaking
+					WHEN @modds =  0.25	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,165,166,1204,1235,1302,1317,405,413,414) then odds-1 else odds end) end) * -apositiontaking * 0.5
 					WHEN @modds =  0	THEN 0
 					WHEN @modds = -0.25	THEN actual_stake * apositiontaking * 0.5
 					WHEN @modds < -0.25	THEN actual_stake * apositiontaking
 					WHEN @modds IS NULL then aWinLost
 					END,
 				mWinLost = CASE
-					WHEN @modds >  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,30,1302,405,413,414) then odds-1 else odds end) end) * -mpositiontaking
-					WHEN @modds =  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,30,1302,405,413,414) then odds-1 else odds end) end) * -mpositiontaking * 0.5
+					WHEN @modds >  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,165,166,1204,1235,1302,1317,405,413,414) then odds-1 else odds end) end) * -mpositiontaking
+					WHEN @modds =  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,165,166,1204,1235,1302,1317,405,413,414) then odds-1 else odds end) end) * -mpositiontaking * 0.5
 					WHEN @modds =  0    	THEN 0
 					WHEN @modds = -0.25 	THEN actual_stake * mpositiontaking * 0.5
 					WHEN @modds < -0.25 	THEN actual_stake * mpositiontaking
 					WHEN @modds IS NULL then mWinLost
 					END,
 				sWinLost = CASE
-					WHEN @modds >  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,30,1302,405,413,414) then odds-1 else odds end) end) * -spositiontaking
-					WHEN @modds =  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,30,1302,405,413,414) then odds-1 else odds end) end) * -spositiontaking * 0.5
+					WHEN @modds >  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,165,166,1204,1235,1302,1317,405,413,414) then odds-1 else odds end) end) * -spositiontaking
+					WHEN @modds =  0.25 	THEN stake * (case when odds<0 then 1 else (case when bettype in (4,5,6,14,15,16,30,127,165,166,1204,1235,1302,1317,405,413,414) then odds-1 else odds end) end) * -spositiontaking * 0.5
 					WHEN @modds =  0    	THEN 0
 					WHEN @modds = -0.25 	THEN actual_stake * spositiontaking * 0.5
 					WHEN @modds < -0.25 	THEN actual_stake * spositiontaking
@@ -725,93 +727,8 @@ BEGIN
 			DROP TABLE #tempCust
 		END
 	END
-
-	IF (ISNULL(@FGLG2,'') = '' AND ISNULL(@correctscore, '0:0') <> '0:0')
-		SET @FGLG2 = @correctscore
-
-	-------------Start:Settle FGLG for bettransm-------------
-	IF (@bettype IN(14, 127))
-	BEGIN
-		SELECT @matchdate = eventdate
-		FROM match WITH (NOLOCK)
-		WHERE matchid = @matchid	
-
-		UPDATE dbo.bettransm WITH (UPDLOCK)
-		SET @modds = CASE 
-				WHEN (betteam = @correctscore OR betteam = @FGLG2) THEN 1
-				ELSE - 1
-				END
-			,ruben = CASE 
-				WHEN @modds IS NULL THEN 0
-				ELSE 1
-				END
-			,winlostdate = @matchdate
-			,[status] = CASE 
-				WHEN @modds < 0 THEN N'LOSE'
-				WHEN @modds > 0 THEN N'WON'
-				END
-			,statusID = CASE 
-				WHEN @modds < 0 THEN 113 --LOSE
-				WHEN @modds > 0 THEN 112 --WON
-				END
-			,statuswinlost = CASE 
-				WHEN @modds <= - 0.5 THEN 4 -- LOSE
-				WHEN @modds >= 0.5 THEN 2 -- WIN
-				END
-		-- ========================
-		FROM dbo.bettransm WITH (INDEX = IX_matchid)
-		WHERE bettype = @bettype 
-			AND matchid = @matchid 
-			AND statusID NOT IN (101, 102) --VOID, REJECT
-			AND (
-				ISNULL(@IsSettleAbandonedMatchIBC, 0) = 0
-				OR (@IsSettleAbandonedMatchIBC = 1 
-					AND RIGHT(betteam, 1) IN ('0', '1' ) --just for betchoice FG and NG
-					AND ISNULL(@FGLG2,'') <> '' 
-				)
-			)
-
-		CREATE TABLE #Refno (Refno BIGINT, Serial INT, rid BIGINT)
 	
-		INSERT INTO #Refno (RefNo, Serial, rid)
-		SELECT	RefNo, Serial, rID
-		FROM	dbo.BetParlayDetail WITH(ROWLOCK)
-		WHERE	matchid = @matchid 
-				AND bettype = @bettype 			
-				
-		UPDATE pd
-		SET @modds = CASE 
-						WHEN pd.rid = r.rid THEN CASE 
-													WHEN (betteam = @correctscore OR betteam = @FGLG2) THEN 1
-													ELSE - 1
-												 END
-						ELSE NULL
-					END
-			,winlostdate = CASE WHEN @modds IS NOT NULL THEN @matchdate ELSE pd.winlostdate END
-			,statusID = CASE 
-				WHEN @modds < 0 THEN 113 --LOSE
-				WHEN @modds > 0 THEN 112 --WON
-				ELSE pd.statusid
-				END
-			,statuswinlost = CASE 
-				WHEN @modds <= - 0.5 THEN 4 -- LOSE
-				WHEN @modds >= 0.5 THEN 2 -- WIN
-				ELSE pd.statuswinlost
-				END
-		FROM	dbo.betParlayDetail pd WITH (ROWLOCK, UPDLOCK)
-			INNER JOIN #Refno r
-				ON	pd.RefNo = r.Refno
-					AND pd.Serial = r.Serial
-		WHERE	statusID NOT IN (101, 102) --VOID, REJECT
-				AND (
-					ISNULL(@IsSettleAbandonedMatchIBC, 0) = 0
-					OR (@IsSettleAbandonedMatchIBC = 1 
-						AND RIGHT(betteam, 1) IN ('0', '1' ) --just for betchoice FG and NG
-						AND ISNULL(@FGLG2,'') <> '' 
-					)
-				)
-		-------------Stop:Settle FGLG for bettransm-------------
-	END
+	RETURN
 END
 
 

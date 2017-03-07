@@ -1,4 +1,9 @@
-USE bodb02
+/*<info serverAlias="DBPRO-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
+USE [bodb02]
+GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
 GO
 ALTER PROCEDURE dbo.NAP_Set_AutoPayout_SettingMatchUpd 
 	@MatchId 			INT
@@ -14,6 +19,7 @@ AS
 	
 	Revisions:
 		- 20160930@Bobby: #65003 - Merge Auto Payout and Inst CAL setting
+		- 20161212@Bobby: #67760 - Implement IS for FGLG bet types
 		
 	Param's Explanation:
 		- @AutoType: TINYINT 
@@ -59,7 +65,6 @@ BEGIN
 	--check concurrency users
 	IF (
 		@AutoSetting = @AutoSetting_Old
-		OR @AutoType = 2 --disable for updating instant setting temporary
 	)
 	BEGIN
 		RETURN
