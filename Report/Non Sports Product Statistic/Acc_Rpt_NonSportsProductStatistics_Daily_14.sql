@@ -4,7 +4,7 @@ GO
 ALTER PROCEDURE [dbo].[Acc_Rpt_NonSportsProductStatistics_Daily_14]
 	@WinlostDate	DATETIME,
 	@ProductId		VARCHAR(MAX) = '',
-	@Username		VARCHAR(MAX) = '',
+	@Username		VARCHAR(MAX) = NULL,
 	@Site			VARCHAR(MAX) = 'ALL',	
 	@BetType		VARCHAR(MAX) = '',
 	@LeagueId		VARCHAR(MAX) = '',
@@ -69,12 +69,33 @@ AS
 BEGIN 
 SET NOCOUNT ON 
 
-	IF @Username IS NULL -- invalid username
+	DECLARE @CustList VARCHAR(MAX)
+
+	IF CHARINDEX(',', @Username) <> 0
 	BEGIN
-		SELECT TOP 0 *
-		FROM (
+		EXEC dbo.Acc_CustomerSelCustByUsernameList @Username = @Username, @RoleId = 1, @CustList = @CustList OUTPUT
+
+		IF @CustList IS NULL -- invalid username
+		BEGIN
+			SELECT TOP 0 *
+			FROM (
+				SELECT
+					NULL AS ReportById,
+					NULL AS ReportBy,
+					NULL AS NoOfPlayers,
+					NULL AS BetCount,
+					NULL AS CurrencyId,
+					NULL AS Currency,
+					NULL AS TotalBets,
+					NULL AS TotalWins,
+					NULL AS TotalRefund,
+					NULL AS CompanyTurnover,
+					NULL AS CompanyGrossIncome,
+					NULL AS CompanyComm
+			) A
+		
+			-- Grand Total
 			SELECT
-				NULL AS ReportById,
 				NULL AS ReportBy,
 				NULL AS NoOfPlayers,
 				NULL AS BetCount,
@@ -86,23 +107,9 @@ SET NOCOUNT ON
 				NULL AS CompanyTurnover,
 				NULL AS CompanyGrossIncome,
 				NULL AS CompanyComm
-		) A
-		
-		-- Grand Total
-		SELECT
-			NULL AS ReportBy,
-			NULL AS NoOfPlayers,
-			NULL AS BetCount,
-			NULL AS CurrencyId,
-			NULL AS Currency,
-			NULL AS TotalBets,
-			NULL AS TotalWins,
-			NULL AS TotalRefund,
-			NULL AS CompanyTurnover,
-			NULL AS CompanyGrossIncome,
-			NULL AS CompanyComm
 
-		RETURN
+			RETURN
+		END
 	END
 	
 	DECLARE @WLDate DATETIME , @IsMBC BIT, @IsSite BIT
@@ -158,9 +165,6 @@ SET NOCOUNT ON
 	CREATE TABLE #tmpDevice (
         Betfrom NVARCHAR(2)
     )
-	CREATE TABLE #tmpUsername (
-        Username NVARCHAR(50)
-    )
 
 	IF @ProductID <> ''
     BEGIN
@@ -200,16 +204,26 @@ SET NOCOUNT ON
 	
 	IF @Username <> ''
 	BEGIN
-		INSERT INTO #tmpUsername (Username)
-		SELECT val FROM dbo.strSplit(@Username, ',')
+		IF @CustList IS NOT NULL
+		BEGIN
+			INSERT INTO #Temp_MemIDs (CustID)
+			SELECT val FROM dbo.strSplit(@CustList, ',')
+		END
+		ELSE
+		BEGIN
+			INSERT INTO #Temp_MemIDs (CustID)
+			SELECT custid
+			FROM dbo.Customer WITH(NOLOCK)
+			WHERE username LIKE @Username + '%' AND roleid = 1
 
-		INSERT INTO #Temp_MemIDs (CustID)
-		SELECT custid FROM dbo.Customer c WITH(NOLOCK)
-		WHERE EXISTS (SELECT 1 FROM #tmpUsername u WHERE u.Username = c.username)
-			AND roleID = 1
+			IF @Username NOT LIKE '%[^0-9]%' AND LEN(@Username) < 10
+			BEGIN
+			INSERT INTO #Temp_MemIDs (CustID)
+			SELECT cu.custid FROM dbo.Customer cu WITH(NOLOCK) WHERE cu.custid = @Username AND cu.roleid = 1
+				AND NOT EXISTS (SELECT 1 FROM #Temp_MemIDs c WHERE cu.custid = c.custid)
+			END
+		END
 	END
-
-	DROP TABLE #tmpUsername
 
 	------Get Sport Bettype Matrix------
 	 -- Check SP Version	 

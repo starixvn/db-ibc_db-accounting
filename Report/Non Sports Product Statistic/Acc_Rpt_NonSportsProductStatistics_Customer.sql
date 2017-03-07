@@ -4,7 +4,7 @@ GO
 ALTER PROCEDURE [dbo].[Acc_Rpt_NonSportsProductStatistics_Customer]
 	@WinlostDate	DATETIME,
 	@ProductId		VARCHAR(MAX) = '',
-	@Username		VARCHAR(MAX) = '',
+	@Username		VARCHAR(MAX) = NULL,
 	@RoleID			TINYINT = 1,
 	@Site			VARCHAR(MAX) = 'ALL',	
 	@BetType		VARCHAR(MAX) = '',
@@ -65,43 +65,50 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	IF @Username IS NULL -- invalid username
+	DECLARE @CustList VARCHAR(MAX)
+	
+	IF  @RoleID <> 0 AND CHARINDEX(',', @Username) <> 0
 	BEGIN
-		SELECT TOP 0 *
-		FROM (
+		EXEC dbo.Acc_CustomerSelCustByUsernameList @Username = @Username, @RoleId = @RoleId, @CustList = @CustList OUTPUT
+
+		IF @CustList IS NULL -- invalid username
+		BEGIN
+			SELECT TOP 0 *
+			FROM (
+				SELECT
+					NULL AS ReportById,
+					NULL AS ReportBy,
+					NULL AS RoleId,
+					NULL AS RoleName,
+					NULL AS BetCount,
+					NULL AS NoOfPlayers,
+					NULL AS CurrencyId,
+					NULL AS Currency,
+					NULL AS TotalBets,
+					NULL AS TotalWins,
+					NULL AS TotalRefund,
+					NULL AS CompanyTurnover,
+					NULL AS CompanyGrossIncome,
+					NULL AS CompanyComm,
+					NULL AS HousePositionTaking
+			) A
+
+			-- Grand Total
 			SELECT
-				NULL AS ReportById,
-				NULL AS ReportBy,
-				NULL AS RoleId,
-				NULL AS RoleName,
+				'GrandTotal' AS ReportBy,
 				NULL AS BetCount,
 				NULL AS NoOfPlayers,
-				NULL AS CurrencyId,
-				NULL AS Currency,
+				-1 AS CurrencyId,
+				'RM' AS Currency,
 				NULL AS TotalBets,
 				NULL AS TotalWins,
 				NULL AS TotalRefund,
-				NULL AS CompanyTurnover,
+				NULL AS CompanyTurnover,		
 				NULL AS CompanyGrossIncome,
-				NULL AS CompanyComm,
-				NULL AS HousePositionTaking
-		) A
-
-		-- Grand Total
-		SELECT
-			'GrandTotal' AS ReportBy,
-			NULL AS BetCount,
-			NULL AS NoOfPlayers,
-			-1 AS CurrencyId,
-			'RM' AS Currency,
-			NULL AS TotalBets,
-			NULL AS TotalWins,
-			NULL AS TotalRefund,
-			NULL AS CompanyTurnover,		
-			NULL AS CompanyGrossIncome,
-			NULL AS CompanyComm
+				NULL AS CompanyComm
 		
-		RETURN
+			RETURN
+		END
 	END
 
 	DECLARE @WLDate DATETIME
@@ -113,7 +120,6 @@ BEGIN
 	CREATE TABLE #tmp_SportType		(Sporttype SMALLINT)
 	CREATE TABLE #tmp_GameTableID	(GameTableID INT)
 	CREATE TABLE #tmp_Devide		(Betfrom NVARCHAR(2))
-	CREATE TABLE #tmp_Username		(Username VARCHAR(50))
 
 	-- Get Info from Pars list
 	IF @ProductId <> ''
@@ -150,12 +156,6 @@ BEGIN
 	BEGIN
 		INSERT INTO #tmp_Devide (Betfrom)
 		SELECT val FROM dbo.strSplit(@Device, ',')
-	END
-
-	IF @Username <> ''
-	BEGIN
-		INSERT INTO #tmp_Username (Username)
-		SELECT val FROM dbo.strSplit(@Username, ',')
 	END
 	-- End Info from Pars list
 
@@ -201,7 +201,7 @@ BEGIN
 	BEGIN
 		INSERT INTO #CustUser (CustID, roleID)
 		SELECT custid, roleid FROM dbo.Customer c WITH(NOLOCK)
-		WHERE EXISTS (SELECT 1 FROM #tmp_Username u WHERE c.username = u.Username)
+		WHERE EXISTS (SELECT 1 FROM dbo.strSplit(@Username, ',') u WHERE c.username = u.val)
 		
 		SELECT @IsFilterCust = 1
 	END
@@ -209,17 +209,30 @@ BEGIN
 	BEGIN
 		IF @Username <> ''
 		BEGIN
-			INSERT INTO #CustUser (CustID)
-			SELECT c.custid FROM dbo.Customer c WITH(NOLOCK)
-			WHERE EXISTS (SELECT 1 FROM #tmp_Username u WHERE c.username = u.Username)
-				AND c.roleid = @RoleID
+			IF @CustList IS NOT NULL
+			BEGIN
+				INSERT INTO #CustUser (CustID)
+				SELECT val FROM dbo.strSplit(@CustList, ',')
+			END
+			ELSE
+			BEGIN
+				INSERT INTO #CustUser (CustID)
+				SELECT custid
+				FROM dbo.Customer WITH(NOLOCK)
+				WHERE username LIKE @Username + '%' AND roleid = @RoleId
+
+				IF @Username NOT LIKE '%[^0-9]%' AND LEN(@Username) < 10
+				BEGIN
+				INSERT INTO #CustUser (CustID)
+				SELECT cu.custid FROM dbo.Customer cu WITH(NOLOCK) WHERE cu.custid = @Username AND cu.roleid = @RoleId
+					AND NOT EXISTS (SELECT 1 FROM #CustUser c WHERE cu.custid = c.custid)
+				END
+			END
 		
 			SELECT @IsFilterCust = 1
 		END
 	END
 
-	DROP TABLE #tmp_Username
-	
 	IF @Site <> 'ALL'
 	BEGIN
 		SELECT @IsFilterCust = 1
