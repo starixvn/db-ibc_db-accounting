@@ -209,7 +209,7 @@ BEGIN
 					FOR XML PATH('b'), ROOT ('r'), TYPE
 				) AS VARCHAR(MAX))		
 	
-	EXEC dbo.NAP_Admin_Settlement_Checking_xtest @MatchId = @MatchId
+	EXEC dbo.NAP_Admin_Settlement_Checking @MatchId = @MatchId
 		,@xmlData = @Results
 		,@Action = @Action
 		,@Mode = 'CAL-FM'
