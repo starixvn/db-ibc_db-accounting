@@ -17,6 +17,7 @@ ALTER FUNCTION [dbo].[f_GetSettingProductExtraPTGroup]
 		- 20161117@Percy: Reset setting of NG2 [RedmineID: #67219]
 		- 20170113@Percy: Update setting of ACCTHAI2, ACCTHAI56, ACCTHAI99, BC group [RedmineID: #70060]
 		- 20170213@Percy: Remove SLI [RedmineID: #70036]
+		- 20170308@Percy: Update setting [RedmineID: #72684]
 */
 
 RETURNS @ExtraPTGroup TABLE (GroupId INT, GroupName VARCHAR(50), ProductID TINYINT, Sporttype SMALLINT, SubProduct VARCHAR(500), ExtraPT DECIMAL(9, 8))
@@ -221,13 +222,48 @@ BEGIN
 		-- NG2
 		(15,'ACCYEN789',23,0,'',0.05000000),
 		(16,'ACCYEN889',23,0,'',0.05000000),
-		(19,'ACCUT',23,0,'',0.05000000)
+		(19,'ACCUT',23,0,'',0.05000000),
+		(13,'ACCIRR',23,0,'',0.05000000),
+		(14,'ACCUT2',23,0,'',0.05000000),
+		(17,'ACCNTD',23,0,'',0.05000000),
+
+		-- Allbet
+		(15,'ACCYEN789',21,0,'',0.13000000),
+		(16,'ACCYEN889',21,0,'',0.13000000),
+		(19,'ACCUT',21,0,'',0.13000000),
+		(13,'ACCIRR',21,0,'',0.13000000),
+		(14,'ACCUT2',21,0,'',0.13000000),
+		(17,'ACCNTD',21,0,'',0.13000000),
+
+		-- Colossus Bets
+		(15,'ACCYEN789',15,0,'',0.05000000),
+		(16,'ACCYEN889',15,0,'',0.05000000),
+		(19,'ACCUT',15,0,'',0.05000000),
+		(13,'ACCIRR',15,0,'',0.05000000),
+		(14,'ACCUT2',15,0,'',0.05000000),
+		(17,'ACCNTD',15,0,'',0.05000000)
+
 
 	INSERT INTO @ExtraPTGroup(GroupId, GroupName, ProductID, Sporttype, SubProduct, ExtraPT)
 	SELECT GroupId, GroupName, ProductID, Sporttype, SubProduct, ExtraPT
 	FROM @AllExtraPTGroup
 	WHERE GroupName = COALESCE(@GroupName, GroupName)
 		AND ProductID <> 4 -- Remove SLI
+
+	-- Sportbook of ACCYEN789 --
+	UPDATE @ExtraPTGroup
+	SET ExtraPT = 0.015
+	WHERE 
+		GroupName = 'ACCYEN789'
+		AND ProductID = 1
+		AND (SubProduct = '' OR SubProduct = 'MG-SuperLive')
+
+	-- Gold Deluxe of ACCIRR, ACCUT2, ACCNTD, ACCYEN789, ACCYEN889, ACCUT
+	UPDATE @ExtraPTGroup
+	SET ExtraPT = 0.13
+	WHERE 
+		GroupName IN ('ACCIRR', 'ACCUT2', 'ACCNTD', 'ACCYEN789', 'ACCYEN889', 'ACCUT')
+		AND ProductID = 12
 
 	RETURN
 END
