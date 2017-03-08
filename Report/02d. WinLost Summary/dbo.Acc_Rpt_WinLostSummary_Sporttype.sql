@@ -28,6 +28,9 @@ AS
 			- 20160411@Robert: Integrate Voidbridge Credit - Single Wallet model, using sporttype, bettye matrix function, change the way to get data Microgaming-RNG Casino from bettransRNG instead bettrans [RedmineID: #55589]
 			- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
 			- 20160830@Robert: Enhance System/Mix Parlay [RedmineID: #63022]
+			- 20160913@Percy: [RedmineID: #59840]
+				1. Include hedge match of 8RM account 
+				2. Left join #TempMatch to include data bettrade
 			- 20160916@Robert: Integrate new product NG2 [RedmindID: #63460]
 			- 20161129@Robert: NAP Reports - Integrate Fishing World Product [RedmindID: #67757]
         Parameter's Explanation:
@@ -161,19 +164,14 @@ BEGIN
 
         INSERT INTO #TempData
         SELECT CASE s.SubProduct WHEN 'MG-SuperLive' THEN -1
-								 WHEN 'BT-Comm' THEN -2
-								 WHEN 'BT-Winloss' THEN -2
 								 ELSE	b.sporttype
 								 END sporttype			
-				,case when b.bettype in (901, 902, 903, 904) then 903 when (b.bettype in (1,3,7,8,301,302,303,304) or (b.bettype between 801 and 899)) then b.bettype else 19999 end as bettypec
-				,case when b.bettype in (901, 902, 903, 904) then 1 else b.liveindicator end  liveindicator
+				,case when (b.bettype in (1,3,7,8,301,302,303,304) or (b.bettype between 801 and 899)) then b.bettype else 19999 end as bettype
+				,b.liveindicator
 				,ibc
 				, CASE WHEN m.matchcode LIKE '%Hedge%' THEN 1 ELSE 0 END IsHedge
 				,'' status 
-				,CASE s.SubProduct WHEN 'MG-SuperLive' THEN 2 
-								   WHEN  'BT-Comm' THEN 15	
-								   WHEN  'BT-Winloss' THEN 15	
-									ELSE 1 END AS OrderKey
+				,CASE s.SubProduct WHEN 'MG-SuperLive' THEN 2 ELSE 1 END AS OrderKey
 				,s.SortKey					
 				,ISNULL(SUM(realWinlost),0) as realWinlost
 				,ISNULL(SUM(realPosition),0) as realPosition
@@ -186,22 +184,43 @@ BEGIN
 			INNER JOIN #TempMatch m ON m.matchid = b.matchid
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
         WHERE b.winlostdate BETWEEN @_fromdate AND @_todate           
-		   AND ((s.ProductID = 1 AND s.SubProduct NOT IN ('BT-Sold','BT-Bought')) OR s.ProductID = 3) -- SB or NG
-        GROUP BY CASE s.SubProduct WHEN 'MG-SuperLive' THEN -1 
-								   WHEN 'BT-Comm' THEN -2
-								   WHEN 'BT-Winloss' THEN -2
-								   ELSE	b.sporttype END				
-				,case when b.bettype in (901, 902, 903, 904) then 903 when (b.bettype in (1,3,7,8,301,302,303,304) or (b.bettype between 801 and 899)) then b.bettype else 19999 end 
-				,case when b.bettype in (901, 902, 903, 904) then 1 else b.liveindicator end
+		   AND ((s.ProductID = 1 AND s.SubProduct NOT IN ('BT-Sold','BT-Bought','BT-Comm','BT-Winloss')) OR s.ProductID = 3) -- SB or NG, exclude bettrade
+        GROUP BY CASE s.SubProduct WHEN 'MG-SuperLive' THEN -1 ELSE	b.sporttype END				
+				,case when (b.bettype in (1,3,7,8,301,302,303,304) or (b.bettype between 801 and 899)) then b.bettype else 19999 end 
+				,b.liveindicator
 				,ibc
 				,CASE WHEN b.bettype in (1,3,7,8) then b.bettype else 19999 end        
 				,CASE WHEN m.matchcode LIKE '%Hedge%' THEN 1 ELSE 0 END
-				,CASE s.SubProduct WHEN 'MG-SuperLive' THEN 2 
-								    WHEN  'BT-Comm' THEN 15
-								    WHEN  'BT-Winloss' THEN 15
-									ELSE 1 END
+				,CASE s.SubProduct WHEN 'MG-SuperLive' THEN 2 ELSE 1 END
 				,s.SortKey						
-    UNION ALL
+		
+		INSERT INTO #TempData
+		-- bettrade
+		SELECT -2 sporttype			
+				,903 bettype
+				,1 liveindicator
+				,ibc
+				, CASE WHEN ISNULL(m.matchcode, '') LIKE '%Hedge%' THEN 1 ELSE 0 END IsHedge
+				,'' status 
+				,15 OrderKey
+				,s.SortKey					
+				,ISNULL(SUM(realWinlost),0) as realWinlost
+				,ISNULL(SUM(realPosition),0) as realPosition
+				,ISNULL(SUM(realcommission),0) as realCommission
+				,ISNULL(SUM(realLineTotal),0) as realLineTotal
+				,ISNULL(SUM(virtualLineTotal),0) as virtualLineTotal
+				,ISNULL(SUM(realTurnover),0) as realTurnover
+				,ISNULL(SUM(virtualTurnover),0) as virtualTurnover
+        FROM dbo.rptWinlost b WITH(NOLOCK)
+			LEFT JOIN #TempMatch m ON m.matchid = b.matchid
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype AND b.liveindicator=s.liveindicator
+        WHERE b.winlostdate BETWEEN @_fromdate AND @_todate           
+		   AND s.ProductID = 1 AND s.SubProduct IN ('BT-Comm','BT-Winloss')
+        GROUP BY ibc
+				,CASE WHEN ISNULL(m.matchcode, '') LIKE '%Hedge%' THEN 1 ELSE 0 END
+				,s.SortKey	
+	
+		INSERT INTO #TempData
         --Casino
         SELECT  251 as sporttype
 				,71 as bettype
@@ -223,7 +242,8 @@ BEGIN
         WHERE b.winlostdate BETWEEN @_fromdate AND @_todate            
 			AND s.ProductId=6
         --GROUP BY b.bettype
-    UNION ALL
+	
+		INSERT INTO #TempData
         --Bingo
         SELECT 	252 as sporttype
 				,b.bettype
@@ -246,7 +266,9 @@ BEGIN
             --AND bettype = 73
 			AND s.ProductId=7
         GROUP BY b.bettype
-    UNION ALL
+    
+		INSERT INTO #TempData
+		-- Keno
 		SELECT 	202 sporttype
 				,b.bettype
 				,b.liveindicator
@@ -269,7 +291,8 @@ BEGIN
 			AND s.ProductId=8
         GROUP BY sporttype,b.liveindicator ,ibc
             ,b.bettype
-    UNION ALL
+    
+		INSERT INTO #TempData
         --Live casino
         SELECT  162 as sporttype
 				,b.bettype
@@ -292,7 +315,8 @@ BEGIN
             --AND bettype between 1101 and 1199
 			AND s.ProductId=4
         GROUP BY b.bettype
-    UNION ALL
+    
+		INSERT INTO #TempData
         SELECT  97 -- mix parlay
 				,9 as bettype
 				,0 as liveindicator
@@ -312,7 +336,8 @@ BEGIN
         WHERE b.winlostdate BETWEEN @_fromdate AND @_todate
             AND (bettype = 9 or (bettype = 29 and exrisk = 1))
         GROUP BY status
-    UNION ALL
+    
+		INSERT INTO #TempData
         SELECT  98 --system parlay
 				,29 as bettype
 				,0 as liveindicator
@@ -332,7 +357,8 @@ BEGIN
         WHERE b.winlostdate BETWEEN @_fromdate AND @_todate
             AND bettype = 29 and exrisk <> 1  
         GROUP BY status
-    UNION ALL
+    
+		INSERT INTO #TempData
         --racing
         SELECT   sporttype
 				,0 as bettype
@@ -355,7 +381,8 @@ BEGIN
             --AND bettype BETWEEN 31 AND 33
 			AND s.ProductId=2
         GROUP BY sporttype
-    UNION ALL
+    
+		INSERT INTO #TempData
         --virtual sports
         SELECT sporttype
             ,0 as bettype
@@ -379,7 +406,7 @@ BEGIN
 			AND s.ProductId=5
         GROUP BY sporttype
 
-    UNION ALL
+		INSERT INTO #TempData
         -- HR Fixed Odds
         SELECT sporttype
             ,bettype
@@ -400,8 +427,9 @@ BEGIN
 		WHERE winlostdate BETWEEN @_fromdate AND @_todate
             AND sporttype = 154
         GROUP BY sporttype,bettype, b.liveindicator ,ibc
-	--- GD	
-     UNION ALL
+	
+		INSERT INTO #TempData
+		-- GD
         SELECT 255 sporttype
             ,b.bettype
             ,b.liveindicator
@@ -422,8 +450,9 @@ BEGIN
 		WHERE winlostdate BETWEEN @_fromdate AND @_todate
             AND s.ProductId=12
         GROUP BY sporttype,b.bettype, b.liveindicator ,ibc
-	-- Micro Gaming LC
-		UNION ALL
+	
+		INSERT INTO #TempData
+		-- Micro Gaming LC
         SELECT 203 sporttype
             ,b.bettype
             ,b.liveindicator
@@ -444,8 +473,9 @@ BEGIN
 		WHERE winlostdate BETWEEN @_fromdate AND @_todate
             AND s.ProductId=13
         GROUP BY sporttype,b.bettype, b.liveindicator ,ibc
-	-- Micro Gaming RNG
-		UNION ALL
+	
+		INSERT INTO #TempData
+		-- Micro Gaming RNG
         SELECT 205 sporttype
             ,b.bettype
             ,b.liveindicator
@@ -466,8 +496,9 @@ BEGIN
 		WHERE winlostdate BETWEEN @_fromdate AND @_todate
             AND s.ProductId=17
         GROUP BY sporttype,b.bettype, b.liveindicator ,ibc
-	--- AG Casino
-		UNION ALL
+	
+		INSERT INTO #TempData
+		--- AG Casino
         SELECT 250 sporttype
             ,b.bettype
             ,b.liveindicator
@@ -488,8 +519,9 @@ BEGIN
 		WHERE winlostdate BETWEEN @_fromdate AND @_todate
             AND s.ProductId=11
         GROUP BY sporttype,b.bettype, b.liveindicator ,ibc
-	--	VegasGame aka Macau
-		UNION ALL
+	
+		INSERT INTO #TempData
+		--	VegasGame aka Macau
         SELECT 249 sporttype
             ,b.bettype
             ,b.liveindicator
@@ -510,8 +542,9 @@ BEGIN
 		WHERE winlostdate BETWEEN @_fromdate AND @_todate
             AND s.ProductId=14
         GROUP BY sporttype,b.bettype, b.liveindicator ,ibc	
-	-- allbet section 
-		UNION ALL
+	
+		INSERT INTO #TempData
+		-- allbet section 
         SELECT 211 sporttype
             ,b.bettype
             ,b.liveindicator
@@ -534,7 +567,7 @@ BEGIN
         GROUP BY sporttype,b.bettype, b.liveindicator ,ibc	
 	   
 	   -- Macau Games section 
-		UNION ALL
+		INSERT INTO #TempData
         SELECT 212 sporttype
             ,b.bettype
             ,b.liveindicator
@@ -555,9 +588,9 @@ BEGIN
 		WHERE winlostdate BETWEEN @_fromdate AND @_todate
             AND s.ProductId=22
         GROUP BY sporttype,b.bettype, b.liveindicator ,ibc	
-
-	--	ColossusBet
-		UNION ALL
+	
+		INSERT INTO #TempData
+		--	ColossusBet
         SELECT 204 sporttype
             ,b.bettype
             ,b.liveindicator
@@ -578,8 +611,8 @@ BEGIN
 		WHERE winlostdate BETWEEN @_fromdate AND @_todate
             AND s.ProductId=15
         GROUP BY sporttype,b.bettype, b.liveindicator ,ibc
-	--	NG2
-		UNION ALL
+	
+		INSERT INTO #TempData
 		  SELECT sporttype
             ,b.bettype
             ,b.liveindicator
@@ -623,18 +656,64 @@ BEGIN
             AND s.ProductId IN (24)
         GROUP BY b.bettype, b.liveindicator ,ibc		
 	ORDER BY OrderKey ASC	
-	    
 	
-	UPDATE #TempData SET IsHedge =1,
-						ibc = 0
-	WHERE ibc = 1 AND IsHedge = 1
-	
+	-- Result --
+	CREATE TABLE #Result
+	(
+		sporttype INT,
+        bettype INT,
+        liveindicator BIT,
+        ibc TINYINT,
+        IsHedge BIT,
+        status NVARCHAR(20),
+		OrderKey TINYINT,
+        SortKey TINYINT,
+        realWinlost MONEY,
+        realPosition MONEY, 
+        realCommission MONEY,
+        realLineTotal MONEY,
+        virtualLineTotal MONEY,
+        realTurnover MONEY,
+        virtualTurnover MONEY
+	)
+
+	-- 8RM, BARM
+	INSERT INTO #Result
 	SELECT sporttype,
            bettype,
            liveindicator,
            ibc,
+           0 AS IsHedge,
+           status,
+		   OrderKey,
+           SortKey,
+           SUM(realWinlost) as realWinlost,
+           SUM(realPosition) as realPosition, 
+           SUM(realCommission) as realCommission,
+           SUM(realLineTotal) as realLineTotal,
+           SUM(virtualLineTotal) as virtualLineTotal,
+           SUM(realTurnover) as realTurnover,
+           SUM(virtualTurnover) as virtualTurnover 
+	FROM #TempData
+	WHERE ibc IN (1, 2)
+	GROUP BY sporttype,
+           bettype,
+           liveindicator,
+           ibc,
+           status,
+           OrderKey,
+           SortKey
+
+	-- Hegde match, Normal match
+	INSERT INTO #Result
+	SELECT sporttype,
+           bettype,
+           liveindicator,
+           0 AS ibc,
            IsHedge,
            status,
+		   OrderKey,
+           SortKey,
            SUM(realWinlost) as realWinlost,
            SUM(realPosition) as realPosition, 
            SUM(realCommission) as realCommission,
@@ -646,19 +725,45 @@ BEGIN
 	GROUP BY sporttype,
            bettype,
            liveindicator,
+           IsHedge,
+           status,
+           OrderKey,
+           SortKey
+
+	SELECT sporttype,
+           bettype,
+           liveindicator,
            ibc,
            IsHedge,
            status,
-           OrderKey
-           ,SortKey
+		   OrderKey,
+           SortKey,
+           SUM(realWinlost) as realWinlost,
+           SUM(realPosition) as realPosition, 
+           SUM(realCommission) as realCommission,
+           SUM(realLineTotal) as realLineTotal,
+           SUM(virtualLineTotal) as virtualLineTotal,
+           SUM(realTurnover) as realTurnover,
+           SUM(virtualTurnover) as virtualTurnover 
+	FROM #Result
+	GROUP BY sporttype,
+           bettype,
+           liveindicator,
+           ibc,
+		   IsHedge,
+           status,
+           OrderKey,
+           SortKey
 	ORDER BY OrderKey,SortKey, liveindicator
-     DROP TABLE #TempMatch
-	DROP TABLE #TempData    
+    
+	DROP TABLE #TempMatch
+	DROP TABLE #TempData
+	DROP TABLE #Result
 END
 GO 
- GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_WinlostSummary_Sporttype] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_WinlostSummary_Sporttype] TO [vnteam]
 GO 
- GRANT EXECUTE ON [dbo].[Acc_Rpt_WinlostSummary_Sporttype] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_WinlostSummary_Sporttype] TO [bodbAdminNet]
 GO 
- GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_WinlostSummary_Sporttype] TO [bodbAdminNet]
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_WinlostSummary_Sporttype] TO [bodbAdminNet]
 GO
