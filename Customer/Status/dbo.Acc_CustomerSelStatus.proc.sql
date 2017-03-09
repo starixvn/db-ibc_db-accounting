@@ -1,4 +1,4 @@
-ALTER PROCEDURE dbo.Acc_CustomerSelStatus
+ALTER PROCEDURE [dbo].[Acc_CustomerSelStatus]
 	@CustID		INT,
 	@AdminID	INT			= 0,
 	@system		VARCHAR(30)	='NAP',
@@ -49,6 +49,7 @@ Revisions:
 	- 20160801@Elodie: NG2 product - [Redmine: #60809]
 	- 20160815@Winnie: AllBet add more status for Bettype VIP Barcarat - [Redmine: #61733 ]
 	- 20161028@Winnie: Fishing world [Redmine's Ids: #65474]
+	- 20160801@Elodie: Implementing NewProductStatus Plugin - [Redmine #70722]	
 
 Param's Explanation:
 • @system: = NAP : internal login from NAP
@@ -243,7 +244,7 @@ Param's Explanation:
 	BEGIN
 		SET @IsHidden_NG2 = 0
 	END
-	IF EXISTS( SELECT 1 FROM dbo.f_CustSetting_SportBetTypeSettingSelect(@FishingWorld,4))
+	IF EXISTS( SELECT 1 FROM dbo.f_CustSetting_SportBetTypeSettingSelect(@FishingWorld,13))
 	BEGIN
 		SET @IsHidden_FishingWorld = 0
 	END
