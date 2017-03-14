@@ -10,8 +10,6 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_1_AutoPayout_Push] @AdminId INT
     , @FullTimeAway	SMALLINT        = NULL
     , @HalfTimeHome SMALLINT        = NULL
     , @HalfTimeAway SMALLINT        = NULL 
-    , @GoalRecord	VARCHAR(50)     = NULL
-    , @BetStatus	NVARCHAR(50)    
     , @Action		VARCHAR(10)     = 'CAL-FT'
     , @IP			VARCHAR(15)     = ''
     , @ErrCode		INT             = 0     OUTPUT
@@ -26,11 +24,14 @@ AS
 
     Revisions:        
 		- 20161028@Kathy: Extend sqlCommand column to varchar(max) [Redmine:#56367]
+		- 20170313@Kathy: Remove @betstatus, @goalrecord [Redmine:#73218]
+		
     Param's Explanation:
         
 */
 BEGIN
     SET NOCOUNT ON
+    
 	IF @Action = 'CAL'
 	BEGIN
 		RETURN --not supported
@@ -94,10 +95,6 @@ BEGIN
                             + ', @fta = ' + ISNULL(CONVERT(NVARCHAR(50), @FullTimeAway), 'NULL') 
                             + ', @hth = ' + ISNULL(CONVERT(NVARCHAR(50), @HalfTimeHome), 'NULL') 
                             + ', @hta = ' + ISNULL(CONVERT(NVARCHAR(50), @HalfTimeAway), 'NULL') 
-                            + ', @goalrecord = ' + CASE WHEN @GoalRecord IS NULL THEN 'NULL'
-                                                        ELSE '''' + CONVERT(NVARCHAR(50), @GoalRecord) + '''' END 
-                            + ', @betstatus = ' + CASE WHEN @BetStatus IS NULL THEN 'NULL' 
-                                                        ELSE 'N''' + CONVERT(NVARCHAR(50), @BetStatus) + '''' END 
                             + ', @action = ''' + CONVERT(NVARCHAR(50), @Action) + '''' 
                             + ', @IP = ''' + CONVERT(NVARCHAR(50), @IP) + '''' 
                             + ', @ErrCode = @ErrCode OUTPUT' 
