@@ -7,8 +7,8 @@ AS
 	DB: DBPRO/BODB02
 	
 	Revisions:
-		20161019@Bobby: @#65002 - Add checking AutoSetting on match & league
-		
+		- 20161019@Bobby: @#65002 - Add checking AutoSetting on match & league
+		- 20170314@Kathy: Not allow to process Auto Payout HT/FT if keyscore calculated HT/FT manually [Redmine:#73218]
 	Param's Explanation:
  
 */
@@ -53,6 +53,16 @@ BEGIN
 								FROM dbo.AutoPayoutResult rs WITH(NOLOCK) 
 								WHERE rs.MatchId = m.matchid 
 									AND f.TypeId = rs.CalculationType AND rs.StatusId IN (1, 2, 3))
+			AND NOT EXISTS (SELECT TOP 1 1
+								FROM dbo.ResultDetail r WITH(NOLOCK)
+								WHERE	r.MatchId = m.matchid
+										AND 1 = CASE 
+													WHEN r.ResourceId = '00' AND f.TypeId = 2 THEN 1
+													WHEN r.ResourceId = '01' AND f.TypeId = 1 THEN 1
+													ELSE 0
+												END
+										AND r.ResultStatusID = 5 -- completed (manual)
+							)
 	)t
 	WHERE IsConfirmed > 0
 END
