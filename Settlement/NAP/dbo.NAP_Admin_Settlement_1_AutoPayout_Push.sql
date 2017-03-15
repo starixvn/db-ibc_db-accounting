@@ -25,6 +25,7 @@ AS
     Revisions:        
 		- 20161028@Kathy: Extend sqlCommand column to varchar(max) [Redmine:#56367]
 		- 20170313@Kathy: Remove @betstatus, @goalrecord [Redmine:#73218]
+		- 20170314@Kathy: Not allow to process Auto Payout HT/FT if keyscore calculated HT/FT manually [Redmine:#73218]
 		
     Param's Explanation:
         
@@ -57,6 +58,22 @@ BEGIN
         RETURN
     END
 
+	IF EXISTS (SELECT TOP 1 1
+				FROM DBPRO.bodb02.dbo.ResultDetail with(NOLOCK)
+				WHERE matchid = @matchid
+					AND 1 = CASE 
+								WHEN resourceId = '00' AND @Action = 'CAL-FT' THEN 1
+								WHEN resourceId = '01' AND @Action = 'CAL-HT' THEN 1
+								ELSE 0
+							END
+					AND resultStatusId = 5 -- completed (manual)
+			)
+	BEGIN
+		SELECT @ErrCode = 1001018
+			, @ErrMsg   = 'Auto payout is cancelled because the match has been calculated manually.'
+
+        RETURN
+	END
     IF EXISTS (SELECT TOP 1 1
 				FROM dbo.Single_Calculate_Queue WITH (NOLOCK)
 				WHERE matchid = @matchid

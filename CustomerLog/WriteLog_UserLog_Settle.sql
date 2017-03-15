@@ -6,18 +6,18 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 ALTER PROCEDURE [dbo].[WriteLog_UserLog_Settle]
-	@UserID int, 
-	@MatchID int, 
-	@ActionID int=0, 
-	@finalhomescore INT,
-    @finalawayscore INT,  
-    @hthomescore INT,
-    @htawayscore INT,
-    @GoalRecord VARCHAR(50),
-    @betstatus NVARCHAR(50),
-    @Remark VARCHAR(MAX) = '',	
-	@IP varchar(15)='',
-	@LogDate DATETIME = NULL
+	@UserID			INT, 
+	@MatchID		INT, 
+	@ActionID		INT				= 0, 
+	@finalhomescore INT				= NULL,
+    @finalawayscore INT				= NULL,  
+    @hthomescore	INT				= NULL,
+    @htawayscore	INT				= NULL,
+    @GoalRecord		VARCHAR(50)		= NULL,
+    @betstatus		NVARCHAR(50)	= NULL,
+    @Remark			VARCHAR(MAX)	= '',	
+	@IP				VARCHAR(15)		= '',
+	@LogDate		DATETIME		= NULL
 AS
 /*
 Creator: Daniel
@@ -28,6 +28,7 @@ Task: Insert LOGS for settlement function
 Revision:
 	- 20110110@Jamie: Change size of Remark to 500
 	- 20160507@Patrick: Add more param @LogDate & change size of Remark to 3000
+	- 20170314@Kathy: Add default value [Redmine:#73218]
 
 */
 

@@ -7,8 +7,8 @@ AS
 	DB: DBPRO/BODB02
 	
 	Revisions:
-		20161019@Bobby: @#65002 - Add checking AutoSetting on match & league
-		
+		- 20161019@Bobby: @#65002 - Add checking AutoSetting on match & league
+		- 20170314@Kathy: Not allow to process Auto Payout HT/FT if keyscore calculated HT/FT manually [Redmine:#73218]
 	Param's Explanation:
  
 */
@@ -42,6 +42,7 @@ BEGIN
 			, m.betstatus AS BetStatus
 			, m.GoalRecord
 			, mr.IsHTCal AS IsHalfTimeCalculated
+			, m.kickofftime
 		FROM dbo.match m WITH(NOLOCK)
 			INNER JOIN dbo.match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid
 			INNER JOIN dbo.League l WITH(NOLOCK) ON m.leagueid = l.leagueid
@@ -53,8 +54,19 @@ BEGIN
 								FROM dbo.AutoPayoutResult rs WITH(NOLOCK) 
 								WHERE rs.MatchId = m.matchid 
 									AND f.TypeId = rs.CalculationType AND rs.StatusId IN (1, 2, 3))
+			AND NOT EXISTS (SELECT TOP 1 1
+								FROM dbo.ResultDetail r WITH(NOLOCK)
+								WHERE	r.MatchId = m.matchid
+										AND 1 = CASE 
+													WHEN r.ResourceId = '00' AND f.TypeId = 2 THEN 1
+													WHEN r.ResourceId = '01' AND f.TypeId = 1 THEN 1
+													ELSE 0
+												END
+										AND r.ResultStatusID = 5 -- completed (manual)
+							)
 	)t
 	WHERE IsConfirmed > 0
+	ORDER BY t.kickofftime, t.MatchId, t.TypeId
 END
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_AutoPayout_ScheduleSel] TO [bodbAdminNet] AS [dbo]

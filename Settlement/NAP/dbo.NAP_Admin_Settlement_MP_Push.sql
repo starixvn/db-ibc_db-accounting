@@ -30,6 +30,7 @@ AS
 		- 20160714@Kathy: Add checking SystemSettings before doing Parlay Settlement on UAT
 		- 20160801@Patrick: Auto Payout - User can cal MP before calculating FT FGLG [Redmine: #61767]
 		- 20161125@Bobby: #67822 - check single and parlay ticket for AUTO bet types
+		- 20170313@Kathy: Check betstatus result for bettype 14,127 to notify user do CAL FGLG [Redmine:#73218]
 
 	Param's Explanation:		
 		
@@ -40,6 +41,7 @@ BEGIN
 	DECLARE  @NotKeyScoreList VARCHAR(130)
 			,@NotAllowCalculating VARCHAR(200)
 			,@HaveWaitingTicket VARCHAR(200)
+			,@NotExecutedFGLG VARCHAR(200)
 			,@procName nvarchar(50)	
 			,@matchid int
 		
@@ -52,6 +54,7 @@ BEGIN
 						  ,fta SMALLINT
 						  ,hth SMALLINT
 						  ,hta SMALLINT
+						  ,betstatus NVARCHAR(50)
 						 )
 						 
 	
@@ -61,17 +64,19 @@ BEGIN
 			,@subErrCode = 0
 			,@subErrMsg = ''
 			
-	INSERT INTO @match ( matchid, matchcode, fth, fta, hth, hta)
+	INSERT INTO @match ( matchid, matchcode, fth, fta, hth, hta, betstatus)
 	SELECT DISTINCT matchid
 			,matchcode
 			,finalhomescore
 			,finalawayscore
 			,hthomescore
 			,htawayscore
+			,betstatus
 	FROM DBPRO.BODB02.dbo.Match WITH (NOLOCK)
 	WHERE matchid IN ( SELECT val
 					   FROM dbo.strSplit(@matchids, ',') ) 
 	
+	DECLARE @tblFGLGMatch TABLE(matchid INT, matchcode NVARCHAR(50))
 	DECLARE @tblRunningAutoSettle TABLE (matchid INT)
 	
 	INSERT INTO @tblRunningAutoSettle
@@ -140,14 +145,37 @@ BEGIN
 							AND bettype IN (14,127)
 							AND statusID = 0)
 	END
-
+	
 	IF EXISTS (SELECT TOP 1 1 FROM @Tmp)
 	BEGIN
 		SELECT @NotKeyScoreList = COALESCE(@NotKeyScoreList + ',' + matchcode, matchcode)
 		FROM @Tmp
 	END
 	--End: have running tickets of 14 & 127 on bettrans for auto payout
-
+	
+	DELETE m
+	OUTPUT DELETED.matchid, DELETED.matchcode INTO @tblFGLGMatch(matchid, matchcode)
+	FROM @match m
+	WHERE EXISTS (SELECT	TOP 1 1 
+					FROM	dbo.bettransm bm WITH(NOLOCK)
+					WHERE	bm.matchid = m.matchid
+							AND bm.bettype = 127
+							AND CHARINDEX('1FL',m.betstatus) = 0 )
+							
+	DELETE m
+	OUTPUT DELETED.matchid, DELETED.matchcode INTO @tblFGLGMatch(matchid, matchcode)
+	FROM @match m
+	WHERE EXISTS (SELECT	TOP 1 1 
+					FROM	dbo.bettransm bm WITH(NOLOCK)
+					WHERE	bm.matchid = m.matchid
+							AND bm.bettype = 14
+							AND CHARINDEX('FL',REPLACE(m.betstatus,'1FL','')) = 0 )
+	
+	IF EXISTS (SELECT TOP 1 1 FROM @tblFGLGMatch)
+	BEGIN
+		SELECT @NotExecutedFGLG = COALESCE(@NotExecutedFGLG + ',' + matchcode, matchcode)
+		FROM @tblFGLGMatch
+	END
 	IF EXISTS (SELECT 1
 				FROM @match
 				WHERE matchid IN (SELECT matchid from Single_Calculate_Queue with(NOLOCK) where IsCalculating IN (0,1))
@@ -178,7 +206,7 @@ BEGIN
 	DELETE FROM @match
 	WHERE matchid IN (SELECT val FROM dbo.strSplit(@MatchIds, ','))
 
-	IF (ISNULL(@NotKeyScoreList,'') <> '' or ISNULL(@NotAllowCalculating,'') <> '' OR ISNULL(@HaveWaitingTicket,'') <> '')
+	IF (ISNULL(@NotKeyScoreList,'') <> '' or ISNULL(@NotAllowCalculating,'') <> '' OR ISNULL(@HaveWaitingTicket,'') <> '') OR ISNULL(@NotExecutedFGLG,'') <> ''
 	BEGIN
 		SELECT   @ErrCode = 1001011
 				,@ErrMsg = 'All matches are being calculated, except following matches ' 
@@ -192,6 +220,10 @@ BEGIN
 								END 
 							+ CASE WHEN ISNULL(@HaveWaitingTicket, '') <> ''
 									THEN '(existing some PENDING tickets): ' + @HaveWaitingTicket
+									ELSE ''
+								END
+							+ CASE WHEN ISNULL(@NotExecutedFGLG, '') <> ''
+									THEN '(need to be executed "Calc FGLG"):' + @NotExecutedFGLG
 									ELSE ''
 								END
 	END
@@ -264,7 +296,10 @@ END
 
 
 
+
 GO
 GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_MP_Push] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_MP_Push] TO [vnteam] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_MP_Push] TO [vnteam] AS [dbo]
