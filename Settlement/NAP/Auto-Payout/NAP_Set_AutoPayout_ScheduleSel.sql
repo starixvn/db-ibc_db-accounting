@@ -42,6 +42,7 @@ BEGIN
 			, m.betstatus AS BetStatus
 			, m.GoalRecord
 			, mr.IsHTCal AS IsHalfTimeCalculated
+			, m.kickofftime
 		FROM dbo.match m WITH(NOLOCK)
 			INNER JOIN dbo.match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid
 			INNER JOIN dbo.League l WITH(NOLOCK) ON m.leagueid = l.leagueid
@@ -65,6 +66,7 @@ BEGIN
 							)
 	)t
 	WHERE IsConfirmed > 0
+	ORDER BY t.kickofftime, t.MatchId, t.TypeId
 END
 GO
 GRANT EXECUTE ON [dbo].[NAP_Set_AutoPayout_ScheduleSel] TO [bodbAdminNet] AS [dbo]
