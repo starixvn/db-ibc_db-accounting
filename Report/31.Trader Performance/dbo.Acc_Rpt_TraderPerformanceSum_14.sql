@@ -1,7 +1,7 @@
 USE [bodb02]
 GO
 
-ALTER PROCEDURE [dbo].[Acc_Rpt_TraderPerformance_Detail_bk]   
+ALTER PROCEDURE [dbo].[Acc_Rpt_TraderPerformanceSum_14]   
 	@FromDate	DATETIME,  
 	@ToDate		DATETIME,  
 	@IsSoccer	BIT = 1   
@@ -11,7 +11,7 @@ AS
 	Creator: Percy
 	Date: 2017-03-13
 	DB: DBACC.bodb02
-	Task: Trader Performance Report - Detail - bettrans_bk
+	Task: Trader Performance Report - Sum - bettrans14
 
 	Revisions:
 
@@ -24,22 +24,16 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
+	DECLARE @countMajorOrphan INT, @countMinor1Orphan INT, @countMinor2Orphan INT, @countMinor3Orphan INT, @countOthersOrphan INT
+  
 	CREATE TABLE #tmpData
 	(  
 		custid		INT,
 		username	VARCHAR(50),
-		leagueid	INT,
 		matchid		INT,
-		homeid		INT,
-		awayid		INT,
-		eventdate	DATETIME,
-		hthomescore	INT,
-		htawayscore	INT,
-		fthomescore	INT,
-		ftawayscore	INT,
 		bettype		SMALLINT,
-		IsNeutral	BIT,
-		OUtype		TINYINT
+		OUtype		TINYINT,
+		category	VARCHAR(10)
 	)
 
 	CREATE TABLE #bettrans
@@ -62,28 +56,16 @@ BEGIN
 		ToDate		DATETIME
 	)
 
-	DECLARE @temp_maxbet TABLE
-	(
-		matchid INT,
-		custid	INT,
-		maxbet	MONEY
-	) 
-
-	DECLARE @bettype TABLE
-	(
-		bettype		INT,
-		priority	INT
+	CREATE TABLE #userMatch
+	(  
+		custid INT PRIMARY KEY,  
+		nMatch INT,  
+		Major INT,
+		Minor1 INT,
+		Minor2 INT,
+		Minor3 INT,
+		Others INT
 	)
-
-	INSERT INTO @bettype 
-			SELECT 	1, 1
-	UNION SELECT 	7, 2
-	UNION SELECT 	3, 3
-	UNION SELECT 	8, 4
-	UNION SELECT 	5, 5
-	UNION SELECT 	15, 6
-	UNION SELECT 	2, 7
-	UNION SELECT 	12, 8
 
 	INSERT INTO #ExtraPTSportbook
 	SELECT SuperId, SUM(ExtraPT) AS ExtraPT, FromDate, ToDate
@@ -103,30 +85,18 @@ BEGIN
 	IF @IsSoccer = 1
 	BEGIN
 		INSERT INTO #tmpData
-		SELECT DISTINCT
-			c.custid,
-			c.username,
-			m.leagueid,
-			m.matchid,
-			m.homeid,
-			m.awayid,
-			m.eventdate,
-			m.hthomescore,
-			m.htawayscore,
-			m.finalhomescore,
-			m.finalawayscore,
-			CASE 
-				WHEN (operatortype = 1) AND (bettype = 1 OR bettype = 5) THEN 1
-				WHEN operatortype = 1 AND bettype = 4 THEN 2
-				WHEN operatortype = 1 AND bettype = 2 THEN 3
-				WHEN operatortype = 1 AND bettype = 3 THEN 5
-				WHEN operatortype = 2 AND bettype = 1 THEN 7
-				WHEN operatortype = 2 AND bettype = 2 THEN 8
-				WHEN operatortype = 2 AND bettype = 4 THEN 12
-				WHEN operatortype = 2 AND bettype = 3 THEN 15
-				ELSE 0 END bettype,
-			m.isNeutral,
-			CASE 
+		SELECT DISTINCT a.operatorid, username, m.matchID,  
+			CASE
+				WHEN (a.bettype = 1 OR a.bettype = 5) AND a.operatortype = 1 THEN 1
+				WHEN (a.bettype = 1 AND a.operatortype = 2) THEN 7
+				WHEN (a.bettype = 2 AND a.operatortype = 1) THEN 3
+				WHEN (a.bettype = 2 AND a.operatortype = 2) THEN 8
+				WHEN (a.bettype = 3 AND a.operatortype = 1) THEN 5
+				WHEN (a.bettype = 3 AND a.operatortype = 2) THEN 15
+				WHEN (a.bettype = 4 AND a.operatortype = 1) THEN 2
+				WHEN (a.bettype = 4 AND a.operatortype = 2) THEN 12        
+			ELSE 0 END,
+			CASE
 				WHEN leaguename LIKE '%SPECIFIC 15 MINS%' AND t.teamname LIKE '%No.of Corners%' THEN 6
 				WHEN t.teamname LIKE '%No.of Corners%' THEN 1
 				WHEN t.teamname LIKE '%Total Bookings' THEN 3
@@ -136,50 +106,39 @@ BEGIN
 				WHEN leaguename LIKE '%SPECIFIC 15 MINS%' THEN 2
 				WHEN leaguename LIKE '%SPECIFIC 10 MINS%' THEN 8
 				WHEN leaguename LIKE '%SINGLE TEAM OVER/UNDER%' AND (t.teamname LIKE '%Over' OR t.teamname LIKE '%Under') THEN 9
-				ELSE 0 END
+			ELSE 0 END,
+			l.category
 		FROM bodb_Archive.dbo.Dot_admin_Assignment_Operator_bk a WITH (NOLOCK)
-			INNER JOIN bodb_Archive.dbo.match_bk m WITH (NOLOCK) ON a.matchid = m.matchid
-			LEFT JOIN dbo.team t WITH (NOLOCK) ON m.homeid = t.teamid
 			INNER JOIN dbo.customer c WITH (NOLOCK) ON a.operatorid = c.custid
+			INNER JOIN dbo.match14 m WITH (NOLOCK) ON a.matchid = m.matchid
+			LEFT JOIN dbo.team t WITH (NOLOCK) ON m.homeid = t.teamid
 			INNER JOIN dbo.league l WITH (NOLOCK) ON m.leagueid = l.leagueid
-		WHERE
+		WHERE  
 			m.eventdate BETWEEN @FromDate AND @ToDate
 			AND m.eventstatus = 'completed'
 			AND m.sporttype = 1
-			AND a.operatortype < 3
 			AND m.matchcode NOT LIKE '%hedge%'
+			AND a.operatortype < 3
 
 		INSERT INTO #tmpData
-		SELECT
-			NULL,
-			NULL,
-			m.leagueid,
-			m.matchid,
-			m.homeid,
-			m.awayid,
-			m.eventdate,
-			m.hthomescore,
-			m.htawayscore,
-			m.finalhomescore,
-			m.finalawayscore,
-			0,
-			m.isNeutral,
-			CASE 
+		SELECT NULL, NULL, m.matchID, 0,
+			CASE
 				WHEN leaguename LIKE '%SPECIFIC 15 MINS%' AND t.teamname LIKE '%No.of Corners%' THEN 6
 				WHEN t.teamname LIKE '%No.of Corners%' THEN 1
 				WHEN t.teamname LIKE '%Total Bookings' THEN 3
-				WHEN t.teamname LIKE '%Booking' THEN 5
+				WHEN t.teamname LIKE '%Booking' THEN 5 
 				WHEN t.teamname LIKE '%Corner%' THEN 4
 				WHEN leaguename LIKE '%SPECIFIC 15 MINS TOTAL BOOKINGS%' THEN 7
 				WHEN leaguename LIKE '%SPECIFIC 15 MINS%' THEN 2
 				WHEN leaguename LIKE '%SPECIFIC 10 MINS%' THEN 8
 				WHEN leaguename LIKE '%SINGLE TEAM OVER/UNDER%' AND (t.teamname LIKE '%Over' OR t.teamname LIKE '%Under') THEN 9
-				ELSE 0 END
+				ELSE 0 END,
+			l.category
 		FROM bodb_Archive.dbo.Dot_admin_Assignment_Operator_bk a WITH (NOLOCK)
-			RIGHT JOIN bodb_Archive.dbo.match_bk m WITH (NOLOCK) ON a.matchid = m.matchid
-			LEFT JOIN dbo.team t WITH (NOLOCK) ON m.homeid = t.teamid
-			INNER JOIN dbo.league l WITH (NOLOCK) ON m.leagueid = l.leagueid
-		WHERE
+			RIGHT JOIN dbo.match14 m WITH (NOLOCK) ON a.matchid = m.matchid  
+			LEFT JOIN dbo.team t WITH (NOLOCK) ON m.homeid = t.teamid   
+			INNER JOIN dbo.league l WITH (NOLOCK) ON m.leagueid = l.leagueid  
+		WHERE  
 			m.eventdate BETWEEN @FromDate AND @ToDate
 			AND m.eventstatus = 'completed'
 			AND m.sporttype = 1
@@ -189,61 +148,36 @@ BEGIN
 	ELSE
 	BEGIN
 		INSERT INTO #tmpData
-		SELECT DISTINCT
-			c.custid,
-			c.username,
-			m.leagueid,
-			m.matchid,
-			m.homeid,
-			m.awayid,
-			m.eventdate,
-			m.hthomescore,
-			m.htawayscore,
-			m.finalhomescore,
-			m.finalawayscore,
-			CASE 
-				WHEN operatortype = 1 AND (bettype = 1 OR bettype = 5) THEN 1
-				WHEN operatortype = 1 AND bettype = 4 THEN 2
-				WHEN operatortype = 1 AND bettype = 2 THEN 3
-				WHEN operatortype = 1 AND bettype = 3 THEN 5
-				WHEN operatortype = 2 AND bettype = 1 THEN 7
-				WHEN operatortype = 2 AND bettype = 2 THEN 8
-				WHEN operatortype = 2 AND bettype = 4 THEN 12
-				WHEN operatortype = 2 AND bettype = 3 THEN 15
-				ELSE 0 END bettype
-			,m.isNeutral
-			,0
+		SELECT DISTINCT a.operatorid, username, m.matchID,  
+			CASE
+				WHEN (a.bettype = 1 OR a.bettype = 5) AND a.operatortype = 1 THEN 1
+				WHEN (a.bettype = 1 AND a.operatortype = 2) THEN 7
+				WHEN (a.bettype = 2 AND a.operatortype = 1) THEN 3
+				WHEN (a.bettype = 2 AND a.operatortype = 2) THEN 8
+				WHEN (a.bettype = 3 AND a.operatortype = 1) THEN 5
+				WHEN (a.bettype = 3 AND a.operatortype = 2) THEN 15
+				WHEN (a.bettype = 4 AND a.operatortype = 1) THEN 2
+				WHEN (a.bettype = 4 AND a.operatortype = 2) THEN 12        
+			ELSE 0 END,
+			0,
+			l.category
 		FROM bodb_Archive.dbo.Dot_admin_Assignment_Operator_bk a WITH (NOLOCK)
-			INNER JOIN bodb_Archive.dbo.match_bk m WITH (NOLOCK) ON a.matchid = m.matchid
 			INNER JOIN dbo.customer c WITH (NOLOCK) ON a.operatorid = c.custid
+			INNER JOIN dbo.match14 m WITH (NOLOCK) ON a.matchid = m.matchid
 			INNER JOIN dbo.league l WITH (NOLOCK) ON m.leagueid = l.leagueid
-		WHERE
+		WHERE  
 			m.eventdate BETWEEN @FromDate AND @ToDate
 			AND m.eventstatus = 'completed'
-			AND m.sporttype NOT IN (1, 161) -- exclude number game  
-			AND a.operatortype < 3
+			AND m.sporttype NOT IN (1, 161)
 			AND m.matchcode NOT LIKE '%hedge%'
+			AND a.operatortype < 3
 
 		INSERT INTO #tmpData
-		SELECT
-			NULL,
-			NULL,
-			m.leagueid,
-			m.matchid,
-			m.homeid,
-			m.awayid,
-			m.eventdate,
-			m.hthomescore,
-			m.htawayscore,
-			m.finalhomescore,
-			m.finalawayscore,
-			0,
-			m.isNeutral,
-			0
+		SELECT NULL, NULL, m.matchID, 0, 0, l.category
 		FROM bodb_Archive.dbo.Dot_admin_Assignment_Operator_bk a WITH (NOLOCK)
-			RIGHT JOIN bodb_Archive.dbo.match_bk m WITH (NOLOCK) ON a.matchid = m.matchid
-			INNER JOIN dbo.league l WITH (NOLOCK) ON m.leagueid = l.leagueid
-		WHERE
+			RIGHT JOIN dbo.match14 m WITH (NOLOCK) ON a.matchid = m.matchid  
+			INNER JOIN dbo.league l WITH (NOLOCK) ON m.leagueid = l.leagueid  
+		WHERE  
 			m.eventdate BETWEEN @FromDate AND @ToDate
 			AND m.eventstatus = 'completed'
 			AND m.sporttype NOT IN (1, 161)
@@ -251,18 +185,26 @@ BEGIN
 			AND a.matchid IS NULL
 	END
 
-	INSERT INTO @temp_maxbet(matchid, custid, maxbet)
-	SELECT t.matchid, t.custid, MAX(maxbet)
-	FROM bodb_Archive.dbo.MatchMaxbet_bk m WITH(NOLOCK)
-		INNER JOIN (
-			SELECT matchid, t.custid, MIN(b.priority) AS priority
-			FROM #tmpData t
-				INNER JOIN @bettype b ON t.bettype = b.bettype
-			GROUP BY t.matchid, t.custid
-		) t ON m.matchid = t.matchid 
-		INNER JOIN @bettype b ON b.priority = t.priority AND m.bettype = b.bettype
-	GROUP BY t.matchid, t.custid
-		
+	INSERT INTO #userMatch (custid, nMatch, Major, Minor1, Minor2, Minor3, Others) 
+	SELECT
+		custid,
+		ISNULL(Major, 0) + ISNULL(Minor1, 0) + ISNULL(Minor2, 0) + ISNULL(Minor3, 0) + ISNULL(Others, 0) AS nMatch,
+		ISNULL(Major, 0), ISNULL(Minor1, 0), ISNULL(Minor2, 0), ISNULL(Minor3, 0) ,ISNULL(Others, 0)
+	FROM
+	(
+		SELECT t.custid, ISNULL(t.category, 'Others') AS category, COUNT(DISTINCT t.matchID) AS cntMatch
+		FROM #tmpData t  
+			INNER JOIN dbo.bettrans14 b WITH (NOLOCK) ON b.matchid = t.matchid AND (b.bettype = t.bettype OR (b.bettype = 124 AND t.bettype = 5) OR (b.bettype = 125 AND t.bettype = 15))
+		WHERE b.liveindicator = 1
+			AND b.statusID NOT IN (101, 102, 103, 121, 111)   
+			AND b.currency <> 20
+		GROUP BY t.custid, ISNULL(t.category,'Others')
+	) AS s
+	PIVOT
+	(
+		SUM(s.cntMatch) FOR category IN (Major, Minor1, Minor2, Minor3, Others)
+	) p
+
 	INSERT INTO #bettrans
 	SELECT
 		matchid,
@@ -281,7 +223,7 @@ BEGIN
 				ELSE 0 END) AS stake_AfterExtraPT,
 		-SUM((winlost - actual_stake + CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm/(1 - tpositiontaking) END) * virtualrate * ISNULL(e.ExtraPT, 0)) AS memberwinlost_ExtraPT,
 		COUNT(1) AS bet
-	FROM bodb_Archive.dbo.bettrans_bk b WITH (NOLOCK)
+	FROM dbo.bettrans14 b WITH (NOLOCK)
 		LEFT JOIN #ExtraPTSportbook e ON b.srecommend = e.superId AND b.winlostdate BETWEEN e.FromDate AND e.ToDate
 	WHERE
 		statusID NOT IN (101, 102, 103, 121, 111)
@@ -292,15 +234,33 @@ BEGIN
 		AND currency <> 20
 	GROUP BY matchid, bettype
 
-	-- Return Data
+	;WITH CTE AS
+	(  
+		SELECT ISNULL(t.category, 'Others') AS category, COUNT(DISTINCT t.matchID) AS countOrphan
+		FROM #tmpData t
+			INNER JOIN dbo.bettrans14 b WITH (NOLOCK) ON b.matchid = t.matchid AND t.bettype = 0  
+		WHERE b.liveindicator = 1
+			AND b.statusID NOT IN (101, 102, 103, 121, 111)
+			AND b.currency <> 20
+		GROUP BY ISNULL(t.category, 'Others')
+	)
 	SELECT
-		a.custid, username, eventdate, leagueid, a.matchid, ISNULL(t.maxbet, 0) AS maxbet, homeid, awayid, IsNeutral, hthomescore, htawayscore, fthomescore, ftawayscore,
+		@countMajorOrphan = ISNULL(@countMajorOrphan, 0) + ISNULL(SUM(CASE WHEN category = 'Major' THEN countOrphan ELSE 0 END), 0),
+		@countMinor1Orphan = ISNULL(@countMinor1Orphan, 0) + ISNULL(SUM(CASE WHEN category = 'Minor1' THEN countOrphan ELSE 0 END), 0),
+		@countMinor2Orphan = ISNULL(@countMinor2Orphan, 0) + ISNULL(SUM(CASE WHEN category = 'Minor2' THEN countOrphan ELSE 0 END), 0),
+		@countMinor3Orphan = ISNULL(@countMinor3Orphan, 0) + ISNULL(SUM(CASE WHEN category = 'Minor3' THEN countOrphan ELSE 0 END), 0),
+		@countOthersOrphan = ISNULL(@countOthersOrphan, 0) + ISNULL(SUM(CASE WHEN category = 'Others' THEN countOrphan ELSE 0 END), 0)
+	FROM CTE
+	
+	-- Return Data
+	SELECT  
+		custid, username, matchno, Major, Minor1, Minor2, Minor3, Others,
 		-- turnover
 		stake_hdp, stake_ou, stake_1sthdp, stake_1stou, stake_1x2, stake_1st1x2, stake_oe, stake_1stoe, stake_1stNoOfCorners, stake_NoOfCorners, stake_15minhdp, stake_15minOU, stake_15min1x2, stake_1stTotalBookings,stake_TotalBookings,stake_NextCorner,  
 		stake_NextBooking, stake_15minCorners, stake_15minTotalBookings, stake_10minHdp, stake_10minOU, stake_10min1x2, stake_SingleTeamOU,
 		-- winloss
-		winlost_hdp, winlost_ou, winlost_1sthdp, winlost_1stou, winlost_1x2, winlost_1st1x2, winlost_oe, winlost_1stoe, winlost_1stNoOfCorners, winlost_NoOfCorners, winlost_15minhdp, winlost_15minOU,
-		winlost_15min1x2, winlost_1stTotalBookings, winlost_TotalBookings, winlost_NextCorner, winlost_NextBooking, winlost_15minCorners, winlost_15minTotalBookings, winlost_10minHdp, winlost_10minOU, winlost_10min1x2, winlost_SingleTeamOU,
+		winlost_hdp, winlost_ou, winlost_1sthdp, winlost_1stou, winlost_1x2, winlost_1st1x2, winlost_oe, winlost_1stoe, winlost_1stNoOfCorners, winlost_NoOfCorners, winlost_15minhdp, winlost_15minOU, winlost_15min1x2,
+		winlost_1stTotalBookings, winlost_TotalBookings, winlost_NextCorner, winlost_NextBooking, winlost_15minCorners, winlost_15minTotalBookings, winlost_10minHdp, winlost_10minOU, winlost_10min1x2, winlost_SingleTeamOU,
 		-- commission
 		comm_hdp, comm_ou, comm_1sthdp, comm_1stou, comm_1x2, comm_1st1x2, comm_oe, comm_1stoe, comm_1stNoOfCorners,comm_NoOfCorners, comm_15minhdp, comm_15minOU, comm_15min1x2, comm_1stTotalBookings,comm_TotalBookings,comm_NextCorner,  
 		comm_NextBooking, comm_15minCorners, comm_15minTotalBookings, comm_10minHdp, comm_10minOU, comm_10min1x2, comm_SingleTeamOU,
@@ -308,7 +268,7 @@ BEGIN
 		stake_1sthdp + stake_hdp + stake_1stou + stake_ou + stake_1x2 + stake_1st1x2 + stake_oe + stake_1stoe + stake_1stNoOfCorners + stake_NoOfCorners + stake_15minhdp + stake_15minOU + stake_15min1x2 + stake_1stTotalBookings + stake_TotalBookings+ stake_NextCorner 
 		+ stake_NextBooking + stake_15minCorners + stake_15minTotalBookings + stake_10minHdp + stake_10minOU + stake_10min1x2 + stake_SingleTeamOU AS overall_st,  
    
-		winlost_1sthdp + winlost_hdp + winlost_1stou + winlost_ou +  winlost_1x2 + winlost_1st1x2 + winlost_oe + winlost_1stoe + winlost_1stNoOfCorners + winlost_NoOfCorners + winlost_15minhdp + winlost_15minOU + winlost_15min1x2 + winlost_1stTotalBookings + winlost_TotalBookings+ winlost_NextCorner
+		winlost_1sthdp + winlost_hdp + winlost_1stou + winlost_ou +  winlost_1x2 + winlost_1st1x2 + winlost_oe + winlost_1stoe + winlost_1stNoOfCorners +winlost_NoOfCorners + winlost_15minhdp + winlost_15minOU + winlost_15min1x2 + winlost_1stTotalBookings + winlost_TotalBookings+ winlost_NextCorner
 		+ winlost_NextBooking + winlost_15minCorners + winlost_15minTotalBookings + winlost_10minHdp + winlost_10minOU + winlost_10min1x2 + winlost_SingleTeamOU AS overall_wl,  
      
 		comm_1sthdp + comm_hdp + comm_1stou + comm_ou + comm_1x2 + comm_1st1x2 + comm_oe + comm_1stoe + comm_1stNoOfCorners +comm_NoOfCorners + comm_15minhdp + comm_15minOU + comm_15min1x2 + comm_1stTotalBookings + comm_TotalBookings + comm_NextCorner
@@ -337,13 +297,11 @@ BEGIN
 		(winlost_10minOU)/(CASE WHEN ISNULL(ROUND(stake_10minOU,4),0) = 0 THEN 1 ELSE stake_10minOU END) AS margin_10minOU,
 		(winlost_10min1x2)/(CASE WHEN ISNULL(ROUND(stake_10min1x2,4),0) = 0 THEN 1 ELSE stake_10min1x2 END) AS margin_10min1x2,
 		(winlost_SingleTeamOU)/(CASE WHEN ISNULL(ROUND(stake_SingleTeamOU,4),0) = 0 THEN 1 ELSE stake_SingleTeamOU END) AS margin_SingleTeamOU,
-   
-		(winlost_1sthdp + winlost_hdp + winlost_1stou + winlost_ou + winlost_1x2 + winlost_1st1x2 + winlost_oe + winlost_1stoe + winlost_1stNoOfCorners + winlost_NoOfCorners + winlost_15minhdp + winlost_15minOU + winlost_15min1x2 + winlost_1stTotalBookings + winlost_TotalBookings + winlost_NextCorner
-		+ winlost_NextBooking + winlost_15minCorners + winlost_15minTotalBookings + winlost_10minHdp + winlost_10minOU + winlost_10min1x2 + winlost_SingleTeamOU)
+		(winlost_1sthdp + winlost_hdp + winlost_1stou + winlost_ou + winlost_1x2 + winlost_1st1x2 + winlost_oe + winlost_1stoe + winlost_1stNoOfCorners + winlost_NoOfCorners + winlost_15minhdp + winlost_15minOU + winlost_15min1x2 + winlost_1stTotalBookings + winlost_TotalBookings + winlost_NextCorner) 
 		/(CASE WHEN ROUND((ISNULL(stake_1sthdp,0) + ISNULL(stake_hdp,0) + ISNULL(stake_1stou,0) + ISNULL(stake_ou,0) + ISNULL(stake_1x2,0) + ISNULL(stake_1st1x2,0) + ISNULL(stake_oe,0) + ISNULL(stake_1stoe,0) + ISNULL(stake_1stNoOfCorners,0) + ISNULL(stake_NoOfCorners,0) + ISNULL(stake_15minhdp,0) + ISNULL(stake_15minOU,0) + ISNULL(stake_15min1x2,0) + ISNULL(stake_1stTotalBookings,0) + ISNULL(stake_TotalBookings,0)+ ISNULL(stake_NextCorner,0)
 										+ ISNULL(stake_NextBooking,0) + ISNULL(stake_15minCorners,0) + ISNULL(stake_15minTotalBookings,0) + ISNULL(stake_10minHdp,0) + ISNULL(stake_10minOU,0) + ISNULL(stake_10min1x2,0) + ISNULL(stake_SingleTeamOU,0)),4) = 0 THEN 1   
 		ELSE (ISNULL(stake_1sthdp,0) + ISNULL(stake_hdp,0) + ISNULL(stake_1stou,0) +ISNULL(stake_ou,0) + ISNULL(stake_1x2,0) + ISNULL(stake_1st1x2,0) + ISNULL(stake_oe,0)+ ISNULL(stake_1stoe,0)+ ISNULL(stake_1stNoOfCorners,0) +ISNULL(stake_NoOfCorners,0)+ ISNULL(stake_15minhdp,0) + ISNULL(stake_15minOU,0) + ISNULL(stake_15min1x2,0)  + ISNULL(stake_1stTotalBookings,0) + ISNULL(stake_TotalBookings,0) + ISNULL(stake_NextCorner,0) 
-										+ ISNULL(stake_NextBooking,0) + ISNULL(stake_15minCorners,0) + ISNULL(stake_15minTotalBookings,0) + ISNULL(stake_10minHdp,0) + ISNULL(stake_10minOU,0) + ISNULL(stake_10min1x2,0) + ISNULL(stake_SingleTeamOU,0)) END) AS overall_margin,  
+										+ ISNULL(stake_NextBooking,0) + ISNULL(stake_15minCorners,0) + ISNULL(stake_15minTotalBookings,0) + ISNULL(stake_10minHdp,0) + ISNULL(stake_10minOU,0) + ISNULL(stake_10min1x2,0) + ISNULL(stake_SingleTeamOU,0)) END) AS overall_margin ,  
      
 		bet_hdp, bet_ou, bet_1sthdp, bet_1stou, bet_1x2, bet_1st1x2, bet_oe, bet_1stoe, bet_1stNoOfCorners, bet_NoOfCorners, bet_15minhdp, bet_15minOU, bet_15min1x2, bet_1stTotalBookings, bet_TotalBookings, bet_NextCorner,
 		bet_NextBooking, bet_15minCorners, bet_15minTotalBookings, bet_10minHdp, bet_10minOU, bet_10min1x2, bet_SingleTeamOU,  
@@ -351,7 +309,7 @@ BEGIN
 		+ bet_NextBooking + bet_15minCorners + bet_15minTotalBookings + bet_10minHdp + bet_10minOU + bet_10min1x2 + bet_SingleTeamOU AS overall_livebet  
 	FROM
 	(
-		SELECT t.custid, t.username, t.eventdate, t.leagueid, t.matchid,t.homeid, t.awayid, t.hthomescore, t.htawayscore, t.fthomescore, t.ftawayscore, t.IsNeutral,
+		SELECT t.custid, t.username, nMatch AS matchno, Major, Minor1, Minor2, Minor3, Others,
 			-- turn over
 			SUM(CASE WHEN b.bettype = 1 AND OUtype = 0 THEN stake_AfterExtraPT ELSE 0 END) AS stake_hdp,
 			SUM(CASE WHEN b.bettype = 2 THEN stake_AfterExtraPT ELSE 0 END) AS stake_oe,
@@ -423,7 +381,7 @@ BEGIN
 			SUM(CASE WHEN b.bettype = 1 AND OUtype = 8  THEN comm ELSE 0 END) AS comm_10minHdp,
 			SUM(CASE WHEN b.bettype = 3 AND OUtype = 8  THEN comm ELSE 0 END) AS comm_10minOU,
 			SUM(CASE WHEN b.bettype = 5 AND OUtype = 8  THEN comm ELSE 0 END) AS comm_10min1x2,
-			SUM(CASE WHEN b.bettype IN (3, 8) AND OUtype = 9 THEN comm ELSE 0 END) AS comm_SingleTeamOU,  
+			SUM(CASE WHEN b.bettype IN (3, 8) AND OUtype = 9 THEN comm ELSE 0 END) AS comm_SingleTeamOU,
 			-- betcount      
 			SUM(CASE WHEN b.bettype = 1 AND OUtype = 0 THEN bet ELSE 0 END) AS bet_hdp,  
 			SUM(CASE WHEN b.bettype = 2 THEN bet ELSE 0 END) AS bet_oe,  
@@ -450,10 +408,11 @@ BEGIN
 			SUM(CASE WHEN b.bettype IN (3, 8) AND OUtype = 9 THEN bet ELSE 0 END) AS bet_SingleTeamOU
 		FROM #bettrans b
 			INNER JOIN #tmpData t ON b.matchid = t.matchid AND (b.bettype = t.bettype OR (b.bettype = 124 AND t.bettype = 5) OR (b.bettype = 125 AND t.bettype = 15))
-		GROUP BY t.custid, t.username, t.eventdate, t.leagueid, t.matchid, t.homeid, t.awayid, t.hthomescore, t.htawayscore, t.fthomescore, t.ftawayscore, t.IsNeutral
+			INNER JOIN #userMatch um ON um.custid = t.custid
+		GROUP BY t.custid, t.username, um.nMatch, Major, Minor1, Minor2, Minor3, Others
 		
 		UNION ALL  
-		SELECT 0, '(unassigned)', t.eventdate, t.leagueid, t.matchid, t.homeid, t.awayid, t.hthomescore, t.htawayscore, t.fthomescore, t.ftawayscore, t.IsNeutral,
+		SELECT 0, '(unassigned)', ISNULL(@countMajorOrphan, 0) + ISNULL(@countMinor1Orphan, 0) + ISNULL(@countMinor2Orphan, 0) + ISNULL(@countMinor3Orphan, 0) + ISNULL(@countOthersOrphan, 0) AS matchno, ISNULL(@countMajorOrphan, 0) Major, ISNULL(@countMinor1Orphan, 0), ISNULL(@countMinor2Orphan, 0), ISNULL(@countMinor3Orphan, 0), ISNULL(@countOthersOrphan, 0),
 			-- turn over
 			SUM(CASE WHEN b.bettype = 1 AND OUtype = 0 THEN stake_AfterExtraPT ELSE 0 END) AS stake_hdp,
 			SUM(CASE WHEN b.bettype = 2 THEN stake_AfterExtraPT ELSE 0 END) AS stake_oe,
@@ -525,7 +484,7 @@ BEGIN
 			SUM(CASE WHEN b.bettype = 1 AND OUtype = 8  THEN comm ELSE 0 END) AS comm_10minHdp,
 			SUM(CASE WHEN b.bettype = 3 AND OUtype = 8  THEN comm ELSE 0 END) AS comm_10minOU,
 			SUM(CASE WHEN b.bettype = 5 AND OUtype = 8  THEN comm ELSE 0 END) AS comm_10min1x2,
-			SUM(CASE WHEN b.bettype IN (3, 8) AND OUtype = 9 THEN comm ELSE 0 END) AS comm_SingleTeamOU,  
+			SUM(CASE WHEN b.bettype IN (3, 8) AND OUtype = 9 THEN comm ELSE 0 END) AS comm_SingleTeamOU,
 			-- betcount      
 			SUM(CASE WHEN b.bettype = 1 AND OUtype = 0 THEN bet ELSE 0 END) AS bet_hdp,  
 			SUM(CASE WHEN b.bettype = 2 THEN bet ELSE 0 END) AS bet_oe,  
@@ -552,16 +511,16 @@ BEGIN
 			SUM(CASE WHEN b.bettype IN (3, 8) AND OUtype = 9 THEN bet ELSE 0 END) AS bet_SingleTeamOU
 		FROM #bettrans b      
 			INNER JOIN #tmpData t ON b.matchid = t.matchid AND t.bettype = 0     
-		GROUP BY t.eventdate, t.leagueid, t.matchid, t.homeid, t.awayid, t.hthomescore, t.htawayscore, t.fthomescore, t.ftawayscore, t.IsNeutral
 	) AS A
-		LEFT JOIN @temp_maxbet t ON a.matchid = t.matchid AND a.custid = t.custid
-	ORDER BY username, eventdate, leagueid, matchid
-
+	ORDER BY username
+    
 	DROP TABLE #bettrans
 	DROP TABLE #tmpData
+	DROP TABLE #userMatch
 	DROP TABLE #ExtraPTSportbook
 END
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_TraderPerformance_Detail_bk] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_TraderPerformanceSum_14] TO [bodbAdminNet]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_TraderPerformance_Detail_bk] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_TraderPerformanceSum_14] TO [vnteam]
+GO
