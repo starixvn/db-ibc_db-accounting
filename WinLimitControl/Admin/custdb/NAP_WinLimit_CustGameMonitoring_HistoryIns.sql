@@ -16,12 +16,12 @@ GO
 SET QUOTED_IDENTIFIER ON;
 GO
 CREATE PROCEDURE [dbo].[NAP_WinLimit_CustGameMonitoring_HistoryIns] @CustId       INT,
-                                                                    @ProductId    INT,
-                                                                    @BetTypeId    INT,
-                                                                    @ActionId     INT,
-                                                                    @UserId       INT,
-                                                                    @ErrorCode    INT           = 0 OUTPUT,
-                                                                    @ErrorMessage NVARCHAR(500) = '' OUTPUT
+                                                                          @ProductId    INT,
+                                                                          @GroupId      INT,
+                                                                          @ActionId     INT,
+                                                                          @UserId       INT,
+                                                                          @ErrorCode    INT           = 0 OUTPUT,
+                                                                          @ErrorMessage NVARCHAR(500) = '' OUTPUT
 AS
 	
 /*
@@ -32,7 +32,7 @@ Task: #38608 - Implement function to control Player's Win Limit on specific Prod
 DB: DBCust/CustDB
 
 Revisions:
-
+20170321@Jacob: Risk & Control - Phase 3A [#72604].  
 Parameters Explanation:	
 EXEC [NAP_WinLimit_CustGameMonitoring_HistoryIns] 
    @CustId = 662531, 
@@ -49,6 +49,7 @@ EXEC [NAP_WinLimit_CustGameMonitoring_HistoryIns]
         INSERT INTO dbo.WinLimit_CustGameMonitoring_History
         (CustID,
          ProductID,
+         GroupId,
          BettypeID,
          WinlostDate,
          LevelID,
@@ -63,7 +64,8 @@ EXEC [NAP_WinLimit_CustGameMonitoring_HistoryIns]
         )
                SELECT TOP 1 CustID,
                             ProductID,
-                            BettypeID,
+                            GroupId,
+                            0,
                             WinlostDate,
                             LevelID,
                             MaxWinLimit,
@@ -77,7 +79,7 @@ EXEC [NAP_WinLimit_CustGameMonitoring_HistoryIns]
                FROM dbo.WinLimit_CustGameMonitoring
                WHERE CustId = @CustId
                      AND ProductId = @ProductId
-                     AND BetTypeId = @BetTypeId
+                     AND GroupId = @GroupId
                ORDER BY ModifiedDate DESC;
     END TRY
     BEGIN CATCH

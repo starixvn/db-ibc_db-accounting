@@ -46,8 +46,7 @@ EXEC [NAP_WinLimit_HistorySel] @ProductId = 4, @CustId = 1368173
      END;
      BEGIN -- temp table data
          CREATE TABLE #WinLimitHistory
-         (BetTypeId          INT,
-          GroupId            INT,
+         (GroupId            INT,
           ReachedLimitLevel  SMALLINT,
           TotalWinAmount     MONEY,
           TotalWinAmountRM   MONEY,
@@ -58,8 +57,7 @@ EXEC [NAP_WinLimit_HistorySel] @ProductId = 4, @CustId = 1368173
           CreatedBy          INT
          );
          INSERT INTO #WinLimitHistory
-         (BetTypeId,
-          GroupId,
+         (GroupId,
           ReachedLimitLevel,
           TotalWinAmount,
           TotalWinAmountRM,
@@ -69,8 +67,7 @@ EXEC [NAP_WinLimit_HistorySel] @ProductId = 4, @CustId = 1368173
           ModifiedBy,
           CreatedBy
          )
-                SELECT h.BetTypeId,
-                       gs.GroupId,
+                SELECT h.GroupId,
                        h.LevelID,
                        h.TotalWinAmt,
                        h.TotalWinAmt_RM,
@@ -80,15 +77,12 @@ EXEC [NAP_WinLimit_HistorySel] @ProductId = 4, @CustId = 1368173
                        h.ModifiedBy,
                        h.CreatedBy
                 FROM dbo.WinLimit_CustGameMonitoring_History h WITH (NOLOCK)
-                     INNER JOIN dbo.WinLimit_GameGroupSetting gs WITH (NOLOCK) ON h.BettypeID = gs.BetTypeID
-                                                                                  AND h.ProductID = gs.ProductID
                      INNER JOIN dbo.Winlimit_ActionSetting a WITH (NOLOCK) ON a.ActionID = h.ActionID
                 WHERE h.ProductID = @ProductId
                       AND h.CustID = @CustId;
      END;
      BEGIN -- Query data
          SELECT h.GroupId,
-                h.BetTypeId,
                 h.ModifiedDate,
                 h.MaxWinLimitSetting,
                 h.TotalWinAmount,
