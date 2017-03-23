@@ -4,7 +4,7 @@ GO
 ALTER PROCEDURE [dbo].[Acc_Rpt_NonSportsProductStatistics_Daily]
 	@WinlostDate	DATETIME,
 	@ProductId		VARCHAR(MAX) = '',
-	@Username		VARCHAR(50) = '',
+	@Username		VARCHAR(MAX) = NULL,
 	@Site			VARCHAR(MAX) = 'ALL',	
 	@BetType		VARCHAR(MAX) = '',
 	@LeagueId		VARCHAR(MAX) = '',
@@ -30,6 +30,7 @@ AS
 	DB:		DBACC/bodb02
 	Original: Acc_Rpt_CasinoGameStatistics_GameType_bettrans
 	Revisions:
+		- 20170227@Percy: support search multiple username [RedmineID: #71342]
 
 	Param's Explanation:
 			 - @username:  + Search by keyword, member only
@@ -68,6 +69,49 @@ AS
 
 BEGIN 
 SET NOCOUNT ON 
+
+	DECLARE @CustList VARCHAR(MAX)
+	
+	IF CHARINDEX(',', @Username) <> 0
+	BEGIN
+		EXEC dbo.Acc_CustomerSelCustByUsernameList @Username = @Username, @RoleId = 1, @CustList = @CustList OUTPUT
+
+		IF @CustList IS NULL -- invalid username
+		BEGIN
+			SELECT TOP 0 *
+			FROM (
+				SELECT
+					NULL AS ReportById,
+					NULL AS ReportBy,
+					NULL AS NoOfPlayers,
+					NULL AS BetCount,
+					NULL AS CurrencyId,
+					NULL AS Currency,
+					NULL AS TotalBets,
+					NULL AS TotalWins,
+					NULL AS TotalRefund,
+					NULL AS CompanyTurnover,
+					NULL AS CompanyGrossIncome,
+					NULL AS CompanyComm
+			) A
+		
+			-- Grand Total
+			SELECT
+				NULL AS ReportBy,
+				NULL AS NoOfPlayers,
+				NULL AS BetCount,
+				NULL AS CurrencyId,
+				NULL AS Currency,
+				NULL AS TotalBets,
+				NULL AS TotalWins,
+				NULL AS TotalRefund,
+				NULL AS CompanyTurnover,
+				NULL AS CompanyGrossIncome,
+				NULL AS CompanyComm
+
+			RETURN
+		END
+	END
 
 	DECLARE @WLDate DATETIME , @IsMBC BIT, @IsSite BIT
 	SELECT @WLDate = @WinlostDate
@@ -121,15 +165,13 @@ SET NOCOUNT ON
     )
 	CREATE TABLE #tmpDevice (
         Betfrom NVARCHAR(2)
-    )	 
+    )
 
 	IF @ProductID <> ''
     BEGIN
 		INSERT INTO #tmpProductID (ProductID)
 		SELECT val FROM [dbo].strSplit(@ProductID, ',')
 	END
-	
-
 
 	IF @Bettype <> ''
     BEGIN
@@ -161,6 +203,28 @@ SET NOCOUNT ON
 		SELECT val FROM [dbo].strSplit(@Device, ',')
 	END
 	
+	IF @Username <> ''
+	BEGIN
+		IF @CustList IS NOT NULL
+		BEGIN
+			INSERT INTO #Temp_MemIDs (CustID)
+			SELECT val FROM dbo.strSplit(@CustList, ',')
+		END
+		ELSE
+		BEGIN
+			INSERT INTO #Temp_MemIDs (CustID)
+			SELECT custid
+			FROM dbo.Customer WITH(NOLOCK)
+			WHERE username LIKE @Username + '%' AND roleid = 1
+
+			IF @Username NOT LIKE '%[^0-9]%' AND LEN(@Username) < 10
+			BEGIN
+			INSERT INTO #Temp_MemIDs (CustID)
+			SELECT cu.custid FROM dbo.Customer cu WITH(NOLOCK) WHERE cu.custid = @Username AND cu.roleid = 1
+				AND NOT EXISTS (SELECT 1 FROM #Temp_MemIDs c WHERE cu.custid = c.custid)
+			END
+		END
+	END
 
 	------Get Sport Bettype Matrix------
 	 -- Check SP Version	 
@@ -184,16 +248,7 @@ SET NOCOUNT ON
 			AND NOT EXISTS (SELECT Bettype FROM #tmpBetType b WHERE b.Bettype = s.Bettype)
 
 
-	--- End Sport Bettype Matrix------		
-
-	IF (@Username <> '')
-    BEGIN
-        INSERT INTO #Temp_MemIDs (CustID)
-            SELECT	Custid
-            FROM	dbo.CustInfo WITH (NOLOCK)
-            WHERE	Username LIKE + @Username + '%'
-					AND Roleid = 1
-    END
+	--- End Sport Bettype Matrix------
 
 	------Get Site
 	SELECT @IsMBC = 0

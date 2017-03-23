@@ -4,7 +4,7 @@ GO
 ALTER PROCEDURE [dbo].[Acc_Rpt_NonSportsProductStatistics_Currency_14]
 	@WinlostDate	DATETIME,
 	@ProductId		VARCHAR(MAX) = '',
-	@Username		VARCHAR(50) = '',
+	@Username		VARCHAR(MAX) = NULL,
 	@Site			VARCHAR(MAX) = 'ALL',	
 	@BetType		VARCHAR(MAX) = '',
 	@LeagueId		VARCHAR(MAX) = '',
@@ -20,7 +20,7 @@ ALTER PROCEDURE [dbo].[Acc_Rpt_NonSportsProductStatistics_Currency_14]
 	@HousePTType	SMALLINT = 0,
 	@HousePTValue   MONEY = 0,
 	@DrillDownCurrency	SMALLINT = 0,
-	@IsGrandTotal	BIT = 0 -- dont need to use in this report
+	@IsGrandTotal	BIT = 0 -- don't need to use in this report
 AS
 /*
 	Created	: 20161114@Harper
@@ -28,6 +28,7 @@ AS
 	DB		: DBACC/bodb02
 	
 	Revision:
+		- 20170227@Percy: support search multiple username [RedmineID: #71342]
 
 	Param's Explanation:
 		- @Username:  + Search by keyword, member only
@@ -70,6 +71,48 @@ AS
 */
 BEGIN
 	SET NOCOUNT ON
+
+	DECLARE @CustList VARCHAR(MAX)
+
+	IF CHARINDEX(',', @Username) <> 0
+	BEGIN
+		EXEC dbo.Acc_CustomerSelCustByUsernameList @Username = @Username, @RoleId = 1, @CustList = @CustList OUTPUT
+
+		IF @CustList IS NULL -- invalid username
+		BEGIN
+			SELECT TOP 0 *
+			FROM (
+				SELECT
+					NULL AS Reportby,
+					NULL AS Currency,
+					NULL AS CurrencyID,
+					NULL AS NoOfPlayers,
+					NULL AS BetCount,
+					NULL AS TotalBets,
+					NULL AS TotalWins,
+					NULL AS TotalRefund,
+					NULL AS CompanyTurnOver,
+					NULL AS CompanyGrossIncome,
+					NULL AS CompanyComm
+			) A
+
+			-- grand total
+			SELECT
+				'Grand Total RM' AS ReportBy,
+				'RM' AS Currency,
+				0 AS CurrencyID,
+				NULL AS NoOfPlayers,
+				NULL AS BetCount,
+				NULL AS TotalBets,
+				NULL AS TotalWins,
+				NULL AS TotalRefund,
+				NULL AS CompanyTurnOver,
+				NULL AS CompanyGrossIncome,
+				NULL AS CompanyComm
+
+			RETURN
+		END
+	END
 	
 	DECLARE @WLDate DATETIME
 	SELECT @WLDate = @WinlostDate
@@ -115,7 +158,7 @@ BEGIN
 	CREATE TABLE #tmp_GameTableID	(GameTableID INT)
 	CREATE TABLE #tmp_Devide		(Betfrom NVARCHAR(2))
 	CREATE TABLE #tmp_Site			(Site VARCHAR(50))
-	CREATE TABLE #tmp_MemIDs		(CustID INT)	
+	CREATE TABLE #tmp_MemIDs		(CustID INT)
 
 	-- Get Info from Pars list
 	IF @ProductId <> ''
@@ -158,10 +201,25 @@ BEGIN
 	-- Get Cust Info
 	IF @Username <> ''
 	BEGIN
-		INSERT INTO #tmp_MemIDs (CustID)
-		SELECT custid 
-		FROM dbo.custInfo WITH (NOLOCK)
-		WHERE username LIKE + @Username + '%' AND roleid = 1
+		IF @CustList IS NOT NULL
+		BEGIN
+			INSERT INTO #tmp_MemIDs (CustID)
+			SELECT val FROM dbo.strSplit(@CustList, ',')
+		END
+		ELSE
+		BEGIN
+			INSERT INTO #tmp_MemIDs (CustID)
+			SELECT custid
+			FROM dbo.Customer WITH(NOLOCK)
+			WHERE username LIKE @Username + '%' AND roleid = 1
+
+			IF @Username NOT LIKE '%[^0-9]%' AND LEN(@Username) < 10
+			BEGIN
+			INSERT INTO #tmp_MemIDs (CustID)
+			SELECT cu.custid FROM dbo.Customer cu WITH(NOLOCK) WHERE cu.custid = @Username AND cu.roleid = 1
+				AND NOT EXISTS (SELECT 1 FROM #tmp_MemIDs c WHERE cu.custid = c.custid)
+			END
+		END
 	END
 	-- End Cust Info
 

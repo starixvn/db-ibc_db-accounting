@@ -4,7 +4,7 @@ GO
 ALTER PROCEDURE [dbo].[Acc_Rpt_NonSportsProductStatistics_Top20_14]
 	@WinlostDate	DATETIME,
 	@ProductId		VARCHAR(MAX) = '',
-	@Username		VARCHAR(5000) = '',
+	@Username		VARCHAR(MAX) = NULL,
 	@TopType		TINYINT = 0,
 	@Site			VARCHAR(MAX) = 'ALL',	
 	@BetType		VARCHAR(MAX) = '',
@@ -31,6 +31,7 @@ AS
 	Task: Risk and Control - Non-Sport Game Statistics Report - Report by Super/Master/Agent/Username
 
 	Revisions:
+		- 20170227@Percy: support search multiple username [RedmineID: #71342]
 
 	Param's Explanation:
 		- @username: search keyword
@@ -64,8 +65,58 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	DECLARE @WLDate DATETIME, @UName VARCHAR(5000), @UrsName VARCHAR(5000)
-	SELECT  @WLDate = @WinlostDate, @UrsName = @Username
+	DECLARE @CustList VARCHAR(MAX)
+
+	IF (@TopType <> 0 OR @IsDrillDown <> 1) AND CHARINDEX(',', @Username) <> 0
+	BEGIN
+		EXEC dbo.Acc_CustomerSelCustByUsernameList @Username = @Username, @RoleId = 1, @CustList = @CustList OUTPUT
+
+		IF @CustList IS NULL -- invalid username
+		BEGIN
+			SELECT TOP 0 *
+			FROM (
+				SELECT
+					NULL AS TopType,
+					NULL AS ReportById,
+					NULL AS ReportBy,
+					NULL AS RoleId,
+					NULL AS RoleName,
+					NULL AS BetCount,
+					NULL AS NoOfPlayers,
+					NULL AS CurrencyId,
+					NULL AS Currency,
+					NULL AS TotalBets,
+					NULL AS TotalWins,
+					NULL AS TotalRefund,
+					NULL AS CompanyTurnover,
+					NULL AS CompanyGrossIncome,
+					NULL AS CompanyComm,
+					NULL AS HousePositionTaking
+			) A
+
+			-- GrandTotal
+			IF @IsGrandTotal = 1 OR @TopType <> 0 OR @IsDrillDown = 1
+			BEGIN
+				SELECT
+					NULL AS ReportBy,
+					NULL AS BetCount,
+					NULL AS NoOfPlayers,
+					NULL AS CurrencyId,
+					NULL AS Currency,
+					NULL AS TotalBets,
+					NULL AS TotalWins,
+					NULL AS TotalRefund,
+					NULL AS CompanyTurnover,		
+					NULL AS CompanyGrossIncome,
+					NULL AS CompanyComm
+			END
+
+			RETURN
+		END
+	END
+
+	DECLARE @WLDate DATETIME
+	SELECT  @WLDate = @WinlostDate
 
 	CREATE TABLE #tmp_ProductID		(ProductID TINYINT)
 	CREATE TABLE #tmp_BetType		(Bettype SMALLINT)
@@ -140,10 +191,6 @@ BEGIN
 	CREATE TABLE #tmp_Site (Site VARCHAR(50))
 	CREATE TABLE #tmp_Company (SiteName VARCHAR(50), srecommend INT)
 	CREATE TABLE #tmp_MemIDs (CustID INT PRIMARY KEY, roleID TINYINT)
-	
-	SELECT  @UrsName = LTRIM(RTRIM(@UrsName))
-	SELECT  @UName = '''' + REPLACE(@UrsName, ',', ''',''') + ''''
-	DECLARE @SQL NVARCHAR(MAX)
 
 	DECLARE @CID INT, @IsFilterCust BIT
 	SELECT  @IsFilterCust = 0
@@ -152,24 +199,37 @@ BEGIN
 	
 	IF @TopType = 0 AND @IsDrillDown = 1 -- click associated accounts link
 	BEGIN
-		SELECT  @SQL = N'INSERT INTO #CustUser (CustID, roleID)
-						SELECT custid, roleid FROM dbo.Customer WITH(NOLOCK)
-						WHERE username IN (' + @UName + ')'
-		EXEC (@SQL)
+		INSERT INTO #CustUser (CustID, roleID)
+		SELECT custid, roleid FROM dbo.Customer c WITH(NOLOCK)
+		WHERE EXISTS (SELECT 1 FROM dbo.strSplit(@Username, ',') u WHERE u.val = c.username)
 
 		SELECT @IsFilterCust = 1
 	END
-	ELSE
+	ELSE IF @Username <> ''
 	BEGIN
-		IF @UrsName <> ''
+		IF @CustList IS NOT NULL
 		BEGIN
 			INSERT INTO #CustUser (CustID)
-			SELECT custid FROM dbo.Customer WITH(NOLOCK) WHERE username LIKE @UrsName + '%' AND roleid = 1
-
-			SELECT @IsFilterCust = 1
+			SELECT val FROM dbo.strSplit(@CustList, ',')
 		END
+		ELSE
+		BEGIN
+			INSERT INTO #CustUser (CustID)
+			SELECT custid
+			FROM dbo.Customer WITH(NOLOCK)
+			WHERE username LIKE @Username + '%' AND roleid = 1
+
+			IF @Username NOT LIKE '%[^0-9]%' AND LEN(@Username) < 10
+			BEGIN
+			INSERT INTO #CustUser (CustID)
+			SELECT cu.custid FROM dbo.Customer cu WITH(NOLOCK) WHERE cu.custid = @Username AND cu.roleid = 1
+				AND NOT EXISTS (SELECT 1 FROM #CustUser c WHERE cu.custid = c.custid)
+			END
+		END
+
+		SELECT @IsFilterCust = 1
 	END
-	
+
 	IF @Site <> 'ALL'
 	BEGIN
 		SELECT @IsFilterCust = 1
@@ -196,7 +256,7 @@ BEGIN
 			WHERE c.roleid = 4 AND ss.isDeposit = 1
 		END
 
-		IF @UrsName <> ''
+		IF @Username <> ''
 		BEGIN
 			IF @IsDrillDown = 0 OR @TopType <> 0
 			BEGIN
@@ -237,7 +297,7 @@ BEGIN
 	END
 	ELSE
 	BEGIN
-		IF @UrsName <> ''
+		IF @Username <> ''
 		BEGIN
 			SELECT @IsFilterCust = 1
 
