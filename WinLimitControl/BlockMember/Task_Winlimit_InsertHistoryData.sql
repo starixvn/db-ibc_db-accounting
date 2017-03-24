@@ -1,3 +1,8 @@
+/*<info serverAlias="DBCUST-CUSTDB" executers="" viewers="vnteam" isFunction="0"></info>*/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE dbo.Task_Winlimit_InsertHistoryData @XmlData NVARCHAR(MAX)
 AS
 /*   
@@ -5,6 +10,8 @@ AS
 	Task : Winlimit - Insert history data
 	DB: DBCUST/CUSTDB
 	Revisions:
+		- 20170321@Helen: NAP Risk & Control - Phase 3A [Redmine: 72604]
+		
 	Param's Explanation:
 		
 */
@@ -17,7 +24,7 @@ BEGIN
 	SELECT 
 		CustId
 		, ProductId 
-		, BettypeID
+		, GroupID
 		, MaxWinLimit 
 		, TotalWinAmt 
 		, WinAmt 
@@ -34,7 +41,7 @@ BEGIN
 	FROM OPENXML(@_hdoc,'/root/r', 2)   
 	WITH (CustId INT 'a1'
 		, ProductId TINYINT 'a2'
-		, BettypeID SMALLINT 'a3'
+		, GroupID INT 'a3'
 		, MaxWinLimit MONEY 'a4'
 		, TotalWinAmt MONEY 'a5'
 		, WinAmt MONEY  'a6'
@@ -51,11 +58,11 @@ BEGIN
 	
 	EXEC sp_xml_removedocument @_hdoc  
 
-	INSERT INTO WinLimit_CustGameMonitoring_History( CustId, ProductId,BettypeID, MaxWinLimit, TotalWinAmt,WinAmt,LevelID,ActionID,ModifiedDate
-		, IsNotified, ModifiedBy, CreatedBy, WinlostDate,MaxWinLimitSetting,TotalWinAmt_RM)
+	INSERT INTO WinLimit_CustGameMonitoring_History( CustId, ProductId,GroupID, MaxWinLimit, TotalWinAmt,WinAmt,LevelID,ActionID,ModifiedDate
+		, IsNotified, ModifiedBy, CreatedBy, WinlostDate,MaxWinLimitSetting,TotalWinAmt_RM,BettypeID)
 
-	SELECT CustId, ProductId,BettypeID, MaxWinLimit, TotalWinAmt,WinAmt,LevelID,ActionID,ModifiedDate
-		, IsNotified, ModifiedBy, CreatedBy, WinlostDate,MaxWinLimitSetting,TotalWinAmt_RM
+	SELECT CustId, ProductId,GroupID, MaxWinLimit, TotalWinAmt,WinAmt,LevelID,ActionID,ModifiedDate
+		, IsNotified, ModifiedBy, CreatedBy, WinlostDate,MaxWinLimitSetting,TotalWinAmt_RM, 0 AS BettypeID
 
 	FROM #TempData
 	
