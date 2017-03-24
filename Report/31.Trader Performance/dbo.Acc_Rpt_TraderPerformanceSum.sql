@@ -1,7 +1,7 @@
 USE [bodb02]
 GO
 
-ALTER PROCEDURE [dbo].[Acc_Rpt_TraderPerformance_Sum]   
+ALTER PROCEDURE [dbo].[Acc_Rpt_TraderPerformanceSum]   
 	@FromDate	DATETIME,  
 	@ToDate		DATETIME,  
 	@IsSoccer	BIT = 1   
@@ -520,7 +520,7 @@ BEGIN
 	DROP TABLE #ExtraPTSportbook
 END
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_TraderPerformance_Sum] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_TraderPerformanceSum] TO [bodbAdminNet]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_TraderPerformance_Sum] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_TraderPerformanceSum] TO [vnteam]
 GO
