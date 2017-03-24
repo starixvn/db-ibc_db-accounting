@@ -23,6 +23,13 @@ Revisions:
 	- 20160119@Robert: Modify SP covered bettype 501. Need to exclude bettype 500 from this report. [#50274]
 	- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
 	- 20160830@Robert: Enhance System/Mix Parlay [RedmineID: #63022]
+	- 20170323@Sophia: Fix Parlay issue ( can't detect Parlay ticket if checking RefNo) [Redmine: #73884]
+						1	Sportsbook
+						2	Number Game
+						3	SLI - Live Casino
+						4	Virtual Sports
+						5   Metric Gaming - Superlive
+						6   BetTrade (check the refno)
 Param's Explanation:
 	- @CheckTime : The time we consider how long the job fails (Compared the last run with the current time).
 				   Because job recurs every 30s, so we set @CheckTime = 1 minute as default
@@ -39,7 +46,7 @@ BEGIN
 
 	DELETE  @SportBettype 
 	WHERE	ProductID NOT IN (1, 3, 4, 5) 
-			OR bettype IN (500, 901, 902, 903, 904)
+			OR bettype IN (500) ----, 901, 902, 903, 904)
 
 	---- ** 1. Check the transdate of LastTransID and current time  ** ----
 	DECLARE @LastTransDate DATETIME	
@@ -71,7 +78,7 @@ BEGIN
 					b.winlostdate, 
 					b.matchid,
 					b.ip,
-					b.refno 		
+					CASE WHEN b.Bettype IN (901,902,903,904) THEN b.RefNo ELSE 0 END as RefNo	
 			INTO #TempData
 			FROM bodb02.dbo.bettrans b WITH(NOLOCK)
 				INNER JOIN @SportBettype s ON s.bettype = b.bettype
@@ -95,7 +102,7 @@ BEGIN
 					b.winlostdate, 
 					b.matchid,
 					b.ip,
-					b.refno 	
+					CASE WHEN b.Bettype IN (901,902,903,904) THEN b.RefNo ELSE 0 END	
 			HAVING COUNT(*) > 1
 			option (maxdop 4)
 			--------------------------------------------------------
@@ -110,7 +117,7 @@ BEGIN
 					AND b.winlostdate = t.winlostdate
 					AND b.matchid = t.matchid
 					AND b.ip = t.ip
-					AND b.refno = t.refno
+					AND CASE WHEN b.bettype IN (901,902,903,904) THEN b.RefNo ELSE 0 END = CASE WHEN t.bettype IN (901,902,903,904) THEN t.RefNo ELSE 0 END
 				INNER JOIN bodb02.dbo.bettype bt with(nolock) on bt.typeid = b.bettype
 			WHERE b.custid IN (SELECT DISTINCT custid FROM #TempData)
 				AND b.statusID NOT IN (101,102)
