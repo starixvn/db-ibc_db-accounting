@@ -90,8 +90,15 @@ BEGIN
 
 	--need to check cust setting fisrt after check global setting
 	--for WinLimit_CustSetting
+	
 	DECLARE @Fromdate DATE= GETDATE(), @Todate DATE= GETDATE()  
 	
+	IF NOT EXISTS (SELECT TOP 1 1 FROM Lrf_f_GetExchangeDaily(@Fromdate, @Todate))
+	BEGIN
+		SET @Fromdate = DATEADD(D,-1, @Fromdate)
+		SET @Todate = @Fromdate
+	END
+
 	INSERT INTO #CustReachCWLList(CustId, ProductId, GroupID,WinlostDate,ExchangeID,SiteID, LevelID, MaxwinLimit, TotalWinAmount,IsPrivateSetting,MaxWinLimitSetting)--,TotalWinAmt_RM)
 	SELECT t.CustId, t.ProductId, t.GroupID,t.WinlostDate,t.ExchangeID,t.SiteID, MAX(s.LevelID) AS LevelID , MAX(s.MaxWinLimit) AS MaxWinLimit, MAX(t.TotalWinAmount) AS TotalWinAmount,1
 			, CAST(tmp.MaxWinLimitSetting AS XML)
