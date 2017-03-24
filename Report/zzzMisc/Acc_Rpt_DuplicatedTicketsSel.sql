@@ -113,7 +113,9 @@ BEGIN
 					AND b.odds = t.odds
 					AND b.stake = t.stake
 					AND ISNULL(b.balance,0) = ISNULL(t.balance,0) 
-					AND b.bettype = t.bettype
+					AND CASE WHEN b.bettype = 9 OR (b.bettype = 29 AND b.betteam = '1') THEN 9  
+							 WHEN b.bettype = 29 AND b.betteam <> '1' THEN 29 
+							 ELSE b.bettype END = t.bettype
 					AND b.winlostdate = t.winlostdate
 					AND b.matchid = t.matchid
 					AND b.ip = t.ip
@@ -127,7 +129,7 @@ BEGIN
 			DROP TABLE #TempData			
 
 	END
-	ELSE  ----> Get report form new table
+	ELSE  ----> Get report from new table
 	BEGIN 	
 
 		DECLARE @DateFrom DATETIME
