@@ -280,9 +280,10 @@ BEGIN
 				, ModifiedDate = @ReachedDate
 		FROM #CustReachCWLList T
 			INNER JOIN #HistoryData H ON T.CustId = H.CustId AND T.GroupID = H.GroupID AND T.ProductId = H.ProductId AND H.WinlostDate = T.WinlostDate
-			INNER JOIN WinLimit_ProductSettingDetail psd WITH (NOLOCK) ON T.ProductId = psd.ProductId AND t.ExchangeID = psd.ExchangeID AND T.SiteID = PSD.SiteID AND T.LevelID = psd.LevelID
-			INNER JOIN WinLimit_GameGroupSetting GS WITH (NOLOCK) ON GS.GroupID = psd.GroupID AND t.GroupID = GS.GroupID 
-			INNER JOIN WinLimit_CustGameStatus CS (NOLOCK) ON T.CustId = CS.CustId AND T.ProductId = CS.ProductID AND T.GroupID = GS.GroupID
+			INNER JOIN WinLimit_ProductSettingDetail psd WITH (NOLOCK) ON T.ProductId = psd.ProductId AND t.ExchangeID = psd.ExchangeID AND T.SiteID = PSD.SiteID AND T.LevelID = psd.LevelID AND psd.GroupID = T.GroupID			
+			INNER JOIN WinLimit_GameGroupSetting GS WITH (NOLOCK) ON GS.GroupID = psd.GroupID 
+			INNER JOIN WinLimit_CustGameStatus CS (NOLOCK) ON T.CustId = CS.CustId AND T.ProductId = CS.ProductID AND CS.BettypeID = GS.BetTypeID
+		
 		
 		-- Insert Status	
 		INSERT INTO WinLimit_CustGameStatus (CustID,ProductID,BettypeID,IsBlockedPlaceBet,IsBlockedTransfer,ActionID,ModifiedDate)
