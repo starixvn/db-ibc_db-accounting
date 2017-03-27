@@ -173,7 +173,7 @@ BEGIN
 					, TotalWinAmt_RM ) 
 	FROM dbo.WinLimit_CustGameMonitoring g WITH(ROWLOCK, UPDLOCK)
 		INNER JOIN #CustReachCWLList t ON t.CustId = g.CustID AND g.WinlostDate = t.WinlostDate AND t.GroupID = g.GroupID AND g.ProductID = t.ProductId AND g.LevelID = t.LevelID
-		INNER JOIN Winlimit_ProductSettingDetail psd WITH (NOLOCK) ON g.ProductId = psd.ProductId AND t.ExchangeID = psd.ExchangeID and g.LevelID = psd.LevelID AND psd.SiteID = t.SiteID
+		INNER JOIN Winlimit_ProductSettingDetail psd WITH (NOLOCK) ON g.ProductId = psd.ProductId AND t.ExchangeID = psd.ExchangeID and g.LevelID = psd.LevelID AND psd.SiteID = t.SiteID AND psd.GroupID = t.GroupID
 		CROSS APPLY (SELECT TOP 1 tmp.ActionID,tmp.IsBlockedTransfer,tmp.IsBlockedPlaceBet
 					 FROM WinLimit_CustGameStatus tmp WITH (NOLOCK) 
 						INNER JOIN WinLimit_GameGroupSetting GS WITH (NOLOCK) ON GS.GroupID = psd.GroupID AND tmp.BettypeID = gs.BetTypeID
