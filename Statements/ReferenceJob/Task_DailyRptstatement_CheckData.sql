@@ -1,5 +1,4 @@
-USE [bodb_Report]
-GO
+/*<info serverAlias="DBRPT-bodb_Report" executers="" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 
 ALTER PROCEDURE [dbo].[Task_DailyRptStatement_CheckData]
 	@winlostdate DATE

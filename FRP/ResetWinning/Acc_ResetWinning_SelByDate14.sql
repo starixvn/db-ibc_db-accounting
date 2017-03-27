@@ -1,5 +1,4 @@
-﻿USE [bodb02]
-GO
+﻿/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet,vnteam" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 
 ALTER PROCEDURE [dbo].[Acc_ResetWinning_SelByDate14]
 	@winlostdate	SMALLDATETIME,	
@@ -524,11 +523,4 @@ BEGIN
 		DROP TABLE #ExtraPTWL
 		DROP TABLE #source
 END
-GO
-
-GRANT EXECUTE ON [dbo].[Acc_ResetWinning_SelByDate14] TO [vnteam]
-GO 
-GRANT VIEW DEFINITION ON [dbo].[Acc_ResetWinning_SelByDate14] TO [vnteam]
-GO 
-GRANT EXECUTE ON [dbo].[Acc_ResetWinning_SelByDate14] TO [bodbAdminNet]
 GO

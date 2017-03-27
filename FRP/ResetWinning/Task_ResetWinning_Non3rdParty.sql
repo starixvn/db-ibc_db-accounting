@@ -1,5 +1,4 @@
-USE [bodb02]
-GO
+/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet,vnteam" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 
 ALTER PROCEDURE [dbo].[Task_ResetWinning_Non3rdParty]
 	@fromdate smalldatetime,
@@ -679,11 +678,4 @@ BEGIN
 	DROP TABLE #bettranstmp
     DROP TABLE #ExtraPTWL
 END
-GO
-
-GRANT EXECUTE ON [dbo].[Task_ResetWinning_Non3rdParty] TO [vnteam]
-GO 
-GRANT VIEW DEFINITION ON [dbo].[Task_ResetWinning_Non3rdParty] TO [vnteam]
-GO 
-GRANT EXECUTE ON [dbo].[Task_ResetWinning_Non3rdParty] TO [bodbAdminNet]
 GO
