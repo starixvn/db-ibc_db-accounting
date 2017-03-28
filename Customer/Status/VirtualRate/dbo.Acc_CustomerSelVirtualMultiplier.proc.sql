@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE  [dbo].[Acc_CustomerSelVirtualMultiplier_UAT1] 
+﻿ALTER PROCEDURE  [dbo].[Acc_CustomerSelVirtualMultiplier] 
 	@CustID int,
 	@IsTest BIT=0
 AS
