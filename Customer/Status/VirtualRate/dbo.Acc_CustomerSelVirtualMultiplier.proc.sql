@@ -36,7 +36,7 @@ BEGIN
     SELECT  @ActualRate         AS ActualRate,
             VirtualMultiplier   AS EnableVirtualRate,
             -0.9                AS Min_VirtualMultiplier,
-            3.0                 AS Max_VirtualMultiplier
+            2.0                 AS Max_VirtualMultiplier
     FROM    custInfo WITH(NOLOCK)
     WHERE   custid = @CustID
 
