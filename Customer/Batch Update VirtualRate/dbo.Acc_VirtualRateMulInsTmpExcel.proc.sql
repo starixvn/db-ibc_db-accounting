@@ -97,7 +97,7 @@ SET NOCOUNT ON
 
 	INSERT INTO @tblFail(username, sporttype, bettype, isLive, virtualrate, reason)
 	SELECT	username, sporttype, bettype, isLive, virtualrate, 
-			CASE WHEN virtualrate <0.1 OR virtualrate > 3 OR virtualrate*100%5!=0 THEN 'Virtual rate must be in a range from -80% to +60% and be multiples of 5%.'
+			CASE WHEN virtualrate <0.1 OR virtualrate > 3 OR virtualrate*100%5!=0 THEN 'Invalid Virtual Rate.'
 				 WHEN ISNULL(username,'') ='' THEN 'Username cannot be blanked.' ELSE '' END AS Reason 	
 	FROM	@tblCust 
 	WHERE	virtualrate <0.1 OR virtualrate > 3 OR virtualrate*100%5!=0
