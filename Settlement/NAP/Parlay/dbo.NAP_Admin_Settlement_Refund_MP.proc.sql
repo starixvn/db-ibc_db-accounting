@@ -20,6 +20,7 @@ AS
 	ORIGINAL: 
 
 	Revisions:		
+		- 20170215@Kathy: Basketball All-in-One [Redmine:#71372]
 		
 
 	Param's Explanation:		
@@ -36,6 +37,7 @@ BEGIN
 		, @IsDetermined 		BIT
 		, @resultDetail_cb 		VARCHAR(MAX) = NULL -- for corners bets
 		, @resultDetail_ss 		VARCHAR(MAX)
+		, @resultDetail_bb		VARCHAR(MAX) -- for basketball
 		, @SelectedSetCAL 		VARCHAR(50)
 		, @SelectedSetREFUND 	VARCHAR(50)
 		--ticket count
@@ -147,6 +149,13 @@ BEGIN
 			,@TotalAway = @TotalGameAwayMatch OUTPUT
 			,@str_resultDetail = @resultDetail_ss OUTPUT	
 	END
+	IF @SportType = 2
+	BEGIN
+		EXEC dbo.NAP_Admin_Settlement_2 
+			@mode = 'basketball'
+			,@matchid = @matchid
+			,@str_resultDetail = @resultDetail_bb OUTPUT
+	END
 	
 	BEGIN TRY
 	
@@ -173,7 +182,7 @@ BEGIN
 		--CHECK for CAL fisrt
 		IF(
 			@action IN ('REFUND-HT', 'ABANDONED-2H','REFUND-FT')
-		)
+		) OR (@SportType = 2 AND @Action = 'REFUND')
 		BEGIN
 			/*IF(@action IN ('REFUND-HT')) --REFUND Is3x30 AND CAL the REST
 			BEGIN
@@ -198,6 +207,7 @@ BEGIN
 				,@GoalSequence 		= @GoalRecord
 				,@resultDetail_cb	= @resultDetail_cb
 				,@resultDetail_ss	= @resultDetail_ss
+				,@resultDetail_bb	= @resultDetail_bb
 				,@IsRefundHT		= @IsRefundHT
 				,@ticketCount		= @ticketCountCAL OUTPUT
 				
@@ -228,6 +238,7 @@ BEGIN
 			,@matchdate			= @matchdate
 			,@mode				= @Action
 			,@IsRefundHT		= @IsRefundHT
+			,@resultDetail_bb	= @resultDetail_bb
 			,@ticketCount		= @ticketCountREFUND OUTPUT
 		
 		/*

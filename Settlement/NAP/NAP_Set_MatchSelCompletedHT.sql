@@ -1,14 +1,16 @@
-ALTER PROCEDURE [dbo].[NAP_Set_MatchSelCompletedHT] @Date DATETIME
-	, @SportType SMALLINT = 0
-	, @LeagueID INT = 0 -- 0 for ALL Leagues
-	, @isReLoad BIT = 0
+/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
+ALTER PROCEDURE [dbo].[NAP_Set_MatchSelCompletedHT] 
+	@Date 			DATETIME
+	, @SportType 	SMALLINT = 0
+	, @LeagueID 	INT = 0 -- 0 for ALL Leagues
+	, @isReLoad 	BIT = 0
 	, @IsManualSettlementOnly BIT = 0
 AS
 /*
 	Created by: Kathy
 	Date: 
 	Task: List HT-completed matches for billing
-	DB: DBTRANS.BODB02
+	DB: DBTXN.BODB02
 	Original: Acc_Set_MatchSelCompletedHT
 	
 	Revisions:
@@ -26,6 +28,7 @@ AS
 		- 20160314@Patrick: Add more filter to support auto-payout [Redmine: #53262]
 		- 20160808@Kathy: BetTrade - changes for new commercial terms - add bettype 904 [Redmine:#61905]
 		- 20161013@Bobby: #65002 - Update changes for Instant Calculation 
+		- 20170215@Kathy: Basketball All-in-One [Redmine:#71372]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -151,12 +154,20 @@ BEGIN
 			INNER JOIN BetStatus b ON m.matchid = b.matchid
 			LEFT JOIN @tblSingle t ON m.matchid = t.matchid
 	ORDER BY eventstatus, matchcode
-
+	
+	-- Get BASKETBALL RESULT 
+	SELECT	MatchId
+			, ResourceId
+			, HomeValue
+			, AwayValue
+			, ResultStatusID
+			, SettlementStatusID
+	FROM	DBPRO.BODB02.dbo.ResultDetail rs WITH (NOLOCK) 
+	WHERE	@Sporttype IN (0, 2)
+			AND EXISTS (SELECT TOP 1 1 FROM #DataTmp m WHERE rs.MatchId = m.MatchId)
+			AND (ResourceId LIKE 'Q[1-4]' 
+				OR ResourceId IN ('00','01','OT') -- Basketball: 00, 01, Q1, Q2, Q3, Q4, OT
+			)
 	DROP TABLE #DataTmp
 END
-
 GO
-GRANT EXECUTE ON [dbo].[NAP_Set_MatchSelCompletedHT] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Set_MatchSelCompletedHT] TO [vnteam] AS [dbo]
-

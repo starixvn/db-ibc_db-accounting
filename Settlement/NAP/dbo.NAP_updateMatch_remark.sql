@@ -1,10 +1,12 @@
+/*<info serverAlias="DBPRO-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
 ALTER PROCEDURE [dbo].[NAP_updateMatch_remark]
-	@matchid int,
-	@command varchar(5),
-	@ivalue bigint = NULL,
+	@matchid 			INT,
+	@command 			VARCHAR(5),
+	@ivalue 			BIGINT = NULL,
 	@SelectedSet		VARCHAR(50) = NULL,
 	@SelectedSetCAL		VARCHAR(50) = NULL,
-	@SelectedSetREFUND	VARCHAR(50) = NULL
+	@SelectedSetREFUND	VARCHAR(50) = NULL,
+	@SelectedQuarter 	VARCHAR(50) = NULL
 
 WITH RECOMPILE
 /*  
@@ -20,6 +22,7 @@ WITH RECOMPILE
 		- 20140905@Kathy: Update SettlementStatus135 = 4 if the match hasn't any PS ticket [Redmine:#21560]
 		- 20141022@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		- 20150418@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
+		- 20170215@Kathy: Basketball All-in-One [Redmine:#71372]		
 	Param's Explanation: 
 */
 AS
@@ -102,7 +105,7 @@ BEGIN
 	END
 	
 	-- [U]ndo settlement
-	IF @command = 'U' AND (@SelectedSet IS NULL OR @SelectedSet LIKE'%6%')
+	IF @command = 'U' AND ((@SelectedSet IS NULL OR @SelectedSet LIKE'%6%') OR ISNULL(@SelectedQuarter,'') LIKE '%FT%')
 	BEGIN
 		UPDATE match_remark WITH(ROWLOCK, UPDLOCK)
 		SET IsHTCal					= 0
@@ -301,6 +304,3 @@ BEGIN
 
 END
 GO
-GRANT EXECUTE ON [dbo].[NAP_updateMatch_remark] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_updateMatch_remark] TO [vnteam] AS [dbo]

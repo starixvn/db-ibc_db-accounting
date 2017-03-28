@@ -77,6 +77,38 @@ ALTER FUNCTION [dbo].[f_Set_Parlay_CalModds] (
 	, @away_firstteam2goals INT
 	, @home_firstteam3goals INT
 	, @away_firstteam3goals INT
+	, @FTHighestQuarter	VARCHAR(10) = NULL
+	, @FTFirstBasket		VARCHAR(10) = NULL
+	, @FTLastBasket		VARCHAR(10) = NULL
+	, @HTRaceTo20		VARCHAR(10) = NULL
+	, @HTRaceTo25		VARCHAR(10) = NULL
+	, @HTRaceTo30		VARCHAR(10) = NULL
+	, @SecondRaceTo20		VARCHAR(10) = NULL
+	, @SecondRaceTo25		VARCHAR(10) = NULL
+	, @SecondRaceTo30		VARCHAR(10) = NULL
+	, @Q1Home				INT = NULL
+	, @Q2Home				INT = NULL
+	, @Q3Home				INT = NULL
+	, @Q4Home				INT = NULL			
+	, @Q1Away				INT = NULL
+	, @Q2Away				INT = NULL
+	, @Q3Away				INT = NULL
+	, @Q4Away				INT = NULL
+	, @Q1RaceTo10			VARCHAR(10) = NULL
+	, @Q1RaceTo15			VARCHAR(10) = NULL
+	, @Q1RaceTo20			VARCHAR(10) = NULL
+	, @Q2RaceTo10			VARCHAR(10) = NULL
+	, @Q2RaceTo15			VARCHAR(10) = NULL
+	, @Q2RaceTo20			VARCHAR(10) = NULL
+	, @Q3RaceTo10			VARCHAR(10) = NULL
+	, @Q3RaceTo15			VARCHAR(10) = NULL
+	, @Q3RaceTo20			VARCHAR(10) = NULL
+	, @Q4RaceTo10			VARCHAR(10) = NULL
+	, @Q4RaceTo15			VARCHAR(10) = NULL
+	, @Q4RaceTo20			VARCHAR(10) = NULL
+	, @Q1LastBasket			VARCHAR(10) = NULL
+	, @Q2LastBasket			VARCHAR(10) = NULL
+	, @Q3LastBasket			VARCHAR(10) = NULL
 
 )
 RETURNS TABLE
@@ -1336,6 +1368,337 @@ RETURN (
 				WHEN 127 THEN 
 					CASE 
 						WHEN (@betteam = @HT_FGLG1 OR @betteam = @HT_FGLG2) THEN 1
+						ELSE - 1
+					END
+				WHEN 601 THEN -- FT Winning Margin 14 Way
+					CASE 
+						WHEN @betteam = 'H1-2' AND (@fth - @fta) BETWEEN 1 AND 2 THEN 1
+						WHEN @betteam = 'H3-6' AND (@fth - @fta) BETWEEN 3 AND 6 THEN 1
+						WHEN @betteam = 'H7-9' AND (@fth - @fta) BETWEEN 7 AND 9 THEN 1
+						WHEN @betteam = 'H10-13' AND (@fth - @fta) BETWEEN 10 AND 13 THEN 1
+						WHEN @betteam = 'H14-16' AND (@fth - @fta) BETWEEN 14 AND 16 THEN 1
+						WHEN @betteam = 'H17-20' AND (@fth - @fta) BETWEEN 17 AND 20 THEN 1
+						WHEN @betteam = 'H21+' AND (@fth - @fta) >= 21 THEN 1
+						WHEN @betteam = 'A1-2' AND (@fth - @fta) BETWEEN -2 AND -1 THEN 1
+						WHEN @betteam = 'A3-6' AND (@fth - @fta) BETWEEN -6 AND -3 THEN 1
+						WHEN @betteam = 'A7-9' AND (@fth - @fta) BETWEEN -9 AND -7 THEN 1
+						WHEN @betteam = 'A10-13' AND (@fth - @fta) BETWEEN -13 AND -10 THEN 1
+						WHEN @betteam = 'A14-16' AND (@fth - @fta) BETWEEN -16 AND -14 THEN 1
+						WHEN @betteam = 'A17-20' AND (@fth - @fta) BETWEEN -20 AND -17 THEN 1
+						WHEN @betteam = 'A21+' AND (@fth - @fta) <= -21 THEN 1
+						ELSE -1
+					END 
+				WHEN 602 THEN -- FT Winning Margin 12 Way
+					CASE
+						WHEN @betteam = 'H1-5' AND (@fth - @fta) BETWEEN 1 AND 5 THEN 1
+						WHEN @betteam = 'H6-10' AND (@fth - @fta) BETWEEN 6 AND 10 THEN 1
+						WHEN @betteam = 'H11-15' AND (@fth - @fta) BETWEEN 11 AND 15 THEN 1
+						WHEN @betteam = 'H16-20' AND (@fth - @fta) BETWEEN 16 AND 20 THEN 1
+						WHEN @betteam = 'H21-25' AND (@fth - @fta) BETWEEN 21 AND 25 THEN 1
+						WHEN @betteam = 'H26+' AND (@fth - @fta) >= 26 THEN 1
+						WHEN @betteam = 'A1-5' AND (@fth - @fta) BETWEEN -5 AND -1 THEN 1
+						WHEN @betteam = 'A6-10' AND (@fth - @fta) BETWEEN -10 AND -6 THEN 1
+						WHEN @betteam = 'A11-15' AND (@fth - @fta) BETWEEN -15 AND -11 THEN 1
+						WHEN @betteam = 'A16-20' AND (@fth - @fta) BETWEEN -20 AND -16 THEN 1
+						WHEN @betteam = 'A21-25' AND (@fth - @fta) BETWEEN -25 AND -21 THEN 1
+						WHEN @betteam = 'A26+' AND (@fth - @fta) <= -26 THEN 1	
+						ELSE -1
+					END
+				WHEN 603 THEN -- FT Which team to score the highest quarter
+					CASE 
+						WHEN @FTHighestQuarter = '' THEN 0
+						WHEN @betteam = @FTHighestQuarter THEN 1 
+						ELSE -1 
+					END
+				WHEN 604 THEN -- FT Which team to score the first basket
+					CASE
+						WHEN @betteam = @FTFirstBasket THEN 1 
+						ELSE -1 
+					END
+				WHEN 605 THEN -- FT Which team to score the last basket 	
+					CASE
+						WHEN @betteam = @FTLastBasket THEN 1 
+						ELSE -1 
+					END
+				WHEN 606 THEN -- 1H Race to YY
+					CASE 
+						WHEN @betcheck = '820' AND @HTRaceTo20 = 'N' THEN 0 
+						WHEN @betcheck = '825' AND @HTRaceTo25 = 'N' THEN 0
+						WHEN @betcheck = '830' AND @HTRaceTo30 = 'N' THEN 0
+						WHEN @betcheck = '820' AND @betteam = @HTRaceTo20 THEN 1 
+						WHEN @betcheck = '825' AND @betteam = @HTRaceTo25 THEN 1
+						WHEN @betcheck = '830' AND @betteam = @HTRaceTo30 THEN 1
+						ELSE -1 
+					END
+				WHEN 607 THEN -- 2H Race to YY
+					CASE 
+						WHEN @betcheck = '820' AND @SecondRaceTo20 = 'N' THEN 0 
+						WHEN @betcheck = '825' AND @SecondRaceTo25 = 'N' THEN 0
+						WHEN @betcheck = '830' AND @SecondRaceTo30 = 'N' THEN 0
+						WHEN @betcheck = '820' AND @betteam = @SecondRaceTo20 THEN 1 
+						WHEN @betcheck = '825' AND @betteam = @SecondRaceTo25 THEN 1
+						WHEN @betcheck = '830' AND @betteam = @SecondRaceTo30 THEN 1
+						ELSE -1 
+					END
+				WHEN 608 THEN -- 1H Winning Margin 12 Way
+					CASE
+						WHEN (@hth - @hta) BETWEEN 1 AND 5 AND @betteam = 'H1-5' THEN 1
+						WHEN (@hth - @hta) BETWEEN 6 AND 10 AND @betteam = 'H6-10' THEN 1
+						WHEN (@hth - @hta) BETWEEN 11 AND 15 AND @betteam = 'H11-15' THEN 1 
+						WHEN (@hth - @hta) BETWEEN 16 AND 20 AND @betteam = 'H16-20' THEN 1
+						WHEN (@hth - @hta) BETWEEN 21 AND 25 AND @betteam = 'H21-25' THEN 1 
+						WHEN (@hth - @hta) >= 26 AND @betteam = 'H26+' THEN 1
+						WHEN (@hth - @hta) = 0 AND @betteam = 'D' THEN 1
+						WHEN (@hth - @hta) BETWEEN -5 AND -1 AND @betteam = 'A1-5' THEN 1
+						WHEN (@hth - @hta) BETWEEN -10 AND -6 AND @betteam = 'A6-10' THEN 1
+						WHEN (@hth - @hta) BETWEEN -15 AND -11 AND @betteam = 'A11-15' THEN 1
+						WHEN (@hth - @hta) BETWEEN -20 AND -16 AND @betteam = 'A16-20' THEN 1
+						WHEN (@hth - @hta) BETWEEN -25 AND -21 AND @betteam = 'A21-25' THEN 1
+						WHEN (@hth - @hta) <= -26 AND @betteam = 'A26+' THEN 1
+						ELSE -1
+					END
+				WHEN 609 THEN -- Quarter X Handicap
+					CASE 
+						WHEN @betcheck = '801' THEN CASE
+														WHEN @betteam = 'h' THEN (@Q1Home - @hdp1) - (@Q1Away - @hdp2)
+														WHEN @betteam = 'a' THEN (@Q1Away - @hdp2) - (@Q1Home - @hdp1)
+														ELSE -1
+													END
+						WHEN @betcheck = '802' THEN CASE
+														WHEN @betteam = 'h' THEN (@Q2Home - @hdp1) - (@Q2Away - @hdp2)
+														WHEN @betteam = 'a' THEN (@Q2Away - @hdp2) - (@Q2Home - @hdp1)
+														ELSE -1
+													END
+						WHEN @betcheck = '803' THEN CASE
+														WHEN @betteam = 'h' THEN (@Q3Home - @hdp1) - (@Q3Away - @hdp2)
+														WHEN @betteam = 'a' THEN (@Q3Away - @hdp2) - (@Q3Home - @hdp1)
+														ELSE -1
+													END
+						WHEN @betcheck = '804' THEN CASE
+														WHEN @betteam = 'h' THEN (@Q4Home - @hdp1) - (@Q4Away - @hdp2)
+														WHEN @betteam = 'a' THEN (@Q4Away - @hdp2) - (@Q4Home - @hdp1)
+														ELSE -1
+													END
+						ELSE -1
+					END
+				WHEN 610 THEN -- Quarter X Over Under
+					CASE 
+						WHEN @betcheck = '801' THEN CASE
+														WHEN @betteam = 'o' THEN @Q1Home + @Q1Away - @hdp1
+														WHEN @betteam = 'u' THEN @hdp1 - (@Q1Home + @Q1Away) 
+														ELSE -1
+													END
+						WHEN @betcheck = '802' THEN CASE
+														WHEN @betteam = 'o' THEN @Q2Home + @Q2Away - @hdp1
+														WHEN @betteam = 'u' THEN @hdp1 - (@Q2Home + @Q2Away) 
+														ELSE -1
+													END
+						WHEN @betcheck = '803' THEN CASE
+														WHEN @betteam = 'o' THEN @Q3Home + @Q3Away - @hdp1
+														WHEN @betteam = 'u' THEN @hdp1 - (@Q3Home + @Q3Away) 
+														ELSE -1
+													END
+						WHEN @betcheck = '804' THEN CASE
+														WHEN @betteam = 'o' THEN @Q4Home + @Q4Away - @hdp1
+														WHEN @betteam = 'u' THEN @hdp1 - (@Q4Home + @Q4Away) 
+														ELSE -1
+													END
+						ELSE -1
+					END
+				WHEN 611 THEN -- Quarter X Odd Even
+					CASE 
+						WHEN @betcheck = '801' THEN CASE
+														WHEN @betteam = 'o' AND (@Q1Home + @Q1Away) % 2 = 1 THEN 1
+														WHEN @betteam = 'e' AND (@Q1Home + @Q1Away) % 2 = 0 THEN 1
+														ELSE -1
+													END
+						WHEN @betcheck = '802' THEN CASE
+														WHEN @betteam = 'o' AND (@Q2Home + @Q2Away) % 2 = 1 THEN 1
+														WHEN @betteam = 'e' AND (@Q2Home + @Q2Away) % 2 = 0 THEN 1
+														ELSE -1
+													END
+						WHEN @betcheck = '803' THEN CASE
+														WHEN @betteam = 'o' AND (@Q3Home + @Q3Away) % 2 = 1 THEN 1
+														WHEN @betteam = 'e' AND (@Q3Home + @Q3Away) % 2 = 0 THEN 1
+														ELSE -1
+													END
+						WHEN @betcheck = '804' THEN CASE
+														WHEN @betteam = 'o' AND (@Q4Home + @Q4Away) % 2 = 1 THEN 1
+														WHEN @betteam = 'e' AND (@Q4Home + @Q4Away) % 2 = 0 THEN 1
+														ELSE -1
+													END
+						ELSE -1
+					END
+				WHEN 612 THEN -- Quarter X Moneyline
+					CASE 
+						WHEN @betcheck = '801' THEN CASE
+														WHEN @betteam = 'h' THEN (@Q1Home - @Q1Away)
+														WHEN @betteam = 'a' THEN (@Q1Away - @Q1Home)
+														ELSE -1
+													END
+						WHEN @betcheck = '802' THEN CASE
+														WHEN @betteam = 'h' THEN (@Q2Home - @Q2Away)
+														WHEN @betteam = 'a' THEN (@Q2Away - @Q2Home)
+														ELSE -1
+													END
+						WHEN @betcheck = '803' THEN CASE
+														WHEN @betteam = 'h' THEN (@Q3Home - @Q3Away)
+														WHEN @betteam = 'a' THEN (@Q3Away - @Q3Home)
+														ELSE -1
+													END
+						WHEN @betcheck = '804' THEN CASE
+														WHEN @betteam = 'h' THEN (@Q4Home - @Q4Away)
+														WHEN @betteam = 'a' THEN (@Q4Away - @Q4Home)
+														ELSE -1
+													END
+						ELSE -1
+					END
+				WHEN 613 THEN -- Quarter X Race to YY
+					CASE 
+						WHEN @betcheck LIKE '801__' THEN CASE
+															WHEN @betcheck LIKE '___10' AND @Q1RaceTo10 = 'N' THEN 0
+															WHEN @betcheck LIKE '___15' AND @Q1RaceTo15 = 'N' THEN 0
+															WHEN @betcheck LIKE '___20' AND @Q1RaceTo20 = 'N' THEN 0
+															WHEN @betcheck LIKE '___10' AND @betteam= @Q1RaceTo10 THEN 1
+															WHEN @betcheck LIKE '___15' AND @betteam= @Q1RaceTo15 THEN 1
+															WHEN @betcheck LIKE '___20' AND @betteam= @Q1RaceTo20 THEN 1
+															ELSE -1
+														END
+						WHEN @betcheck LIKE '802__' THEN CASE
+															WHEN @betcheck LIKE '___10' AND @Q2RaceTo10 = 'N' THEN 0
+															WHEN @betcheck LIKE '___15' AND @Q2RaceTo15 = 'N' THEN 0
+															WHEN @betcheck LIKE '___20' AND @Q2RaceTo20 = 'N' THEN 0
+															WHEN @betcheck LIKE '___10' AND @betteam= @Q2RaceTo10 THEN 1
+															WHEN @betcheck LIKE '___15' AND @betteam= @Q2RaceTo15 THEN 1
+															WHEN @betcheck LIKE '___20' AND @betteam= @Q2RaceTo20 THEN 1
+															ELSE -1
+														END
+						WHEN @betcheck LIKE '803__' THEN CASE
+															WHEN @betcheck LIKE '___10' AND @Q3RaceTo10 = 'N' THEN 0
+															WHEN @betcheck LIKE '___15' AND @Q3RaceTo15 = 'N' THEN 0
+															WHEN @betcheck LIKE '___20' AND @Q3RaceTo20 = 'N' THEN 0
+															WHEN @betcheck LIKE '___10' AND @betteam= @Q3RaceTo10 THEN 1
+															WHEN @betcheck LIKE '___15' AND @betteam= @Q3RaceTo15 THEN 1
+															WHEN @betcheck LIKE '___20' AND @betteam= @Q3RaceTo20 THEN 1
+															ELSE -1
+														END
+						WHEN @betcheck LIKE '804__' THEN CASE
+															WHEN @betcheck LIKE '___10' AND @Q4RaceTo10 = 'N' THEN 0
+															WHEN @betcheck LIKE '___15' AND @Q4RaceTo15 = 'N' THEN 0
+															WHEN @betcheck LIKE '___20' AND @Q4RaceTo20 = 'N' THEN 0
+															WHEN @betcheck LIKE '___10' AND @betteam= @Q4RaceTo10 THEN 1
+															WHEN @betcheck LIKE '___15' AND @betteam= @Q4RaceTo15 THEN 1
+															WHEN @betcheck LIKE '___20' AND @betteam= @Q4RaceTo20 THEN 1
+															ELSE -1
+														END
+						ELSE -1
+					END
+				WHEN 614 THEN -- Quarter X Winning Margin 7 Way
+					CASE	
+						WHEN @betcheck = '801' THEN CASE
+														WHEN @betteam = 'H1-4' AND (@Q1Home - @Q1Away) BETWEEN 1 AND 4 THEN 1
+														WHEN @betteam = 'H5-8' AND (@Q1Home - @Q1Away) BETWEEN 5 AND 8 THEN 1
+														WHEN @betteam = 'H9+' AND (@Q1Home - @Q1Away) >= 9 THEN 1
+														WHEN @betteam = 'D' AND (@Q1Home - @Q1Away) = 0 THEN 1
+														WHEN @betteam = 'A1-4' AND (@Q1Away - @Q1Home) BETWEEN 1 AND 4 THEN 1
+														WHEN @betteam = 'A5-8' AND (@Q1Away - @Q1Home) BETWEEN 5 AND 8 THEN 1
+														WHEN @betteam = 'A9+' AND (@Q1Away - @Q1Home) >= 9 THEN 1
+														ELSE -1
+													END
+						WHEN @betcheck = '802' THEN CASE
+														WHEN @betteam = 'H1-4' AND (@Q2Home - @Q2Away) BETWEEN 1 AND 4 THEN 1
+														WHEN @betteam = 'H5-8' AND (@Q2Home - @Q2Away) BETWEEN 5 AND 8 THEN 1
+														WHEN @betteam = 'H9+' AND (@Q2Home - @Q2Away) >= 9 THEN 1
+														WHEN @betteam = 'D' AND (@Q2Home - @Q2Away) = 0 THEN 1
+														WHEN @betteam = 'A1-4' AND (@Q2Away - @Q2Home) BETWEEN 1 AND 4 THEN 1
+														WHEN @betteam = 'A5-8' AND (@Q2Away - @Q2Home) BETWEEN 5 AND 8 THEN 1
+														WHEN @betteam = 'A9+' AND (@Q2Away - @Q2Home) >= 9 THEN 1
+														ELSE -1
+													END
+						WHEN @betcheck = '803' THEN CASE
+														WHEN @betteam = 'H1-4' AND (@Q3Home - @Q3Away) BETWEEN 1 AND 4 THEN 1
+														WHEN @betteam = 'H5-8' AND (@Q3Home - @Q3Away) BETWEEN 5 AND 8 THEN 1
+														WHEN @betteam = 'H9+' AND (@Q3Home - @Q3Away) >= 9 THEN 1
+														WHEN @betteam = 'D' AND (@Q3Home - @Q3Away) = 0 THEN 1
+														WHEN @betteam = 'A1-4' AND (@Q3Away - @Q3Home) BETWEEN 1 AND 4 THEN 1
+														WHEN @betteam = 'A5-8' AND (@Q3Away - @Q3Home) BETWEEN 5 AND 8 THEN 1
+														WHEN @betteam = 'A9+' AND (@Q3Away - @Q3Home) >= 9 THEN 1
+														ELSE -1
+													END
+						WHEN @betcheck = '804' THEN CASE
+														WHEN @betteam = 'H1-4' AND (@Q4Home - @Q4Away) BETWEEN 1 AND 4 THEN 1
+														WHEN @betteam = 'H5-8' AND (@Q4Home - @Q4Away) BETWEEN 5 AND 8 THEN 1
+														WHEN @betteam = 'H9+' AND (@Q4Home - @Q4Away) >= 9 THEN 1
+														WHEN @betteam = 'D' AND (@Q4Home - @Q4Away) = 0 THEN 1
+														WHEN @betteam = 'A1-4' AND (@Q4Away - @Q4Home) BETWEEN 1 AND 4 THEN 1
+														WHEN @betteam = 'A5-8' AND (@Q4Away - @Q4Home) BETWEEN 5 AND 8 THEN 1
+														WHEN @betteam = 'A9+' AND (@Q4Away - @Q4Home) >= 9 THEN 1
+														ELSE -1
+													END
+						ELSE - 1
+					END
+				WHEN 615 THEN -- Quarter X Home Team Over Under
+					CASE	
+						WHEN @betcheck = '801' THEN CASE
+														WHEN @betteam = 'o' THEN @Q1Home - @hdp1
+														WHEN @betteam = 'u' THEN @hdp1 - @Q1Home
+														ELSE -1
+													END
+						WHEN @betcheck = '802' THEN CASE
+														WHEN @betteam = 'o' THEN @Q2Home - @hdp1
+														WHEN @betteam = 'u' THEN @hdp1 - @Q2Home
+														ELSE -1
+													END
+						WHEN @betcheck = '803' THEN CASE
+														WHEN @betteam = 'o' THEN @Q3Home - @hdp1
+														WHEN @betteam = 'u' THEN @hdp1 - @Q3Home
+														ELSE -1
+													END
+						WHEN @betcheck = '804' THEN CASE
+														WHEN @betteam = 'o' THEN @Q4Home - @hdp1
+														WHEN @betteam = 'u' THEN @hdp1 - @Q4Home
+														ELSE -1
+													END
+						ELSE - 1
+					END
+				WHEN 616 THEN -- Quarter X Away Team Over Under
+					CASE	
+						WHEN @betcheck = '801' THEN CASE
+														WHEN @betteam = 'o' THEN @Q1Away - @hdp1
+														WHEN @betteam = 'u' THEN @hdp1 - @Q1Away
+														ELSE -1
+													END
+						WHEN @betcheck = '802' THEN CASE
+														WHEN @betteam = 'o' THEN @Q2Away - @hdp1
+														WHEN @betteam = 'u' THEN @hdp1 - @Q2Away
+														ELSE -1
+													END
+						WHEN @betcheck = '803' THEN CASE
+														WHEN @betteam = 'o' THEN @Q3Away - @hdp1
+														WHEN @betteam = 'u' THEN @hdp1 - @Q3Away
+														ELSE -1
+													END
+						WHEN @betcheck = '804' THEN CASE
+														WHEN @betteam = 'o' THEN @Q4Away - @hdp1
+														WHEN @betteam = 'u' THEN @hdp1 - @Q4Away
+														ELSE -1
+													END
+						ELSE - 1
+					END
+				WHEN 617 THEN -- Quarter X Which team to score the last basket
+					CASE	
+						WHEN @betcheck = '801' THEN CASE
+														WHEN @betteam = @Q1LastBasket THEN 1
+														ELSE -1
+													END
+						WHEN @betcheck = '802' THEN CASE
+														WHEN @betteam = @Q2LastBasket THEN 1
+														ELSE -1
+													END
+						WHEN @betcheck = '803' THEN CASE
+														WHEN @betteam = @Q3LastBasket THEN 1
+														ELSE -1
+													END
 						ELSE - 1
 					END
 				ELSE NULL -- Not support @bettype

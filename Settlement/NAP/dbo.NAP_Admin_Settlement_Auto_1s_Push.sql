@@ -1,4 +1,5 @@
-﻿ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Auto_1s_Push]
+﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet,Dot_CoreAPI" viewers="vnteam" isFunction="0"></info>*/
+ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Auto_1s_Push]
 	 @AdminId			INT				= 148		-- calculated by system (default)
 	,@MatchId			INT
 	,@ResourceIDs		VARCHAR(MAX)	= '' 
@@ -178,11 +179,4 @@ BEGIN
 	END
 
 END
-
-GO 
- GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Auto_1s_Push] TO [Dot_CoreAPI]
-GO 
- GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Auto_1s_Push] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Auto_1s_Push] TO [bodbAdminNet]
 GO 

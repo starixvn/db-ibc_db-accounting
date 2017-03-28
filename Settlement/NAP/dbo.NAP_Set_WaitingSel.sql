@@ -1,13 +1,8 @@
 /*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
-USE [bodb02]
-GO
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[NAP_Set_WaitingSel] @MatchCode NVARCHAR(50) = ''
-	, @SportType SMALLINT = 0
-	, @LeagueId INT = 0 -- 0 for ALL Leagues
+ALTER PROCEDURE [dbo].[NAP_Set_WaitingSel] 
+	@MatchCode 		NVARCHAR(50) = ''
+	, @SportType 	SMALLINT = 0
+	, @LeagueId 	INT = 0 -- 0 for ALL Leagues
 AS
 /*
 	Created: 20140103@Kathy
@@ -29,6 +24,7 @@ AS
 		- 20161222@Kathy: Check match in queue in 10mins instead of 1 hour [Redmine:68890]
 		- 20160509@Kathy: Fast Market integration [Remine:#56367]
 		- 20170208@Bobby: Correct IsMissingAutoResult case [Remine:#67952]
+		- 20170215@Kathy: Basketball All-in-One [Redmine:#71372]
 	
 	Param's explanation:  
 		
@@ -127,29 +123,30 @@ BEGIN
 			,@MaxBettype = MAX(bettype)
 		FROM #tblBettype
 		
-		IF @Sporttype IN (0, 1, 5)
+		IF @Sporttype IN (0, 1, 2, 5)
 		BEGIN
 			INSERT INTO #tblResultDetail(matchid, ResourceId, HomeValue, AwayValue, ResultStatusID, SettlementStatusID)
 			SELECT	r.MatchId, r.ResourceId, r.HomeValue, r.AwayValue, r.ResultStatusID, r.SettlementStatusID
 			FROM	DBPRO.bodb02.dbo.ResultDetail r WITH (NOLOCK)
 				INNER JOIN @TempMatch t
 					ON r.matchid = t.MatchId
-				
-			UPDATE	m
-				SET SettlementStatusID = rs.SettlementStatusID
-					,IsExistFastMarketResult = rs.IsExistFastMarketResult
-			FROM	@TempMatch m
-				INNER JOIN (
-					SELECT	r.matchid
-						,MIN(CASE WHEN bt.groupId = 8 THEN ISNULL(r.SettlementStatusID,0) ELSE NULL END) AS SettlementStatusID
-						,MAX(CASE WHEN bt.groupId = 9 THEN 1 ELSE 0 END) AS IsExistFastMarketResult
-					FROM #tblResultDetail r
-						INNER JOIN #tblBettype bt
-							ON r.ResourceId LIKE bt.ResourceId
-					WHERE bt.GroupId IN (8,9)
-					GROUP BY r.matchid
-				) rs
-					ON m.MatchId = rs.matchId
+			
+			IF @Sporttype IN (0,1)	
+				UPDATE	m
+					SET SettlementStatusID = rs.SettlementStatusID
+						,IsExistFastMarketResult = rs.IsExistFastMarketResult
+				FROM	@TempMatch m
+					INNER JOIN (
+						SELECT	r.matchid
+							,MIN(CASE WHEN bt.groupId = 8 THEN ISNULL(r.SettlementStatusID,0) ELSE NULL END) AS SettlementStatusID
+							,MAX(CASE WHEN bt.groupId = 9 THEN 1 ELSE 0 END) AS IsExistFastMarketResult
+						FROM #tblResultDetail r
+							INNER JOIN #tblBettype bt
+								ON r.ResourceId LIKE bt.ResourceId
+						WHERE bt.GroupId IN (8,9)
+						GROUP BY r.matchid
+					) rs
+						ON m.MatchId = rs.matchId
 		END
 		
 		INSERT INTO #tblBetStatus (matchid, bettype, isRunning, groupId, IsParlay)
@@ -271,16 +268,28 @@ BEGIN
 		AND (@LeagueId = 0 OR m.leagueid = @LeagueId)
 		AND (@matchcode = '' OR (m.matchid = @matchid OR m.matchcode = @matchcode))
 	
-	-- GET TENNIS RESULT DETAIL 
-	SELECT MatchId
-		, ResourceId
-		, HomeValue
-		, AwayValue
-		, ResultStatusID
-		, SettlementStatusID
-	FROM #tblResultDetail rs
-	WHERE rs.MatchId IN (SELECT t.MatchId FROM @TempMatch t)
-		AND ResourceId LIKE '0[0-5]'
+	-- Get TENNIS, BASKETBALL RESULT  
+	IF @SportType IN (0,1,2,5)
+		SELECT MatchId
+			, ResourceId
+			, HomeValue
+			, AwayValue
+			, ResultStatusID
+			, SettlementStatusID
+		FROM #tblResultDetail rs
+		WHERE rs.MatchId IN (SELECT t.MatchId FROM @TempMatch t)
+			AND (ResourceId LIKE '0[0-5]' -- Tennis
+					OR ResourceId LIKE 'Q[1-4]' OR ResourceId = 'OT' -- Basketball: 00, 01, Q1, Q2, Q3, Q4, OT
+				)
+	ELSE
+		SELECT MatchId
+			, ResourceId
+			, HomeValue
+			, AwayValue
+			, ResultStatusID
+			, SettlementStatusID
+		FROM #tblResultDetail rs
+		WHERE 1 = 0
 
 	SET @EndTime = GETDATE()
 	IF DATEDIFF(MILLISECOND, @StartTime, @EndTime) > 1000
@@ -291,19 +300,4 @@ BEGIN
 	END
 
 END
-
-
-
 GO
-
-SET QUOTED_IDENTIFIER OFF 
-GO
-SET ANSI_NULLS ON 
-GO
-
-
-GO 
- GRANT VIEW DEFINITION ON [dbo].[NAP_Set_WaitingSel] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[NAP_Set_WaitingSel] TO [bodbAdminNet]
-GO 
