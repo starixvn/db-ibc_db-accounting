@@ -38,6 +38,7 @@ AS
 		- 20151109@Billy: Change LogSPData definition to support over-8000-characters log - [Redmine: #46541]
 		- 20160128@Billy: Update Virtual Rate's range from [-0.8, 1.6] to [-0.9, 1.6] - [Redmine: #51611]
 		- 20160422@Billy:	Exclude Auto Adjusted VR Members when update VR - [Redmine: #56525]
+		- 20170328@Elodie: Expand the range of VR setting [RedmineID:#73808]
 	Param's Explanation:  
 	• @virtualmultiplier = '<ROOT>
 								<Rate SportType="1" BetType="1" IsLive="0" VirtualMultiplier="1.5" />	
@@ -131,7 +132,7 @@ BEGIN
 		  
 	IF EXISTS (SELECT TOP 1 1
 				FROM @tblVirtualrate
-				WHERE virtualmultiplier > 1.6 
+				WHERE virtualmultiplier > 3 
 					OR virtualmultiplier < 0.1
 				)  
 	BEGIN  

@@ -1,7 +1,3 @@
-SET QUOTED_IDENTIFIER ON;
-SET ANSI_NULLS ON;
-GO
-
 ALTER PROCEDURE	dbo.Acc_CustomerUpdVirtualMultiplier_Multiple
 					@VirtualMultiplier		VARCHAR(MAX)	= ''
 				,	@UserID					INT  
@@ -16,6 +12,7 @@ AS
 	Original:  
   
 	Revisions: 
+		- 20170328@Elodie: Expand the range of VR setting [RedmineID:#73808]
 	Param's Explanation:  
 		- @VirtualMultiplier = '<ROOT>
 									<Rate CustIds="1,2,3,4,5,6" VirtualMultiplier="0.7" />	
@@ -70,7 +67,7 @@ BEGIN
 		  
 	IF	EXISTS	(	SELECT	1
 					FROM	@tblVirtualrate
-					WHERE	virtualmultiplier > 1.6 
+					WHERE	virtualmultiplier > 3 
 						OR	virtualmultiplier < 0.1
 				)  
 	BEGIN  
