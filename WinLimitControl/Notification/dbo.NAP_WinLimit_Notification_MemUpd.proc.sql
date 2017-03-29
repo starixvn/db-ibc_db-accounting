@@ -12,6 +12,7 @@ Revisions:
 	- 20150702@bobby.nguyen: Initial
 	- 20160507@Patrick: #57213 - Voidbridge integration
 	- 20160701@Robert: CWL - Phase 2 - Support RED and Yellow level - [Redmine: 57722]
+	- 20170329@Robert: CWL Phase 3A - email notification Enhancement - [Redmine: 72604]
 	
 Param's Explanation:
 	• @ErrCode	:
@@ -26,8 +27,8 @@ Param's Explanation:
          CREATE TABLE #tempMemNotify
          (custid      INT,
           productid   TINYINT,
-          winlostdate SMALLDATETIME,
-          bettypeid   SMALLINT
+          groupid     TINYINT,
+          winlostdate SMALLDATETIME
          );
 	
          -- RESET output
@@ -36,8 +37,8 @@ Param's Explanation:
          INSERT INTO #tempMemNotify
                 SELECT Tbl.Col.value('@custid', 'INT'),
                        Tbl.Col.value('@productid', 'TINYINT'),
-                       Tbl.Col.value('@winlostdate', 'SMALLDATETIME'),
-                       Tbl.Col.value('@bettypeid', 'SMALLINT')
+                       Tbl.Col.value('@groupid', 'TINYINT'),
+                       Tbl.Col.value('@winlostdate', 'SMALLDATETIME')
                 FROM @MemNotify.nodes('//notify/row') Tbl(Col);
          IF(@@ROWCOUNT = 0)
              BEGIN
@@ -49,10 +50,10 @@ Param's Explanation:
            SET
                g.IsNotified = 1
          FROM dbo.WinLimit_CustGameMonitoring g WITH (ROWLOCK, UPDLOCK)
+              INNER JOIN WinLimit_GameGroupSetting GGS WITH (NOLOCK) ON g.GroupID = GGS.GroupID
               INNER JOIN #tempMemNotify t ON g.custid = t.custid
                                              AND g.winlostdate = t.winlostdate
-                                             AND g.productid = t.productid
-                                             AND g.BettypeID = t.bettypeid;         
+                                             AND g.productid = t.productid;
      END;
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_Notification_MemUpd] TO [bodbAdminNet];
