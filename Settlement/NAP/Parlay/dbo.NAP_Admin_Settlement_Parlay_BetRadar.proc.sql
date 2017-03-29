@@ -1,10 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
-USE [bodb02]
-GO
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
+/*<info serverAlias="DBTXN-bodb02" executers="" viewers="vnteam" isFunction="0" isNested="1"></info>*/
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Parlay_BetRadar] (
 	@matchId 			INT
 	, @matchdate		SMALLDATETIME
@@ -20,7 +14,7 @@ AS
 	ORIGINAL: 
 
 	Revisions:		
-		
+		- 20170328@Bobby: #74203 - Update modds alias column
 
 	Param's Explanation:		
 		- @Mode: ['ABANDONED-1H', 'ABANDONED-2H']
@@ -161,7 +155,7 @@ BEGIN
 				SELECT TOP(@batchNo)
 					b.transid AS t
 					, b.refno AS r
-					, ISNULL(odds.modds, 0) AS s
+					, ISNULL(odds.modds, 0) AS m
 				FROM @tempBatch ref
 					INNER JOIN dbo.bettransm b WITH(NOLOCK) ON ref.refno = b.refno
 					OUTER APPLY [dbo].[f_Set_Parlay_SDT_CalModds_BetRadar](
@@ -220,3 +214,4 @@ BEGIN
 	RETURN
 	
 END
+GO
