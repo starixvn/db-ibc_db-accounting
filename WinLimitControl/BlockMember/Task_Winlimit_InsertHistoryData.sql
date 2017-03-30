@@ -62,7 +62,7 @@ BEGIN
 		, IsNotified, ModifiedBy, CreatedBy, WinlostDate,MaxWinLimitSetting,TotalWinAmt_RM,BettypeID)
 
 	SELECT CustId, ProductId,GroupID, MaxWinLimit, TotalWinAmt,WinAmt,LevelID,ActionID,ModifiedDate
-		, IsNotified, ModifiedBy, CreatedBy, WinlostDate,MaxWinLimitSetting,TotalWinAmt_RM, 0 AS BettypeID
+		, IsNotified, ModifiedBy, CreatedBy, WinlostDate,MaxWinLimitSetting,TotalWinAmt_RM, GroupID AS BettypeID
 
 	FROM #TempData
 	

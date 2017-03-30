@@ -250,7 +250,7 @@ BEGIN
 					, BettypeID ) 
 							
 	SELECT t.CustId, t.ProductId, t.GroupID,t.LevelID, t.MaxwinLimit, t.TotalWinAmount, t.TotalWinAmount, 0, NULL,@ReachedDate ,@WinlostDate,t.MaxWinLimitSetting
-			, CASE WHEN T.ExchangeID = 20 THEN t.TotalWinAmount ELSE ROUND(FEX.MYR * t.TotalWinAmount,2) END AS TotalWinAmt_RM, 0 BettypeID
+			, CASE WHEN T.ExchangeID = 20 THEN t.TotalWinAmount ELSE ROUND(FEX.MYR * t.TotalWinAmount,2) END AS TotalWinAmt_RM, t.GroupID AS BettypeID
 	FROM #CustReachCWLList t
 		LEFT JOIN dbo.WinLimit_CustGameMonitoring g WITH(NOLOCK) ON t.CustId = g.CustID AND t.WinlostDate = g.WinlostDate AND t.GroupID = g.GroupID
 		LEFT JOIN Lrf_f_GetExchangeDaily(@Fromdate, @Todate) fEx  ON fEx.ExchangeId = T.ExchangeID
