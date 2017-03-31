@@ -1,5 +1,4 @@
-﻿USE [BK]
-GO
+﻿/*<info serverAlias="DBBET-BK" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 
 ALTER PROCEDURE [dbo].[Acc_Rpt_CheckBet]
 	@winlostdate datetime
@@ -23,7 +22,8 @@ AS
 		- SQL execution: exec Acc_Rpt_CheckBet @winlostdate='Aug  13 2012 12:00:00:000AM'
 	
 */
-Begin
+
+BEGIN
 	SET NOCOUNT ON 	
 	 
 	----Get Sport Bettype Matrix------
@@ -77,10 +77,5 @@ Begin
 			)*/
 
 	select @CheckNormalBet as CheckNormalBet,@CheckRejectBet as CheckRejectBet 	
-End
-
+END
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_CheckBet] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_CheckBet] TO [vnteam]
-

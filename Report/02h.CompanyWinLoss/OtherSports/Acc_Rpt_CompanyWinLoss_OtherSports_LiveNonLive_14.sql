@@ -1,3 +1,5 @@
+/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+
 IF EXISTS
 (
     SELECT *
@@ -313,8 +315,4 @@ EXEC [Acc_Rpt_CompanyWinLoss_OtherSports_LiveNonLive_14] @EndDate='2020-01-01',@
      DROP TABLE #DepositSuper;
      DROP TABLE #Match;
      DROP TABLE #Data;
-GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_CompanyWinLoss_OtherSports_LiveNonLive_14] TO [bodbAdminNet];
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_CompanyWinLoss_OtherSports_LiveNonLive_14] TO [vnteam];
 GO
