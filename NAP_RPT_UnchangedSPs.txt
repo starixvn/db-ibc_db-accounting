@@ -1,0 +1,9 @@
+Report/02h.CompanyWinLoss/OtherSports/Acc_Rpt_CompanyWinLoss_OtherSports_BetType.sql
+Report/02h.CompanyWinLoss/OtherSports/Acc_Rpt_CompanyWinLoss_OtherSports_BetType_14.sql
+Report/02h.CompanyWinLoss/OtherSports/Acc_Rpt_CompanyWinLoss_OtherSports_LiveNonLive.sql
+Report/02h.CompanyWinLoss/OtherSports/Acc_Rpt_CompanyWinLoss_OtherSports_LiveNonLive_14.sql
+Report/02h.CompanyWinLoss/OtherSports/Acc_Rpt_CompanyWinLoss_OtherSports_SportType.sql
+Report/02h.CompanyWinLoss/OtherSports/Acc_Rpt_CompanyWinLoss_OtherSports_SportType_14.sql
+Report/CheckBet/Acc_Rpt_CheckBet.sql
+Report/CheckBet/Acc_Rpt_CheckBet_Normal.sql
+Report/CheckBet/Acc_Rpt_CheckBet_Reject.sql
