@@ -18,6 +18,7 @@ AS
 		- 20160615@Jim: support to show TEAM statistic figures for Metric Gaming (HotFix #59341)
 		- 20160810@Percy: return homeid, awayid [RedmineID: #53523]
 		- 20160819@Robert: Add Bet Trade Winloss bettype=904 (#62630)
+		- 20170323@Percy: return betid [RedmineID: #72900]
 		
 */
 
@@ -71,6 +72,7 @@ BEGIN
 		,b.oddsspread
 		,@homeid homeid
 		,@awayid awayid
+		,b.betid
 	FROM 
 	bodb02.dbo.bettrans b with (nolock)
 	INNER JOIN bodb02.dbo.customer c with (nolock) ON b.custid = c.custid
@@ -119,6 +121,7 @@ BEGIN
 		,b.oddsspread
 		,@homeid homeid
 		,@awayid awayid
+		,b.betid
 	FROM 
 	bodb02.dbo.bettrans14 b with (nolock)
 	INNER JOIN bodb02.dbo.customer c with (nolock) ON b.custid = c.custid
