@@ -1,7 +1,7 @@
 USE bodb02
 GO
 
-ALTER PROCEDURE [dbo].[Acc_Rpt_HouseNetIncome_MacauGame_Deposit]
+ALTER PROCEDURE [dbo].[Acc_Rpt_HouseNetIncome_MacauGames_Deposit]
 	@FromDate DATE,
 	@ToDate	DATE
 AS  
@@ -162,6 +162,6 @@ BEGIN
 END
 GO
 
-GRANT EXECUTE ON [dbo].[Acc_Rpt_HouseNetIncome_VB_Deposit] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_HouseNetIncome_MacauGames_Deposit] TO [bodbAdminNet]
 GO
-GRANT VIEW definition ON [dbo].[Acc_Rpt_HouseNetIncome_VB_Deposit] TO vnteam
+GRANT VIEW definition ON [dbo].[Acc_Rpt_HouseNetIncome_MacauGames_Deposit] TO vnteam

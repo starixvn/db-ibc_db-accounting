@@ -1,7 +1,7 @@
 USE bodb_dwrs
 GO
 
-ALTER PROCEDURE [dbo].[Acc_Rpt_HouseNetIncome_MacauGame_Credit]
+ALTER PROCEDURE [dbo].[Acc_Rpt_HouseNetIncome_MacauGames_Credit]
 	@FromDate DATE,
 	@ToDate	DATE
 AS  
@@ -70,7 +70,7 @@ BEGIN
 	CREATE TABLE #SportBettypeMatrix (ProductID INT, Bettype INT, EventType INT, SubProduct VARCHAR(500))
 
 	INSERT INTO #SportBettypeMatrix (ProductID, Bettype, EventType, SubProduct)
-	SELECT ProductID, BetType, EventType, SubProduct FROM bodb02.dbo.f_SportBettypeMatrix_Sel(3,0,0,2,'','VB',0)
+	SELECT ProductID, BetType, EventType, SubProduct FROM bodb02.dbo.f_SportBettypeMatrix_Sel(22,0,0,2,'','VB',0)
 
 	-- Daily Extra PT
 	;WITH ExtraPT AS
@@ -79,7 +79,7 @@ BEGIN
 		FROM bodb_account.dbo.rptGroupWinloss b WITH (NOLOCK)
 			INNER JOIN #SportBettypeMatrix sb ON sb.Bettype = b.bettype
 		WHERE	rptdate BETWEEN @FDate AND @TDate 
-				AND sb.ProductID = 22 --VB in Products table
+				AND sb.ProductID = 22 -- Macau Games in Products table
 				AND b.statusid <> 14
 		GROUP BY b.rptDate
 	)
@@ -107,22 +107,24 @@ BEGIN
 		AND b.status <> 14
 	GROUP BY b.rptDate
 	OPTION (RECOMPILE)
-
+	
 	UPDATE f
 	SET HouseWL = f.HouseWL + wl.HouseWL
 	FROM #FinalResult f
 		INNER JOIN #TmpHouseWL wl ON CONVERT(VARCHAR(2), wl.rptDate, 106) = f.RptDate
-
-	-- FullRange amount
-	INSERT INTO #FinalResult (RptDate, HouseWL, ExtraPT, PayToSupplier)
-	SELECT 'FullRange', SUM(HouseWL), SUM(ExtraPT), 0
-	FROM #FinalResult
+	
+	UPDATE f
+	SET f.PayToSupplier = 0.02 * wl.MemberWLOANDA
+	FROM #FinalResult f
+		INNER JOIN #TmpHouseWL wl ON CONVERT(VARCHAR(2), wl.rptDate, 106) = f.RptDate
 
 	DECLARE @SumPayToSupplier MONEY
 	SELECT @SumPayToSupplier = SUM(MemberWLOANDA) FROM #TmpHouseWL
-
-	UPDATE #FinalResult 
-	SET PayToSupplier = 0.02 * (CASE WHEN @SumPayToSupplier > 0 THEN 0 ELSE @SumPayToSupplier END)
+	
+	-- FullRange amount
+	INSERT INTO #FinalResult (RptDate, HouseWL, ExtraPT, PayToSupplier)
+	SELECT 'FullRange', SUM(HouseWL), SUM(ExtraPT), 0.02 * (CASE WHEN @SumPayToSupplier > 0 THEN 0 ELSE @SumPayToSupplier END)
+	FROM #FinalResult	
 
 	---------------------------------------------------- Select the output -------------------------------------------------------
 	DECLARE @SQL VARCHAR(1000)
@@ -151,8 +153,8 @@ BEGIN
 END
 GO
 
-GRANT EXECUTE ON [dbo].[Acc_Rpt_HouseNetIncome_VB_Credit] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_HouseNetIncome_MacauGames_Credit] TO [bodbAdminNet]
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_HouseNetIncome_VB_Credit] TO [dwrs]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_HouseNetIncome_MacauGames_Credit] TO [dwrs]
 GO
-GRANT VIEW definition ON [dbo].[Acc_Rpt_HouseNetIncome_VB_Credit] TO vnteam
+GRANT VIEW definition ON [dbo].[Acc_Rpt_HouseNetIncome_MacauGames_Credit] TO vnteam

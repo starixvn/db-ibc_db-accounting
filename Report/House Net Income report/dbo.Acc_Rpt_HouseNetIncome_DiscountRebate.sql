@@ -14,7 +14,8 @@ AS
     Revisions: 
 		- 20160909@Harper - #63899 - Rebate and Discount should be included when calculating the Pay to Suplplier
 		- 20160922@Harper - #64527 - Cannot calculate the Rebate of Keno and Number Game
-		- 20161024@Harper - #65699: HAIFA - Apply new charge rate discount for HNI report
+		- 20161024@Harper - #65699 - HAIFA - Apply new charge rate discount for HNI report
+		- 20170323@Harper - #67065 - Add more product to calculate discount & rebate
 	Param's Explanation:   
 */  
 BEGIN  
@@ -147,7 +148,7 @@ BEGIN
 
 	INSERT INTO #FeeData (PartyId, ProductId, AComm, MinFeeApplied, WLFeeApplied, AmountToCompany)
 	EXEC dbo.Acc_Rpt_HouseNetIncome_LicenseeFee @FromDate = @FDate, @ToDate = @TDate, @Products = @ProductList
-
+	
 	-- Apply discount & rebate
 	;WITH t AS(
 			SELECT SUM(s.AmountToCompany) Total, s.PartyId,d.DiscountGroupId
@@ -165,11 +166,11 @@ BEGIN
 									ProductCode		VARCHAR(10),
 									[Order]			INT,
 									Figure			VARCHAR(200),
-									FullRange		MONEY)
+									FullRange		MONEY)	
 
 	INSERT INTO #RebateDiscount (ProductId, ProductCode, [Order], Figure, FullRange)	
 	SELECT	s.ProductId,
-			CASE WHEN s.ProductId = 0 THEN 'SB' ELSE p.ProductPrefix END ProductCode,
+			CASE WHEN s.ProductId = 0 THEN 'SB' WHEN s.ProductId IN (14, 17) THEN 'MGC' ELSE p.ProductPrefix END ProductCode,
 			CASE WHEN s.ProductId = 0 THEN 4 ELSE 3 END [Order],
 			'Rebate & Discount' Figure,
 			-SUM(CASE WHEN s.AmountToCompany < 0 THEN 0 ELSE s.AmountToCompany * (ISNULL(d.Rate, 0) + (1 - ISNULL(d.Rate, 0)) * ISNULL(r.Rate,0)) END) AS FullRange
@@ -178,13 +179,13 @@ BEGIN
 		LEFT JOIN #DiscountGroup d ON s.PartyId = d.PartyId AND d.ProductId = s.ProductId AND d.DiscountGroupType = 1 -- discount = 1
 		LEFT JOIN #DiscountGroup r ON s.PartyId = r.PartyId AND r.ProductId = s.ProductId AND r.DiscountGroupType = 2 -- rebate = 2
 	GROUP BY	s.ProductId,
-				CASE WHEN s.ProductId = 0 THEN 'SB' ELSE p.ProductPrefix END, 
+				CASE WHEN s.ProductId = 0 THEN 'SB' WHEN s.ProductId IN (14, 17) THEN 'MGC' ELSE p.ProductPrefix END, 
 				CASE WHEN s.ProductId = 0 THEN 4 ELSE 3 END
 	
 	UNION ALL
 	-- For Product that have discount group type = 3, discount based on Licensee WL
 	SELECT	s.ProductId,
-			CASE WHEN s.ProductId = 0 THEN 'SB' ELSE p.ProductPrefix END ProductCode,
+			CASE WHEN s.ProductId = 0 THEN 'SB' WHEN s.ProductId IN (14, 17) THEN 'MGC' ELSE p.ProductPrefix END ProductCode,
 			CASE WHEN s.ProductId = 0 THEN 4 ELSE 3 END [Order],
 			'Rebate & Discount' Figure,
 			-SUM(CASE WHEN s.LicenseeWL < 0 THEN 0 ELSE s.LicenseeWL * ISNULL(d.Rate, 0) END) AS FullRange
@@ -192,18 +193,18 @@ BEGIN
 		LEFT JOIN bodb_licensee.dbo.Product3rd p ON p.Productid = s.ProductId
 		LEFT JOIN #DiscountGroup d ON s.PartyId = d.PartyId AND d.ProductId = s.ProductId AND d.DiscountGroupType = 3
 	GROUP BY	s.ProductId,
-				CASE WHEN s.ProductId = 0 THEN 'SB' ELSE p.ProductPrefix END, 
+				CASE WHEN s.ProductId = 0 THEN 'SB' WHEN s.ProductId IN (14, 17) THEN 'MGC' ELSE p.ProductPrefix END, 
 				CASE WHEN s.ProductId = 0 THEN 4 ELSE 3 END
 	
 	UNION ALL	
 	SELECT	ProductId,
-			ProductPrefix AS ProductCode,
+			CASE WHEN ProductId IN (14, 17) THEN 'MGC' ELSE ProductPrefix END AS ProductCode,
 			3 AS [Order],
 			'Rebate & Discount' Figure,
 			0 AS FullRange
 	FROM bodb_licensee.dbo.Product3rd WITH (NOLOCK)
 	WHERE Productid NOT IN (SELECT DISTINCT ProductID FROM #FeeData)
-		AND Productid IN (2,4,5,6,8)
+		AND Productid IN (2,4,5,6,8,14,17,12,22,11,21,24)
 
 	UNION ALL
 	SELECT  0,

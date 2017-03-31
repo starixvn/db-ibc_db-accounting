@@ -162,6 +162,6 @@ BEGIN
 END
 GO
 
-GRANT EXECUTE ON [dbo].[Acc_Rpt_HouseNetIncome_VG_Deposit] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Acc_Rpt_HouseNetIncome_Macau_Deposit] TO [bodbAdminNet]
 GO
-GRANT VIEW definition ON [dbo].[Acc_Rpt_HouseNetIncome_VG_Deposit] TO vnteam
+GRANT VIEW definition ON [dbo].[Acc_Rpt_HouseNetIncome_Macau_Deposit] TO vnteam
