@@ -1,5 +1,4 @@
-USE [bodb_ACC]
-GO
+/*<info serverAlias="DBACC-bodb_ACC" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 
 ALTER PROCEDURE [dbo].[NAP_SaveBet_GetBets] 
 	@matchid int,
@@ -137,9 +136,4 @@ BEGIN
 -- exec Save_BetList 419522
 	ORDER BY b.betteam, b.transid
 END
-
-GO 
-GRANT EXECUTE ON [dbo].[NAP_SaveBet_GetBets] TO [bodbAdminNet]
-GO 
-GRANT VIEW DEFINITION ON [dbo].[NAP_SaveBet_GetBets] TO [vnteam]
-GO 
+GO

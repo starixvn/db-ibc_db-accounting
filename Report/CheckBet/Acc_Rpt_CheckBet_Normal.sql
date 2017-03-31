@@ -1,5 +1,4 @@
-﻿USE [bk]
-GO
+﻿/*<info serverAlias="DBBET-BK" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 
 ALTER PROCEDURE [dbo].[Acc_Rpt_CheckBet_Normal]
 	@winlostdate datetime
@@ -185,9 +184,4 @@ BEGIN
 	
 	DROP TABLE #tmp
 END
-
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_CheckBet_Normal] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_CheckBet_Normal] TO [vnteam]
- 
