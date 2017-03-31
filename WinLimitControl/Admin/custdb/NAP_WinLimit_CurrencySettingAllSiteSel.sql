@@ -83,15 +83,17 @@ EXEC [NAP_WinLimit_CurrencySettingAllSiteSel] @ProductId = 22, @CurrencyId = 72
      END;
      BEGIN --#ProductSiteCurrencySetting
          CREATE TABLE #ProductSiteCurrencySetting
-         (ProductId  TINYINT,
-          SiteId     SMALLINT,
-          CurrencyId TINYINT
+         (ProductId    TINYINT,
+          SiteId       SMALLINT,
+          CurrencyId   TINYINT,
+          IsCreditSite BIT
          );
          INSERT INTO #ProductSiteCurrencySetting
                 SELECT DISTINCT
                        @ProductId,
                        s.siteId,
-                       lc.Currency
+                       lc.Currency,
+                       0 AS IsCreditSite
                 FROM DBLIC.bodb_licensee.dbo.LicenseeCust lc WITH (NOLOCK)
                      INNER JOIN @AllLicensees l ON l.LicenseeID = lc.LicenseeID
                      INNER JOIN exchange ex WITH (NOLOCK) ON ex.exchangeid = lc.Currency
@@ -102,7 +104,8 @@ EXEC [NAP_WinLimit_CurrencySettingAllSiteSel] @ProductId = 22, @CurrencyId = 72
                 UNION
                 SELECT @ProductId,
                        T.SiteId,
-                       c.Id
+                       c.Id,
+                       1 AS IsCreditSite
                 FROM [dbo].[f_Nap_WinLimit_CreditCurrencySel]() c
                      CROSS APPLY
                 (
@@ -118,6 +121,7 @@ EXEC [NAP_WinLimit_CurrencySettingAllSiteSel] @ProductId = 22, @CurrencyId = 72
                 p.GroupId,
                 pc.CurrencyId,
                 pc.SiteId,
+                pc.IsCreditSite,
                 ISNULL(s.MaxWinLimit_RM, 0) AS MaxWinLimit,
                 ISNULL(s.IsBlockedPlaceBet, 0) AS IsBlockedPlaceBet,
                 ISNULL(s.IsBlockedTransfer, 0) AS IsBlockedTransfer

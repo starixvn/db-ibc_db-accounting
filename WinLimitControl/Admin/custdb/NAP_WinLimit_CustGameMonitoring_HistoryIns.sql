@@ -76,7 +76,7 @@ EXEC [NAP_WinLimit_CustGameMonitoring_HistoryIns]
                             IsNotified,
                             @UserId,
                             @UserId
-               FROM dbo.WinLimit_CustGameMonitoring
+               FROM dbo.WinLimit_CustGameMonitoring WITH(NOLOCK)
                WHERE CustId = @CustId
                      AND ProductId = @ProductId
                      AND GroupId = @GroupId

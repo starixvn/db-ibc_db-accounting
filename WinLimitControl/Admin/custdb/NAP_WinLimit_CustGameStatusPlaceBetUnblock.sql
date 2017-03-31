@@ -56,10 +56,11 @@ Parameters Explanation:
                    s.ActionId = 2,
                    s.ModifiedDate = GETDATE()
              FROM dbo.WinLimit_CustGameStatus s WITH (ROWLOCK, UPDLOCK)
-                  INNER JOIN dbo.Winlimit_GameGroupSetting g WITH(NOLOCK) ON s.BettypeID = s.BettypeID
-                                                                AND s.ProductID = g.ProductID
+                  INNER JOIN dbo.Winlimit_GameGroupSetting g WITH (NOLOCK) ON s.BettypeID = g.BettypeID
+                                                                              AND s.ProductID = g.ProductID
              WHERE s.CustId = @CustId
-                   AND s.ProductId = @ProductId;
+                   AND s.ProductId = @ProductId
+                   AND g.GroupId = @GroupId;
          END TRY
          BEGIN CATCH
              SELECT @ErrorCode = 1,

@@ -27,7 +27,7 @@ DB: DBCUST/CustDB
 
 Revisions:
 20160923@Jacob: Risk & Control - Phase 3 [#61220].
-
+20170313@Jacob: Risk & Control - Phase 3A [#72604].
 Parameters Explanation:  
      @SiteId: Site Or Licensee ID.  
      @IsCreditSite: Is Credit Site.  

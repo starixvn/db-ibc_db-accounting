@@ -30,7 +30,7 @@ DB: DBCUST/CustDB
 
 Revisions:
 20160923@Jacob: Risk & Control - Phase 3 [#61220].
-
+20170313@Jacob: Risk & Control - Phase 3A [#72604].
 Parameters Explanation:
    @ProductId: Product ID
    @SiteId	: Site or Licensee ID
@@ -107,7 +107,8 @@ EXEC [NAP_WinLimit_CurrencySettingSel] @ProductId=21,@SiteId=32,@IsCreditSite=1,
                 pc.SiteId,
                 ISNULL(s.MaxWinLimit_RM, 0) AS MaxWinLimit,
                 ISNULL(s.IsBlockedPlaceBet, 0) AS IsBlockedPlaceBet,
-                ISNULL(s.IsBlockedTransfer, 0) AS IsBlockedTransfer
+                ISNULL(s.IsBlockedTransfer, 0) AS IsBlockedTransfer,
+                @IsCreditSite AS IsCreditSite
          FROM #ProductSiteCurrencySetting pc
               INNER JOIN @Products p ON p.ProductId = pc.ProductId
               INNER JOIN dbo.WinLimit_ProductSettingDetail s WITH (NOLOCK) ON s.ProductID = p.ProductId
