@@ -31,6 +31,7 @@ DB: DBCUST/CustDB
 
 Revisions:
 20170313@Jacob: Risk & Control - Phase 3A [#72604].
+
 Example:
 SELECT * FROM [f_Nap_WinLimit_CreditCurrencySel]()
 */

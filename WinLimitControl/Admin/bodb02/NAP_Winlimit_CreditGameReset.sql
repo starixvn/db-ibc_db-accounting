@@ -15,22 +15,22 @@ GO
 SET QUOTED_IDENTIFIER ON;
 GO
 CREATE PROCEDURE [dbo].[NAP_Winlimit_CreditGameReset] @CustId    INT,
-                                                     @BetTypeId INT
+                                                     @GroupId INT
 AS
 	
 /*
-	Created: Jacob	
-	Date: 2016-06-30
-	Task: #38608 - Implement function to control Player's Win Limit on specific Product
-	
-	DB: DBCust/bodb02
-	
-	Revisions:
-	
-	Parameters Explanation:	
-	EXEC [NAP_Winlimit_CreditGameReset] 
-	   @CustId = 662531, 
-	   @BetTypeId=4001
+Created: Jacob	
+Date: 2016-06-30
+Task: #38608 - Implement function to control Player's Win Limit on specific Product
+
+DB: DBCust/bodb02
+
+Revisions:
+20170313@Jacob: Risk & Control - Phase 3A [#72604].
+Parameters Explanation:	
+EXEC [NAP_Winlimit_CreditGameReset] 
+   @CustId = 662531, 
+   @GroupId=1
 	
 */
 
@@ -42,7 +42,12 @@ AS
                    cg.WinLost = 0
              FROM dbo.WinLimit_CreditGame cg WITH (ROWLOCK, UPDLOCK)
              WHERE cg.CustId = @CustId
-                   AND cg.BetType = @BetTypeId;
+                   AND cg.BetType IN
+             (
+                 SELECT BetTypeId
+                 FROM DBCUST.CustDB.dbo.Winlimit_GameGroupSetting WITH (NOLOCK)
+                 WHERE GroupId = @GroupId
+             );
          END TRY
          BEGIN CATCH
              SELECT 1 AS ErrorCode,

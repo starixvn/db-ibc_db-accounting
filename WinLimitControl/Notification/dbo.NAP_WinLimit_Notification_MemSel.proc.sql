@@ -54,7 +54,6 @@ AS
                 l.LevelName,
                 e.Rate AS ExchangeRate
          FROM WinLimit_CustGameMonitoring wl WITH (NOLOCK)
-              INNER JOIN WinLimit_GameGroupSetting GGS WITH (NOLOCK) ON WL.GroupID = GGS.GroupID
               INNER JOIN Customer c WITH (NOLOCK) ON c.custid = wl.CustID
               INNER JOIN Customer ag WITH (NOLOCK) ON ag.custid = c.recommend
               INNER JOIN Site S WITH (NOLOCK) ON S.site = ag.site
