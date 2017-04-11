@@ -32,7 +32,9 @@ Task: #38608 - Implement function to control Player's Win Limit on specific Prod
 DB: DBCust/CustDB
 
 Revisions:
-20170321@Jacob: Risk & Control - Phase 3A [#72604].  
+	- 20170321@Jacob: Risk & Control - Phase 3A [#72604].  
+	- 20170411@Helen: HOTFIX - Missing to notify Yellow level due to service schedule and SPs code - [Redmine: 74906]
+
 Parameters Explanation:	
 EXEC [NAP_WinLimit_CustGameMonitoring_HistoryIns] 
    @CustId = 662531, 
@@ -77,7 +79,7 @@ EXEC [NAP_WinLimit_CustGameMonitoring_HistoryIns]
                             WinAmt,
                             @ActionId,
                             GETDATE(),
-                            IsNotified,
+                            1,
                             @UserId,
                             @UserId
                FROM dbo.WinLimit_CustGameMonitoring WITH(NOLOCK)
