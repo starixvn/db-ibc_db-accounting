@@ -16,11 +16,33 @@ AS
 		- 20170412@Kent: Get all licensee [Redmine:#75009]		
 */
 BEGIN
-	SET NOCOUNT ON
+	SET NOCOUNT ON	
 	
-	SELECT CAST(1 AS INT) AS Id
-	     , CAST('' AS VARCHAR(100)) AS Name
-	     , CAST('' AS VARCHAR(100)) AS GroupName	
+	CREATE TABLE #LicenseeGroupInfo
+	(
+		Id VARCHAR(100) PRIMARY KEY,
+		GroupName VARCHAR(100)
+	)
+	
+	INSERT INTO #LicenseeGroupInfo(Id, GroupName)
+	VALUES ('MBC Group', 'Others')
+	     , ('789y', 'Others')	
+	
+	;WITH LicenseeList AS
+	(     
+		SELECT siteid as Id, site as Name
+		FROM site WITH(NOLOCK)
+		WHERE isLicensee = 1 AND isActive =1 
+		  AND siteID NOT IN (29,35)	
+		UNION ALL
+		SELECT 'MBC Group' AS Id, 'MBC Group' As Name 
+		UNION ALL
+		SELECT '789y' AS Id, '789y' As Name
+	)
+	SELECT l.Id, l.Name, ISNULL(g.GroupName, 'Asian') AS GroupName
+	FROM LicenseeList l
+		 LEFT JOIN #LicenseeGroupInfo g
+				 ON l.Id = g.Id	  		      
 	
 	SET NOCOUNT OFF
 END
