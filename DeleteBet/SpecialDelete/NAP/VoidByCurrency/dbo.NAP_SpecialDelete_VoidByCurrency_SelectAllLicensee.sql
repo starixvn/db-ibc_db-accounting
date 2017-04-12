@@ -16,7 +16,12 @@ AS
 		- 20170412@Kent: Get all licensee [Redmine:#75009]		
 */
 BEGIN
-	SET NOCOUNT ON	
+	SET NOCOUNT ON
+	
+	DECLARE @MBCGroup_Id		 INT		  = -1
+		  , @MBCGroup_Name		 VARCHAR(100) = 'MBC Group'
+		  , @789y_Id			 INT		  = 0
+		  , @789y_Name			 VARCHAR(100) = '789y'
 	
 	CREATE TABLE #LicenseeGroupInfo
 	(
@@ -25,8 +30,8 @@ BEGIN
 	)
 	
 	INSERT INTO #LicenseeGroupInfo(Id, GroupName) -- fix here 
-	VALUES (-1, 'Others')
-	     , (0, 'Others')	
+	VALUES (@MBCGroup_Id, 'Others')
+	     , (@789y_Id, 'Others')	
 	
 	;WITH LicenseeList AS
 	(     
@@ -35,9 +40,9 @@ BEGIN
 		WHERE isLicensee = 1 AND isActive =1 
 		  AND siteID NOT IN (29,35)	
 		UNION ALL
-		SELECT -1 AS Id, 'MBC Group' As Name -- fix here 
+		SELECT @MBCGroup_Id AS Id, @MBCGroup_Name As Name
 		UNION ALL
-		SELECT 0 AS Id, '789y' As Name -- fix here 
+		SELECT @789y_Id AS Id, @789y_Name As Name 
 	)
 	SELECT l.Id, l.Name, ISNULL(g.GroupName, 'Asian') AS GroupName
 	FROM LicenseeList l
