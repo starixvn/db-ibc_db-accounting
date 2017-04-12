@@ -20,13 +20,13 @@ BEGIN
 	
 	CREATE TABLE #LicenseeGroupInfo
 	(
-		Id VARCHAR(100) PRIMARY KEY,
+		Id INT PRIMARY KEY,
 		GroupName VARCHAR(100)
 	)
 	
-	INSERT INTO #LicenseeGroupInfo(Id, GroupName)
-	VALUES ('MBC Group', 'Others')
-	     , ('789y', 'Others')	
+	INSERT INTO #LicenseeGroupInfo(Id, GroupName) -- fix here 
+	VALUES (-1, 'Others')
+	     , (0, 'Others')	
 	
 	;WITH LicenseeList AS
 	(     
@@ -35,9 +35,9 @@ BEGIN
 		WHERE isLicensee = 1 AND isActive =1 
 		  AND siteID NOT IN (29,35)	
 		UNION ALL
-		SELECT 'MBC Group' AS Id, 'MBC Group' As Name 
+		SELECT -1 AS Id, 'MBC Group' As Name -- fix here 
 		UNION ALL
-		SELECT '789y' AS Id, '789y' As Name
+		SELECT 0 AS Id, '789y' As Name -- fix here 
 	)
 	SELECT l.Id, l.Name, ISNULL(g.GroupName, 'Asian') AS GroupName
 	FROM LicenseeList l
