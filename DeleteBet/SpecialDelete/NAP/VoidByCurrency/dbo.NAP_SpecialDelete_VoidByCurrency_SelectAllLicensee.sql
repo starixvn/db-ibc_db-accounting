@@ -106,7 +106,8 @@ BEGIN
 				WHEN @China_GroupName THEN 1
 				WHEN @Asia_GroupName THEN 2
 				ELSE 3
-			 END ASC			 	  		      
+			 END ASC
+		   , l.Name ASC			 	  		      
 	
 	SET NOCOUNT OFF
 END
