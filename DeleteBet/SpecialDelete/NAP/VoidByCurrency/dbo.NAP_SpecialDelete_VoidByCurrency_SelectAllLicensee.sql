@@ -38,9 +38,9 @@ BEGIN
 	      , (@789y_Name, @Others_GroupName)
 		    -- China
 	      , ('Avia', @China_GroupName)
-	      , ('Boma', @China_GroupName)
+	      , ('Boma365', @China_GroupName)
 	      , ('FLC', @China_GroupName)
-	      , ('Hengcai', @China_GroupName)
+	      , ('Hengcai88', @China_GroupName)
 	      , ('Platinum', @China_GroupName)
 	      , ('Salon365', @China_GroupName)
 	      , ('Sun988', @China_GroupName)
@@ -48,13 +48,13 @@ BEGIN
 	      , ('VCBA', @China_GroupName)
 	      , ('Webet168', @China_GroupName)
 	      , ('Webet88', @China_GroupName)
-	      , ('BBIN', @China_GroupName)
+	      , ('HAIFA', @China_GroupName)
 	      , ('Bodog', @China_GroupName)
-	      , ('Livv88', @China_GroupName)
+	      , ('Happy1668', @China_GroupName)
 	      , ('MayFair', @China_GroupName)
 	      , ('Leon', @China_GroupName)
 	      , ('TLC', @China_GroupName)
-	      , ('Heji', @China_GroupName)			
+	      , ('KeenOcean', @China_GroupName)			
 	      , ('88Macao', @China_GroupName)
 	      , ('AG', @China_GroupName)
 	      , ('Honbet', @China_GroupName)
@@ -99,14 +99,7 @@ BEGIN
 		SELECT @789y_Id AS Id, @789y_Name As Name 
 	)
 	SELECT l.Id
-		 , CASE l.Name
-				WHEN 'Boma' THEN 'Boma365'
-				WHEN 'Hengcai' THEN 'Hencai88'
-				WHEN 'BBIN' THEN 'HAIFA'
-				WHEN 'Livv88Heji' THEN 'Happy1668'
-				WHEN 'Heji' THEN 'KeenOcean'
-				ELSE l.Name
-		   END AS Name
+		 , l.Name
 		 , ISNULL(g.GroupName, @Asia_GroupName) AS GroupName
 	FROM LicenseeList l
 		 LEFT JOIN #LicenseeGroupInfo g
