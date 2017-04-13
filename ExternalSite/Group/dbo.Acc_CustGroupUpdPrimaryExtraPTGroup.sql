@@ -1,7 +1,7 @@
 USE [bodb_Age]
 GO
 
-ALTER PROCEDURE dbo.Acc_CustGroupUpdPrimaryExtraPTGroup
+ALTER PROCEDURE [dbo].[Acc_CustGroupUpdPrimaryExtraPTGroup]
 	@CustID			INT,
 	@GroupName		VARCHAR(50),
 	@EffectiveDate	DATETIME,

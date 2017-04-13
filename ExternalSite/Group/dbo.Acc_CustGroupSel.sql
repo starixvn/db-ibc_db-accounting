@@ -15,7 +15,7 @@ AS
 		- 20130121@Dan: Move sp from DB053/bodb02 to DBAGE/bodb_AGE
 		- 20160620@Winnie: #48948 Hide_special_sites_from_unautorized_users
 		- 20160721@Percy: Return NormalGroup and ExtraPTGroup columns [RedmineID: #60883]
-
+		- 20170413@Percy: Change way get to-be-primary group [RedmineID: #74292]
 */
 BEGIN
 	SET NOCOUNT ON 
@@ -26,6 +26,8 @@ BEGIN
 	IF @GroupName = ''
 		SET @GroupName = NULL
 
+	DECLARE @GroupId INT
+	
 	DECLARE @GroupExtraPT TABLE (GroupName VARCHAR(50))
 	DECLARE @GroupExtraPTSetting TABLE (SuperId INT, GroupId INT, GroupName VARCHAR(50), EffectiveDate DATETIME, IsPrimary BIT)
 
@@ -51,6 +53,16 @@ BEGIN
 									WHERE FromDate > CONVERT(DATE, GETDATE())'
 								)
 	
+	SELECT TOP 1 @GroupId = GroupId FROM @GroupExtraPTSetting WHERE IsPrimary = 1
+	DELETE @GroupExtraPTSetting WHERE IsPrimary = 0 AND GroupId = @GroupId
+
+	DELETE tmp
+	FROM (
+		SELECT ROW_NUMBER() OVER(PARTITION BY SuperId, GroupId, GroupName ORDER BY EffectiveDate) AS RN
+		FROM @GroupExtraPTSetting WHERE IsPrimary = 0
+	) AS tmp
+	WHERE RN > 1
+
 	IF @Userid IS NULL
 	BEGIN	
 		;WITH CTE AS

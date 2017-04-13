@@ -15,36 +15,42 @@ ALTER FUNCTION [dbo].[f_GetAllGroupExtraPTByCustId]
 	Revisions:
 */
 
-RETURNS @CustExtraPTGroup TABLE (GroupId INT, GroupName VARCHAR(50), EffectiveDate DATETIME, [Primary] TINYINT, OrderId TINYINT)
+RETURNS @CustExtraPTGroup TABLE (GroupId INT, GroupName VARCHAR(50), EffectiveDate DATETIME, [Primary] BIT)
 AS
 BEGIN
-	INSERT INTO @CustExtraPTGroup (GroupId, GroupName, EffectiveDate, [Primary], OrderId)
-	SELECT d.GroupId, d.GroupName, s.EffectiveDate, CASE WHEN s.EffectiveDate IS NULL THEN 0 ELSE CASE WHEN s.EffectiveDate <= CONVERT(DATE, GETDATE()) THEN 1 ELSE 2 END END, 10
-	FROM
-		dbo.Acc_DWLList_ExtraPT d WITH(NOLOCK)
+	INSERT INTO @CustExtraPTGroup (GroupId, EffectiveDate, [Primary])
+	SELECT d.GroupId, s.EffectiveDate, CASE WHEN ISNULL(s.EffectiveDate, '9999-12-31') > CONVERT(DATE, GETDATE()) THEN 0 ELSE 1 END
+	FROM (
+		SELECT GroupId FROM dbo.Acc_DWLList_ExtraPT WITH(NOLOCK) WHERE GroupName <> 'BC'
+		UNION ALL SELECT 0
+	) AS d
 		LEFT JOIN
 		(
-			SELECT GroupName, MIN(FromDate) AS EffectiveDate
+			SELECT GroupId, MIN(FromDate) AS EffectiveDate
 			FROM bodb_Acc.dbo.Acc_GroupExtraPTSetting WITH(NOLOCK)
-			WHERE SuperID = @CustID AND (CONVERT(DATE, GETDATE()) BETWEEN FromDate AND ToDate OR FromDate > CONVERT(DATE, GETDATE()))
-			GROUP BY GroupName
-		) s ON d.GroupName = s.GroupName
-	WHERE d.GroupName <> 'BC'
+			WHERE SuperID = @CustID
+				AND (
+					CONVERT(DATE, GETDATE()) BETWEEN FromDate AND ToDate
+					OR FromDate > CONVERT(DATE, GETDATE())
+				)
+				AND GroupName <> 'BC'
+			GROUP BY GroupId
+		) s ON d.GroupId = s.GroupId
 	
-	IF NOT EXISTS (SELECT TOP 1 1 FROM @CustExtraPTGroup WHERE [Primary] = 1)
+	IF NOT EXISTS (SELECT TOP 1 1 FROM @CustExtraPTGroup WHERE GroupId = 0)
 	BEGIN
-		DECLARE @EffectiveDate DATETIME
+		INSERT INTO @CustExtraPTGroup (GroupId, EffectiveDate, [Primary])
+		SELECT 0, NULL, 0
+	END
 
-		SELECT  @EffectiveDate = MAX(ToDate) FROM dbo.Acc_GroupExtraPTSetting WITH(NOLOCK) WHERE SuperId = @CustID AND ToDate < CONVERT(DATE, GETDATE())
-		
-		INSERT INTO @CustExtraPTGroup (GroupId, GroupName, EffectiveDate, [Primary], OrderId)
-		SELECT 0, 'No Extra PT', DATEADD(DAY, 1, @EffectiveDate), 1, 1
-	END
-	ELSE
-	BEGIN
-		INSERT INTO @CustExtraPTGroup (GroupId, GroupName, EffectiveDate, [Primary], OrderId)
-		SELECT 0, 'No Extra PT', NULL, 0, 1
-	END
+	UPDATE c
+	SET c.GroupName = a.GroupName
+	FROM @CustExtraPTGroup c
+		INNER JOIN dbo.Acc_DWLList_ExtraPT a WITH(NOLOCK) ON c.GroupId = a.GroupId
+
+	UPDATE @CustExtraPTGroup
+	SET GroupName = ''
+	WHERE GroupId = 0
 
 	RETURN
 END
