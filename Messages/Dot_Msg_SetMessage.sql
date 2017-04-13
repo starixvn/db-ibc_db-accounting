@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Dot_Msg_SetMessage]
+﻿USE [bodb_Message]
+GO
+
+ALTER PROCEDURE [dbo].[Dot_Msg_SetMessage]
 	@MessageId int = NULL,
 	@Content_en	nvarchar(4000) = NULL,
 	@Content_ch	nvarchar(4000) = NULL,
@@ -109,7 +112,8 @@ BEGIN
 			   @IsBatch,
 			   @MsgContentsType
 				);
-		SELECT scope_identity() AS MessageId;
+		
+		SELECT SCOPE_IDENTITY() AS MessageId;
 	END
 END
 
