@@ -15,10 +15,10 @@ SET ANSI_NULLS ON;
 GO
 SET QUOTED_IDENTIFIER ON;
 GO
-CREATE PROCEDURE [dbo].[NAP_WinLimit_CurrencySettingSel] @ProductId           INT,
-                                                         @SiteId              INT,
-                                                         @IsCreditSite        BIT = 0,
-                                                         @CurrencyId          INT = 0
+CREATE PROCEDURE [dbo].[NAP_WinLimit_CurrencySettingSel] @ProductId    INT,
+                                                         @SiteId       INT,
+                                                         @IsCreditSite BIT = 0,
+                                                         @CurrencyId   INT = 0
 AS
 
 /*
@@ -30,6 +30,7 @@ DB: DBCUST/CustDB
 
 Revisions:
 20160923@Jacob: Risk & Control - Phase 3 [#61220].
+20170313@Jacob: Risk & Control - Phase 3A [#72604].
 Parameters Explanation:
    @ProductId: Product ID
    @SiteId	: Site or Licensee ID
@@ -37,7 +38,9 @@ Parameters Explanation:
    @CurrencyId	: Currency ID
    
 Example:
-EXEC [NAP_WinLimit_CurrencySettingSel] @ProductId = 6, @SiteId = 30
+EXEC [NAP_WinLimit_CurrencySettingSel] @ProductId=21,@SiteId=32,@IsCreditSite=1,@CurrencyId=72
+
+
 */
 
 
@@ -81,7 +84,7 @@ EXEC [NAP_WinLimit_CurrencySettingSel] @ProductId = 6, @SiteId = 30
                         WHERE s.siteid = @SiteId
                               AND (@CurrencyId = 0
                                    OR lc.Currency = @CurrencyId)
-                             AND lc.CurrencyName NOT IN('H', 'C');
+                              AND lc.CurrencyName NOT IN('H', 'C');
              END;
          ELSE
              BEGIN
@@ -90,9 +93,10 @@ EXEC [NAP_WinLimit_CurrencySettingSel] @ProductId = 6, @SiteId = 30
                                @SiteId,
                                ex.exchangeid
                         FROM dbo.exchange ex WITH (NOLOCK)
+                             INNER JOIN [dbo].[f_Nap_WinLimit_CreditCurrencySel]() c ON c.Id = ex.exchangeid
                         WHERE(@CurrencyId = 0
                               OR ex.exchangeid = @CurrencyId)
-                        AND ex.currency NOT IN('H', 'C');
+                             AND ex.currency NOT IN('H', 'C');
              END;
      END;
      BEGIN -- Query Data
@@ -103,14 +107,15 @@ EXEC [NAP_WinLimit_CurrencySettingSel] @ProductId = 6, @SiteId = 30
                 pc.SiteId,
                 ISNULL(s.MaxWinLimit_RM, 0) AS MaxWinLimit,
                 ISNULL(s.IsBlockedPlaceBet, 0) AS IsBlockedPlaceBet,
-                ISNULL(s.IsBlockedTransfer, 0) AS IsBlockedTransfer
+                ISNULL(s.IsBlockedTransfer, 0) AS IsBlockedTransfer,
+                @IsCreditSite AS IsCreditSite
          FROM #ProductSiteCurrencySetting pc
               INNER JOIN @Products p ON p.ProductId = pc.ProductId
               INNER JOIN dbo.WinLimit_ProductSettingDetail s WITH (NOLOCK) ON s.ProductID = p.ProductId
-                                                                             AND s.LevelID = p.LevelId
-                                                                             AND s.SiteID = pc.SiteId
-                                                                             AND s.ExchangeID = pc.CurrencyId
-                                                                             and s.GroupID = p.GroupId
+                                                                              AND s.LevelID = p.LevelId
+                                                                              AND s.SiteID = pc.SiteId
+                                                                              AND s.ExchangeID = pc.CurrencyId
+                                                                              AND s.GroupID = p.GroupId
          ORDER BY pc.CurrencyId,
                   p.LevelId;
      END;

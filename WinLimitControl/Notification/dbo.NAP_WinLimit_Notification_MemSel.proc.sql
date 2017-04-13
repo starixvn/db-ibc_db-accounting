@@ -1,9 +1,12 @@
-/****** Object:  StoredProcedure [dbo].[NAP_WinLimit_Notification_MemSel]    Script Date: 7/1/2016 10:22:38 AM ******/
-
-SET ANSI_NULLS ON;
-GO
 SET QUOTED_IDENTIFIER ON;
 GO
+SET ANSI_NULLS ON;
+GO
+
+/****** Object:  Stored Procedure dbo.NAP_WinLimit_Notification_MemSel    Script Date: 4/5/2017 1:04:53 PM ******/
+
+ALTER PROCEDURE [dbo].[NAP_WinLimit_Notification_MemSel]
+AS
 
 /*
 Created: 20150702@bobby.nguyen
@@ -19,6 +22,9 @@ Revisions:
 	- 20160802@Robert: CWL Phase 2 - Wrong Exchange Rate using in the email notification - [Redmine: 61839]
 	- 20160802@Robert: CWL Phase 2 - email notification Enhancement - [Redmine: 62253]
 	- 20161027@Robert: CWL Phase 3 - email notification Enhancement - [Redmine: 61220]
+	- 20170306@Robert: CWL Phase 3 - email notification Enhancement - [Redmine: 61220]
+	- 20170306@Helen: CWL Phase 3A - email notification Enhancement - [Redmine: 72604]
+
 	
 Param's Explanation:
 	• @ErrCode:
@@ -27,46 +33,50 @@ Param's Explanation:
 	• @ErrMsg: Error description.
 */
 
-ALTER PROCEDURE [dbo].[NAP_WinLimit_Notification_MemSel]
-AS
      BEGIN
-         DECLARE @Fromdate DATE= GETDATE(), @Todate DATE= GETDATE();
          SELECT wl.custid,
                 c.username,
                 CASE
-                    WHEN e.CurrencyId = 20
+                    WHEN e.exchangeid = 20
                     THEN 'UUS'
-                    ELSE e.CurrencyCode
+                    ELSE e.currency
                 END AS code,
                 ag.site,
-                s.isLicensee  AS IsDeposit,
+                s.isLicensee AS IsDeposit,
                 p.ProductName,
                 p.ProductId,
-                wl.BettypeId,
-			 wl.MaxWinLimit AS WinlimitAmount,
+                wl.GroupID,
+                CASE
+                    WHEN wl.Levelid = 1
+                    THEN wl.MaxWinLimitSetting.value('(/MaxWinLimitSetting/@Level1)[1]', 'MONEY')
+                    WHEN wl.LevelID = 2
+                    THEN wl.MaxWinLimitSetting.value('(/MaxWinLimitSetting/@Level2)[1]', 'MONEY')
+                    WHEN wl.LevelID = 3
+                    THEN wl.MaxWinLimitSetting.value('(/MaxWinLimitSetting/@Level3)[1]', 'MONEY')
+                END AS WinlimitAmount,
                 wl.TotalWinAmt AS TotalWinAmt_OriginalCurrency,
-                wl.TotalWinAmt * e.Rate AS TotalWinAmt_BaseCurrency,
+                wl.TotalWinAmt_RM AS TotalWinAmt_BaseCurrency,
                 wl.ModifiedDate,
                 wl.WinlostDate,
                 wl.LevelId,
-                l.LevelName,
-				e.Rate AS ExchangeRate
+                l.LevelName
          FROM WinLimit_CustGameMonitoring wl WITH (NOLOCK)
               INNER JOIN Customer c WITH (NOLOCK) ON c.custid = wl.CustID
               INNER JOIN Customer ag WITH (NOLOCK) ON ag.custid = c.recommend
-              INNER JOIN Site S WITH (NOLOCK) ON S.site = ag.site 
+              INNER JOIN Site S WITH (NOLOCK) ON S.site = ag.site
               INNER JOIN DBPRO.bodb02.dbo.Products p WITH (NOLOCK) ON p.ProductID = wl.ProductID
               INNER JOIN Winlimit_LevelSetting l WITH (NOLOCK) ON l.LevelId = wl.LevelId
-              INNER JOIN
-         (
-             SELECT fEx.ExchangeId AS CurrencyId,
-                    fEx.Code AS CurrencyCode,
-                    fEx.MYR AS Rate
-             FROM Lrf_f_GetExchangeDaily(@Fromdate, @Todate) AS fEx
-         ) e ON c.currency = e.CurrencyId
-         WHERE wl.IsNotified = 0 AND S.isActive = 1;
+              INNER JOIN exchange e WITH (NOLOCK) ON c.currency = e.exchangeid
+         WHERE wl.IsNotified = 0
+               AND S.isActive = 1;
      END;
+GO
+SET QUOTED_IDENTIFIER OFF;
+GO
+SET ANSI_NULLS ON;
+GO
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_Notification_MemSel] TO [vnteam];
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_Notification_MemSel] TO [bodbAdminNet];
+GO
