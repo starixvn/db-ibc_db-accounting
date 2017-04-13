@@ -1,8 +1,4 @@
-SET QUOTED_IDENTIFIER ON;
-SET ANSI_NULLS ON;
-GO
-
-ALTER PROCEDURE	dbo.Acc_CustomerUpdVirtualMultiplier_Multiple
+ALTER PROCEDURE	[dbo].[Acc_CustomerUpdVirtualMultiplier_Multiple]
 					@VirtualMultiplier		VARCHAR(MAX)	= ''
 				,	@UserID					INT  
 				,	@IP						VARCHAR(15)		= ''
@@ -16,6 +12,9 @@ AS
 	Original:  
   
 	Revisions: 
+		- 20160614@Elodie: Update enable virtualrate [Redmine:#58700]
+		- 20170328@Elodie: Expand the range of VR setting [RedmineID:#73808]
+
 	Param's Explanation:  
 		- @VirtualMultiplier = '<ROOT>
 									<Rate CustIds="1,2,3,4,5,6" VirtualMultiplier="0.7" />	
@@ -70,7 +69,7 @@ BEGIN
 		  
 	IF	EXISTS	(	SELECT	1
 					FROM	@tblVirtualrate
-					WHERE	virtualmultiplier > 1.6 
+					WHERE	virtualmultiplier > 3.0 
 						OR	virtualmultiplier < 0.1
 				)  
 	BEGIN  
@@ -82,6 +81,9 @@ BEGIN
 	-- Update via Execrep
 	EXECUTE	dbo.Acc_CustSetting_10 
 				@VirtualMultiplier = @VirtualMultiplier;
+
+	-- Update enable virtual rate via Execrep
+	EXECUTE	dbo.Acc_CustomerInfo_Execrep_04 @custid = 0, @roleid = 0, @action = 'EnableVirtualMultiplier', @EnableVirtualMultiplier = @VirtualMultiplier;
 
 	-- Log data for each customer
 	DECLARE	@CustID			INT
@@ -95,6 +97,7 @@ BEGIN
 					,	@ErrCode	AS '@ErrCode'
 					,	@ErrMsg		AS '@ErrMsg'
 					,	@IP			AS '@IP'
+					,	1			AS '@EnableVirtualrate'
 					,	(	SELECT	pvs.sporttype			AS '@SportType'
 								,	pvs.bettype				AS '@BetType'
 								,	pvs.islive				AS '@IsLive'
@@ -143,7 +146,7 @@ BEGIN
 	END;
 
 	DROP TABLE #log;
-END;
-GO
+END
 
+GO
 GRANT EXECUTE ON Acc_CustomerUpdVirtualMultiplier_Multiple TO bodbAdminNet 

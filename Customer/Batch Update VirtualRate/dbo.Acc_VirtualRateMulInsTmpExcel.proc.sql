@@ -18,7 +18,8 @@ AS
 		- 20131203@Elodie: Expand size of string
 		- 20150126@Johnson: Separate virtual rate setting into sport types and bet types [Redmine: #25840]						
 						+ Change to use new structure : table Ac_VirtualRateList						 						
-	
+		- 20170328@Elodie: Expand the range of VR setting [RedmineID:#73808]
+
 	Parameter's Explanation:
 		- @virtualRate = '<ROOT>
 							<customer username="test123">
@@ -96,10 +97,10 @@ SET NOCOUNT ON
 
 	INSERT INTO @tblFail(username, sporttype, bettype, isLive, virtualrate, reason)
 	SELECT	username, sporttype, bettype, isLive, virtualrate, 
-			CASE WHEN virtualrate <0.2 OR virtualrate > 1.6 OR virtualrate*100%5!=0 THEN 'Virtual rate must be in a range from -80% to +60% and be multiples of 5%.'
+			CASE WHEN virtualrate <0.1 OR virtualrate > 3 OR virtualrate*100%5!=0 THEN 'Invalid Virtual Rate.'
 				 WHEN ISNULL(username,'') ='' THEN 'Username cannot be blanked.' ELSE '' END AS Reason 	
 	FROM	@tblCust 
-	WHERE	virtualrate <0.2 OR virtualrate > 1.6 OR virtualrate*100%5!=0
+	WHERE	virtualrate <0.1 OR virtualrate > 3 OR virtualrate*100%5!=0
 			OR ISNULL(username,'') ='' 
 	
 	INSERT INTO dbo.Acc_VirtualRateList(userid, username, sporttype, bettype, islive, virtualrate)
