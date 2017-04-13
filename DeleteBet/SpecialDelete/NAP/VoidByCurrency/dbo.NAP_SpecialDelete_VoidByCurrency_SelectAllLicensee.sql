@@ -22,6 +22,9 @@ BEGIN
 		  , @MBCGroup_Name		 VARCHAR(100) = 'MBC Group'
 		  , @789y_Id			 INT		  = 0
 		  , @789y_Name			 VARCHAR(100) = '789y'
+		  , @Others_GroupName	 VARCHAR(100) = 'Others'
+		  , @China_GroupName	 VARCHAR(100) = 'China Market'
+		  , @Asia_GroupName		 VARCHAR(100) = 'Asia Market'
 	
 	CREATE TABLE #LicenseeGroupInfo
 	(
@@ -29,9 +32,60 @@ BEGIN
 		GroupName VARCHAR(100)
 	)
 	
-	INSERT INTO #LicenseeGroupInfo(Id, GroupName) -- fix here 
-	VALUES (@MBCGroup_Id, 'Others')
-	     , (@789y_Id, 'Others')	
+	INSERT INTO #LicenseeGroupInfo(Id, GroupName) 
+	VALUES  -- Others
+		    (@MBCGroup_Id, @Others_GroupName)
+	      , (@789y_Id, @Others_GroupName)
+		    -- China
+	      , ('Avia', @China_GroupName)
+	      , ('Boma', @China_GroupName)
+	      , ('FLC', @China_GroupName)
+	      , ('Hengcai', @China_GroupName)
+	      , ('Platinum', @China_GroupName)
+	      , ('Salon365', @China_GroupName)
+	      , ('Sun988', @China_GroupName)
+	      , ('Toobet', @China_GroupName)
+	      , ('VCBA', @China_GroupName)
+	      , ('Webet168', @China_GroupName)
+	      , ('Webet88', @China_GroupName)
+	      , ('BBIN', @China_GroupName)
+	      , ('Bodog', @China_GroupName)
+	      , ('Livv88', @China_GroupName)
+	      , ('MayFair', @China_GroupName)
+	      , ('Leon', @China_GroupName)
+	      , ('TLC', @China_GroupName)
+	      , ('Heji', @China_GroupName)			
+	      , ('88Macao', @China_GroupName)
+	      , ('AG', @China_GroupName)
+	      , ('Honbet', @China_GroupName)
+	      , ('XTD3', @China_GroupName)
+	      , ('IBO', @China_GroupName)
+	      , ('NewHonbet', @China_GroupName)
+	      , ('Abcasino', @China_GroupName)
+	      , ('Hecbet', @China_GroupName)
+	      , ('TGO', @China_GroupName)
+	      , ('365Online', @China_GroupName)
+	      , ('HuangMa', @China_GroupName)
+	      , ('BigGaming', @China_GroupName)
+	      , ('Mayayule', @China_GroupName)
+	      , ('Gampag', @China_GroupName)
+	      , ('Boying', @China_GroupName)
+	      , ('GDC', @China_GroupName)
+	      , ('PKbet', @China_GroupName)
+	      , ('Webet138', @China_GroupName)
+	      , ('CGame', @China_GroupName)
+	      , ('TCL', @China_GroupName)
+	      , ('Dawoo', @China_GroupName)
+	      , ('BetStar', @China_GroupName)
+	      , ('TGame', @China_GroupName)
+	      , ('LZYQ', @China_GroupName)
+	      , ('Star99', @China_GroupName)
+	      , ('Starnet', @China_GroupName) 
+	      , ('IGPTech', @China_GroupName)
+	      , ('BuyWin', @China_GroupName)
+	      , ('CQ11', @China_GroupName)
+	      , ('Ty777', @China_GroupName)
+	      , ('HonorW', @China_GroupName)
 	
 	;WITH LicenseeList AS
 	(     
@@ -44,7 +98,7 @@ BEGIN
 		UNION ALL
 		SELECT @789y_Id AS Id, @789y_Name As Name 
 	)
-	SELECT l.Id, l.Name, ISNULL(g.GroupName, 'Asian') AS GroupName
+	SELECT l.Id, l.Name, ISNULL(g.GroupName, @Asia_GroupName) AS GroupName
 	FROM LicenseeList l
 		 LEFT JOIN #LicenseeGroupInfo g
 				 ON l.Id = g.Id	  		      
