@@ -102,7 +102,7 @@ BEGIN
 	FROM LicenseeList l
 		 LEFT JOIN #LicenseeGroupInfo g
 				 ON l.Name = g.Name
-	ORDER BY CASE GroupName
+	ORDER BY CASE ISNULL(g.GroupName, @Asia_GroupName)
 				WHEN @China_GroupName THEN 1
 				WHEN @Asia_GroupName THEN 2
 				ELSE 3
