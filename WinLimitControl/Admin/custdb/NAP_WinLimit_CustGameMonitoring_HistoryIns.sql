@@ -1,27 +1,17 @@
-USE [CustDB];
-GO
-IF EXISTS
-(
-    SELECT *
-    FROM sys.objects
-    WHERE object_id = OBJECT_ID(N'[dbo].[NAP_WinLimit_CustGameMonitoring_HistoryIns]')
-          AND type IN(N'P', N'PC')
-)
-    DROP PROCEDURE [dbo].[NAP_WinLimit_CustGameMonitoring_HistoryIns];
-GO
-USE [CustDB];
+SET QUOTED_IDENTIFIER ON;
 GO
 SET ANSI_NULLS ON;
 GO
-SET QUOTED_IDENTIFIER ON;
-GO
-CREATE PROCEDURE [dbo].[NAP_WinLimit_CustGameMonitoring_HistoryIns] @CustId       INT,
-                                                                          @ProductId    INT,
-                                                                          @GroupId      INT,
-                                                                          @ActionId     INT,
-                                                                          @UserId       INT,
-                                                                          @ErrorCode    INT           = 0 OUTPUT,
-                                                                          @ErrorMessage NVARCHAR(500) = '' OUTPUT
+
+/****** Object:  Stored Procedure dbo.NAP_WinLimit_CustGameMonitoring_HistoryIns    Script Date: 4/5/2017 1:04:53 PM ******/
+
+ALTER PROCEDURE [dbo].[NAP_WinLimit_CustGameMonitoring_HistoryIns] @CustId       INT,
+                                                                   @ProductId    INT,
+                                                                   @GroupId      INT,
+                                                                   @ActionId     INT,
+                                                                   @UserId       INT,
+                                                                   @ErrorCode    INT           = 0 OUTPUT,
+                                                                   @ErrorMessage NVARCHAR(500) = '' OUTPUT
 AS
 	
 /*
@@ -32,9 +22,7 @@ Task: #38608 - Implement function to control Player's Win Limit on specific Prod
 DB: DBCust/CustDB
 
 Revisions:
-	- 20170321@Jacob: Risk & Control - Phase 3A [#72604].  
-	- 20170411@Helen: HOTFIX - Missing to notify Yellow level due to service schedule and SPs code - [Redmine: 74906]
-
+20170321@Jacob: Risk & Control - Phase 3A [#72604].  
 Parameters Explanation:	
 EXEC [NAP_WinLimit_CustGameMonitoring_HistoryIns] 
    @CustId = 662531, 
@@ -79,10 +67,10 @@ EXEC [NAP_WinLimit_CustGameMonitoring_HistoryIns]
                             WinAmt,
                             @ActionId,
                             GETDATE(),
-                            1,
+                            IsNotified,
                             @UserId,
                             @UserId
-               FROM dbo.WinLimit_CustGameMonitoring WITH(NOLOCK)
+               FROM dbo.WinLimit_CustGameMonitoring WITH (NOLOCK)
                WHERE CustId = @CustId
                      AND ProductId = @ProductId
                      AND GroupId = @GroupId
@@ -96,7 +84,12 @@ EXEC [NAP_WinLimit_CustGameMonitoring_HistoryIns]
      SELECT @ErrorCode = 0,
             @ErrorMessage = '';
 GO
-GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustGameMonitoring_HistoryIns] TO [bodbAdminNet];
+SET QUOTED_IDENTIFIER OFF;
+GO
+SET ANSI_NULLS ON;
+GO
 GO
 GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_CustGameMonitoring_HistoryIns] TO [vnteam];
+GO
+GRANT EXECUTE ON [dbo].[NAP_WinLimit_CustGameMonitoring_HistoryIns] TO [bodbAdminNet];
 GO

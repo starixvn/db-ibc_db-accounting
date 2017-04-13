@@ -1,9 +1,10 @@
-/*<info serverAlias="DBCUST-CUSTDB" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
-
-SET ANSI_NULLS ON;
-GO
 SET QUOTED_IDENTIFIER ON;
 GO
+SET ANSI_NULLS ON;
+GO
+
+/****** Object:  Stored Procedure dbo.NAP_WinLimit_Notification_MemSel    Script Date: 4/5/2017 1:04:53 PM ******/
+
 ALTER PROCEDURE [dbo].[NAP_WinLimit_Notification_MemSel]
 AS
 
@@ -23,7 +24,6 @@ Revisions:
 	- 20161027@Robert: CWL Phase 3 - email notification Enhancement - [Redmine: 61220]
 	- 20170306@Robert: CWL Phase 3 - email notification Enhancement - [Redmine: 61220]
 	- 20170306@Helen: CWL Phase 3A - email notification Enhancement - [Redmine: 72604]
-	- 20170411@Robert: CWL Phase 3A - email notification Enhancement - [Redmine: 72604]
 
 	
 Param's Explanation:
@@ -60,7 +60,7 @@ Param's Explanation:
                 wl.WinlostDate,
                 wl.LevelId,
                 l.LevelName
-         FROM WinLimit_CustGameMonitoring_History wl WITH (NOLOCK)
+         FROM WinLimit_CustGameMonitoring wl WITH (NOLOCK)
               INNER JOIN Customer c WITH (NOLOCK) ON c.custid = wl.CustID
               INNER JOIN Customer ag WITH (NOLOCK) ON ag.custid = c.recommend
               INNER JOIN Site S WITH (NOLOCK) ON S.site = ag.site
@@ -71,4 +71,12 @@ Param's Explanation:
                AND S.isActive = 1;
      END;
 GO
-GRANT EXECUTE ON [dbo].[NAP_WinLimit_Notification_MemSel] TO [bodbAdminNet] AS [dbo];
+SET QUOTED_IDENTIFIER OFF;
+GO
+SET ANSI_NULLS ON;
+GO
+GO
+GRANT VIEW DEFINITION ON [dbo].[NAP_WinLimit_Notification_MemSel] TO [vnteam];
+GO
+GRANT EXECUTE ON [dbo].[NAP_WinLimit_Notification_MemSel] TO [bodbAdminNet];
+GO
