@@ -98,7 +98,16 @@ BEGIN
 		UNION ALL
 		SELECT @789y_Id AS Id, @789y_Name As Name 
 	)
-	SELECT l.Id, l.Name, ISNULL(g.GroupName, @Asia_GroupName) AS GroupName
+	SELECT l.Id
+		 , CASE l.Name
+				WHEN 'Boma' THEN 'Boma365'
+				WHEN 'Hengcai' THEN 'Hencai88'
+				WHEN 'BBIN' THEN 'HAIFA'
+				WHEN 'Livv88Heji' THEN 'Happy1668'
+				WHEN 'Heji' THEN 'KeenOcean'
+				ELSE l.Name
+		   END AS Name
+		 , ISNULL(g.GroupName, @Asia_GroupName) AS GroupName
 	FROM LicenseeList l
 		 LEFT JOIN #LicenseeGroupInfo g
 				 ON l.Name = g.Name
