@@ -28,14 +28,14 @@ BEGIN
 	
 	CREATE TABLE #LicenseeGroupInfo
 	(
-		Id INT PRIMARY KEY,
+		Name VARCHAR(100) PRIMARY KEY,
 		GroupName VARCHAR(100)
 	)
 	
-	INSERT INTO #LicenseeGroupInfo(Id, GroupName) 
+	INSERT INTO #LicenseeGroupInfo(Name, GroupName) 
 	VALUES  -- Others
-		    (@MBCGroup_Id, @Others_GroupName)
-	      , (@789y_Id, @Others_GroupName)
+		    (@MBCGroup_Name, @Others_GroupName)
+	      , (@789y_Name, @Others_GroupName)
 		    -- China
 	      , ('Avia', @China_GroupName)
 	      , ('Boma', @China_GroupName)
@@ -101,7 +101,12 @@ BEGIN
 	SELECT l.Id, l.Name, ISNULL(g.GroupName, @Asia_GroupName) AS GroupName
 	FROM LicenseeList l
 		 LEFT JOIN #LicenseeGroupInfo g
-				 ON l.Id = g.Id	  		      
+				 ON l.Name = g.Name
+	ORDER BY CASE GroupName
+				WHEN @China_GroupName THEN 1
+				WHEN @Asia_GroupName THEN 2
+				ELSE 3
+			 END ASC			 	  		      
 	
 	SET NOCOUNT OFF
 END
