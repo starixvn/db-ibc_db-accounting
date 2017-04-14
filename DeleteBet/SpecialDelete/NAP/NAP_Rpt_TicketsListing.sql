@@ -39,6 +39,7 @@ AS
 		- 20150401@Kathy: Add new parent-child bettypes for PH [Redmine:#48110]
 		- 20150119@Kathy: Changes parent-child for phase 1.2 of PH All in One:  [Redmine:#50932]	  
 		- 20160722@Bobby: #61240 - Implement parent-child for PHAIO new 19 bet types
+		- 20170414@Kent: Fix IBC to MBC [Redmine:#75009]
 		
 	Param's Explanation:
 	- @Type: sports type
@@ -485,7 +486,7 @@ BEGIN
 					WHEN @type = 1 THEN b.liveindicator
 					ELSE 0
 					END
-				,'IBC' AS LicenseeName
+				,'MBC' AS LicenseeName
 			FROM #TmpBettrans b WITH (NOLOCK)
 			WHERE b.srecommend NOT IN (
 					SELECT custid
@@ -507,7 +508,7 @@ BEGIN
 				,Count(DISTINCT b.transid) AS TotalTrans
 				,b.bettype
 				,0
-				,'IBC' AS LicenseeName
+				,'MBC' AS LicenseeName
 			FROM bettransm bm WITH (NOLOCK)
 				INNER JOIN Bettrans b WITH (NOLOCK) ON bm.refno = b.refno
 				INNER JOIN dbo.strSplit(@BetTypes, ',') t ON b.bettype = t.val
@@ -584,7 +585,7 @@ BEGIN
 					ELSE 0
 					END
 				,CASE 
-					WHEN s.site IS NULL THEN 'IBC'
+					WHEN s.site IS NULL THEN 'MBC'
 					ELSE s.site
 					END AS LicenseeName
 			FROM #TmpBettrans b WITH (NOLOCK)
@@ -615,7 +616,7 @@ BEGIN
 				,b.bettype
 				,0
 				,CASE 
-					WHEN s.site IS NULL THEN 'IBC'
+					WHEN s.site IS NULL THEN 'MBC'
 					ELSE s.site
 					END AS LicenseeName
 			FROM bettransm bm WITH (NOLOCK)
