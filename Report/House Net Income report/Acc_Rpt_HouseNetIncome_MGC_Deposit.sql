@@ -13,6 +13,7 @@ AS
     Revisions:  
 	
 	Param's Explanation:   
+		- 20160315@Harper: PayToSupplier using GMT +0 [RedmindID: #67062]
 
 	EXEC Acc_Rpt_HouseNetIncome_MGC_Deposit_xtest '20161201', '20161210'
 */  
@@ -128,7 +129,7 @@ BEGIN
 			SELECT rpt.RptDate, SiteId, pr.ProductId, pr.BettypeRef, pr.GameTypeName, CurrencyId, 				
 				-SUM(ISNULL(Winloss, 0)) AS LicenseeWinLoss,
 				CASE WHEN pr.ProductId = 17 THEN SUM(ISNULL(ProgressiveContribution, 0)) ELSE 0 END  AS ProgresCont -- IF RNG: Contr <> 0, else = 0
-			FROM bodb_LicenseeReport.dbo.rpt_ThirdPartyWL_ExtraGMT rpt
+			FROM bodb_LicenseeReport.dbo.rpt_ThirdPartyWL_ExtraGMT rpt WITH (NOLOCK)
 				INNER JOIN @ProductsRef pr ON rpt.BetTypeId = pr.BettypeId
 			WHERE rpt.RptDate BETWEEN @FromDate AND @ToDate
 				  AND rpt.SiteId IN (SELECT DISTINCT LicenseeId FROM @PartyChargeInfo)
@@ -164,7 +165,7 @@ BEGIN
 					a.FromDate, a.ToDate
 	FROM (
 			SELECT DISTINCT ci2.ChargeID, cis.FromParty, cis.BettypeRef, cis.ChargeType, 
-							cis.Rate, cis.MinAmount, cis.MaxAmount, cis.BaseCurrencyId, cis.FromDate, cis.ToDate
+							cis.Rate, ISNULL(cis.MinAmount, 0) AS MinAmount, ISNULL(cis.MaxAmount, 0) AS MaxAmount, cis.BaseCurrencyId, cis.FromDate, cis.ToDate
 			FROM @PartyChargeInfo tp
 				INNER JOIN bodb_licensee.dbo.OAS_ChargeInfo ci WITH (NOLOCK) ON tp.ChargeId = ci.ChargeID
 				LEFT JOIN bodb_licensee.dbo.OAS_ChargeInfo ci2 WITH (NOLOCK) ON ci.ToParty = ci2.FromParty AND ci2.ProductID = tp.ProductID
@@ -181,8 +182,10 @@ BEGIN
 
 	DECLARE @HouseNetIncome MONEY
 	SELECT @HouseNetIncome = SUM(CASE WHEN s.SumByProduct <= 0 THEN 0 ELSE s.SumByProduct END) 
-						  FROM ( SELECT SUM (HouseIncomeDaily) AS SumByProduct 
-									   FROM #TempDataMGC GROUP BY ProductId, BettypeRef) s
+	FROM ( 
+			SELECT SUM (HouseIncomeDaily) AS SumByProduct 
+			FROM #TempDataMGC GROUP BY ProductId, BettypeRef
+		) s
 									   								
 	INSERT INTO #FinalResult (RptDate, LicenseeWL)
 	SELECT 'FullRange', @HouseNetIncome	
@@ -202,17 +205,53 @@ BEGIN
 
 	SELECT @DateList = COALESCE(@DateList + ',', '') + '[' + CONVERT(VARCHAR(10), RptDate) + ']' FROM #FinalResult 
 	
-	-- PayToSupplier		
+	-- PayToSupplier Using 	
+	CREATE TABLE #TempDataMGC3rd(
+		RptDate3rd			DATE,
+		BettypeRef			INT, 
+		GameTypeName		VARCHAR(20),
+		PartyId				INT, 		
+		CurrencyId			INT, 
+		ProductId			INT,	
+		LicenseeWinLoss		MONEY,
+		LicenseeNetWin		MONEY,
+		ProgresCont			MONEY,		
+		HouseIncomeDaily	MONEY)
+
+	INSERT INTO #TempDataMGC3rd (RptDate3rd, BettypeRef, GameTypeName, PartyId, CurrencyId, ProductId,
+							 LicenseeWinLoss, LicenseeNetWin, ProgresCont, HouseIncomeDaily)
+	SELECT d.RptDate3rd, d.BetTypeRef, d.GameTypeName, pci.PartyId, d.CurrencyId, d.ProductId,			
+			SUM(LicenseeWinLoss) AS LicenseeWinLoss,
+			SUM(LicenseeWinLoss - ProgresCont) AS LicenseeNetWin,
+			SUM(ProgresCont) AS ProgresCont,
+			SUM((LicenseeWinLoss - ProgresCont) * pci.Rate * e.Rate) AS HouseIncomeDaily
+	FROM (
+			SELECT rpt.RptDate3rd, SiteId, pr.ProductId, pr.BettypeRef, pr.GameTypeName, CurrencyId, 				
+				-SUM(ISNULL(Winloss, 0)) AS LicenseeWinLoss,
+				CASE WHEN pr.ProductId = 17 THEN SUM(ISNULL(ProgressiveContribution, 0)) ELSE 0 END  AS ProgresCont -- IF RNG: Contr <> 0, else = 0
+			FROM bodb_LicenseeReport.dbo.rpt_ThirdPartyWL_ExtraGMT rpt WITH (NOLOCK)
+				INNER JOIN @ProductsRef pr ON rpt.BetTypeId = pr.BettypeId
+			WHERE rpt.RptDate3rd BETWEEN @FromDate AND @ToDate
+				  AND rpt.SiteId IN (SELECT DISTINCT LicenseeId FROM @PartyChargeInfo)
+				  AND CurrencyID <> 20
+				  AND StatusId NOT IN (-1, 101, 102, 103)
+			GROUP BY rpt.RptDate3rd, SiteId, pr.ProductId, pr.BettypeRef, CurrencyId, pr.GameTypeName
+			) d
+		INNER JOIN @PartyChargeInfo pci ON d.SiteId = pci.LicenseeID AND d.BettypeRef = pci.BettypeRef AND pci.ProductId = d.ProductId
+		INNER JOIN #Exchange e ON e.ExchangeDate = d.RptDate3rd AND e.ExchangeID = d.CurrencyId
+	WHERE d.RptDate3rd BETWEEN pci.Fromdate AND pci.ToDate
+	GROUP BY d.RptDate3rd, d.GameTypeName, d.BettypeRef, pci.PartyId, d.ProductId, d.CurrencyId
+		
 	; WITH sums AS 
-				(	SELECT b.BettypeRef, CONVERT(VARCHAR(2), b.RptDate, 106) AS rptDate, b.RptDate AS FullDate
+				(	SELECT b.BettypeRef, CONVERT(VARCHAR(2), b.RptDate3rd, 106) AS RptDate3rd, b.RptDate3rd AS FullDate
 						, SUM(b.LicenseeNetWin * e.MYR) AS LicenseeNetWin
-					FROM #TempDataMGC b
-						INNER JOIN #ExchangeOANDA e ON e.ExchangeDate = b.RptDate AND e.ExchangeID = b.CurrencyId	
-					GROUP BY b.BettypeRef, CONVERT(VARCHAR(2), b.RptDate, 106), b.RptDate
+					FROM #TempDataMGC3rd b
+						INNER JOIN #ExchangeOANDA e ON e.ExchangeDate = b.RptDate3rd AND e.ExchangeID = b.CurrencyId	
+					GROUP BY b.BettypeRef, CONVERT(VARCHAR(2), b.RptDate3rd, 106), b.RptDate3rd
 				),
 	MicrogamingFee AS
 	(
-		SELECT s.BettypeRef, s.rptDate, s.FullDate,		 
+		SELECT s.BettypeRef, s.RptDate3rd, s.FullDate,		 
 				CASE 
 					WHEN (ChargeType = 4 AND (s.LicenseeNetWin < 0 AND r.MinAmount = 0) OR (s.LicenseeNetWin BETWEEN r.MinAmount AND r.MaxAmount)) 
 					THEN CASE 						
@@ -228,22 +267,23 @@ BEGIN
 	),
 	AmtByDate AS
 	(
-		SELECT f.rptDate, SUM(f.PayToSupplier) AS PayToSupplierByDate
+		SELECT f.RptDate3rd, SUM(f.PayToSupplier) AS PayToSupplierByDate
 		FROM MicrogamingFee f
-		GROUP BY f.rptDate
+		GROUP BY f.RptDate3rd
 	)
 	UPDATE r
 	SET r.PayToSupplier = m.PayToSupplierByDate
-	FROM AmtByDate m INNER JOIN #FinalResult r ON r.RptDate = m.rptDate
-
+	FROM AmtByDate m 
+		INNER JOIN #FinalResult r ON r.RptDate = m.RptDate3rd	
+		
 	-- Monthly
 	; WITH sums AS 
 				(	SELECT b.BettypeRef
 						, SUM(b.LicenseeNetWin * e.MYR) AS LicenseeNetWin
 						, ci.Rate, ci.FromDate, ci.ToDate, ci.MinAmount, ci.MaxAmount, ci.ChargeType
-					FROM #TempDataMGC b
-						INNER JOIN #ExchangeOANDA e ON e.ExchangeDate = b.RptDate AND e.ExchangeID = b.CurrencyId
-						INNER JOIN @ProductChargeInfo ci ON b.RptDate BETWEEN ci.FromDate AND ci.ToDate AND b.BettypeRef = ci.BettypeRef	
+					FROM #TempDataMGC3rd b
+						INNER JOIN #ExchangeOANDA e ON e.ExchangeDate = b.RptDate3rd AND e.ExchangeID = b.CurrencyId
+						INNER JOIN @ProductChargeInfo ci ON b.RptDate3rd BETWEEN ci.FromDate AND ci.ToDate AND b.BettypeRef = ci.BettypeRef	
 					GROUP BY b.BettypeRef, ci.Rate, ci.FromDate, ci.ToDate, ci.MinAmount, ci.MaxAmount, ci.ChargeType
 				),
 	AmtByMonth AS
@@ -287,6 +327,7 @@ BEGIN
 	DROP TABLE #ExchangeOANDA
 	DROP TABLE #TempDataMGC
 	DROP TABLE #FinalResult
+	DROP TABLE #TempDataMGC3rd
 END
 GO
 
