@@ -32,7 +32,8 @@ AS
 		- 20151302@Kathy: add modds column 
 		- 20150712@Kathy: Database - Change datatype [Redmine: #48660]
 		- 20150119@Kathy: Changes for phase 1.2 of PH All in One: add new column transdesc [Redmine:#50932]
-		- 20170104@Kent: Add Column SportType to output tables [Redmine:#69816]	  
+		- 20170104@Kent: Add Column SportType to output tables [Redmine:#69816]	
+		- 20170414@Kent: Fix IBC to MBC [Redmine:#75009]  
 		
 	Param's Explanation:
 	- @Type: sports type
@@ -127,7 +128,7 @@ BEGIN
 	)
 	
 	----Direct Licensee
-	IF @LicenseeName <> 'IBC' AND @LicenseeName <> 'ALL' 
+	IF @LicenseeName <> 'MBC' AND @LicenseeName <> 'ALL' 
 	BEGIN				 
 		INSERT INTO #SpecialDeleteBets
 		SELECT	b.username,
@@ -261,7 +262,7 @@ BEGIN
 	END
 
 	---IBC 
-	IF @LicenseeName = 'IBC'  
+	IF @LicenseeName = 'MBC'  
 	BEGIN	
 		INSERT INTO #SpecialDeleteBets
 		SELECT	b.username,
@@ -581,7 +582,7 @@ END
 IF charindex('9', @p_bettypes , 1) <> 0  
 BEGIN 
 	---Licensee
-	IF @LicenseeName <> 'IBC' AND @LicenseeName <> 'ALL' 
+	IF @LicenseeName <> 'MBC' AND @LicenseeName <> 'ALL' 
 	BEGIN		
 		SELECT
 				b.username,
@@ -648,7 +649,7 @@ BEGIN
 	ELSE 
 	
 	---IBC
-	IF @LicenseeName= 'IBC'  
+	IF @LicenseeName= 'MBC'  
 	BEGIN		
 		SELECT	b.username,
 				b.bettype,	
