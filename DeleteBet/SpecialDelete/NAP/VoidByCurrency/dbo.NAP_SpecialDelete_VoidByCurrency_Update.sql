@@ -29,6 +29,7 @@ AS
 
 	Revisions: 		
 		- 20161201@Kent: Search sportbook tickets by crrency to void [Redmine:#67987]
+		- 20170418@Kent: Fix Returned Data Type For Bit Columns [Redmine:#75009]
 	
 	Param's Explanation:			
 			- @TicketType:
@@ -1276,8 +1277,8 @@ BEGIN
 					WHEN EXISTS (SELECT d.custid 
 								 FROM CustDB.dbo.Dep_CustSuper d WITH(NOLOCK) 
 								 WHERE d.custid = s.srecommend)
-							THEN 1
-					ELSE 0
+							THEN CAST(1 AS BIT)
+					ELSE CAST(0 AS BIT)
 				END AS IsDeposit,
 				s.custid,
 				s.recommend,
