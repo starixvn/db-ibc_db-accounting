@@ -18,6 +18,7 @@ AS
 
 	Revisions: 		
 		- 20161201@Kent: Search sportbook tickets by crrency to void [Redmine:#67987]
+		- 20170418@Kent: Fix Returned Data Type For Bit Columns [Redmine:#75009]
 	
 	Param's Explanation:			
 			- @TicketType:
@@ -472,7 +473,7 @@ BEGIN
 			s.LiveHomeScore,
 			s.Odds,
 			s.IsMixParlay,
-			CASE WHEN s.bettype = 501 AND T1.IsDeposit = 0 THEN 1 ELSE 0 END AS IsCricket,
+			CASE WHEN s.bettype = 501 AND T1.IsDeposit = 0 THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsCricket,
 			s.OddsType,
 			s.RefNo,
 			s.SportType,
