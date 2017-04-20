@@ -62,6 +62,15 @@ BEGIN
 		INSERT INTO @tmpResourceIds (ResourceId) VALUES ('Q4')
 	END
 		
+	-- Insert initial ResourceId 00, 01, 02, Q1, Q2, Q3, Q4, OT if they have not created yet
+	INSERT INTO dbo.ResultDetail (MatchId, ResourceId, ResultStatusID, SettlementStatusID, CreateDate, LastModifyDate, CreateBy, LastModifyBy)				
+	SELECT	@matchid, t.ResourceId, 0, 0, GETDATE(), GETDATE(), @Creator, @Creator
+	FROM	@tmpResourceIds t
+	WHERE	(t.ResourceId LIKE '0[0-2]'
+				OR t.ResourceId LIKE 'Q[1-4]'
+				OR t.ResourceId = 'OT')
+			AND NOT EXISTS (SELECT TOP 1 1 FROM dbo.ResultDetail WITH(ROWLOCK) WHERE MatchId = @matchid AND ResourceId = t.ResourceId)
+		
 	IF @Command ='NAP_Admin_Settlement_1-UNDO'
 	BEGIN
 		UPDATE	r
@@ -89,6 +98,11 @@ BEGIN
 		FROM @xml.nodes('/Results/Resource') AS T(C)
 		OPTION ( OPTIMIZE FOR ( @xml = NULL ) )	
 		
+		UPDATE @tmpResult
+			SET HomeValue = CASE WHEN HomeValue + AwayValue = 0 THEN NULL ELSE HomeValue END
+				,AwayValue = CASE WHEN HomeValue + AwayValue = 0 THEN NULL ELSE AwayValue END
+		WHERE ResourceId = 'OT'
+		
 		IF @Command = 'NAP_Admin_Settlement_1-CAL'
 			SET @SettlementStatusID = 4
 		ELSE
@@ -101,7 +115,7 @@ BEGIN
 				WHERE	MatchId = @matchid
 						AND ResourceId = 'OT'
 		END
-			
+		
 		MERGE dbo.ResultDetail TARGET
 		USING (
 			SELECT  tr.ResourceId, tr.HomeValue, tr.AwayValue
@@ -114,7 +128,7 @@ BEGIN
 		WHEN	MATCHED THEN
 			UPDATE SET HomeValue = SOURCE.HomeValue
 				,AwayValue = SOURCE.AwayValue
-				,ResultStatusID = 	5
+				,ResultStatusID = 5
 				,SettlementStatusID = @SettlementStatusID
 				,LastModifyDate = GETDATE()
 				,LastModifyBy = @creator
