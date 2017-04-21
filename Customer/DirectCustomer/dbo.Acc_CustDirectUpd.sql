@@ -2,12 +2,12 @@
 ALTER PROC Acc_CustDirectUpd
 (
 	@CustID INT
-	, @ProcessedBy VARCHAR(100)= NULL
-	, @Boss VARCHAR(100)= NULL
-	, @RequestedBy VARCHAR(100) = NULL
-	, @ApprovedBy VARCHAR(100) = NULL
-	, @Mobilephone NVARCHAR(50) = NULL
-	, @MaxLoss MONEY = NULL
+	, @ProcessedBy VARCHAR(100)= ''
+	, @Boss VARCHAR(100)= ''
+	, @RequestedBy VARCHAR(100) = ''
+	, @ApprovedBy VARCHAR(100) = ''
+	, @Mobilephone NVARCHAR(50) = ''
+	, @MaxLoss MONEY = 0
 	
 	, @creator    INT = NULL
 	, @IP         VARCHAR(20) = ''
