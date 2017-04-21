@@ -935,7 +935,11 @@ BEGIN
 		    @TotalMemberSuspended MemberSuspended
 	DROP TABLE #SportBettypeMatrix
 	-- For sportbook2
-	EXEC Acc_CustSetting_StatusSettingSelect @CustID = @custid,@roleid = @roleid		    
+	EXEC Acc_CustSetting_StatusSettingSelect @CustID = @custid,@roleid = @roleid
+	
+	-- For extra Info
+	EXEC Acc_CustDirectSel @CustID = @custid
+			    
 END
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbAdminNet] AS [dbo]

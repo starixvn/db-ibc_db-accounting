@@ -1,11 +1,5 @@
-
-SET QUOTED_IDENTIFIER ON 
-GO
-SET ANSI_NULLS ON 
-GO
-
-/****** Object:  Stored Procedure dbo.Acc_CustomerUpdDirectStatus    Script Date: 10/9/2014 4:58:03 PM ******/
-CREATE PROCEDURE [dbo].[Acc_CustomerUpdDirectStatus]
+/*<info serverAlias="DBCUST-CUSTDB" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
+ALTER PROCEDURE [dbo].[Acc_CustomerUpdDirectStatus]
     @custid  	INT
   , @creator    INT
   , @IP         VARCHAR(20) = ''
@@ -15,11 +9,12 @@ AS
 /*
 	Created: 
 	Task : Marking an account as Direct Account
-	DB: DBTXN/CustDB
+	DB: DBCUST/CustDB
 	Original: 
 
 	Revisions:		
 		- 20140523@Logan: Initial version.
+		- 20170420@Helen:  Add Extra information for Direct Accounts, for NAP only - [Redmine:72339]
 		
     Param's Explanation:
     • @ErrCode:
@@ -87,11 +82,16 @@ BEGIN
     EXEC dbo.Acc_CustDirectListAffected
         @custid = @custid
       , @mode = 1
-
+	
+	--[72339]:Add Extra information for Direct Accounts
+	INSERT INTO CustDirectAccount (CustID)
+	SELECT C.custid
+	FROM @affectedList C 
+		
     DECLARE @affCust INT
     
     SELECT @affCust = MIN(custid)
-      FROM @affectedList
+    FROM @affectedList
 
     WHILE @affCust IS NOT NULL
     BEGIN
@@ -139,7 +139,7 @@ BEGIN
          WHERE custid = @affCust
 
         SELECT @affCust = MIN(custid)
-          FROM @affectedList
+        FROM @affectedList
     END
 END
 
