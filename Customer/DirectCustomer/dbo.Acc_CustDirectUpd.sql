@@ -1,4 +1,7 @@
 /*<info serverAlias="DBCUST-CUSTDB" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
+USE CustDB
+GO
+
 ALTER PROC Acc_CustDirectUpd
 (
 	@CustID INT
@@ -74,11 +77,11 @@ BEGIN
 	
 	
     -- Update extra info for direct account
-	SELECT  @ProcessedBy_OLD = ProcessedBy
-			, @Boss_OLD = Boss
-			, @RequestedBy_OLD = RequestedBy
-			, @ApprovedBy_OLD = ApprovedBy 
-	FROM CustDirectAccount CDA WITH (ROWLOCK,UPDLOCK)
+	SELECT  @ProcessedBy_OLD = ISNULL(ProcessedBy,'')
+			, @Boss_OLD = ISNULL(Boss,'')
+			, @RequestedBy_OLD = ISNULL(RequestedBy,'')
+			, @ApprovedBy_OLD = ISNULL(ApprovedBy,'')
+	FROM CustDirectAccount CDA WITH (NOLOCK)
 	WHERE CDA.CustID = @CustID
 	
 	IF @ProcessedBy_OLD <> @ProcessedBy
@@ -122,8 +125,18 @@ BEGIN
 	
 	IF @IsUpdDirectAccount = 1
 	BEGIN
-
 		SELECT @LogData = '<Acc_CustDirectUpd CustID="' + COALESCE(CAST(@CustID AS VARCHAR(50)), SPACE(1)) + '" ' +
+							'ProcessedBy="' + COALESCE(CAST(@ProcessedBy AS VARCHAR(200)), SPACE(1)) + '" ' +
+							'Boss="' + COALESCE(CAST(@Boss AS VARCHAR(200)), SPACE(1)) + '" ' +
+							'RequestedBy="' + COALESCE(CAST(@RequestedBy AS VARCHAR(200)), SPACE(1)) + '" ' +
+							'ApprovedBy="' + COALESCE(CAST(@ApprovedBy AS VARCHAR(200)), SPACE(1)) + '" ' +
+							'Mobilephone="' + COALESCE(CAST(@Mobilephone AS VARCHAR(200)), SPACE(1)) + '" ' +
+							'MaxLoss="' + COALESCE(CAST(@MaxLoss AS VARCHAR(100)), SPACE(1)) + '" ' +
+							'IP="' + COALESCE(CAST(@IP AS VARCHAR(50)), SPACE(1)) + '" ' +
+							'ErrCode="'+ COALESCE(CAST(@ErrCode AS VARCHAR(10)), SPACE(1)) + '" ' +
+							'ErrMsg="'+ COALESCE(CAST(@ErrMsg AS VARCHAR(4000)), SPACE(1)) + '" />'
+						    
+		SELECT @LogData2 = '<Acc_CustDirectUpd CustID="' + COALESCE(CAST(@CustID AS VARCHAR(50)), SPACE(1)) + '" ' +
 							'ProcessedBy="' + COALESCE(CAST(@ProcessedBy_old AS VARCHAR(200)), SPACE(1)) + '" ' +
 							'Boss="' + COALESCE(CAST(@Boss_old AS VARCHAR(200)), SPACE(1)) + '" ' +
 							'RequestedBy="' + COALESCE(CAST(@RequestedBy_OLD AS VARCHAR(200)), SPACE(1)) + '" ' +
@@ -133,19 +146,7 @@ BEGIN
 							'IP="' + COALESCE(CAST(@IP AS VARCHAR(50)), SPACE(1)) + '" ' +
 							'ErrCode="'+ COALESCE(CAST(@ErrCode AS VARCHAR(10)), SPACE(1)) + '" ' +
 							'ErrMsg="'+ COALESCE(CAST(@ErrMsg AS VARCHAR(4000)), SPACE(1)) + '" />'
-	    
-		 SELECT @LogData2 = '<Acc_CustDirectUpd CustID="' + COALESCE(CAST(@CustID AS VARCHAR(50)), SPACE(1)) + '" ' +
-							'ProcessedBy="' + COALESCE(CAST(@ProcessedBy AS VARCHAR(200)), SPACE(1)) + '" ' +
-							'Boss="' + COALESCE(CAST(@Boss AS VARCHAR(200)), SPACE(1)) + '" ' +
-							'RequestedBy="' + COALESCE(CAST(@RequestedBy_OLD AS VARCHAR(200)), SPACE(1)) + '" ' +
-							'ApprovedBy="' + COALESCE(CAST(@ApprovedBy AS VARCHAR(200)), SPACE(1)) + '" ' +
-							'Mobilephone="' + COALESCE(CAST(@Mobilephone AS VARCHAR(200)), SPACE(1)) + '" ' +
-							'MaxLoss="' + COALESCE(CAST(@MaxLoss AS VARCHAR(100)), SPACE(1)) + '" ' +
-							'IP="' + COALESCE(CAST(@IP AS VARCHAR(50)), SPACE(1)) + '" ' +
-							'ErrCode="'+ COALESCE(CAST(@ErrCode AS VARCHAR(10)), SPACE(1)) + '" ' +
-							'ErrMsg="'+ COALESCE(CAST(@ErrMsg AS VARCHAR(4000)), SPACE(1)) + '" />'
-						    
-	    
+
 		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 					@Userid = @Creator,
 					@ActionID = 672,
