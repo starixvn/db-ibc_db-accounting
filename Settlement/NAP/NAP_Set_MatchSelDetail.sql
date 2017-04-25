@@ -630,7 +630,7 @@ BEGIN
 							OR ResourceId LIKE '60[3-5]'
 							OR ResourceId LIKE '60[6-7]__'
 							OR ResourceId LIKE '6130[1-4]__'
-							OR ResourceId LIKE '6170[1-3]'
+							OR ResourceId LIKE '6170[1-4]'
 						)
 			) r
 				ON	ISNULL(s.ResourceId,p.ResourceId) = r.ResourceId

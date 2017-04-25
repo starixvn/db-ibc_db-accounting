@@ -135,6 +135,7 @@ BEGIN
 		,@Q1LastBasket			VARCHAR(10) = NULL
 		,@Q2LastBasket			VARCHAR(10) = NULL
 		,@Q3LastBasket			VARCHAR(10) = NULL
+		,@Q4LastBasket			VARCHAR(10) = NULL
 
 	CREATE TABLE #bettypeCAL (bettype SMALLINT PRIMARY KEY, groupId SMALLINT, groupName NVARCHAR(50))
 	
@@ -322,6 +323,7 @@ BEGIN
 				,@Q1LastBasket = ISNULL(T.C.value('./@Q1LastBasket[1]', 'varchar(10)'), '')
 				,@Q2LastBasket = ISNULL(T.C.value('./@Q2LastBasket[1]', 'varchar(10)'), '')
 				,@Q3LastBasket = ISNULL(T.C.value('./@Q3LastBasket[1]', 'varchar(10)'), '')
+				,@Q4LastBasket = ISNULL(T.C.value('./@Q4LastBasket[1]', 'varchar(10)'), '')
         FROM	@xmlbb.nodes('/root/r') as [T](C) --T: table, C: column
         OPTION	( OPTIMIZE FOR ( @xmlbb = NULL ) )
 		
@@ -489,6 +491,7 @@ BEGIN
 						, @Q1LastBasket		
 						, @Q2LastBasket		
 						, @Q3LastBasket		
+						, @Q4LastBasket		
 						
 					) AS odds
 				WHERE b.matchId = @matchId

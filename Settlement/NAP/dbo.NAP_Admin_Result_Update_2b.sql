@@ -29,7 +29,16 @@ BEGIN
 	WHERE	MatchID = @MatchID
 
 	IF @sporttype <> 2 RETURN -- Apply for basketball ONLY	 
-
+	
+	-- Insert initial ResourceId 00, 01, 02, Q1, Q2, Q3, Q4, OT if they have not created yet
+	INSERT INTO dbo.ResultDetail (MatchId, ResourceId, ResultStatusID, SettlementStatusID, CreateDate, LastModifyDate, CreateBy, LastModifyBy)				
+	SELECT	@matchid, t.ResourceId, 0, 0, GETDATE(), GETDATE(), @Creator, @Creator
+	FROM	(
+			VALUES ('00'), ('01'), ('02'), ('OT')
+				,('Q1'), ('Q2'), ('Q3'), ('Q4')
+	)	t(ResourceId)
+	WHERE	NOT EXISTS (SELECT TOP 1 1 FROM dbo.ResultDetail WITH(ROWLOCK) WHERE MatchId = @matchid AND ResourceId = t.ResourceId)
+			
 	DECLARE @tmpResourceIds TABLE (ResourceId VARCHAR(50))--, QuarterX VARCHAR(2))
 		
 	IF @SelectedQuarter LIKE '%FT%'
@@ -58,18 +67,9 @@ BEGIN
 	END
 	IF @SelectedQuarter LIKE '%804%'
 	BEGIN
-		INSERT INTO @tmpResourceIds (ResourceId) VALUES ('61304__')
+		INSERT INTO @tmpResourceIds (ResourceId) VALUES ('61304__'),('61704')
 		INSERT INTO @tmpResourceIds (ResourceId) VALUES ('Q4')
 	END
-		
-	-- Insert initial ResourceId 00, 01, 02, Q1, Q2, Q3, Q4, OT if they have not created yet
-	INSERT INTO dbo.ResultDetail (MatchId, ResourceId, ResultStatusID, SettlementStatusID, CreateDate, LastModifyDate, CreateBy, LastModifyBy)				
-	SELECT	@matchid, t.ResourceId, 0, 0, GETDATE(), GETDATE(), @Creator, @Creator
-	FROM	@tmpResourceIds t
-	WHERE	(t.ResourceId LIKE '0[0-2]'
-				OR t.ResourceId LIKE 'Q[1-4]'
-				OR t.ResourceId = 'OT')
-			AND NOT EXISTS (SELECT TOP 1 1 FROM dbo.ResultDetail WITH(ROWLOCK) WHERE MatchId = @matchid AND ResourceId = t.ResourceId)
 		
 	IF @Command ='NAP_Admin_Settlement_1-UNDO'
 	BEGIN

@@ -70,7 +70,7 @@ BEGIN
 			,ISNULL(T.C.value('./@Q4RaceTo10[1]', 'VARCHAR(10)'), '') QXRaceTo10
 			,ISNULL(T.C.value('./@Q4RaceTo15[1]', 'VARCHAR(10)'), '') QXRaceTo15
 			,ISNULL(T.C.value('./@Q4RaceTo20[1]', 'VARCHAR(10)'), '') QXRaceTo20
-			,'' QXLastBasket
+			,ISNULL(T.C.value('./@Q4LastBasket[1]', 'VARCHAR(10)'), '') QXLastBasket
 	FROM	@xml.nodes('/root/r') AS T(c) -- Table/Column
 	WHERE	@SelectedQuarter LIKE '%804%'
 	OPTION ( OPTIMIZE FOR ( @xml = NULL )) 

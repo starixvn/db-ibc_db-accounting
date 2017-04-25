@@ -109,6 +109,7 @@ ALTER FUNCTION [dbo].[f_Set_Parlay_CalModds] (
 	, @Q1LastBasket			VARCHAR(10) = NULL
 	, @Q2LastBasket			VARCHAR(10) = NULL
 	, @Q3LastBasket			VARCHAR(10) = NULL
+	, @Q4LastBasket			VARCHAR(10) = NULL
 
 )
 RETURNS TABLE
@@ -1697,6 +1698,10 @@ RETURN (
 													END
 						WHEN @betcheck = '803' THEN CASE
 														WHEN @betteam = @Q3LastBasket THEN 1
+														ELSE -1
+													END
+						WHEN @betcheck = '804' THEN CASE
+														WHEN @betteam = @Q4LastBasket THEN 1
 														ELSE -1
 													END
 						ELSE - 1
