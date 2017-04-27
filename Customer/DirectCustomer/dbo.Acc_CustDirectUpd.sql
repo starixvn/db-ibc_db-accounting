@@ -149,6 +149,7 @@ BEGIN
 
 		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 					@Userid = @Creator,
+					@CustID = @CustID,
 					@ActionID = 672,
 					@TrackingValue = @LogData,
 					@TrackingValue2 = @LogData2,
