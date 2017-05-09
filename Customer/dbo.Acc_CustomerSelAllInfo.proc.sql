@@ -1,6 +1,4 @@
-USE [bodb02]
-GO
-
+/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbExtAccNet" viewers="vnteam" isFunction="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_CustomerSelAllInfo]
 	@username VARCHAR(30)
 AS
@@ -77,6 +75,7 @@ Revisions:
 	- 20160412@Percy: support Voidbridge single wallet [Redmine: #55258]
 	- 20161019@Percy: Support show OTP info [RedmineID: #64871]
 	- 20161028@Percy: Support Fishing World [RedmineID: #65734]
+	- 20170421@Helen: Enable Downline FishingWorld checkbox is ticked & disabled control although Member is disabled [RedmineID: #74421]
 	
 Param's Explanation:
 	@username: username want to get all info related
@@ -205,59 +204,59 @@ BEGIN
 	    RETURN
     -----------------------------	
 
-    SELECT @DisableDownlinesFI = CASE @roleid WHEN 4 THEN (SELECT TOP 1 ISNULL(DisableFinancial,0) FROM custInfo WITH(NOLOCK) WHERE srecommend = @custid AND roleid = 3 AND DisableFinancial = 1)
-										      WHEN 3 THEN (SELECT TOP 1 ISNULL(DisableFinancial,0) FROM custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND roleid = 2 AND DisableFinancial = 1) 											 
-										      WHEN 2 THEN (SELECT TOP 1 ISNULL(DisableFinancial,0) FROM custInfo WITH(NOLOCK) WHERE recommend  = @custid AND roleid = 1 AND DisableFinancial = 1) 											 
+    SELECT @DisableDownlinesFI = CASE @roleid WHEN 4 THEN (SELECT TOP 1 ISNULL(DisableFinancial,0) FROM custInfo WITH(NOLOCK) WHERE srecommend = @custid AND DisableFinancial = 1)
+										      WHEN 3 THEN (SELECT TOP 1 ISNULL(DisableFinancial,0) FROM custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND DisableFinancial = 1) 											 
+										      WHEN 2 THEN (SELECT TOP 1 ISNULL(DisableFinancial,0) FROM custInfo WITH(NOLOCK) WHERE recommend  = @custid AND DisableFinancial = 1) 											 
 										      ELSE 0 END 	
     										  
-    SELECT @DisableDownlinesCS = CASE @roleid WHEN 4 THEN (SELECT TOP 1 ISNULL(DisableCasino,0) FROM custInfo WITH(NOLOCK) WHERE srecommend = @custid AND roleid = 3 AND DisableCasino = 1)
-										      WHEN 3 THEN (SELECT TOP 1 ISNULL(DisableCasino,0) FROM custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND roleid = 2 AND DisableCasino = 1) 											 
-										      WHEN 2 THEN (SELECT TOP 1 ISNULL(DisableCasino,0) FROM custInfo WITH(NOLOCK) WHERE recommend  = @custid AND roleid = 1 AND DisableCasino = 1) 											
+    SELECT @DisableDownlinesCS = CASE @roleid WHEN 4 THEN (SELECT TOP 1 ISNULL(DisableCasino,0) FROM custInfo WITH(NOLOCK) WHERE srecommend = @custid AND DisableCasino = 1)
+										      WHEN 3 THEN (SELECT TOP 1 ISNULL(DisableCasino,0) FROM custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND DisableCasino = 1) 											 
+										      WHEN 2 THEN (SELECT TOP 1 ISNULL(DisableCasino,0) FROM custInfo WITH(NOLOCK) WHERE recommend  = @custid AND DisableCasino = 1) 											
 										      ELSE 0 END
 
-    SELECT @DisableDownlinesBI = CASE @roleid WHEN 4 THEN (SELECT TOP 1 ISNULL(DisableBingo,0) FROM custInfo WITH(NOLOCK) WHERE srecommend = @custid AND roleid = 3 AND DisableBingo = 1)
-										      WHEN 3 THEN (SELECT TOP 1 ISNULL(DisableBingo,0) FROM custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND roleid = 2 AND DisableBingo = 1) 											 
-										      WHEN 2 THEN (SELECT TOP 1 ISNULL(DisableBingo,0) FROM custInfo WITH(NOLOCK) WHERE recommend  = @custid AND roleid = 1 AND DisableBingo = 1) 											 
+    SELECT @DisableDownlinesBI = CASE @roleid WHEN 4 THEN (SELECT TOP 1 ISNULL(DisableBingo,0) FROM custInfo WITH(NOLOCK) WHERE srecommend = @custid AND DisableBingo = 1)
+										      WHEN 3 THEN (SELECT TOP 1 ISNULL(DisableBingo,0) FROM custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND DisableBingo = 1) 											 
+										      WHEN 2 THEN (SELECT TOP 1 ISNULL(DisableBingo,0) FROM custInfo WITH(NOLOCK) WHERE recommend  = @custid AND DisableBingo = 1) 											 
 										      ELSE 0 END				
 
-    SELECT @DisableDownlinesNumber = CASE @roleid WHEN 4 THEN (SELECT TOP 1 ISNULL(DisableNumber,0) FROM custInfo WITH(NOLOCK) WHERE srecommend = @custid AND roleid = 3 AND DisableNumber = 1)
-										      WHEN 3 THEN (SELECT TOP 1 ISNULL(DisableNumber,0) FROM custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND roleid = 2 AND DisableNumber = 1) 											 
-										      WHEN 2 THEN (SELECT TOP 1 ISNULL(DisableNumber,0) FROM custInfo WITH(NOLOCK) WHERE recommend  = @custid AND roleid = 1 AND DisableNumber = 1) 											 
+    SELECT @DisableDownlinesNumber = CASE @roleid WHEN 4 THEN (SELECT TOP 1 ISNULL(DisableNumber,0) FROM custInfo WITH(NOLOCK) WHERE srecommend = @custid AND DisableNumber = 1)
+										      WHEN 3 THEN (SELECT TOP 1 ISNULL(DisableNumber,0) FROM custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND DisableNumber = 1) 											 
+										      WHEN 2 THEN (SELECT TOP 1 ISNULL(DisableNumber,0) FROM custInfo WITH(NOLOCK) WHERE recommend  = @custid AND DisableNumber = 1) 											 
 										      ELSE 0 END	
     										  
-    SELECT @DisableDownlinesLiveCS = CASE @roleid WHEN 4 THEN (SELECT TOP 1 ISNULL(DisableLiveCasino,0) FROM custInfo WITH(NOLOCK) WHERE srecommend = @custid AND roleid = 3 AND DisableLiveCasino = 1)
-										      WHEN 3 THEN (SELECT TOP 1 ISNULL(DisableLiveCasino,0) FROM custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND roleid = 2 AND DisableLiveCasino = 1) 											 
-										      WHEN 2 THEN (SELECT TOP 1 ISNULL(DisableLiveCasino,0) FROM custInfo WITH(NOLOCK) WHERE recommend  = @custid AND roleid = 1 AND DisableLiveCasino = 1) 											 
+    SELECT @DisableDownlinesLiveCS = CASE @roleid WHEN 4 THEN (SELECT TOP 1 ISNULL(DisableLiveCasino,0) FROM custInfo WITH(NOLOCK) WHERE srecommend = @custid  AND DisableLiveCasino = 1)
+										      WHEN 3 THEN (SELECT TOP 1 ISNULL(DisableLiveCasino,0) FROM custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND DisableLiveCasino = 1) 											 
+										      WHEN 2 THEN (SELECT TOP 1 ISNULL(DisableLiveCasino,0) FROM custInfo WITH(NOLOCK) WHERE recommend  = @custid AND DisableLiveCasino = 1) 											 
 										      ELSE 0 END
     										  
-    SELECT @DisableDownlinesHRFixedOdds= CASE @roleid WHEN 4 THEN (SELECT TOP 1 ISNULL(DisableHRFixedOdds,0) FROM custInfo WITH(NOLOCK) WHERE srecommend = @custid AND roleid = 3 AND DisableHRFixedOdds = 1)
-										      WHEN 3 THEN (SELECT TOP 1 ISNULL(DisableHRFixedOdds,0) FROM custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND roleid = 2 AND DisableHRFixedOdds = 1) 											 
-										      WHEN 2 THEN (SELECT TOP 1 ISNULL(DisableHRFixedOdds,0) FROM custInfo WITH(NOLOCK) WHERE recommend  = @custid AND roleid = 1 AND DisableHRFixedOdds = 1) 											 
+    SELECT @DisableDownlinesHRFixedOdds= CASE @roleid WHEN 4 THEN (SELECT TOP 1 ISNULL(DisableHRFixedOdds,0) FROM custInfo WITH(NOLOCK) WHERE srecommend = @custid AND DisableHRFixedOdds = 1)
+										      WHEN 3 THEN (SELECT TOP 1 ISNULL(DisableHRFixedOdds,0) FROM custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND DisableHRFixedOdds = 1) 											 
+										      WHEN 2 THEN (SELECT TOP 1 ISNULL(DisableHRFixedOdds,0) FROM custInfo WITH(NOLOCK) WHERE recommend  = @custid AND DisableHRFixedOdds = 1) 											 
 										      ELSE 0 END
     										  
-    SELECT @DisableDownlinesVirtualSports = CASE @roleid WHEN 4 THEN (SELECT TOP 1 ISNULL(DisableVirtualSports,0) FROM custInfo WITH(NOLOCK) WHERE srecommend = @custid AND roleid = 3 AND DisableVirtualSports = 1)
-										     WHEN 3 THEN (SELECT TOP 1 ISNULL(DisableVirtualSports,0) FROM custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND roleid = 2 AND DisableVirtualSports = 1) 											 
-										     WHEN 2 THEN (SELECT TOP 1 ISNULL(DisableVirtualSports,0) FROM custInfo WITH(NOLOCK) WHERE recommend  = @custid AND roleid = 1 AND DisableVirtualSports = 1) 											 
+    SELECT @DisableDownlinesVirtualSports = CASE @roleid WHEN 4 THEN (SELECT TOP 1 ISNULL(DisableVirtualSports,0) FROM custInfo WITH(NOLOCK) WHERE srecommend = @custid AND DisableVirtualSports = 1)
+										     WHEN 3 THEN (SELECT TOP 1 ISNULL(DisableVirtualSports,0) FROM custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND DisableVirtualSports = 1) 											 
+										     WHEN 2 THEN (SELECT TOP 1 ISNULL(DisableVirtualSports,0) FROM custInfo WITH(NOLOCK) WHERE recommend  = @custid AND DisableVirtualSports = 1) 											 
 										     ELSE 0 END
 
-    SELECT @DisableDownlinesEsports = CASE @roleid WHEN 4 THEN (SELECT TOP 1 ISNULL(DisableEsports, 0) FROM custInfo WITH(NOLOCK) WHERE srecommend = @custid AND roleid = 3 AND DisableEsports = 1)
-											WHEN 3 THEN (SELECT TOP 1 ISNULL(DisableEsports, 0) FROM custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND roleid = 2 AND DisableEsports = 1)
-											WHEN 2 THEN (SELECT TOP 1 ISNULL(DisableEsports, 0) FROM custInfo WITH(NOLOCK) WHERE recommend = @custid AND roleid = 1 AND DisableEsports = 1)
+    SELECT @DisableDownlinesEsports = CASE @roleid WHEN 4 THEN (SELECT TOP 1 ISNULL(DisableEsports, 0) FROM custInfo WITH(NOLOCK) WHERE srecommend = @custid AND DisableEsports = 1)
+											WHEN 3 THEN (SELECT TOP 1 ISNULL(DisableEsports, 0) FROM custInfo WITH(NOLOCK) WHERE mrecommend = @custid  AND DisableEsports = 1)
+											WHEN 2 THEN (SELECT TOP 1 ISNULL(DisableEsports, 0) FROM custInfo WITH(NOLOCK) WHERE recommend = @custid  AND DisableEsports = 1)
 											ELSE 0 END
 
-    SELECT @DisableDownlinesGoldDeluxe = CASE @roleid WHEN 4 THEN (SELECT TOP 1 ISNULL(DisableGoldDeluxe,0) FROM custInfo WITH(NOLOCK) WHERE srecommend = @custid AND roleid = 3 AND DisableGoldDeluxe = 1)
-										      WHEN 3 THEN (SELECT TOP 1 ISNULL(DisableGoldDeluxe,0) FROM custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND roleid = 2 AND DisableGoldDeluxe = 1) 											 
-										      WHEN 2 THEN (SELECT TOP 1 ISNULL(DisableGoldDeluxe,0) FROM custInfo WITH(NOLOCK) WHERE recommend  = @custid AND roleid = 1 AND DisableGoldDeluxe = 1) 											 
+    SELECT @DisableDownlinesGoldDeluxe = CASE @roleid WHEN 4 THEN (SELECT TOP 1 ISNULL(DisableGoldDeluxe,0) FROM custInfo WITH(NOLOCK) WHERE srecommend = @custid AND DisableGoldDeluxe = 1)
+										      WHEN 3 THEN (SELECT TOP 1 ISNULL(DisableGoldDeluxe,0) FROM custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND DisableGoldDeluxe = 1) 											 
+										      WHEN 2 THEN (SELECT TOP 1 ISNULL(DisableGoldDeluxe,0) FROM custInfo WITH(NOLOCK) WHERE recommend  = @custid AND DisableGoldDeluxe = 1) 											 
 										      ELSE 0 END	
 
-	SELECT @DisableDownlinesColossusBet = CASE @roleid WHEN 4 THEN (SELECT TOP 1 ISNULL(DisableColossusBet,0) FROM custInfo WITH(NOLOCK) WHERE srecommend = @custid AND roleid = 3 AND DisableColossusBet = 1)
-										      WHEN 3 THEN (SELECT TOP 1 ISNULL(DisableColossusBet,0) FROM custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND roleid = 2 AND DisableColossusBet = 1) 											 
-										      WHEN 2 THEN (SELECT TOP 1 ISNULL(DisableColossusBet,0) FROM custInfo WITH(NOLOCK) WHERE recommend  = @custid AND roleid = 1 AND DisableColossusBet = 1) 											 
+	SELECT @DisableDownlinesColossusBet = CASE @roleid WHEN 4 THEN (SELECT TOP 1 ISNULL(DisableColossusBet,0) FROM custInfo WITH(NOLOCK) WHERE srecommend = @custid AND DisableColossusBet = 1)
+										      WHEN 3 THEN (SELECT TOP 1 ISNULL(DisableColossusBet,0) FROM custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND DisableColossusBet = 1) 											 
+										      WHEN 2 THEN (SELECT TOP 1 ISNULL(DisableColossusBet,0) FROM custInfo WITH(NOLOCK) WHERE recommend  = @custid  AND DisableColossusBet = 1) 											 
 										      ELSE 0 END	
 										      
-	SELECT @DisableDownlinesSuperLive = CASE @roleid WHEN 4 THEN (SELECT TOP 1 ISNULL(DisableSuperLive,0) FROM custInfo WITH(NOLOCK) WHERE srecommend = @custid AND roleid = 3 AND DisableSuperLive = 1)
-										      WHEN 3 THEN (SELECT TOP 1 ISNULL(DisableSuperLive,0) FROM custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND roleid = 2 AND DisableSuperLive = 1) 											 
-										      WHEN 2 THEN (SELECT TOP 1 ISNULL(DisableSuperLive,0) FROM custInfo WITH(NOLOCK) WHERE recommend  = @custid AND roleid = 1 AND DisableSuperLive = 1) 											 
+	SELECT @DisableDownlinesSuperLive = CASE @roleid WHEN 4 THEN (SELECT TOP 1 ISNULL(DisableSuperLive,0) FROM custInfo WITH(NOLOCK) WHERE srecommend = @custid AND DisableSuperLive = 1)
+										      WHEN 3 THEN (SELECT TOP 1 ISNULL(DisableSuperLive,0) FROM custInfo WITH(NOLOCK) WHERE mrecommend = @custid  AND DisableSuperLive = 1) 											 
+										      WHEN 2 THEN (SELECT TOP 1 ISNULL(DisableSuperLive,0) FROM custInfo WITH(NOLOCK) WHERE recommend  = @custid  AND DisableSuperLive = 1) 											 
 										      ELSE 0 END												  									  										  							  
     -------------------------------------------------------------------------
     DECLARE @IsDeposit BIT --Identify deposit customer
