@@ -76,6 +76,7 @@ Revisions:
 	- 20161019@Percy: Support show OTP info [RedmineID: #64871]
 	- 20161028@Percy: Support Fishing World [RedmineID: #65734]
 	- 20170421@Helen: Enable Downline FishingWorld checkbox is ticked & disabled control although Member is disabled [RedmineID: #74421]
+	- 20170420@Helen:  Add Extra information for Direct Accounts, for NAP only - [Redmine:72339]
 	
 Param's Explanation:
 	@username: username want to get all info related
