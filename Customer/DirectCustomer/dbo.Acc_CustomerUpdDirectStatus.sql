@@ -87,6 +87,8 @@ BEGIN
 	INSERT INTO CustDirectAccount (CustID)
 	SELECT C.custid
 	FROM @affectedList C 
+	
+	--DELETE dbo.CustDirectAccount WHERE CustID = @upline
 		
     DECLARE @affCust INT
     

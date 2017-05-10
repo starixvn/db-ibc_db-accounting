@@ -32,16 +32,11 @@ BEGIN
 		INNER JOIN dbo.Customer c WITH (NOLOCK) ON cda.CustID = c.CustID
 		INNER JOIN dbo.Exchange e WITH (NOLOCK) ON e.ExchangeID = c.Currency
 		INNER JOIN dbo.Customer cr WITH (NOLOCK) ON c.creator = cr.CustID
-		
-		OUTER APPLY (SELECT	TOP 1 groupid 
-					FROM dbo.custaccount ca_g WITH (NOLOCK) 
-					WHERE ca_g.CUSTID IN (C.srecommend,c.mrecommend,c.recommend) AND ca_g.GroupID > 0  
-					) AS GroupHeadline
-					
+		LEFT JOIN custaccount AS GroupHeadline WITH (NOLOCK) ON GroupHeadline.CUSTID = @CustID AND GroupHeadline.GroupID > 0 
 		OUTER APPLY (SELECT C.username
 					 FROM dbo.custaccount ca WITH (NOLOCK)
 						INNER JOIN Customer C ON CA.custid = C.custid 
-					 WHERE ca.GroupID = GroupHeadline.GroupID AND ca.IsGroupHeadLine = 1 AND GroupHeadline.GroupID > 0
+					 WHERE ca.GroupID = GroupHeadline.GroupID AND ca.IsGroupHeadLine = 1 
 					) AS Headline
 						 
 		LEFT JOIN bodb_Age.dbo.LimitLoss_Setting ls WITH (NOLOCK) ON cda.Custid = ls.CustID
