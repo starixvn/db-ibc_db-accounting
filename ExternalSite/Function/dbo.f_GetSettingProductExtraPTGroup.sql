@@ -18,6 +18,7 @@ ALTER FUNCTION [dbo].[f_GetSettingProductExtraPTGroup]
 		- 20170113@Percy: Update setting of ACCTHAI2, ACCTHAI56, ACCTHAI99, BC group [RedmineID: #70060]
 		- 20170213@Percy: Remove SLI [RedmineID: #70036]
 		- 20170308@Percy: Update setting [RedmineID: #72684]
+		- 20170308@Percy: Remove Colossus Bet, Apply Fishing World [RedmineID: #74205]
 */
 
 RETURNS @ExtraPTGroup TABLE (GroupId INT, GroupName VARCHAR(50), ProductID TINYINT, Sporttype SMALLINT, SubProduct VARCHAR(500), ExtraPT DECIMAL(9, 8))
@@ -241,14 +242,22 @@ BEGIN
 		(19,'ACCUT',15,0,'',0.05000000),
 		(13,'ACCIRR',15,0,'',0.05000000),
 		(14,'ACCUT2',15,0,'',0.05000000),
-		(17,'ACCNTD',15,0,'',0.05000000)
+		(17,'ACCNTD',15,0,'',0.05000000),
+
+		-- Fishing World
+		(15,'ACCYEN789',24,0,'',0.10000000),
+		(16,'ACCYEN889',24,0,'',0.10000000),
+		(19,'ACCUT',24,0,'',0.10000000),
+		(13,'ACCIRR',24,0,'',0.10000000),
+		(14,'ACCUT2',24,0,'',0.10000000),
+		(17,'ACCNTD',24,0,'',0.10000000)
 
 
 	INSERT INTO @ExtraPTGroup(GroupId, GroupName, ProductID, Sporttype, SubProduct, ExtraPT)
 	SELECT GroupId, GroupName, ProductID, Sporttype, SubProduct, ExtraPT
 	FROM @AllExtraPTGroup
 	WHERE GroupName = COALESCE(@GroupName, GroupName)
-		AND ProductID <> 4 -- Remove SLI
+		AND ProductID NOT IN (4, 15) -- Remove SLI, Colossus Bet
 
 	-- Sportbook of ACCYEN789 --
 	UPDATE @ExtraPTGroup
