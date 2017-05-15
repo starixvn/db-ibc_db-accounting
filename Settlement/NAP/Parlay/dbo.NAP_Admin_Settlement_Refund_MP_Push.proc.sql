@@ -257,10 +257,9 @@ BEGIN
 				ON b.bettype = f.BetType
 		WHERE b.matchid = @MatchId
 			AND b.statusID = 1 -- waiting status
-			AND f.GroupId BETWEEN 1 AND 8
 		)
 
-	IF (ISNULL(@NotKeyScoreList,'') <> '' or ISNULL(@NotAllowCalculating,'') <> '' OR ISNULL(@HaveWaitingTicket,'') = 1)
+	IF (ISNULL(@NotKeyScoreList,'') <> '' or ISNULL(@NotAllowCalculating,'') <> '' OR ISNULL(@HaveWaitingTicket,'') <> '')
 	BEGIN
 		SELECT   @ErrCode = 1001011
 				,@ErrMsg = 'This match is being calculated, except following matches ' 
