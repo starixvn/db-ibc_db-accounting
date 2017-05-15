@@ -77,7 +77,7 @@ Revisions:
 	- 20161028@Percy: Support Fishing World [RedmineID: #65734]
 	- 20170421@Helen: Enable Downline FishingWorld checkbox is ticked & disabled control although Member is disabled [RedmineID: #74421]
 	- 20170420@Helen:  Add Extra information for Direct Accounts, for NAP only - [Redmine:72339]
-	
+	- 20170515@Helen:  Add Extra information for Direct Accounts, for NAP only Change Request - [Redmine:72339]
 Param's Explanation:
 	@username: username want to get all info related
 */		
@@ -515,6 +515,23 @@ BEGIN
 	SELECT  @OTPCreateDate = CreatedDate FROM DBCUST.CustDB.dbo.CustOTP WITH(NOLOCK)
 	WHERE custid = @custid
 	
+	DECLARE @CustGroupHeadlineID INT, @srecommend INT, @mrecommend INT, @recommend INT
+	
+	IF @IsDeposit = 0
+	BEGIN
+		SELECT @srecommend = srecommend, @mrecommend = mrecommend, @recommend=recommend
+		FROM custInfo WITH (NOLOCK)
+		WHERE custid = @custid
+		
+		SELECT @CustGroupHeadlineID = CDA.CustID
+		FROM CustDirectAccount CDA WITH (NOLOCK)
+		WHERE CDA.CustID IN (@srecommend,@mrecommend,@recommend,@custid)
+		
+		IF @CustGroupHeadlineID IS NULL
+			SET @CustGroupHeadlineID = @srecommend
+			
+	END
+	
     SELECT c.custid, c.username, c.firstname, c.lastname, 
 	    c.username2, 		
 	    ci.roleid, 
@@ -582,9 +599,19 @@ BEGIN
 		@HasDownline AS HasDownline, 
 		@OTPCreateDate AS OTPCreateDate
 		
+		, ISNULL(Headline.username,'') AS Headline
+		, ISNULL(GroupHeadline.GroupID,0) AS GroupHeadlineID
+		
     FROM customer c WITH(NOLOCK)
 	    inner join custinfo ci WITH(NOLOCK) on c.custid = ci.custid
 	    inner join exchange e WITH(NOLOCK) on c.currency = e.exchangeid 
+	    LEFT JOIN custaccount AS GroupHeadline WITH (NOLOCK) ON GroupHeadline.CUSTID = @CustGroupHeadlineID AND GroupHeadline.GroupID > 0 AND @IsDeposit = 0
+		OUTER APPLY (SELECT C.username
+					 FROM dbo.custaccount ca WITH (NOLOCK)
+						INNER JOIN Customer C ON CA.custid = C.custid 
+					 WHERE ca.GroupID = GroupHeadline.GroupID AND ca.IsGroupHeadLine = 1 AND @IsDeposit = 0
+					) AS Headline
+					
     WHERE c.custid = @custid
     
     
@@ -938,9 +965,6 @@ BEGIN
 	-- For sportbook2
 	EXEC Acc_CustSetting_StatusSettingSelect @CustID = @custid,@roleid = @roleid
 	
-	-- For extra Info
-	EXEC Acc_CustDirectSel @CustID = @custid
-			    
 END
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerSelAllInfo] TO [bodbAdminNet] AS [dbo]

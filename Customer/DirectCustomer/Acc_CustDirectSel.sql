@@ -11,7 +11,7 @@ Task: Add Extra information for Direct Accounts, for NAP only - [Redmine:72339]
 DB: DBAGE/BODB02
 
 Revisions:
-	
+	- 20170515@Helen:  Add Extra information for Direct Accounts, for NAP only Change Request - [Redmine:72339]
 */
 BEGIN
 
@@ -24,21 +24,13 @@ BEGIN
 		, ISNULL(cda.ApprovedBy,'') AS ApprovedBy
 		, ISNULL(c.mobilephone,'') AS Mobilephone
 		, ISNULL(ls.MaxLoss,0) AS MaxLoss
-		, ISNULL(GroupHeadline.GroupID,0) AS GroupHeadlineID
 		, CASE WHEN e.ExchangeID = 20 THEN 'UUS' ELSE e.Currency END AS Currency
-		, Headline.username AS Headline
-		
+				
 	FROM dbo.CustDirectAccount cda WITH (NOLOCK)
 		INNER JOIN dbo.Customer c WITH (NOLOCK) ON cda.CustID = c.CustID
 		INNER JOIN dbo.Exchange e WITH (NOLOCK) ON e.ExchangeID = c.Currency
 		INNER JOIN dbo.Customer cr WITH (NOLOCK) ON c.creator = cr.CustID
 		LEFT JOIN custaccount AS GroupHeadline WITH (NOLOCK) ON GroupHeadline.CUSTID = @CustID AND GroupHeadline.GroupID > 0 
-		OUTER APPLY (SELECT C.username
-					 FROM dbo.custaccount ca WITH (NOLOCK)
-						INNER JOIN Customer C ON CA.custid = C.custid 
-					 WHERE ca.GroupID = GroupHeadline.GroupID AND ca.IsGroupHeadLine = 1 
-					) AS Headline
-						 
 		LEFT JOIN bodb_Age.dbo.LimitLoss_Setting ls WITH (NOLOCK) ON cda.Custid = ls.CustID
 		
 	WHERE cda.Custid = @CustID
