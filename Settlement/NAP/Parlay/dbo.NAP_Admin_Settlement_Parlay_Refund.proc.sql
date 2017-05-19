@@ -10,6 +10,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Parlay_Refund] (
 	, @matchdate		SMALLDATETIME
 	, @Mode				VARCHAR(20)
 	, @IsRefundHT		BIT
+	, @resultDetail_bb	VARCHAR(MAX) = NULL
 	, @TicketCount		INT = 0 OUTPUT
 	, @ErrCode 			INT = 0 OUTPUT
 	, @ErrMsg 			NVARCHAR(200) = '' OUTPUT
@@ -21,7 +22,7 @@ AS
 	ORIGINAL: 
 
 	Revisions:		
-		
+		- 20170215@Kathy: Basketball All-in-One [Redmine:#71372]
 
 	Param's Explanation:		
 		- @Mode: ['REFUND', 'REFUND-HT','REFUND-FT']
@@ -30,10 +31,23 @@ BEGIN
 	SET NOCOUNT ON
 
 	DECLARE @tempRefundBatch TABLE (refno BIGINT, betcount INT)
-	CREATE TABLE #refundBettypes (bettype SMALLINT PRIMARY KEY)
+	CREATE TABLE #refundBettypes (bettype SMALLINT PRIMARY KEY, groupId SMALLINT, GroupName NVARCHAR(50))
 	
-	INSERT INTO #refundBettypes (bettype)
-	SELECT f.BetType
+	DECLARE @SelectedQuarterREFUND VARCHAR(50) = NULL
+			,@xmlbb XML
+	
+	IF @resultDetail_bb IS NOT NULL
+	BEGIN
+		SET @xmlbb = CONVERT(XML, @resultDetail_bb)    
+		
+		SELECT	TOP(1) 
+				@SelectedQuarterREFUND = ISNULL(T.C.value('./@SelectedQuarterREFUND[1]', 'varchar(50)'), '')
+		FROM	@xmlbb.nodes('/root/r') as [T](C) --T: table, C: column    
+		OPTION	( OPTIMIZE FOR ( @xmlbb = NULL ) )  
+	END
+	
+	INSERT INTO #refundBettypes (bettype, groupId, GroupName)
+	SELECT f.BetType, f.GroupId, f.GroupName
 	FROM dbo.f_Set_GetGroupBettypes() f
 	WHERE 1 = CASE 
 				WHEN @Mode = 'REFUND' THEN 1
@@ -55,7 +69,7 @@ BEGIN
 					END
 				ELSE 0 
 			END
-		AND f.IsAuto = 0 --Exclude BetRadar, FM
+		AND f.IsAuto = 0 -- Exclude BetRadar, FM
 	
 	DECLARE @fromTransId	INT
 		,@batchNo			INT
@@ -73,9 +87,15 @@ BEGIN
 	SELECT bm.refno
 	FROM dbo.bettransm bm WITH(NOLOCK)
 		INNER JOIN #refundBettypes t ON bm.bettype = t.bettype
-
+	
 	WHERE bm.matchid 	= @matchid
 		AND bm.statusID NOT IN (101,102)
+		AND 1 = CASE
+					WHEN @SelectedQuarterREFUND IS NULL THEN 1
+					WHEN @SelectedQuarterREFUND LIKE '%' + t.GroupName + '%' THEN 1
+					WHEN t.groupId = 10 AND @SelectedQuarterREFUND LIKE '%' + LEFT(bm.betcheck,3) + '%' THEN 1
+					ELSE 0
+				END
 
 	--GROUP BY bm.refno
 

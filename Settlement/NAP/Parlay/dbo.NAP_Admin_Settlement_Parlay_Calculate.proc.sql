@@ -21,6 +21,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Parlay_Calculate] (
 	, @TotalGameAwayMatch INT = NULL
 	, @resultDetail_cb 	VARCHAR(MAX) = NULL
 	, @resultDetail_ss 	VARCHAR(MAX) = NULL
+	, @resultDetail_bb	VARCHAR(MAX) = NULL
 	, @IsRefundHT		BIT  = 0
 	, @ticketCount		INT = 0 OUTPUT
 	, @ErrCode 			INT = 0 OUTPUT
@@ -101,8 +102,42 @@ BEGIN
         ,@FirstGoalMethod			VARCHAR(2) = NULL
         ,@ResourceIDsCAL        VARCHAR(MAX)= NULL
         ,@ResourceIDsREFUND        VARCHAR(MAX)= NULL
+		,@SelectedQuarterCAL		VARCHAR(50) = NULL
+		,@FTHighestQuarter	VARCHAR(10) = NULL
+		,@FTFirstBasket		VARCHAR(10) = NULL
+		,@FTLastBasket		VARCHAR(10) = NULL
+		,@HTRaceTo20		VARCHAR(10) = NULL
+		,@HTRaceTo25		VARCHAR(10) = NULL
+		,@HTRaceTo30		VARCHAR(10) = NULL
+		,@SecondRaceTo20		VARCHAR(10) = NULL
+		,@SecondRaceTo25		VARCHAR(10) = NULL
+		,@SecondRaceTo30		VARCHAR(10) = NULL
+		,@Q1Home				INT = NULL
+		,@Q2Home				INT = NULL
+		,@Q3Home				INT = NULL
+		,@Q4Home				INT = NULL			
+		,@Q1Away				INT = NULL
+		,@Q2Away				INT = NULL
+		,@Q3Away				INT = NULL
+		,@Q4Away				INT = NULL
+		,@Q1RaceTo10			VARCHAR(10) = NULL
+		,@Q1RaceTo15			VARCHAR(10) = NULL
+		,@Q1RaceTo20			VARCHAR(10) = NULL
+		,@Q2RaceTo10			VARCHAR(10) = NULL
+		,@Q2RaceTo15			VARCHAR(10) = NULL
+		,@Q2RaceTo20			VARCHAR(10) = NULL
+		,@Q3RaceTo10			VARCHAR(10) = NULL
+		,@Q3RaceTo15			VARCHAR(10) = NULL
+		,@Q3RaceTo20			VARCHAR(10) = NULL
+		,@Q4RaceTo10			VARCHAR(10) = NULL
+		,@Q4RaceTo15			VARCHAR(10) = NULL
+		,@Q4RaceTo20			VARCHAR(10) = NULL
+		,@Q1LastBasket			VARCHAR(10) = NULL
+		,@Q2LastBasket			VARCHAR(10) = NULL
+		,@Q3LastBasket			VARCHAR(10) = NULL
+		,@Q4LastBasket			VARCHAR(10) = NULL
 
-	CREATE TABLE #bettypeCAL (bettype SMALLINT PRIMARY KEY)
+	CREATE TABLE #bettypeCAL (bettype SMALLINT PRIMARY KEY, groupId SMALLINT, groupName NVARCHAR(50))
 	
 	SELECT @FGLG1 				= ''
 			, @FGLG2 			= ''
@@ -183,9 +218,9 @@ BEGIN
 		END
 	END
 
-	INSERT INTO #bettypeCAL (bettype)
-	SELECT f.bettype
-	FROM	dbo.f_Set_GetGroupBettypes() AS f
+	INSERT INTO #bettypeCAL (bettype, groupId, groupName)
+	SELECT f.bettype, f.GroupId, f.GroupName
+	FROM	dbo.[f_Set_GetGroupBettypes]() AS f
 	WHERE	1 = CASE 
 					WHEN @Mode IN ('REFUND-HT') THEN 
 						CASE 
@@ -197,7 +232,7 @@ BEGIN
 							WHEN f.GroupId IN (1,3,5,7) AND @IsRefundHT = 0 THEN 1 
 							ELSE 0
 						END
-					WHEN @Mode IN ('CAL') THEN 1
+					WHEN @Mode IN ('CAL') OR (@Mode = 'REFUND' AND @Sporttype = 2) THEN 1
 					ELSE 0
 				END
 			AND f.IsAuto = 0 --Exclude BetRadar, FM
@@ -249,6 +284,57 @@ BEGIN
 	
 	END
 	
+	IF @Sporttype = 2 AND @resultDetail_bb IS NOT NULL -- Basketball
+	BEGIN
+		DECLARE	@xmlbb XML
+	
+		SET @xmlbb = CONVERT(XML, @resultDetail_bb)    
+		
+		SELECT	TOP(1) @SelectedQuarterCAL = ISNULL(T.C.value('./@SelectedQuarterCAL[1]', 'varchar(50)'), '')
+				--,@FTHighestQuarter = ISNULL(T.C.value('./@FTHighestQuarter[1]', 'varchar(10)'), '')
+				,@FTFirstBasket = ISNULL(T.C.value('./@FTFirstBasket[1]', 'varchar(10)'), '')
+				,@FTLastBasket = ISNULL(T.C.value('./@FTLastBasket[1]', 'varchar(10)'), '')
+				,@HTRaceTo20 = ISNULL(T.C.value('./@HTRaceTo20[1]', 'varchar(10)'), '')
+				,@HTRaceTo25 = ISNULL(T.C.value('./@HTRaceTo25[1]', 'varchar(10)'), '')
+				,@HTRaceTo30 = ISNULL(T.C.value('./@HTRaceTo30[1]', 'varchar(10)'), '')
+				,@SecondRaceTo20 = ISNULL(T.C.value('./@SecondRaceTo20[1]', 'varchar(10)'), '')
+				,@SecondRaceTo25 = ISNULL(T.C.value('./@SecondRaceTo25[1]', 'varchar(10)'), '')
+				,@SecondRaceTo30 = ISNULL(T.C.value('./@SecondRaceTo30[1]', 'varchar(10)'), '')
+				,@Q1Home = ISNULL(T.C.value('./@Q1Home[1]', 'INT'), '')
+				,@Q2Home = ISNULL(T.C.value('./@Q2Home[1]', 'INT'), '')
+				,@Q3Home = ISNULL(T.C.value('./@Q3Home[1]', 'INT'), '')
+				,@Q4Home = ISNULL(T.C.value('./@Q4Home[1]', 'INT'), '')
+				,@Q1Away = ISNULL(T.C.value('./@Q1Away[1]', 'INT'), '')
+				,@Q2Away = ISNULL(T.C.value('./@Q2Away[1]', 'INT'), '')
+				,@Q3Away = ISNULL(T.C.value('./@Q3Away[1]', 'INT'), '')
+				,@Q4Away = ISNULL(T.C.value('./@Q4Away[1]', 'INT'), '')
+				,@Q1RaceTo10 = ISNULL(T.C.value('./@Q1RaceTo10[1]', 'varchar(10)'), '')
+				,@Q1RaceTo15 = ISNULL(T.C.value('./@Q1RaceTo15[1]', 'varchar(10)'), '')
+				,@Q1RaceTo20 = ISNULL(T.C.value('./@Q1RaceTo20[1]', 'varchar(10)'), '')
+				,@Q2RaceTo10 = ISNULL(T.C.value('./@Q2RaceTo10[1]', 'varchar(10)'), '')
+				,@Q2RaceTo15 = ISNULL(T.C.value('./@Q2RaceTo15[1]', 'varchar(10)'), '')
+				,@Q2RaceTo20 = ISNULL(T.C.value('./@Q2RaceTo20[1]', 'varchar(10)'), '')
+				,@Q3RaceTo10 = ISNULL(T.C.value('./@Q3RaceTo10[1]', 'varchar(10)'), '')
+				,@Q3RaceTo15 = ISNULL(T.C.value('./@Q3RaceTo15[1]', 'varchar(10)'), '')
+				,@Q3RaceTo20 = ISNULL(T.C.value('./@Q3RaceTo20[1]', 'varchar(10)'), '')
+				,@Q4RaceTo10 = ISNULL(T.C.value('./@Q4RaceTo10[1]', 'varchar(10)'), '')
+				,@Q4RaceTo15 = ISNULL(T.C.value('./@Q4RaceTo15[1]', 'varchar(10)'), '')
+				,@Q4RaceTo20 = ISNULL(T.C.value('./@Q4RaceTo20[1]', 'varchar(10)'), '')
+				,@Q1LastBasket = ISNULL(T.C.value('./@Q1LastBasket[1]', 'varchar(10)'), '')
+				,@Q2LastBasket = ISNULL(T.C.value('./@Q2LastBasket[1]', 'varchar(10)'), '')
+				,@Q3LastBasket = ISNULL(T.C.value('./@Q3LastBasket[1]', 'varchar(10)'), '')
+				,@Q4LastBasket = ISNULL(T.C.value('./@Q4LastBasket[1]', 'varchar(10)'), '')
+        FROM	@xmlbb.nodes('/root/r') as [T](C) --T: table, C: column
+        OPTION	( OPTIMIZE FOR ( @xmlbb = NULL ) )
+		
+		SELECT	@FTHighestQuarter = CASE 
+							WHEN MAX(t.scoreH) > MAX(t.scoreA) THEN 'H'
+							WHEN MAX(t.scoreH) < MAX(t.scoreA) THEN 'A'
+							ELSE ''
+						END	
+		FROM	(VALUES(@Q1Home,@Q1Away),(@Q2Home,@Q2Away),(@Q3Home,@Q3Away),(@Q4Home,@Q4Away)) AS t(scoreH,scoreA)
+	END
+	
 	--Start process
 	DECLARE 
 		@fromTransId		INT
@@ -266,8 +352,12 @@ BEGIN
 
 	WHERE bm.matchid 	= @matchid
 		AND bm.statusID NOT IN (101,102)
-
-	
+		AND 1 = CASE
+					WHEN @SelectedQuarterCAL IS NULL THEN 1
+					WHEN @SelectedQuarterCAL LIKE '%' + t.GroupName + '%' THEN 1
+					WHEN t.groupId = 10 AND @SelectedQuarterCAL LIKE '%' + LEFT(bm.betcheck,3) + '%' THEN 1
+					ELSE 0
+				END
 	
 	SELECT @batchNo			= 2000
 		, @batchCount		= 0
@@ -369,6 +459,40 @@ BEGIN
 						, @away_firstteam2goals
 						, @home_firstteam3goals
 						, @away_firstteam3goals
+						, @FTHighestQuarter	
+						, @FTFirstBasket	
+						, @FTLastBasket		
+						, @HTRaceTo20		
+						, @HTRaceTo25		
+						, @HTRaceTo30		
+						, @SecondRaceTo20	
+						, @SecondRaceTo25	
+						, @SecondRaceTo30	
+						, @Q1Home			
+						, @Q2Home			
+						, @Q3Home			
+						, @Q4Home			
+						, @Q1Away			
+						, @Q2Away			
+						, @Q3Away			
+						, @Q4Away			
+						, @Q1RaceTo10		
+						, @Q1RaceTo15		
+						, @Q1RaceTo20		
+						, @Q2RaceTo10		
+						, @Q2RaceTo15		
+						, @Q2RaceTo20		
+						, @Q3RaceTo10		
+						, @Q3RaceTo15		
+						, @Q3RaceTo20		
+						, @Q4RaceTo10		
+						, @Q4RaceTo15		
+						, @Q4RaceTo20		
+						, @Q1LastBasket		
+						, @Q2LastBasket		
+						, @Q3LastBasket		
+						, @Q4LastBasket		
+						
 					) AS odds
 				WHERE b.matchId = @matchId
 			) AS b FOR XML AUTO
@@ -382,7 +506,7 @@ BEGIN
 			
 		IF(@strTicket IS NOT NULL)
 		BEGIN
-			EXEC dbo.NAP_Admin_Calculate_MP_broker 
+			EXEC dbo.[NAP_Admin_Calculate_MP_broker] 
 				@matchid 		= @matchid
 				,@matchdate		= @matchdate
 				,@mode 			= 'CAL'
@@ -399,3 +523,4 @@ BEGIN
 	
 	RETURN
 END
+

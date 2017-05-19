@@ -1,10 +1,4 @@
 /*<info serverAlias="DBPRO-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
-USE [bodb02]
-GO
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 ALTER PROCEDURE [dbo].[NAP_Set_MatchGetResult] 
 	@Date DATETIME
 	,@LeagueID INT = 0
@@ -23,6 +17,7 @@ AS
 		- 20150403@Jamie: Auto Settlement Betradar phase 2 [Redmine: #27212]
 		- 20151210@Patrick: Database - Change datatype [Redmine: #48660]
 		- 20170209@Bobby: Add filtering Abandoned status [Redmine: #71284]
+		- 20170215@Kathy: Basketball All-in-One [Redmine:#71372]
 
 	Param explanation:  
 		@sporttype: show info of particular sport
@@ -406,9 +401,9 @@ BEGIN
 			, CASE WHEN @Sporttype = 1 OR (@Sporttype = 5 AND LEN(ResourceID) > 2) THEN  4 
 				   ELSE SettlementStatusID END AS SettlementStatusID
 	FROM	dbo.[ResultDetail] WITH (NOLOCK) 
-	WHERE	(@Sporttype = 5)
+	WHERE	(@Sporttype IN (2, 5)
 				OR( @Sporttype = 1 AND ResourceID NOT IN ('00','01','08')
-			)
+			))
 			AND MatchID IN (SELECT MatchID FROM #matchList)
 			AND ResultStatusID > 0 
 	ORDER BY MatchID, ResourceID 
@@ -416,10 +411,3 @@ BEGIN
 	DROP TABLE #matchList
 END
 GO
-GRANT EXECUTE ON [NAP_Set_MatchGetResult] TO [bodbAdminNet] AS [dbo]
-GO
-
-GRANT VIEW DEFINITION ON [NAP_Set_MatchGetResult] TO [vnteam] AS [dbo]
-GO
-
-

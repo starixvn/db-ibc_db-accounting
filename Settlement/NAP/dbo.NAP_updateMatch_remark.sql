@@ -1,10 +1,12 @@
+/*<info serverAlias="DBPRO-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
 ALTER PROCEDURE [dbo].[NAP_updateMatch_remark]
-	@matchid int,
-	@command varchar(5),
-	@ivalue bigint = NULL,
+	@matchid 			INT,
+	@command 			VARCHAR(5),
+	@ivalue 			BIGINT = NULL,
 	@SelectedSet		VARCHAR(50) = NULL,
 	@SelectedSetCAL		VARCHAR(50) = NULL,
-	@SelectedSetREFUND	VARCHAR(50) = NULL
+	@SelectedSetREFUND	VARCHAR(50) = NULL,
+	@SelectedQuarter 	VARCHAR(50) = NULL
 
 WITH RECOMPILE
 /*  
@@ -20,6 +22,7 @@ WITH RECOMPILE
 		- 20140905@Kathy: Update SettlementStatus135 = 4 if the match hasn't any PS ticket [Redmine:#21560]
 		- 20141022@Jamie: Sporting Solution for Tennis [Redmine:#23034]
 		- 20150418@Jamie: Manual Settlement Betradar phase 2 [Redmine: #27212]
+		- 20170215@Kathy: Basketball All-in-One [Redmine:#71372]		
 	Param's Explanation: 
 */
 AS
@@ -51,7 +54,7 @@ BEGIN
 		UPDATE match_remark WITH(ROWLOCK, UPDLOCK) 
 		SET Calculate		= 1
 			,calrefund		= 0
-			,IsHTCal		= 1
+			,IsHTCal		= CASE WHEN @SelectedQuarter IS NULL OR @SelectedQuarter LIKE '%1H%' THEN 1 ELSE IsHTCal END
 			,isPending		= 0
 			,isUndecided	= 0 
 		WHERE matchid = @matchid -- whole match calculated
@@ -74,7 +77,7 @@ BEGIN
 	BEGIN
 		UPDATE match_remark WITH(ROWLOCK, UPDLOCK) 
 		SET calculate		= 0
-			,IsHTCal		= 0
+			,IsHTCal		= CASE WHEN @SelectedQuarter IS NULL OR @SelectedQuarter LIKE '%1H%' OR @SelectedQuarter LIKE '%80[1,2]%' THEN 0 ELSE IsHTCal END
 			,calrefund		= 1
 			,isPending		= 0
 			,isUndecided	= 0			
@@ -102,16 +105,27 @@ BEGIN
 	END
 	
 	-- [U]ndo settlement
-	IF @command = 'U' AND (@SelectedSet IS NULL OR @SelectedSet LIKE'%6%')
+	IF @command = 'U' AND ((@SelectedSet IS NULL AND @SelectedQuarter IS NULL) 
+							OR @SelectedSet LIKE'%6%'
+							OR ISNULL(@SelectedQuarter,'') LIKE '%FT%')
 	BEGIN
 		UPDATE match_remark WITH(ROWLOCK, UPDLOCK)
-		SET IsHTCal					= 0
+		SET IsHTCal					= CASE WHEN ISNULL(@SelectedQuarter,'') LIKE '%FT%' THEN IsHTCal ELSE 0 END
 			,Calculate				= 0
 			,multiple				= 0
 			,calrefund				= 0
 			,refund					= 0
 			,isUndecided			= 0
 		--	,SettlementStatus135	= @ivalue -- 0: No offer; 1: Has ticket; 4: No ticket
+		WHERE matchid = @matchid 
+	END
+	
+	-- [U]ndo settlement of HT, Q1, Q2 Basketball
+	IF @command = 'U' AND (ISNULL(@SelectedQuarter,'') LIKE '%1H%' 
+							OR ISNULL(@SelectedQuarter,'') LIKE '%80[1,2]%')
+	BEGIN
+		UPDATE match_remark WITH(ROWLOCK, UPDLOCK)
+		SET IsHTCal					= 0
 		WHERE matchid = @matchid 
 	END
 	
@@ -301,6 +315,3 @@ BEGIN
 
 END
 GO
-GRANT EXECUTE ON [dbo].[NAP_updateMatch_remark] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_updateMatch_remark] TO [vnteam] AS [dbo]

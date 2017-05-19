@@ -1,12 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[NAP_Admin_Settlement_Auto_1s]    Script Date: 09/15/2016 09:27:25 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
-/****** Object:  Stored Procedure dbo.NAP_Admin_Settlement_Auto_1s    Script Date: 13/09/2016 2:08:15 PM ******/
+﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet,Dot_CoreAPI" viewers="vnteam" isFunction="0"></info>*/
 ALTER PROCEDURE [dbo].[NAP_Admin_Settlement_Auto_1s]
      @AdminID                        INT                = 148        -- calculated by system (default)
     ,@MatchID                        INT
@@ -30,6 +22,7 @@ AS
         - 20150806@Kathy: Using new balance table (BalCreditSportsPending,BalDebitSportsPending) [Redmine:#40125]
         - 20160525@Kathy: Change the main Parlay Settlement SP
         - 20160830@Kathy: PH-AIO phase 2b [Redmine:#62861]
+        - 20170215@Kathy: Get list bettypes with xml format [Redmine:#71372]
 
     Param's Explanation:
 */    
@@ -47,7 +40,8 @@ BEGIN
             ,@Remark                    VARCHAR(500)
             ,@LogData                    NVARCHAR(300)
             ,@strAutoBetRadarBettypes    VARCHAR(MAX)
-            ,@strBettypes                VARCHAR(MAX)                                
+            ,@strBettypes                VARCHAR(MAX)   
+            ,@strXML					VARCHAR(MAX)                             
 
     CREATE TABLE #tmpTrans (transid BIGINT)
 
@@ -102,9 +96,15 @@ BEGIN
         )
     
     --===
-    SELECT     @strAutoBetRadarBettypes = COALESCE(@strAutoBetRadarBettypes + ',' + CAST(bettype AS NVARCHAR), CAST(bettype AS NVARCHAR))
+    SELECT  @strAutoBetRadarBettypes = COALESCE(@strAutoBetRadarBettypes + ',' + CAST(bettype AS NVARCHAR), CAST(bettype AS NVARCHAR))
     FROM    dbo.f_Set_GetGroupBettypes() f 
-    WHERE      f.GroupId = 8 -- auto betradar
+    WHERE   f.GroupId = 8 -- auto betradar
+    
+    SET @strXML = (SELECT  BetType 'r/@t'
+					FROM	dbo.f_Set_GetGroupBettypes()			
+					WHERE	GroupId = 8
+					FOR XML PATH ('root')
+				)	
     
     INSERT INTO #BalanceBefore
     SELECT     b.custid
@@ -135,13 +135,13 @@ BEGIN
 
     END
     ELSE IF @action = 'UNDO'
-    BEGIN
+    BEGIN						
         EXEC dbo.NAP_Admin_Calculate_Main 
              @matchid        = @matchid
             ,@ResourceIDs    = @ResourceIDs
             ,@action        = 'CAL'        -- Default Action for UNDO Settlement 
             ,@mode            = 'UNDO' 
-            ,@strBettypes    = @strAutoBetRadarBettypes
+            ,@strBettypes    = @strXML
 
         EXEC dbo.NAP_Admin_Settlement_MP
                 @matchid        = @matchid
@@ -237,19 +237,13 @@ BEGIN
             @IsAuto                = @IsAuto,
             @creator            = @AdminID     
         
-        SET @strBettypes = NULL
-        SELECT    @strBettypes = COALESCE(@strBettypes + ',' + CAST(f.bettype AS VARCHAR(10)) + '|' + CAST(f.GroupID AS VARCHAR(10)), CAST(f.bettype AS VARCHAR(10))+ '|' + CAST(f.GroupID AS VARCHAR(10))) 
-        FROM    dbo.f_Set_GetGroupBettypes() f                    
-        WHERE    f.GroupId = 8            
-        GROUP BY f.bettype, f.groupId
-            
         EXEC dbo.NAP_Admin_Calculate_Main 
              @matchid                    = @matchid
             ,@ResourceIDs                = @ResourceIDs
             ,@IsSettleAbandonedMatchIBC = @IsSettleAbandonedMatchIBC
             ,@action                    = 'REFUND'    
             ,@mode                        = 'REFUND' 
-            ,@strBettypes                = @strBettypes
+            ,@strBettypes                = @strXML
     END
 
 
@@ -396,13 +390,4 @@ BEGIN
     WHERE KeyID = 1 
     AND KeyValue = @matchid
 END
-
-
-
-
 GO
-GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Auto_1s] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[NAP_Admin_Settlement_Auto_1s] TO [Dot_CoreAPI] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_Settlement_Auto_1s] TO [vnteam] AS [dbo]
