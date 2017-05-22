@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BA_LicConfigUpd]
+﻿USE bodb_licensee
+GO
+
+ALTER PROCEDURE [dbo].[Acc_BA_LicConfigUpd]
 (
 	@LicenseeID		INT,
 	@groupa DECIMAL(9,8) = 0,
@@ -33,6 +36,7 @@ Revisions:
 	- 20120403@Jim: get SpecialCust from LicenseeSpecialCust replace for hard-code
 	- 20120426@Henry: fix bug due to update wrong groupcomm in LicenseeBAHistory
 	- 20130123@Daniel: Change link server alias
+	- 20170519@Harper: Fix duplicate key when setting BA [RedmineID: #76420]
 
 Param's Explanation:
 	
@@ -124,8 +128,11 @@ BEGIN
 		END
 		ELSE IF (@EnableBA=1 AND @EnableBA_Old <> @EnableBA) --Enable BA --> Map LicenseeProduct3rd for Product BA
 		BEGIN
-			INSERT INTO LicenseeProduct3rd (LicenseeID, ProductID, Comm, Winloss)
-			VALUES (@LicenseeID,3,1,0)
+			IF NOT EXISTS (SELECT 1 FROM dbo.LicenseeProduct3rd WHERE LicenseeID = @LicenseeID AND ProductID = 3)
+			BEGIN
+				INSERT INTO LicenseeProduct3rd (LicenseeID, ProductID, Comm, Winloss)
+				VALUES (@LicenseeID,3,1,0)
+			END			
 		END
 		
 		--hardcode Alog username which only allow group a
