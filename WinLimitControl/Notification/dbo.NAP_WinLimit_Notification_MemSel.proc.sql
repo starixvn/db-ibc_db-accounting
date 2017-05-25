@@ -24,7 +24,7 @@ Revisions:
 	- 20161027@Robert: CWL Phase 3 - email notification Enhancement - [Redmine: 61220]
 	- 20170306@Robert: CWL Phase 3 - email notification Enhancement - [Redmine: 61220]
 	- 20170306@Helen: CWL Phase 3A - email notification Enhancement - [Redmine: 72604]
-
+	- 20170515@Helen: NAP Risk & Control - CHANGE REQUEST [Redmine: 75332]
 	
 Param's Explanation:
 	• @ErrCode:
@@ -60,7 +60,7 @@ Param's Explanation:
                 wl.WinlostDate,
                 wl.LevelId,
                 l.LevelName
-         FROM WinLimit_CustGameMonitoring wl WITH (NOLOCK)
+         FROM WinLimit_CustGameMonitoring_History wl WITH (NOLOCK)
               INNER JOIN Customer c WITH (NOLOCK) ON c.custid = wl.CustID
               INNER JOIN Customer ag WITH (NOLOCK) ON ag.custid = c.recommend
               INNER JOIN Site S WITH (NOLOCK) ON S.site = ag.site
