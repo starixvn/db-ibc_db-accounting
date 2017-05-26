@@ -1,5 +1,4 @@
-﻿USE [bodb02]
-GO
+﻿/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet,vnteam" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 
 ALTER PROCEDURE [dbo].[Acc_ResetWinning_SelByDate14]
 	@winlostdate	SMALLDATETIME,	
@@ -35,6 +34,7 @@ AS
 		- 20161227@Percy: Clean up code Cockfighting [RedmineID: #69446]
 		- 20170112@Percy: Change Extra PT formula [RedmineID: #70060]
 		- 20170213@Percy: Remove SLI [RedmineID: #70036]
+		- 20170323@Percy: Apply Cash Out [RedmineID: #72164]
 		
 	Explanation's Param:
 
@@ -55,9 +55,8 @@ BEGIN
 	
 	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,SubProduct VARCHAR(500))
 	INSERT INTO @SportBettype
-	SELECT ProductID, Bettype, SubProduct FROM bodb02.dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
-	
-	----- End get sport bettype 
+	SELECT ProductID, Bettype, SubProduct FROM bodb02.dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)	
+	----- End get sport bettype
 	
 	DECLARE @SQL NVARCHAR(100) = OBJECT_NAME(@@PROCID)	
 	
@@ -240,10 +239,19 @@ BEGIN
 		   END Product,
 		   ISNULL(SUM(winlost), 0) winlost
 	FROM #bettranstmp
-	WHERE ((bettype <= 999 AND bettype NOT IN (9, 10, 29, 31, 32, 33, 71, 72) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 904))
-				or bettype between 1301 and 1334		
-			) 
-			AND (Sporttype <> 44 )
+	WHERE
+		(
+			(
+				bettype <= 999
+				AND bettype NOT IN (9, 10, 29, 31, 32, 33, 71, 72) -- Parlay, Outright, Racing, Casino
+				AND (bettype NOT BETWEEN 81 AND 120) -- Number Game
+				AND (bettype NOT BETWEEN 801 AND 899) -- Metric Gaming
+				AND (bettype NOT BETWEEN 901 AND 904) -- Bettrade
+				AND (bettype NOT BETWEEN 911 AND 914) -- Cash Out
+			)
+			OR bettype BETWEEN 1301 AND 1334		
+		) 
+		AND (Sporttype <> 44) -- Muay Thai
 	GROUP BY liveindicator
 
   	UNION ALL
@@ -271,8 +279,9 @@ BEGIN
 			 WHEN bettype BETWEEN 4001 AND 7999 THEN 'Macau Games'
 			 WHEN bettype BETWEEN 2501 AND 2699 THEN 'NG2'
 			 WHEN bettype BETWEEN 1011 AND 1020 THEN 'Fishing World'
+			 WHEN bettype BETWEEN 911 AND 914 THEN 'Cash Out'
 		   END AS Product,
-		   ISNULL(SUM(winlost), 0) as winlost
+		   ISNULL(SUM(winlost), 0) AS winlost
 	 FROM #bettranstmp
 	 WHERE (--bettype BETWEEN 1101 AND 1199
 			--OR
@@ -296,6 +305,7 @@ BEGIN
 			OR bettype BETWEEN 4001 AND 7999
 			OR bettype BETWEEN 2501 AND 2699
 			OR bettype BETWEEN 1011 AND 1020
+			OR bettype BETWEEN 911 AND 914
 		   )
 	GROUP BY CASE
 	         WHEN bettype BETWEEN 31 AND 33 THEN 'Racing gross income'
@@ -320,6 +330,7 @@ BEGIN
 			 WHEN bettype BETWEEN 4001 AND 7999 THEN 'Macau Games'
 			 WHEN bettype BETWEEN 2501 AND 2699 THEN 'NG2'
 			 WHEN bettype BETWEEN 1011 AND 1020 THEN 'Fishing World'
+			 WHEN bettype BETWEEN 911 AND 914 THEN 'Cash Out'
 	         END
 
 	---------------------------------------------------
@@ -512,11 +523,4 @@ BEGIN
 		DROP TABLE #ExtraPTWL
 		DROP TABLE #source
 END
-GO
-
-GRANT EXECUTE ON [dbo].[Acc_ResetWinning_SelByDate14] TO [vnteam]
-GO 
-GRANT VIEW DEFINITION ON [dbo].[Acc_ResetWinning_SelByDate14] TO [vnteam]
-GO 
-GRANT EXECUTE ON [dbo].[Acc_ResetWinning_SelByDate14] TO [bodbAdminNet]
 GO

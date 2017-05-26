@@ -1,5 +1,4 @@
-USE [bodb02]
-GO
+/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet,vnteam" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 
 ALTER PROCEDURE [dbo].[Task_ResetWinning_Non3rdParty]
 	@fromdate smalldatetime,
@@ -40,6 +39,7 @@ AS
 		- 20161227@Percy: Clean up code Cockfighting [RedmineID: #69446]
 		- 20170112@Percy: Change Extra PT formula [RedmineID: #70060]
 		- 20170213@Percy: Remove SLI [RedmineID: #70036]
+		- 20170323@Percy: Apply Cash Out [RedmineID: #72164]
 
 	Param Explanation:
 	    @mode:  0 _ view report
@@ -265,10 +265,19 @@ BEGIN
 		   END Product,
 		   ISNULL(SUM(winlost), 0) winlost
 	FROM #bettranstmp
-	WHERE ((bettype <= 999 AND bettype NOT IN (9, 10, 29, 31, 32, 33, 71, 72) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 904))
-				or bettype between 1301 and 1334		
-			) 
-			AND (Sporttype <> 44 )
+	WHERE
+		(
+			(
+				bettype <= 999
+				AND bettype NOT IN (9, 10, 29, 31, 32, 33, 71, 72) -- Parlay, Outright, Racing, Casino
+				AND (bettype NOT BETWEEN 81 AND 120) -- Number Game
+				AND (bettype NOT BETWEEN 801 AND 899) -- Metric Gaming
+				AND (bettype NOT BETWEEN 901 AND 904) -- Bettrade
+				AND (bettype NOT BETWEEN 911 AND 914) -- Cash Out
+			)
+			OR bettype BETWEEN 1301 AND 1334		
+		) 
+		AND (Sporttype <> 44) -- Muay Thai
 	GROUP BY liveindicator, winlostdate
 
   	UNION ALL
@@ -297,6 +306,7 @@ BEGIN
 			 WHEN bettype BETWEEN 4001 AND 7999 THEN 'Macau Games'
 			 WHEN bettype BETWEEN 2501 AND 2699 THEN 'NG2'
 			 WHEN bettype BETWEEN 1011 AND 1020 THEN 'Fishing World'
+			 WHEN bettype BETWEEN 911 AND 914 THEN 'Cash Out'
 		   END AS Product,
 		   ISNULL(SUM(winlost), 0) as winlost
 	 FROM #bettranstmp
@@ -322,6 +332,7 @@ BEGIN
 			OR bettype BETWEEN 4001 AND 7999
 			OR bettype BETWEEN 2501 AND 2699
 			OR bettype BETWEEN 1011 AND 1020
+			OR bettype BETWEEN 911 AND 914
 		   )
 	GROUP BY CASE
 	         WHEN bettype BETWEEN 31 AND 33 THEN 'Racing gross income'
@@ -346,6 +357,7 @@ BEGIN
 			 WHEN bettype BETWEEN 4001 AND 7999 THEN 'Macau Games'
 			 WHEN bettype BETWEEN 2501 AND 2699 THEN 'NG2'
 			 WHEN bettype BETWEEN 1011 AND 1020 THEN 'Fishing World'
+			 WHEN bettype BETWEEN 911 AND 914 THEN 'Cash Out'
 		   END, winlostdate
 
 	UNION ALL
@@ -666,11 +678,4 @@ BEGIN
 	DROP TABLE #bettranstmp
     DROP TABLE #ExtraPTWL
 END
-GO
-
-GRANT EXECUTE ON [dbo].[Task_ResetWinning_Non3rdParty] TO [vnteam]
-GO 
-GRANT VIEW DEFINITION ON [dbo].[Task_ResetWinning_Non3rdParty] TO [vnteam]
-GO 
-GRANT EXECUTE ON [dbo].[Task_ResetWinning_Non3rdParty] TO [bodbAdminNet]
 GO

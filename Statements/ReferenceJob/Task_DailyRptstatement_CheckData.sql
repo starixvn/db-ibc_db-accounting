@@ -1,10 +1,5 @@
-USE [bodb_Report]
-GO
-/****** Object:  StoredProcedure [dbo].[Task_DailyRptStatement_CheckData]    Script Date: 07/19/2015 22:22:39 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
+/*<info serverAlias="DBRPT-bodb_Report" executers="" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+
 ALTER PROCEDURE [dbo].[Task_DailyRptStatement_CheckData]
 	@winlostdate DATE
 	,@isCheckDataOnly BIT
@@ -24,6 +19,7 @@ AS
 					   Apply MGC - RNG Casino - Add table BettransRNG [#43549]						 
 	- 20151109@Sophia: Change Sporttype of Microgaming RNG Casino [RedmineId: #46450] 
 	- 20160328@Sophia: Check status Of PayOutTrans, get status Completed and Expired [Redmine: #54643]
+	- 20170323@Percy: Apply Cash Out [RedmineID: #72164]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -431,7 +427,7 @@ BEGIN
 			--	ON bt.matchid = match.matchid				
 		WHERE 
 			bt.bettype <= 19000
-			AND bt.bettype <> 903
+			AND bt.bettype NOT IN (500, 903, 913, 914)
 			AND bt.winlostdate = @winlostdate
 			AND bt.statusID in (101, 102) -- 'VOID','REJECT'
 		GROUP BY custid
