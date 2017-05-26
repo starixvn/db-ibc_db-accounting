@@ -1,7 +1,7 @@
 USE [bodb_Age]
 GO
 
-ALTER PROCEDURE dbo.Acc_CustGroupSelExtraPTGroupByCustID
+ALTER PROCEDURE [dbo].[Acc_CustGroupSelExtraPTGroupByCustID]
 	@CustID INT
 AS
 /*
@@ -11,6 +11,7 @@ AS
 	DB: DBAGE.bodb_Age
 
 	Revisions:
+		- 20170413@Percy: Change way get to-be-primary group [RedmineID: #74292]
 
 */
 BEGIN
@@ -19,24 +20,24 @@ BEGIN
 	DECLARE @today DATETIME
 	SELECT  @today = CONVERT(DATE, GETDATE())
 
-	DECLARE @GroupExtraPT TABLE (GroupName VARCHAR(50), EffectiveDate DATETIME, [Primary] TINYINT, OrderId TINYINT)
+	DECLARE @GroupExtraPT TABLE (GroupId INT, GroupName VARCHAR(50), EffectiveDate DATETIME, [Primary] BIT)
 	DECLARE @SQL NVARCHAR(MAX)
-	SELECT  @SQL = 'SELECT * FROM OPENQUERY(DBACC, ''SELECT GroupName, EffectiveDate, [Primary], OrderId FROM bodb_Acc.dbo.f_GetAllGroupExtraPTByCustId(' + CONVERT(NVARCHAR(15), @CustID) + ')'')'
+	SELECT  @SQL = 'SELECT * FROM OPENQUERY(DBACC, ''SELECT GroupId, GroupName, EffectiveDate, [Primary] FROM bodb_Acc.dbo.f_GetAllGroupExtraPTByCustId(' + CONVERT(NVARCHAR(15), @CustID) + ')'')'
 
-	INSERT INTO @GroupExtraPT (GroupName, EffectiveDate, [Primary], OrderId)
+	INSERT INTO @GroupExtraPT (GroupId, GroupName, EffectiveDate, [Primary])
 	EXEC (@SQL)
 
 	SELECT
 		c.GroupName,
 		CASE WHEN e.[Primary] = 1 THEN e.EffectiveDate ELSE NULL END AS EffectiveDate,
-		CASE WHEN e.[Primary] = 1 THEN CONVERT(BIT, 1) ELSE CONVERT(BIT, 0) END AS IsPrimary
+		e.[Primary] AS IsPrimary
 	FROM
 		(
 			SELECT GroupName FROM dbo.Acc_CustGroup WITH(NOLOCK) WHERE CustID = @CustID
 			UNION SELECT 'No Extra PT'
 		) c
 		INNER JOIN @GroupExtraPT e ON c.GroupName = e.GroupName
-	ORDER BY e.OrderId, e.GroupName
+	ORDER BY CASE WHEN e.GroupId = 0 THEN 0 ELSE 1 END, e.GroupName
 END
 GO
 
