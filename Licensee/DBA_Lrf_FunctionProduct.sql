@@ -20,6 +20,7 @@ Revisions:
 	- 20150320@Jim: add more funtion permission for 'Active Customer Summary' report
 	- 20150421@Jim: add more function Gold Deluxe
 	- 20150421@Jim: correct function product for Void Bridge
+	- 20170526@Harper: add new product AllBet, Macau Game, Number Game 2, Fishing World and CashOut
 Param's Explanation:
 		
 	
@@ -301,7 +302,169 @@ BEGIN
 									,65 -- Gold Deluxe Winloss
 									)
 		END	
+
+	IF @ProductCode = 'AB'
+	BEGIN
+		INSERT INTO @tblFunctions (ProductId, FunctionId,TypeID)
+		SELECT	21 AS ProductId -- AB
+				,FunctionID  
+				,1 AS TypeId	 -- Lrf Function
+		FROM dbo.Functions WITH (NOLOCK)
+		WHERE FunctionId    IN (
+								3  -- REPORTS
+								,27 -- Licensee Win Loss
+								,28 -- Settled Match Count
+								,31 -- Match Win Loss
+								,32 -- Win Loss By Products
+								,36 -- Cancelled Bets
+								,37 -- Daily Bet List
+								,38 -- Live Report
+								,39 -- Turnover
+								,52 -- CUSTOMER REPORTS
+								,53 -- Mobile Win Loss
+								,41 -- Results
+								,42 -- Balance
+								,29 -- Customer Win Loss
+								,30 -- Customer Pending Funds
+								,40 -- Customer Balance
+								,51 -- Customer Turnover
+								,64	-- Active Customer Summary
+								)
+		UNION ALL 
+		SELECT 	21 AS ProductId -- AB
+				,64 AS FunctionID -- AllBet Win lossS		
+				,2 AS TypeId	--- LA Function
+	END
+
+	IF @ProductCode = 'VB'
+	BEGIN
+		INSERT INTO @tblFunctions (ProductId, FunctionId,TypeID)
+		SELECT	22 AS ProductId -- VB - Macau Game
+				,FunctionID  
+				,1 AS TypeId	 -- Lrf Function
+		FROM dbo.Functions WITH (NOLOCK)
+		WHERE FunctionId    IN (
+								3  -- REPORTS
+								,27 -- Licensee Win Loss
+								,28 -- Settled Match Count
+								,31 -- Match Win Loss
+								,32 -- Win Loss By Products
+								,36 -- Cancelled Bets
+								,37 -- Daily Bet List
+								,38 -- Live Report
+								,39 -- Turnover
+								,52 -- CUSTOMER REPORTS
+								,53 -- Mobile Win Loss
+								,41 -- Results
+								,42 -- Balance
+								,29 -- Customer Win Loss
+								,30 -- Customer Pending Funds
+								,40 -- Customer Balance
+								,51 -- Customer Turnover
+								,64	-- Active Customer Summary
+								)	
+	END
+
+	IF @ProductCode = 'NG2'
+	BEGIN
+		INSERT INTO @tblFunctions (ProductId, FunctionId,TypeID)
+		SELECT	23 AS ProductId -- Number Game 2
+				,FunctionID  
+				,1 AS TypeId	 -- Lrf Function
+		FROM dbo.Functions WITH (NOLOCK)
+		WHERE FunctionId    IN (
+								3  -- REPORTS
+								,27 -- Licensee Win Loss
+								,28 -- Settled Match Count
+								,31 -- Match Win Loss
+								,32 -- Win Loss By Products
+								,36 -- Cancelled Bets
+								,37 -- Daily Bet List
+								,38 -- Live Report
+								,39 -- Turnover
+								,52 -- CUSTOMER REPORTS
+								,53 -- Mobile Win Loss
+								,41 -- Results
+								,42 -- Balance
+								,29 -- Customer Win Loss
+								,30 -- Customer Pending Funds
+								,40 -- Customer Balance
+								,51 -- Customer Turnover
+								,64	-- Active Customer Summary
+								)
+		UNION ALL 
+		SELECT 	23 AS ProductId -- Number Game 2
+				,65 AS FunctionID -- Number Game 2 Winloss
+				,2 AS TypeId	--- LA Function
+	END
+	
+	IF @ProductCode = 'FW'
+	BEGIN
+		INSERT INTO @tblFunctions (ProductId, FunctionId,TypeID)
+		SELECT	24 AS ProductId -- Fishing World
+				,FunctionID  
+				,1 AS TypeId	 -- Lrf Function
+		FROM dbo.Functions WITH (NOLOCK)
+		WHERE FunctionId    IN (
+								3  -- REPORTS
+								,27 -- Licensee Win Loss
+								,28 -- Settled Match Count
+								,31 -- Match Win Loss
+								,32 -- Win Loss By Products
+								,36 -- Cancelled Bets
+								,37 -- Daily Bet List
+								,38 -- Live Report
+								,39 -- Turnover
+								,52 -- CUSTOMER REPORTS
+								,53 -- Mobile Win Loss
+								,41 -- Results
+								,42 -- Balance
+								,29 -- Customer Win Loss
+								,30 -- Customer Pending Funds
+								,40 -- Customer Balance
+								,51 -- Customer Turnover
+								,64	-- Active Customer Summary
+								)
+		UNION ALL 
+		SELECT 	24 AS ProductId -- Fishing World
+				,66 AS FunctionID -- AllBet Win lossS		
+				,2 AS TypeId	--- LA Function
+	END
 		
+	IF @ProductCode = 'CO'
+	BEGIN
+		INSERT INTO @tblFunctions (ProductId, FunctionId,TypeID)
+		SELECT	25 AS ProductId -- CashOut
+				,FunctionID  
+				,1 AS TypeId	 -- Lrf Function
+		FROM dbo.Functions WITH (NOLOCK)
+		WHERE FunctionId    IN (
+								3  -- REPORTS
+								,27 -- Licensee Win Loss
+								,28 -- Settled Match Count
+								,31 -- Match Win Loss
+								,32 -- Win Loss By Products
+								,36 -- Cancelled Bets
+								,37 -- Daily Bet List
+								,38 -- Live Report
+								,39 -- Turnover
+								,52 -- CUSTOMER REPORTS
+								,53 -- Mobile Win Loss
+								,41 -- Results
+								,42 -- Balance
+								,29 -- Customer Win Loss
+								,30 -- Customer Pending Funds
+								,40 -- Customer Balance
+								,51 -- Customer Turnover
+								,64	-- Active Customer Summary
+								,72 -- Cashout Win Loss
+								)
+		UNION ALL 
+		SELECT 	25 AS ProductId -- CashOut
+				,68 AS FunctionID -- Cashout Winloss Win lossS		
+				,2 AS TypeId	--- LA Function
+	END
+
 	SELECT DISTINCT ProductId, FunctionId,TypeID
 	FROM @tblFunctions ORDER BY ProductId,FunctionId  ASC
 		/*
