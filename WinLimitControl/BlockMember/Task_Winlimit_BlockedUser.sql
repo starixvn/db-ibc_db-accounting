@@ -13,6 +13,7 @@ AS
 	Revisions:
 		- 20161011@Helen: NAP Risk & Control - Phase 3 [Redmine: 61220]
 		- 20170321@Helen: NAP Risk & Control - Phase 3A [Redmine: 72604]
+		- 20170515@Helen: NAP Risk & Control - CHANGE REQUEST [Redmine: 75332]
 
 	Param's Explanation:
 	
@@ -61,25 +62,29 @@ BEGIN
 	)t
 	GROUP BY CustId, WinlostDate, BetType
 
-	INSERT INTO #DataTmp (CustId, WinlostDate, GroupID, TotalWinAmount,IsPrivateSetting)
-	SELECT CustId, WinlostDate, GGS.GroupID, SUM(T.TotalWinAmount),0
+	IF NOT EXISTS (SELECT TOP 1 1 FROM #DataTmp_pre)
+	BEGIN
+		RETURN
+	END
+	
+	INSERT INTO #DataTmp (CustId, WinlostDate, GroupID, TotalWinAmount,IsPrivateSetting,ProductId)
+	SELECT CustId, WinlostDate, GGS.GroupID, SUM(T.TotalWinAmount),0 ,GGS.ProductID
 	FROM #DataTmp_pre T
 		INNER JOIN Winlimit_GameGroupSetting GGS WITH (NOLOCK) ON T.Bettype = GGS.BetTypeID
-	GROUP BY CustId, WinlostDate, GGS.GroupID
+	GROUP BY CustId, WinlostDate, GGS.GroupID,GGS.ProductID
 	
 	UPDATE t 
 	SET ExchangeID = cc.currency
-		, ProductId = GGS.ProductId
 		, SiteID = s.siteid
 		, IsPrivateSetting = CASE WHEN CGS.CustID IS NOT NULL THEN 1 ELSE 0 END 
 	FROM #DataTmp t
-		INNER JOIN WinLimit_GameGroupSetting GGS WITH (NOLOCK) ON T.GroupID = GGS.GroupID
 		INNER JOIN custInfo CI (NOLOCK) ON t.CustId = ci.custid
 		INNER JOIN Customer cc WITH(NOLOCK) ON cc.custid = ci.recommend
 		INNER JOIN [site] s WITH (NOLOCK) ON s.site = cc.site
-		LEFT JOIN WinLimit_CustGameSetting CGS WITH (NOLOCK) ON CGS.CustID = T.CustId AND CGS.GroupID =  GGS.GroupID
+		-- just need one row returned, so checking level1 is fine to know whether this customer has private setting or not
+		LEFT JOIN WinLimit_CustGameSetting CGS WITH (NOLOCK) ON CGS.CustID = T.CustId AND CGS.GroupID =  T.GroupID AND CGS.LevelID = 1
+	OPTION(MAXDOP 8)
 		
-	
 	CREATE TABLE #CustReachCWLList (ID INT IDENTITY PRIMARY KEY, CustId INT, ProductId TINYINT, GroupID INT,WinlostDate SMALLDATETIME,LevelID TINYINT, MaxWinLimit MONEY
 		, TotalWinAmount MONEY
 		, ExchangeID INT
@@ -87,19 +92,9 @@ BEGIN
 		, IsPrivateSetting BIT
 		, MaxWinLimitSetting XML
 		, TotalWinAmt_RM MONEY)
-
-	--need to check cust setting fisrt after check global setting
-	--for WinLimit_CustSetting
 	
-	DECLARE @Fromdate DATE= GETDATE(), @Todate DATE= GETDATE()  
-	
-	IF NOT EXISTS (SELECT TOP 1 1 FROM Lrf_f_GetExchangeDaily(@Fromdate, @Todate))
-	BEGIN
-		SET @Fromdate = DATEADD(D,-1, @Fromdate)
-		SET @Todate = @Fromdate
-	END
-
-	INSERT INTO #CustReachCWLList(CustId, ProductId, GroupID,WinlostDate,ExchangeID,SiteID, LevelID, MaxwinLimit, TotalWinAmount,IsPrivateSetting,MaxWinLimitSetting)--,TotalWinAmt_RM)
+	--for private setting
+	INSERT INTO #CustReachCWLList(CustId, ProductId, GroupID,WinlostDate,ExchangeID,SiteID, LevelID, MaxwinLimit, TotalWinAmount,IsPrivateSetting,MaxWinLimitSetting)
 	SELECT t.CustId, t.ProductId, t.GroupID,t.WinlostDate,t.ExchangeID,t.SiteID, MAX(s.LevelID) AS LevelID , MAX(s.MaxWinLimit) AS MaxWinLimit, MAX(t.TotalWinAmount) AS TotalWinAmount,1
 			, CAST(tmp.MaxWinLimitSetting AS XML)
 	FROM #DataTmp t
@@ -118,8 +113,7 @@ BEGIN
 		
 	GROUP BY t.CustId, t.ProductId, t.GroupID,t.WinlostDate,t.ExchangeID,t.SiteID,tmp.MaxWinLimitSetting
 	
-	
-	--for WinLimit_GlobalSetting
+	--for currency setting
 	INSERT INTO #CustReachCWLList(CustId, ProductId, GroupID,WinlostDate,ExchangeID,SiteID,LevelID, MaxwinLimit, TotalWinAmount,IsPrivateSetting,MaxWinLimitSetting)
 	SELECT t.CustId, t.ProductId, t.GroupID,t.WinlostDate,t.ExchangeID,t.SiteID,MAX(s.LevelID), MAX(s.MaxWinLimit), MAX(t.TotalWinAmount),0
 		  ,CAST(tmp.MaxWinLimitSetting AS XML)
@@ -195,7 +189,7 @@ BEGIN
 		, MaxWinLimitSetting = t.MaxWinLimitSetting
 		, TotalWinAmt_RM = CASE 
 								WHEN T.ExchangeID = 20 THEN (g.TotalWinAmt -  CASE WHEN CGS.ActionID IN (2,4) THEN 0 ELSE g.WinAmt END + t.TotalWinAmount) 
-								ELSE  ROUND (FEX.MYR * (g.TotalWinAmt -  CASE WHEN CGS.ActionID IN (2,4) THEN 0 ELSE g.WinAmt END + t.TotalWinAmount),2)
+								ELSE  ROUND (e.actualrate * (g.TotalWinAmt -  CASE WHEN CGS.ActionID IN (2,4) THEN 0 ELSE g.WinAmt END + t.TotalWinAmount),2)
 							END
 		
 	OUTPUT inserted.CustId, inserted.ProductId,inserted.GroupID, inserted.MaxWinLimit, inserted.TotalWinAmt, inserted.WinAmt, inserted.LevelID  
@@ -222,7 +216,7 @@ BEGIN
 					 FROM WinLimit_CustGameStatus tmp WITH (NOLOCK) 
 						INNER JOIN WinLimit_GameGroupSetting GS WITH (NOLOCK) ON GS.GroupID = t.GroupID AND tmp.BettypeID = gs.BetTypeID
 					 WHERE  tmp.CustID = G.CustID AND tmp.ProductID = G.ProductID) AS CGS
-		LEFT JOIN Lrf_f_GetExchangeDaily(@Fromdate, @Todate) fEx  ON fEx.ExchangeId = T.ExchangeID
+		INNER JOIN Exchange e WITH (NOLOCK)  ON e.ExchangeId = T.ExchangeID
 	WHERE G.LevelID < T.LevelID
 		-- Reach level again after unblocked
 		OR ( CGS.ActionID IN (2,4))
@@ -250,10 +244,11 @@ BEGIN
 					, BettypeID ) 
 							
 	SELECT t.CustId, t.ProductId, t.GroupID,t.LevelID, t.MaxwinLimit, t.TotalWinAmount, t.TotalWinAmount, 0, NULL,@ReachedDate ,@WinlostDate,t.MaxWinLimitSetting
-			, CASE WHEN T.ExchangeID = 20 THEN t.TotalWinAmount ELSE ROUND(FEX.MYR * t.TotalWinAmount,2) END AS TotalWinAmt_RM, t.GroupID AS BettypeID
+			, CASE WHEN T.ExchangeID = 20 THEN t.TotalWinAmount ELSE ROUND(e.actualrate * t.TotalWinAmount,2) END AS TotalWinAmt_RM, t.GroupID AS BettypeID
 	FROM #CustReachCWLList t
 		LEFT JOIN dbo.WinLimit_CustGameMonitoring g WITH(NOLOCK) ON t.CustId = g.CustID AND t.WinlostDate = g.WinlostDate AND t.GroupID = g.GroupID
-		LEFT JOIN Lrf_f_GetExchangeDaily(@Fromdate, @Todate) fEx  ON fEx.ExchangeId = T.ExchangeID
+		INNER JOIN Exchange e WITH (NOLOCK)  ON e.ExchangeId = T.ExchangeID 
+		
 	WHERE g.CustID IS NULL
 	
 	DECLARE @StrData VARCHAR(MAX), @XmlData XML, @RowCount INT, @ReTry INT
@@ -360,6 +355,8 @@ BEGIN
 	DROP TABLE #HistoryData
 	DROP TABLE #DataTmp
 	DROP TABLE #CustReachCWLList
+	DROP TABLE #DataTmp_pre
+	
 	
 END
 

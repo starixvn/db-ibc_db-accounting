@@ -32,8 +32,10 @@ Task: #57722 - Implement Game Win Limit Control phase2
 DB: DBCUST/CustDB  
   
 Revisions:  
-20160923@Jacob: Risk & Control - Phase 3 [#61220].  
-20170321@Hellen: Risk & Control - Phase 3A [#72604].  
+	- 20160923@Jacob: Risk & Control - Phase 3 [#61220].  
+	- 20170321@Hellen: Risk & Control - Phase 3A [#72604].  
+	- 20170515@Helen: NAP Risk & Control - CHANGE REQUEST [Redmine: 75332] 
+	
 Parameters Explanation:   
    @FromDate: From date  
    @ToDate: To Date  
@@ -46,7 +48,7 @@ Parameters Explanation:
 Example:  
 EXEC NAP_WinLimit_MonitorSel @FromDate = '20160101', @ToDate = '20161231'  
 */
-
+BEGIN
 
      SET NOCOUNT ON;
      BEGIN -- #WinLimitMonitor  
@@ -86,8 +88,17 @@ EXEC NAP_WinLimit_MonitorSel @FromDate = '20160101', @ToDate = '20161231'
                        cm.ModifiedDate,
                        c.currency,
                        s.siteid,
-                       cm.IsNotified
+                       cmh_notified.IsNotified
                 FROM WinLimit_CustGameMonitoring cm WITH (NOLOCK)
+					 CROSS APPLY (SELECT TOP 1 IsNotified 
+								  FROM WinLimit_CustGameMonitoring_History cmh WITH (NOLOCK) 
+								  WHERE cm.CustID = cmh.CustID
+									AND cm.ProductID = cmh.ProductID 
+									AND cm.GroupID = cmh.GroupID
+									AND cm.LevelID = cmh.LevelID
+									AND cm.WinlostDate = cmh.WinlostDate
+								  ORDER BY IsNotified ) AS cmh_notified
+								
                      INNER JOIN dbo.custInfo ci WITH (NOLOCK) ON cm.CustID = ci.CustID
                      INNER JOIN dbo.Customer c WITH (NOLOCK) ON c.custid = ci.recommend
                      INNER JOIN dbo.Site s WITH (NOLOCK) ON s.site = c.site
@@ -161,6 +172,8 @@ EXEC NAP_WinLimit_MonitorSel @FromDate = '20160101', @ToDate = '20161231'
          ORDER BY ReachedLimitTime DESC;
      END;
      DROP TABLE #WinLimitMonitor;
+     
+END     
 GO
 GRANT EXECUTE ON [dbo].[NAP_WinLimit_MonitorSel] TO [bodbAdminNet];
 GO
