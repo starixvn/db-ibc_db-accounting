@@ -28,7 +28,8 @@ AS
 		                    2. Do not allow user to follow himself
 		- 20150120@Kathy: Update Original and Nonlive danger level of BA member to 2 [Redmine:#29459]
 		- 20150324@Kathy: Support 2 more bettype 1x2 & 1st 1x2 [Redmine:#30394]  
-		
+		- 20170621@Harper: Apply change request to rules of Bet Follow [Redmine: #78586]
+
 	Param's Explanation:  
 	 
 	  
@@ -165,8 +166,7 @@ BEGIN
 	WHERE t.CustID IN (SELECT custid FROM dbo.Cust_FollowBet WITH(NOLOCK))
 	
 	UPDATE ci WITH(ROWLOCK, UPDLOCK)
-	SET danger = 2
-		,danger2 = 2
+	SET danger = 2		
 	FROM dbo.custInfo ci	
 	INNER JOIN #TempCustID t ON t.CustID = ci.custid
 	WHERE ci.custid IN (SELECT custid FROM dbo.Cust_FollowBet WITH(NOLOCK))
