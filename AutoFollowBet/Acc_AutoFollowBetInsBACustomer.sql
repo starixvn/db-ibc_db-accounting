@@ -18,7 +18,7 @@ AS
 /*  Created: Henry  
 	Date: 2012-07-06
     Task : Insert BA Customers to Cust_FollowBet
-    DB: DBTXN/bodb02  
+    DB: DBCUST/bodb02  
    
     Revisions:  
         - 20130201@Daniel: Change link server alias & failover writelog to DBTXN  

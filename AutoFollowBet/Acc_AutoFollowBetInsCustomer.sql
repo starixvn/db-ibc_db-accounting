@@ -34,7 +34,7 @@ ALTER PROCEDURE [dbo].[Acc_AutoFollowBetInsCustomer]
 AS
 /*
 	Created: Viet @ 4-Jul-2012
-	DB: DBTXN.CustDB
+	DB: DBCUST.CustDB
 
 	Revision:
 		- 20131212@Kathy: - Remove @status, add new @param
