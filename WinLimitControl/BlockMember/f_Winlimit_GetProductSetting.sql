@@ -11,6 +11,8 @@ AS
 		- 20160524@Helen: Support OneRnG [Redmine: #57680]
 		- 20161019@Winnie: Fishing World [Redmine:#62547]
 		- 20161011@Helen: CWL - Phase 3 [Redmine:61220]
+		- 20170611@Helen: CWL Phase 3 - Apply for Virtual Sport [Redmine:72603]
+		
 	Parameters Explanation:	
 */
 BEGIN
@@ -37,8 +39,8 @@ BEGIN
 			UNION ALL
 			-- Phase 3: add more
 			SELECT 3, 81, 0, 1 --Number Game
-			--UNION ALL				
-			--SELECT 5, 1201, 0, 1 --Virtual Sports
+			UNION ALL				
+			SELECT 5, 1201, 0, 1 --Virtual Sports
 			UNION ALL
 			SELECT 8, 1501, 0, 1  -- Keno
 			--UNION ALL
