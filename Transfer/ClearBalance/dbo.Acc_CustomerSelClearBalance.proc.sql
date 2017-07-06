@@ -25,6 +25,7 @@ Revisions:
 	- 20160412@Percy: support Voidbridge single wallet [Redmine: #55258]
 	- 20160608@Percy: Enhance performance - refactor code [RedmineID: #58288]
 	- 20161006@Percy: Support Super and Master levels [RedmineID: #63209]
+	- 20170622@Percy: Return ClosedReason column to apply color for closed accounts [RedmineID : #74494]
 
 Param's Explanation:
 	
@@ -313,6 +314,30 @@ BEGIN
 			AND c.roleid		= @roleID - 1
 	) AS A
 	WHERE A.rownum BETWEEN @rowStart AND @rowEnd
+
+	CREATE TABLE #ClosedReason (custid INT, ClosedReason TINYINT)
+	DECLARE @SQL NVARCHAR(MAX)
+
+	IF @roleID = 2 -- agent view member
+	BEGIN
+		SELECT @SQL = 'SELECT CustID, ClosedReason
+						FROM OPENQUERY(DBCUST, ''SELECT m.CustID, m.ClosedReason
+												FROM CustDB.dbo.CustLoginInfo_Member m WITH(NOLOCK)
+													INNER JOIN CustDB.dbo.Customer c WITH(NOLOCK) ON m.CustID = c.custid
+												WHERE c.roleid = 1 AND c.recommend = ' + CONVERT(VARCHAR(30), @custid) + ''')'
+	END
+	ELSE -- super/master view master/agent
+	BEGIN
+		SELECT @SQL = 'SELECT CustID, ClosedReason
+						FROM OPENQUERY(DBCUST, ''SELECT m.CustID, m.ClosedReason
+												FROM CustDB.dbo.CustLoginInfo m WITH(NOLOCK)
+													INNER JOIN CustDB.dbo.Customer c WITH(NOLOCK) ON m.CustID = c.custid
+												WHERE c.roleid = ' + CONVERT(VARCHAR(1), @roleID-1) + ' AND '
+												+ CASE @roleID WHEN 3 THEN 'c.mrecommend = ' WHEN 4 THEN 'c.srecommend = ' END + CONVERT(VARCHAR(30), @custid) + ''')'
+	END
+
+	INSERT INTO #ClosedReason (custid, ClosedReason)
+	EXEC (@SQL)
 	
 	-- select --
 	SELECT
@@ -320,6 +345,7 @@ BEGIN
 		r.username AS Username,
 		r.custid AS CustId,
 		r.closed AS Closed,
+		ISNULL(cr.ClosedReason, 0) AS ClosedReason,
 		firstname AS FirstName,
 		lastname AS LastName,
 		ISNULL(b.outstanding, 0) Outstanding,
@@ -355,11 +381,13 @@ BEGIN
 			FROM #data
 			GROUP BY custid
 		) b ON r.custid = b.custid
+		LEFT JOIN #ClosedReason cr ON r.custid = cr.custid
 	ORDER BY rownum
 	
 	DROP TABLE #data
 	DROP TABLE #recommend
 	DROP TABLE #SportBettypeMatrix
+	DROP TABLE #ClosedReason
 END
 GO
 GRANT EXECUTE ON [dbo].[Acc_CustomerSelClearBalance] TO [bodbAdminNet] AS [dbo]
