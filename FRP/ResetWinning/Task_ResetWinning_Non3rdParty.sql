@@ -294,7 +294,7 @@ BEGIN
 			 WHEN bettype = 10 THEN 'Outright'
 			 WHEN bettype IN (9, 29) THEN 'Parlay'
 			 WHEN bettype BETWEEN 1201 AND 1299 THEN 'Virtual Sports'
-			 WHEN bettype BETWEEN 2700 AND 2799 THEN 'Betradar Virtual Sports'
+			 WHEN bettype BETWEEN 2700 AND 2899 THEN 'Betradar Virtual Sports'
 			 WHEN bettype BETWEEN 1501 AND 1599 THEN 'Keno'
 			 WHEN bettype BETWEEN 1800 AND 1899 THEN 'AG Casino'
 			 WHEN bettype = 1900 THEN 'Macau'
@@ -321,7 +321,7 @@ BEGIN
 			OR bettype BETWEEN 80 AND 120
 			OR bettype IN (71, 72, 73, 10,  9, 29) ---1000
 			OR bettype BETWEEN 1201 AND 1299
-			OR bettype BETWEEN 2700 AND 2799
+			OR bettype BETWEEN 2700 AND 2899
 			OR bettype BETWEEN 1501 AND 1599
 			OR bettype BETWEEN 1800 AND 1899
 			OR bettype = 1900
@@ -349,7 +349,7 @@ BEGIN
 			 WHEN bettype = 10 THEN 'Outright'
 			 WHEN bettype IN (9, 29) THEN 'Parlay'
 			 WHEN bettype BETWEEN 1201 AND 1299 THEN 'Virtual Sports'
-			 WHEN bettype BETWEEN 2700 AND 2799 THEN 'Betradar Virtual Sports'
+			 WHEN bettype BETWEEN 2700 AND 2899 THEN 'Betradar Virtual Sports'
 			 WHEN bettype BETWEEN 1501 AND 1599 THEN 'Keno'
 			 WHEN bettype BETWEEN 1800 AND 1899 THEN 'AG Casino'
 			 WHEN bettype = 1900 THEN 'Macau'
