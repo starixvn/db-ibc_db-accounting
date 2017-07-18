@@ -509,24 +509,35 @@ BEGIN
 			 INNER JOIN @DummyBalance dm ON b.custid = dm.custid 
 	 	     WHERE bettype > 20000
 		     GROUP BY dm.product
-	    )   	
-			
-		SELECT 'Openning Balance' as product, SUM(ISNULL(winlost, 0)) AS winlost, 0 AS WinlostAfterExtraPT, 0 AS Reset
-		FROM #source 
-		WHERE bettype = 20000
-		HAVING SUM(ISNULL(winlost, 0))  <> 0
+	    )
+		,OpenningBalance AS
+		(
+			SELECT 'Openning Balance' as product, SUM(ISNULL(winlost, 0)) AS winlost, 0 AS WinlostAfterExtraPT, 0 AS Reset, 0 AS seq
+			FROM #source 
+			WHERE bettype = 20000
+			HAVING SUM(ISNULL(winlost, 0))  <> 0
+		)
+		,Result AS
+		(
+			SELECT product, winlost, WinlostAfterExtraPT, reset, seq
+			FROM OpenningBalance
 
-		UNION ALL
-		
-	    SELECT dm.product,
-	           ROUND(ISNULL(w.winlost, 0), 2) AS winlost,
-			   ROUND(ISNULL(w.winlost, 0), 2) -  ROUND(ISNULL(CASE WHEN @winlostdate < @EffectedDate THEN e.ExtraPTwinlost ELSE e.NewExtraPTwinlost END, 0), 2) AS WinlostAfterExtraPT,
-			   ROUND(ISNULL(rs.reset, 0), 2) AS reset
-	    FROM @Winning w
-		FULL OUTER JOIN rs rs ON w.product = rs.product  
-		RIGHT JOIN @DummyBalance dm ON dm.product = ISNULL(w.product, rs.product)
-		LEFT JOIN #ExtraPTWL e ON e.ProductName = dm.product	 
-		---ORDER BY dm.seq
+			UNION ALL
+
+			SELECT dm.product,
+				   ROUND(ISNULL(w.winlost, 0), 2) AS winlost,
+				   ROUND(ISNULL(w.winlost, 0), 2) -  ROUND(ISNULL(CASE WHEN @winlostdate < @EffectedDate THEN e.ExtraPTwinlost ELSE e.NewExtraPTwinlost END, 0), 2) AS WinlostAfterExtraPT,
+				   ROUND(ISNULL(rs.reset, 0), 2) AS reset,
+				   dm.seq
+			FROM @Winning w
+			FULL OUTER JOIN rs rs ON w.product = rs.product  
+			RIGHT JOIN @DummyBalance dm ON dm.product = ISNULL(w.product, rs.product)
+			LEFT JOIN #ExtraPTWL e ON e.ProductName = dm.product
+		)
+		SELECT product, winlost, WinlostAfterExtraPT, reset
+		FROM Result
+		ORDER BY seq
+
 
 		DROP TABLE #bettranstmp
 		DROP TABLE #ExtraPTWL
