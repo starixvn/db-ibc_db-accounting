@@ -458,7 +458,7 @@ BEGIN
 			   s.ProductId,
 			   '' AS SubProduct,
 			   SUM((winlost - actual_stake) * actualrate) AS winlost,
-			   SUM((CASE WHEN b.tpositiontaking = 1 THEN b.winlost - b.actual_stake ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END) * b.actualrate) AS newwinlost
+			   SUM((CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END) * b.actualrate) AS newwinlost
 		FROM dbo.bettrans b WITH(READPAST, INDEX = IX_Report)
 		INNER JOIN @SportBettype s ON s.BetType = b.bettype
 		WHERE  b.winlostdate between @fromdate and @todate
@@ -507,7 +507,7 @@ BEGIN
 			   CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss') THEN s.SubProduct ELSE '' END AS SubProduct,
 			   CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss') OR ISNULL(m.matchid, 0) <> 0 OR B.Bettype IN (10,9,29) THEN 2 ELSE b.liveindicator END AS liveindicator,
 			   SUM((winlost - actual_stake) * actualrate) AS winlost,
-			   SUM((CASE WHEN b.tpositiontaking = 1 THEN b.winlost - b.actual_stake ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END) * b.actualrate) AS newwinlost
+			   SUM((CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END) * b.actualrate) AS newwinlost
 		FROM dbo.bettrans b WITH(READPAST, INDEX = IX_Report)	
 		INNER JOIN @SportBettype s ON s.BetType = b.bettype
 		LEFT JOIN dbo.Match m WITH (NOLOCK) ON m.MatchId = b.MatchId AND m.eventdate = b.Winlostdate AND m.Sporttype = 44
