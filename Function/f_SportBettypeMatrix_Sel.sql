@@ -19,7 +19,8 @@ ALTER FUNCTION [dbo].[f_SportBettypeMatrix_Sel]
 		
 	Revisions:
 		- 20160505@Percy: Return 2 columns RefTable, CasinoType
-		
+		- 20170629@Harper: Return ProductPrefix column
+
 	Paramters Explanation:
  		@ProductID, @SportType, @BetType
 			0	: get all
@@ -45,6 +46,7 @@ SELECT DISTINCT
 	,ma.SubProduct
 	,ma.RefTable
 	,p.CasinoType
+	,p.ProductPrefix
 FROM
 	dbo.SportBettypeMatrix ma WITH(NOLOCK)
 	INNER JOIN dbo.Products p WITH(NOLOCK) ON p.ProductID = ma.ProductID
