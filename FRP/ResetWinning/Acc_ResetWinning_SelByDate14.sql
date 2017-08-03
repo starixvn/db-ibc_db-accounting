@@ -1,4 +1,6 @@
-﻿/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet,vnteam" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+USE [bodb02]
+GO
 
 ALTER PROCEDURE [dbo].[Acc_ResetWinning_SelByDate14]
 	@winlostdate	SMALLDATETIME,	
@@ -35,6 +37,7 @@ AS
 		- 20170112@Percy: Change Extra PT formula [RedmineID: #70060]
 		- 20170213@Percy: Remove SLI [RedmineID: #70036]
 		- 20170323@Percy: Apply Cash Out [RedmineID: #72164]
+		- 20170706@Percy: Apply Betradar VS and Keno Lottery [RedmineID: #79521]
 		
 	Explanation's Param:
 
@@ -264,6 +267,7 @@ BEGIN
 			 WHEN bettype = 10 THEN 'Outright'
 			 WHEN bettype IN (9, 29) THEN 'Parlay'
 			 WHEN bettype BETWEEN 1201 AND 1299 THEN 'Virtual Sports'
+			 WHEN bettype BETWEEN 2700 AND 2899 THEN 'Virtual Sports 2'
 			 WHEN bettype BETWEEN 1501 AND 1599 THEN 'Keno'
 			 WHEN bettype BETWEEN 1800 AND 1899 THEN 'AG Casino'
 			 WHEN bettype = 1900 THEN 'Macau'
@@ -280,6 +284,7 @@ BEGIN
 			 WHEN bettype BETWEEN 2501 AND 2699 THEN 'NG2'
 			 WHEN bettype BETWEEN 1011 AND 1020 THEN 'Fishing World'
 			 WHEN bettype BETWEEN 911 AND 914 THEN 'Cash Out'
+			 WHEN bettype BETWEEN 1021 AND 1049 THEN 'Lottery'
 		   END AS Product,
 		   ISNULL(SUM(winlost), 0) AS winlost
 	 FROM #bettranstmp
@@ -289,6 +294,7 @@ BEGIN
 			OR bettype BETWEEN 80 AND 120
 			OR bettype IN (71, 72, 10,  9, 29) ---1000
 			OR bettype BETWEEN 1201 AND 1299
+			OR bettype BETWEEN 2700 AND 2899
 			OR bettype BETWEEN 1501 AND 1599
 			OR bettype BETWEEN 1800 AND 1899
 			OR bettype = 1900
@@ -306,6 +312,7 @@ BEGIN
 			OR bettype BETWEEN 2501 AND 2699
 			OR bettype BETWEEN 1011 AND 1020
 			OR bettype BETWEEN 911 AND 914
+			OR bettype BETWEEN 1021 AND 1049
 		   )
 	GROUP BY CASE
 	         WHEN bettype BETWEEN 31 AND 33 THEN 'Racing gross income'
@@ -315,6 +322,7 @@ BEGIN
 			 WHEN bettype = 10 THEN 'Outright'
 			 WHEN bettype IN (9, 29) THEN 'Parlay'
 			 WHEN bettype BETWEEN 1201 AND 1299 THEN 'Virtual Sports'
+			 WHEN bettype BETWEEN 2700 AND 2899 THEN 'Virtual Sports 2'
 			 WHEN bettype BETWEEN 1501 AND 1599 THEN 'Keno'
 			 WHEN bettype BETWEEN 1800 AND 1899 THEN 'AG Casino'
 			 WHEN bettype = 1900 THEN 'Macau'
@@ -331,6 +339,7 @@ BEGIN
 			 WHEN bettype BETWEEN 2501 AND 2699 THEN 'NG2'
 			 WHEN bettype BETWEEN 1011 AND 1020 THEN 'Fishing World'
 			 WHEN bettype BETWEEN 911 AND 914 THEN 'Cash Out'
+			 WHEN bettype BETWEEN 1021 AND 1049 THEN 'Lottery'
 	         END
 
 	---------------------------------------------------
@@ -409,7 +418,7 @@ BEGIN
 			   s.ProductId,
 			   '' AS SubProduct,
 			   SUM((winlost - actual_stake) * actualrate) AS winlost,
-			   SUM((CASE WHEN tpositiontaking = 1 THEN winlost - actual_stake ELSE winlost - actual_stake + scomm / (1 - tpositiontaking) END) * actualrate) AS newwinlost
+			   SUM((CASE WHEN tpositiontaking = 1 THEN 0 ELSE winlost - actual_stake + scomm / (1 - tpositiontaking) END) * actualrate) AS newwinlost
 		FROM dbo.bettrans14 b WITH(NOLOCK)
 		INNER JOIN @SportBettype s ON s.BetType = b.bettype
 		WHERE  b.winlostdate = @winlostdate
@@ -453,7 +462,7 @@ BEGIN
 			   CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss') THEN s.SubProduct ELSE '' END AS SubProduct,
 			   CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss') OR ISNULL(m.matchid, 0) <> 0 OR B.Bettype IN (10,9,29) THEN 2 ELSE b.liveindicator END AS liveindicator,
 			   SUM((winlost - actual_stake) * actualrate) AS winlost,
-			   SUM((CASE WHEN tpositiontaking = 1 THEN winlost - actual_stake ELSE winlost - actual_stake + scomm / (1 - tpositiontaking) END) * actualrate) AS newwinlost
+			   SUM((CASE WHEN tpositiontaking = 1 THEN 0 ELSE winlost - actual_stake + scomm / (1 - tpositiontaking) END) * actualrate) AS newwinlost
 		FROM dbo.bettrans14 b WITH(NOLOCK)	
 		INNER JOIN @SportBettype s ON s.BetType = b.bettype
 		LEFT JOIN dbo.Match14 m WITH (NOLOCK) ON m.MatchId = b.MatchId AND m.eventdate = @Winlostdate AND m.Sporttype = 44
@@ -500,24 +509,35 @@ BEGIN
 			 INNER JOIN @DummyBalance dm ON b.custid = dm.custid 
 	 	     WHERE bettype > 20000
 		     GROUP BY dm.product
-	    )   	
-			
-		SELECT 'Openning Balance' as product, SUM(ISNULL(winlost, 0)) AS winlost, 0 AS WinlostAfterExtraPT, 0 AS Reset
-		FROM #source 
-		WHERE bettype = 20000
-		HAVING SUM(ISNULL(winlost, 0))  <> 0
+	    )
+		,OpenningBalance AS
+		(
+			SELECT 'Openning Balance' as product, SUM(ISNULL(winlost, 0)) AS winlost, 0 AS WinlostAfterExtraPT, 0 AS Reset, 0 AS seq
+			FROM #source 
+			WHERE bettype = 20000
+			HAVING SUM(ISNULL(winlost, 0))  <> 0
+		)
+		,Result AS
+		(
+			SELECT product, winlost, WinlostAfterExtraPT, reset, seq
+			FROM OpenningBalance
 
-		UNION ALL
-		
-	    SELECT dm.product,
-	           ROUND(ISNULL(w.winlost, 0), 2) AS winlost,
-			   ROUND(ISNULL(w.winlost, 0), 2) -  ROUND(ISNULL(CASE WHEN @winlostdate < @EffectedDate THEN e.ExtraPTwinlost ELSE e.NewExtraPTwinlost END, 0), 2) AS WinlostAfterExtraPT,
-			   ROUND(ISNULL(rs.reset, 0), 2) AS reset
-	    FROM @Winning w
-		FULL OUTER JOIN rs rs ON w.product = rs.product  
-		RIGHT JOIN @DummyBalance dm ON dm.product = ISNULL(w.product, rs.product)
-		LEFT JOIN #ExtraPTWL e ON e.ProductName = dm.product	 
-		---ORDER BY dm.seq
+			UNION ALL
+
+			SELECT dm.product,
+				   ROUND(ISNULL(w.winlost, 0), 2) AS winlost,
+				   ROUND(ISNULL(w.winlost, 0), 2) -  ROUND(ISNULL(CASE WHEN @winlostdate < @EffectedDate THEN e.ExtraPTwinlost ELSE e.NewExtraPTwinlost END, 0), 2) AS WinlostAfterExtraPT,
+				   ROUND(ISNULL(rs.reset, 0), 2) AS reset,
+				   dm.seq
+			FROM @Winning w
+			FULL OUTER JOIN rs rs ON w.product = rs.product  
+			RIGHT JOIN @DummyBalance dm ON dm.product = ISNULL(w.product, rs.product)
+			LEFT JOIN #ExtraPTWL e ON e.ProductName = dm.product
+		)
+		SELECT product, winlost, WinlostAfterExtraPT, reset
+		FROM Result
+		ORDER BY seq
+
 
 		DROP TABLE #bettranstmp
 		DROP TABLE #ExtraPTWL
