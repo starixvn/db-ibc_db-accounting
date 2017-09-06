@@ -96,7 +96,7 @@ BEGIN
 		END
 		ELSE
 		BEGIN
-			 SET @ErrMsg = 'This user ' + @Username  + ' has already granted access to ' + @LicenseeID +  ' !'
+			 SET @ErrMsg = 'This user ' + @Username  + ' has already granted access to ' + CONVERT(VARCHAR(20),@LicenseeID) +  ' !'
 			 SET @ErrCode = 101
 			 PRINT @ErrMsg
 			 --RETURN
@@ -110,7 +110,7 @@ BEGIN
 		END 
 		ELSE
 		BEGIN
-			 SET @ErrMsg = 'This user ' + @Username  + ' has already granted access to ' + @LicenseeID +  ' !'
+			 SET @ErrMsg = 'This user ' + @Username  + ' has already granted access to ' + CONVERT(VARCHAR(20),@LicenseeID) +  ' !'
 			 SET @ErrCode = 101
 			 PRINT @ErrMsg
 			 --RETURN
