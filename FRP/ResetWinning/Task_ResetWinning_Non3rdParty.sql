@@ -43,6 +43,7 @@ AS
 		- 20170213@Percy: Remove SLI [RedmineID: #70036]
 		- 20170323@Percy: Apply Cash Out [RedmineID: #72164]
 		- 20170706@Percy: Apply Betradar VS and Keno Lottery [RedmineID: #79521]
+		- 20170727@Percy: Expand bettype range of OneRNG Casino [RedmineID: #78424]
 
 	Param Explanation:
 	    @mode:  0 _ view report
@@ -290,7 +291,11 @@ BEGIN
 	     	 WHEN bettype BETWEEN 31 AND 33 THEN 'Racing gross income'
 			 WHEN bettype BETWEEN 81 AND 120 THEN 'Number Game'	
 			 --WHEN bettype BETWEEN 1101 AND 1199 THEN 'Live Casino'
-			 WHEN bettype IN (71, 72) OR bettype BETWEEN 2101 AND 2399 THEN 'Casino'
+			 WHEN
+				bettype IN (71, 72)
+				OR bettype BETWEEN 2101 AND 2399
+				OR bettype BETWEEN 2901 AND 2999
+				THEN 'Casino'
 			 WHEN bettype = 10 THEN 'Outright'
 			 WHEN bettype IN (9, 29) THEN 'Parlay'
 			 WHEN bettype BETWEEN 1201 AND 1299 THEN 'Virtual Sports'
@@ -333,6 +338,7 @@ BEGIN
 			OR bettype BETWEEN 18000 AND 18099  
 			--OR bettype = 1003
 			OR bettype BETWEEN 2101 AND 2399
+			OR bettype BETWEEN 2901 AND 2999
 			OR Sporttype = 44
 			OR bettype BETWEEN 2401 AND 2499 
 			OR bettype BETWEEN 4001 AND 7999
@@ -345,7 +351,11 @@ BEGIN
 	         WHEN bettype BETWEEN 31 AND 33 THEN 'Racing gross income'
 			 WHEN bettype BETWEEN 81 AND 120 THEN 'Number Game'
 			 --WHEN bettype BETWEEN 1101 AND 1199 THEN 'Live Casino'
-			 WHEN bettype IN(71, 72) OR bettype BETWEEN 2101 AND 2399 THEN 'Casino'
+			 WHEN
+				bettype IN (71, 72)
+				OR bettype BETWEEN 2101 AND 2399
+				OR bettype BETWEEN 2901 AND 2999
+				THEN 'Casino'
 			 WHEN bettype = 10 THEN 'Outright'
 			 WHEN bettype IN (9, 29) THEN 'Parlay'
 			 WHEN bettype BETWEEN 1201 AND 1299 THEN 'Virtual Sports'
