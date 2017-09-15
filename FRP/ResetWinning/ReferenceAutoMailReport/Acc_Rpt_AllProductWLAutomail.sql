@@ -33,6 +33,7 @@ AS
 		- 20170323@Percy: Apply Cash Out [RedmineID: #72164]
 		- 20170706@Percy: Apply Betradar VS and Keno Lottery [RedmineID: #79521]
 		- 20170727@Percy: Expand bettype range of OneRNG Casino [RedmineID: #78424]
+		- 20170915@Percy: Change testing dummy account of VS 2 and Lottery [RedmineID: #83298]
 		 
 	Param's Explanation:
 	
@@ -224,7 +225,7 @@ BEGIN
 							WHEN bettype BETWEEN 81 AND 120 THEN 13062600
 							WHEN bettype IN (31,32,33) THEN 13062602
 							WHEN bettype BETWEEN 1201 AND 1299 THEN 13062615
-							WHEN bettype BETWEEN 2700 AND 2899 THEN 26433297
+							WHEN bettype BETWEEN 2700 AND 2899 THEN 27234475
 							WHEN bettype BETWEEN 1501 AND 1599 THEN 13062664
 							WHEN bettype IN (31,32,33) THEN 13062630
 							WHEN bettype BETWEEN 1800 AND 1899 THEN 18254399
@@ -242,7 +243,7 @@ BEGIN
 							WHEN bettype BETWEEN 2501 AND 2699 THEN 23766923
 							WHEN bettype BETWEEN 1011 AND 1020 THEN 24567778
 							WHEN bettype BETWEEN 911 AND 914 THEN 25440545
-							WHEN bettype BETWEEN 1021 AND 1049 THEN 26433298
+							WHEN bettype BETWEEN 1021 AND 1049 THEN 27234433
 						END
 		FROM bodb_report.dbo.rptWinLost b WITH(NOLOCK)
 		WHERE b.winlostdate = @_todate
