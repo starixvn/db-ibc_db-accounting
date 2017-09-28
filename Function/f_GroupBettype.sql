@@ -1,5 +1,7 @@
-use bodb02
-GO 
+/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet" viewers="" isFunction="1" isNested="1"></info>*/
+USE [bodb02]
+GO
+
 ALTER FUNCTION [dbo].[f_GroupBettype] ()
 RETURNS TABLE
 RETURN
@@ -15,6 +17,7 @@ RETURN
 		- 20160426@Sophia: Change to in line Func-High Availability Step 4 [Redmine: #55746]
 		- 20160712@Percy: PH AIO phase 2 [Redmine: #53152]
 		- 20161007@Sophia: PHAIO Phase 2 , add more couple of Parent - Child [Redmine: #65406]
+		- 20170919@Percy: PHAIO Phase 3, add 4 new bettypes 461 - 464 [RedmineID: #83356]
 */
 	-------- Grouped bettype for Sporting Solution
 	SELECT 153 AS Bettype, 153 AS GroupTypeId
@@ -118,11 +121,10 @@ RETURN
 		,(429, 429), (187, 429) -- Exact 2H Goals
 		,(412, 412), (179, 412) -- Exact 1H Goals
 
+		,(401, 401), (461, 401) -- Home Team Over/Under
+		,(402, 402), (462, 402) -- Away Team Over/Under
+		,(403, 403), (463, 403) -- 1H Home Team Over/Under
+		,(404, 404), (464, 404) -- 1 H Away Team Over/Under
+
 	) PH (Bettype, GroupTypeId)
-
-
-GO 
-GRANT SELECT ON [dbo].[f_GroupBettype] TO [bodbDownlineNet]
-GO 
-GRANT SELECT ON [dbo].[f_GroupBettype] TO [bodbDownlineNetView]
-GO 
+GO
