@@ -1,24 +1,33 @@
+/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
+USE [bodb02]
+GO
+
 ALTER PROCEDURE [dbo].[U3_Rpt_MatchWinLoss_Ag]
 	@CustID   INT,
 	@FromDate DATETIME,
 	@ToDate   DATETIME	
 AS
+
 /*
-Created: 20150209@Sophia 
-Task : U3 report match winloss - for Number game, Bingo, Live Casino
-DB: DBAGE/bodb02
-Original: Age_Rpt_MatchWinLoss_Ag
-Revisions:
-   
+	Created: 20150303@Sophia
+	Task: U3 Report WinLoss By bettype - for Number game, Bingo, Live Casino
+	DB: DBAGE/bodb02
+	Original: Age_Rpt_MatchWinLoss_Ag
+
+	Revisions:
+		- 20170830@Percy: Integrate Lucky 3 [RedmineID: #76770]
 */
-	BEGIN 
+
+BEGIN 
 	SET NOCOUNT ON
 
 	----Get Sport Bettype Matrix------
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
-	INSERT INTO @SportBettype
-	EXEC dbo.Acc_SportBettypeMatrix_Sel @mode=4
+	DECLARE @ProductIds VARCHAR(MAX), @isTest BIT
+	SELECT  @ProductIds = dbo.U3_f_GetProductList(), @isTest = dbo.f_CheckSPVersion(@@PROCID)
 
+	DECLARE @SportBettype TABLE (ProductID INT, Bettype INT)
+	INSERT INTO @SportBettype (ProductID, Bettype)
+	SELECT ProductID, Bettype FROM dbo.f_SportBettypeMatrixByProduct_Sel (@ProductIds, @isTest)
 
 	SELECT x.* ,isnull(x.isNeutral, CONVERT(BIT, 0)) AS IsNeutral
 	FROM (
@@ -71,7 +80,7 @@ Revisions:
 			AND m.eventdate <= @todate
 			AND m.eventstatus = 'completed'
 			AND isnull(m.betstatus, '') <> 'refund'
-			AND s.ProductID IN (4,7)
+			AND s.ProductID <> 3 -- Not Number Game
 		GROUP BY m.matchid
 			,m.homeid
 			,m.awayid
@@ -130,7 +139,7 @@ Revisions:
 			AND m.eventdate <= @todate
 			AND m.eventstatus = 'completed'
 			AND isnull(m.betstatus, '') <> 'refund'
-			AND s.ProductID IN (4,7)
+			AND s.ProductID <> 3 -- Not Number Game
 		GROUP BY m.matchid
 			,m.homeid
 			,m.awayid
@@ -142,12 +151,3 @@ Revisions:
 	ORDER BY x.showtime
 END
 GO
-
-GRANT EXECUTE ON [dbo].[U3_Rpt_MatchWinLoss_Ag] TO [bodbDownlineNet]
-GO
-
-GRANT EXECUTE ON [dbo].[U3_Rpt_MatchWinLoss_Ag] TO [bodbDownlineNetView]
-GO
-
-GRANT VIEW DEFINITION ON [dbo].[U3_Rpt_MatchWinLoss_Ag] TO [vnteam]
-
