@@ -34,7 +34,7 @@ ALTER PROCEDURE [dbo].[Acc_AutoFollowBetInsCustomer]
 AS
 /*
 	Created: Viet @ 4-Jul-2012
-	DB: DBTXN.CustDB
+	DB: DBCUST.CustDB
 
 	Revision:
 		- 20131212@Kathy: - Remove @status, add new @param
@@ -53,6 +53,7 @@ AS
 		- 20150311@Kathy: Support multi-follower on one customer [Redmine:#32146]
 		- 20150323@Kathy: - Support 2 more bettype 1x2 & 1st 1x2 [Redmine:#30394]   
 						  - Update danger, danger2 for downlines	
+		- 20170621@Harper: Apply change request to rules of Bet Follow [Redmine: #78586]
 		
 	Param's Explanation:	
 */
@@ -321,16 +322,14 @@ BEGIN
     
     -- Update the accounts dangerous setting change to "2" for Live & Non Live
     UPDATE dbo.custInfo WITH(UPDLOCK, ROWLOCK)
-    SET danger = 2
-		,danger2 = 2
+    SET danger = CASE WHEN danger = 2 THEN danger ELSE 2 END		
 	WHERE custid = @custid
 	
 	-- update downlines
 	IF @isAgent = 1
 	BEGIN
 		UPDATE dbo.custInfo WITH(UPDLOCK, ROWLOCK)
-		SET danger = 2
-			,danger2 = 2
+		SET danger = CASE WHEN danger = 2 THEN danger ELSE 2 END			
 		WHERE recommend = @custid AND roleid = 1
 	END	    
 

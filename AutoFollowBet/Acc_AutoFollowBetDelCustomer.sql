@@ -17,7 +17,7 @@ ALTER PROCEDURE [dbo].[Acc_AutoFollowBetDelCustomer]
 AS
 /*
 	Created: Viet @ 4-Jul-2012
-	DB: DBTXN.custDB
+	DB: DBCUST.custDB
 
 	Revision:
 		- 20131212@Kathy: - Remove @status, add new @param
@@ -31,6 +31,7 @@ AS
 		- 20150311@Kathy: Support multi-follower on one customer [Redmine:#32146]
 		- 20150323@Kathy: - Support 2 more bettype 1x2 & 1st 1x2 [Redmine:#30394]  
 						  - Update danger, danger2 for downlines
+		- 20170621@Harper: Apply change request to rules of Bet Follow [Redmine: #78586]
 		
 	Param's Explanation:	
 */
@@ -157,34 +158,32 @@ BEGIN
 	BEGIN
 		--  If remove a member, but his upline is being followed -> danger still stay at level 2
 		UPDATE dbo.custInfo WITH(ROWLOCK, UPDLOCK)
-		SET danger = CASE WHEN @isBA = 1 THEN 100 ELSE 0 END
-			,danger2 = 0
+		SET danger = CASE WHEN @isBA = 1 THEN 100 ELSE 0 END			
 		WHERE custid = @custid
 		AND (
 				(@isAgent = 1) 
 				OR (recommend NOT IN (SELECT cf.custid FROM dbo.Cust_FollowBet cf WITH(NOLOCK) WHERE cf.IsAgent = 1))
 			)
-	END
-	-- update downlines
-	-- If remove an agent, but his downline who is being followed -> danger of only this member still stay at level 2
-	IF @isAgent = 1
-	BEGIN
-		SELECT ci.custid
-			,(SELECT ci.custid FROM dbo.Dep_CustBAActive d WITH(NOLOCK) WHERE ci.custid = d.CustId) BACust
-		INTO #Downlines
-		FROM dbo.custInfo ci WITH(NOLOCK)
-		WHERE ci.recommend = @custid AND ci.roleid = 1
-		AND ci.custid NOT IN (SELECT cf.custid FROM dbo.Cust_FollowBet cf WITH(NOLOCK) WHERE IsAgent = 0)
 		
-		UPDATE ci 
-		SET danger = CASE WHEN d.BACust IS NOT NULL THEN 100 ELSE 0 END
-			,danger2 = 0
-		FROM dbo.custInfo ci WITH(ROWLOCK, UPDLOCK)
-		INNER JOIN #Downlines d ON ci.custid = d.custid
-		
-		DROP TABLE #Downlines
+		-- update downlines
+		IF @isAgent = 1
+		BEGIN
+			SELECT ci.custid
+				,(SELECT ci.custid FROM dbo.Dep_CustBAActive d WITH(NOLOCK) WHERE ci.custid = d.CustId) BACust
+			INTO #Downlines
+			FROM dbo.custInfo ci WITH(NOLOCK)
+			WHERE ci.recommend = @custid AND ci.roleid = 1
+			AND ci.custid NOT IN (SELECT cf.custid FROM dbo.Cust_FollowBet cf WITH(NOLOCK) WHERE IsAgent = 0)
+			
+			UPDATE ci 
+			SET danger = CASE WHEN d.BACust IS NOT NULL THEN 100 ELSE 0 END				
+			FROM dbo.custInfo ci WITH(ROWLOCK, UPDLOCK)
+			INNER JOIN #Downlines d ON ci.custid = d.custid
+			
+			DROP TABLE #Downlines
+		END
+
 	END
-	 
 
 	-- write log
 	Declare @LogSPData VARCHAR(MAX),@TrackingValueDB VARCHAR(max)
