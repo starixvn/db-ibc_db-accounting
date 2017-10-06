@@ -1,12 +1,12 @@
 USE [bodb_ACC]
 GO
 
-ALTER PROCEDURE [dbo].[Acc_GroupExtraPTSetting_Upd_xtest]
+ALTER PROCEDURE [dbo].[Acc_GroupExtraPTSetting_Upd]
 	@CustID			INT,
 	@GroupName		VARCHAR(50),
 	@EffectiveDate	DATETIME = NULL,
 	@UserID			INT,
-	@ErrCode		TINYINT = 0 OUTPUT,
+	@ErrCode		INT = 0 OUTPUT,
 	@ErrMsg			NVARCHAR(1000) = '' OUTPUT
 AS
 /*

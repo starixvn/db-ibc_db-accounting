@@ -268,7 +268,7 @@ BEGIN
 	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 		@UserID = @UserID,
 		@CustID = @UserID,
-		@ActionID = 619,
+		@ActionID = 674,
 		@TrackingValue = @LogData,
 		@duration = @duration
 END

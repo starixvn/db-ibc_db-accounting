@@ -7,7 +7,7 @@ ALTER PROCEDURE [dbo].[Acc_CustGroupUpdPrimaryExtraPTGroup]
 	@EffectiveDate	DATETIME,
 	@UserID			INT,
 	@IP				VARCHAR(20),
-	@ErrCode		TINYINT = 0 OUTPUT,
+	@ErrCode		INT = 0 OUTPUT,
 	@ErrMsg			NVARCHAR(1000) = '' OUTPUT
 AS
 /*
