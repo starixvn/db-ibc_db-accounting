@@ -1,6 +1,5 @@
-/*<info serverAlias="DBACC-bodb_ACC" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
-
-USE [bodb_ACC]
+/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+USE [CustDB]
 GO
 
 ALTER PROCEDURE [dbo].[Acc_GroupExtraPT_GroupByProduct_Ins]
@@ -18,10 +17,11 @@ AS
 /*
 	Created by: Percy
 	Date: 2017-04-13
-	DB: DBACC.bodb_ACC
+	DB: DBCUST.CustDB
 	Task: Manage Extra PT Group - Insert [RedmineID: #74292]
 
 	Revisions:
+		- 20170926@Percy: Move this SP from DBACC.bodb_ACC to DBCUST.CustDB [RedmineID: #83600]
 
 	Param's Explanation:
 */
@@ -44,8 +44,8 @@ BEGIN
 	SELECT  @startRun = GETDATE()
 
 	DECLARE @GroupName VARCHAR(30), @ProductName VARCHAR(30), @today DATETIME
-	SELECT  @GroupName = GroupName FROM dbo.Acc_DWLList_ExtraPT WITH(NOLOCK) WHERE GroupId = @GroupId
-	SELECT  @ProductName = ProductName FROM bodb02.dbo.Products WITH(NOLOCK) WHERE ProductID = @ProductID
+	SELECT  @GroupName = GroupName FROM DBACC.bodb_ACC.dbo.Acc_DWLList_ExtraPT WITH(NOLOCK) WHERE GroupId = @GroupId
+	SELECT  @ProductName = ProductName FROM DBTXN.bodb02.dbo.Products WITH(NOLOCK) WHERE ProductID = @ProductID
 	SELECT  @today = CONVERT(DATE, GETDATE())
 
 	IF ISNULL(@GroupName, '') = ''
@@ -62,7 +62,7 @@ BEGIN
 		RETURN
 	END
 
-	IF NOT EXISTS (SELECT 1 FROM dbo.Acc_DWLList WITH(NOLOCK) WHERE ProductId = @ProductId)
+	IF NOT EXISTS (SELECT 1 FROM DBACC.bodb_ACC.dbo.Acc_DWLList WITH(NOLOCK) WHERE ProductId = @ProductId)
 	BEGIN
 		SELECT @ErrCode = 102, @ErrMsg = 'This product is not offers'
 		
@@ -293,3 +293,4 @@ BEGIN
 		@TrackingValue = @LogData,
 		@duration = @duration
 END
+GO

@@ -1,4 +1,5 @@
-USE [bodb_ACC]
+/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="" isFunction="0" isNested="1"></info>*/
+USE [CustDB]
 GO
 
 ALTER PROCEDURE [dbo].[Acc_GroupExtraPTSetting_Upd]
@@ -9,20 +10,23 @@ ALTER PROCEDURE [dbo].[Acc_GroupExtraPTSetting_Upd]
 	@ErrCode		INT = 0 OUTPUT,
 	@ErrMsg			NVARCHAR(1000) = '' OUTPUT
 AS
+
 /*
 	Creator: Percy
 	Date: 20160721
 	Task: Change Primary, Remove CustID from Extra PT Group
-	DB: DBACC.bodb_ACC
+	DB: DBCUST.CustDB
 
 	Revisions:
 		- 20170413@Percy: Get setting of group from new table [RedmineID: #74292]
+		- 20170926@Percy: Migrate this SP from DBACC.bodb_ACC to DBCUST.CustDB [RedmineID: #83600]
 
 	Param's Explanation:
 		- @EffectiveDate
 			+ IS NULL: remove @CustID from @GroupName
 			+ NOT NULL: change @GroupName is Primary Extra PT Group of @CustID
 */
+
 BEGIN
 	SET NOCOUNT ON
 
@@ -169,9 +173,4 @@ BEGIN
 		END
 	END
 END
-GO
-
-GRANT EXECUTE ON [dbo].[Acc_GroupExtraPTSetting_Upd] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_GroupExtraPTSetting_Upd] TO [vnteam]
 GO

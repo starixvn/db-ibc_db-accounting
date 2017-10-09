@@ -1,3 +1,4 @@
+/*<info serverAlias="DBAGE-bodb_Age" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 USE [bodb_Age]
 GO
 
@@ -10,6 +11,7 @@ ALTER PROCEDURE [dbo].[Acc_CustGroupUpdPrimaryExtraPTGroup]
 	@ErrCode		INT = 0 OUTPUT,
 	@ErrMsg			NVARCHAR(1000) = '' OUTPUT
 AS
+
 /*
 	Creator: Percy
 	Date: 20160721
@@ -17,7 +19,9 @@ AS
 	DB: DBAGE.bodb_Age
 
 	Revisions:
+		- 20170926@Percy: Move the nested SP: Acc_GroupExtraPTSetting_Upd from DBACC.bodb_ACC to DBCUST.CustDB [RedmineID: #83600]
 */
+
 BEGIN
 	SET NOCOUNT ON
 
@@ -58,7 +62,7 @@ BEGIN
 	END
 
 	-- Update table Acc_GroupExtraPTSetting
-	EXEC DBACC.bodb_ACC.dbo.Acc_GroupExtraPTSetting_Upd
+	EXEC DBCUST.CustDB.dbo.Acc_GroupExtraPTSetting_Upd
 		@CustID = @CustID,
 		@GroupName = @GroupName,
 		@EffectiveDate = @EffectiveDate,
@@ -87,9 +91,4 @@ BEGIN
 		@TrackingValue = @LogData,
 		@Duration = @Duration
 END
-GO
-
-GRANT EXECUTE ON [dbo].[Acc_CustGroupUpdPrimaryExtraPTGroup] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustGroupUpdPrimaryExtraPTGroup] TO [vnteam]
 GO
