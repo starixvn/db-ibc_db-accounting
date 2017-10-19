@@ -1,4 +1,5 @@
-﻿USE [bodb02]
+﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,bodbExtAccNet" viewers="" isFunction="0" isNested="0"></info>*/
+USE [bodb02]
 GO
 
 ALTER PROCEDURE [dbo].[Acc_CustomerSelClearBalance]
@@ -26,6 +27,7 @@ Revisions:
 	- 20160608@Percy: Enhance performance - refactor code [RedmineID: #58288]
 	- 20161006@Percy: Support Super and Master levels [RedmineID: #63209]
 	- 20170622@Percy: Return ClosedReason column to apply color for closed accounts [RedmineID : #74494]
+	- 20171018@Percy: Get status waiting from translog [RedmineID: #84692]
 
 Param's Explanation:
 	
@@ -130,7 +132,7 @@ BEGIN
 			ISNULL(SUM(ABS(actual_stake*mpositiontaking)), 0) outstanding
 		FROM translog t (NOLOCK)
 			INNER JOIN #recommend r ON t.recommend = r.recommend
-		WHERE statusID = 0
+		WHERE statusID IN (0, 1)
 		GROUP BY t.mrecommend
 	END
 	ELSE IF @roleID = 3
@@ -205,7 +207,7 @@ BEGIN
 			ISNULL(SUM(ABS(actual_stake*apositiontaking)), 0) outstanding
 		FROM translog t (NOLOCK)
 			INNER JOIN #recommend r ON t.recommend = r.recommend
-		WHERE statusID = 0
+		WHERE statusID IN (0, 1)
 		GROUP BY t.recommend
 	END
 	ELSE IF @roleID = 2
@@ -268,7 +270,7 @@ BEGIN
 			0 cash,
 			ISNULL(SUM(ABS(actual_stake)), 0) outstanding
 		FROM translog t (NOLOCK)
-		WHERE recommend = @custid AND statusID = 0
+		WHERE recommend = @custid AND statusID IN (0, 1)
 		GROUP BY t.custid
 	END
 
@@ -389,10 +391,4 @@ BEGIN
 	DROP TABLE #SportBettypeMatrix
 	DROP TABLE #ClosedReason
 END
-GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelClearBalance] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelClearBalance] TO [bodbExtAccNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelClearBalance] TO [vnteam] AS [dbo]
 GO
