@@ -211,7 +211,7 @@ END
 
 		IF @ErrCode <> 0
 		BEGIN
-			SELECT @ErrMsg = 'Sorry, you can''t withdraw money at this time because data process is running.', @ErrCode = 333	
+			SELECT @ErrMsg = @ErrMsg, @ErrCode = 333
 			RETURN
 		END
 
@@ -242,7 +242,7 @@ END
 
 		IF @ErrCode <> 0
 		BEGIN
-			SELECT @ErrMsg = 'Sorry, you can''t withdraw money at this time because data process is running.', @ErrCode = 333	
+			SELECT @ErrMsg = @ErrMsg, @ErrCode = 333
 			RETURN
 		END
 
@@ -446,4 +446,10 @@ BEGIN CATCH
 	-- if write log error: not return error code
 END CATCH
 
-
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Dot_Dep_BettransInsTransaction_V2_Cust] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[Dot_Dep_BettransInsTransaction_V2_Cust] TO [Dot_Member]
+GO 
+ GRANT EXECUTE ON [dbo].[Dot_Dep_BettransInsTransaction_V2_Cust] TO [Dot_Bonus]
+GO 

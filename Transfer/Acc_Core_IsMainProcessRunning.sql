@@ -1,4 +1,3 @@
-
 ALTER PROCEDURE [dbo].[Acc_Core_IsMainProcessRunning]
 	  @CustId INT
 	, @UplineId INT
@@ -44,7 +43,7 @@ BEGIN
 			)
 			BEGIN
 				SELECT @ErrCode = 114
-					, @ErrMsg = 'Can''t make transfer at this time.'
+					, @ErrMsg = 'System is busy, please try again after 2 minutes.'
 				RETURN
 			END
 		END
@@ -57,19 +56,20 @@ BEGIN
 	)
 	BEGIN
 		SELECT @ErrCode = 115
-			, @ErrMsg = 'Can''t make transfer/withdrawal at this time. Because The [MB/BU] process is running for this line.'
+			, @ErrMsg = 'System is busy, please try again after 2 minutes.'
 		RETURN
 	END
 
 END
-GO
-GRANT EXECUTE ON [dbo].[Acc_Core_IsMainProcessRunning] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[Acc_Core_IsMainProcessRunning] TO [bodbDownlineNet] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[Acc_Core_IsMainProcessRunning] TO [bodbExtAccNet] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[Acc_Core_IsMainProcessRunning] TO [Dot_Bonus] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[Acc_Core_IsMainProcessRunning] TO [Dot_Member] AS [dbo]
-GO
+
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_Core_IsMainProcessRunning] TO [Dot_Member]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_Core_IsMainProcessRunning] TO [bodbAdminNet]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_Core_IsMainProcessRunning] TO [bodbDownlineNet]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_Core_IsMainProcessRunning] TO [bodbExtAccNet]
+GO 
+ GRANT EXECUTE ON [dbo].[Acc_Core_IsMainProcessRunning] TO [Dot_Bonus]
+GO 
