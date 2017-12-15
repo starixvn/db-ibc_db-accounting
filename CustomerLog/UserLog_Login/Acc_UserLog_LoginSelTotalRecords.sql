@@ -4,7 +4,7 @@ ALTER PROCEDURE [dbo].[Acc_UserLog_LoginSelTotalRecords]
 	@UserName AS VARCHAR(50),
     @FromDate DATETIME,
     @ToDate DATETIME,    
-    @LogType SMALLINT = 0
+    @LogType TINYINT = 0
 	   
 AS
 /* Created:20100121@Lewin
