@@ -24,10 +24,9 @@ AS
 	- @CustID: a customer which we want to view actions affect to.
 	- @FromDate: date range to view log
 	- @ToDate: date range to view log	
-	- @TypeLog: 0: show log for customer
-	            1: show log for External Admin 
-	            2: show log for Internal Nap
-	
+	- @TypeLog: 0: show log for customer (Main Alpha) 
+	            1: show log for Internal Alpha (link alpha tu ExtNap va Nap) 
+	            2: show log for Nap
 	
 */
 -- SET NOCOUNT ON added to prevent extra result sets from
