@@ -1,6 +1,7 @@
-﻿/*<info serverAlias="DBLOG-bodb_CustomerLog" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0"></info>*/
-ALTER PROCEDURE [dbo].[Acc_UserLog_LoginSelTotalRecords]    
+/*<info serverAlias="DBLOG-bodb_CustomerLog" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0"></info>*/
+ALTER PROCEDURE [dbo].[Acc_UserLog_LoginSelTotalRecords]
     @UserId INT,	
+	@UserName AS VARCHAR(50),
     @FromDate DATETIME,
     @ToDate DATETIME,    
     @LogType SMALLINT = 0
@@ -43,10 +44,11 @@ BEGIN
 	SELECT  COUNT(LogID)                           
 	FROM    dbo.UserLog_Login AS ul WITH(NOLOCK, index=CIX_LogDate_User)
 			INNER JOIN dbo.LogAction AS la WITH(NOLOCK) ON ul.ActionID = la.ActionID
+			INNER JOIN bodb02.dbo.CustInfo AS ci with(nolock) ON ci.custid = ul.UserID
 	WHERE    LogDate BETWEEN @FromDate AND @ToDate			
 			AND IsInternal = 0
 			AND ((	UserID = @UserId AND SubAccID >= 0)
-					--or (SubAccID = @UserId)
+					--OR (SubAccID = @UserId)
 					)
 			AND ci.roleid <=4
 END
