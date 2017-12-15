@@ -9,7 +9,7 @@ ALTER PROCEDURE [dbo].[Acc_UserLog_LoginSelTotalRecords]
 AS
 /* Created:20100121@Lewin
     Task: ViewLog function 331
-    DB: bodb_CustomerLog
+    DB: DBLOG.bodb_CustomerLog
 
 	Description:
 	- count total record with input conditions
@@ -52,6 +52,7 @@ BEGIN
 			AND ci.roleid <=4
 END
 ELSE
+IF (@LogType = 1 OR @LogType = 2) 
 BEGIN
 	SELECT  COUNT(LogID)                           
 	FROM    dbo.UserLog_Login AS ul WITH(NOLOCK, index=CIX_LogDate_User)
