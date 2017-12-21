@@ -3,7 +3,8 @@ USE [bodb02]
 GO
 
 ALTER PROCEDURE [dbo].[Acc_CustomerSelAllInfo]
-	@username VARCHAR(30)
+	@username VARCHAR(30),
+	@CheckCustId TINYINT = 0
 AS
 
 /*
@@ -79,13 +80,15 @@ Revisions:
 	- 20161019@Percy: Support show OTP info [RedmineID: #64871]
 	- 20161028@Percy: Support Fishing World [RedmineID: #65734]
 	- 20170421@Helen: Enable Downline FishingWorld checkbox is ticked & disabled control although Member is disabled [RedmineID: #74421]
-	- 20170420@Helen: Add Extra information for Direct Accounts, for NAP only - [Redmine:72339]
-	- 20170515@Helen: Add Extra information for Direct Accounts, for NAP only Change Request - [Redmine:72339]
+	- 20170420@Helen:  Add Extra information for Direct Accounts, for NAP only - [Redmine:72339]
+	- 20170515@Helen:  Add Extra information for Direct Accounts, for NAP only Change Request - [Redmine:72339]
 	- 20170517@Winnie: Apply color for closed accounts  - [Redmine:74494]
 	- 20170612@Winnie: New agent cash balance - [Redmine:74291]
 	- 20170601@Elodie: Migrate Inspired VS to DCS structure, add BetRadar VS product [Redmine: #77274]
 	- 20170629@Winnie: Offer Enable/Disable GoldDeluxe [RedmineID: #72957]
-	- 20170721@Winnie: EXT - Support Security Code on Customer List [RedmineID: #78298]
+	- 20170601@Elodie: Migrate Inspired VS to DCS structure, add BetRadar VS product [Redmine: #77274]
+	- 20170721@Winnie: EXT - Support Security Code on Customer List RedmineID: #78298
+	- 20171107@Vicky: Support to search customer id on Left panel [RedmineID: #86134]
 	- 20171018@Percy:
 		1. Move code of balance part into new nested sp [RedmineID: #73606]
 		2. Change yesterday balance formula + Integrate Bullfighting [RedmineID: #84692]
@@ -142,10 +145,13 @@ BEGIN
           , @IsCheckedDirectStatus BIT = 0
           , @IsDisabledDirectStatus BIT = 0
 
+    DECLARE @NegativeBetEffectiveDate DATETIME
+    SET @NegativeBetEffectiveDate='2011-09-01'
+
 	DECLARE @netPosition MONEY = 0 -- for member
 	
-    --Get CustID FROM DB06, WHERE got index on Username AND Username2
-    EXEC @custid = DBACC.bodb02.dbo.f_GetCustIDFromUsername @username
+    --Get CustID FROM DB06, WHERE got index on Username AND Username2 or CustID
+    EXEC @custid = DBACC.bodb02.dbo.f_GetCustIDFromUsernameOrCustId @username, @CheckCustId
 
     IF @custid is NULL
     BEGIN
@@ -632,10 +638,12 @@ BEGIN
 	    left join custinfo s WITH(NOLOCK) on c.srecommend = s.custid
     where
 	    c.custid = @custid
-    -------------------------------------------------------------------------
-    /* Balance Info */
-	EXEC dbo.Acc_CustomerSelBalanceCashInfo @custid = @custid
+  
+	 -------------------------------------------------------------------------
+	 /* Balance Info */
+	 EXEC dbo.Acc_CustomerSelBalanceCashInfo @custid = @custid
 	-------------------------------------------------------------------------
+
 
     SELECT  @TotalMAgentActive MAgentActive,
 		    @TotalMAgentClosed MAgentClosed,
@@ -646,7 +654,6 @@ BEGIN
 		    @TotalMemberActive MemberActive,
 		    @TotalMemberClosed MemberClosed,
 		    @TotalMemberSuspended MemberSuspended
-	
 
 	-- For sportbook2
 	IF @IsDeposit = 0 -- credit
@@ -657,5 +664,6 @@ BEGIN
 	BEGIN
 		EXEC DBACC.bodb02.dbo.Acc_Dep_CustSetting_StatusSettingSelect @CustID = @custid,@roleid = @roleid      
 	END
+	
 END
 GO
