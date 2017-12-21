@@ -63,6 +63,7 @@ AS
 			2. enhance performance: using right index on bettrans, bettransRnG/LC, translog
 		- 20160809@Percy: Change Void tickets label [RedmineID: #62192]
 		- 20170323@Percy: Apply Cash Out [RedmineID: #72164]
+		- 20171020@Percy: Get both waiting and running tickets on translog [RedmineID: #84692]
 		
 	Param explanation : 
 		- Transtypeid = 4 - GrandPrize
@@ -198,7 +199,7 @@ BEGIN
 				WHERE
 					custid = @CID
 					AND winlostdate BETWEEN @_FromDate AND @_ToDate
-					AND statusID = 0
+					AND statusID IN (0, 1)
 				GROUP BY GameId, winlostdate
 
 				---- 1.3 bettransLC
