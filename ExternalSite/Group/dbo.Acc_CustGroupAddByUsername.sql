@@ -1,4 +1,5 @@
-﻿USE [bodb_Age]
+﻿/*<info serverAlias="DBAGE-bodb_Age" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+USE [bodb_Age]
 GO
 
 ALTER PROCEDURE  [dbo].[Acc_CustGroupAddByUsername]
@@ -8,6 +9,7 @@ ALTER PROCEDURE  [dbo].[Acc_CustGroupAddByUsername]
 	@ErrMsg		nvarchar(1000) = '' OUTPUT,
 	@UserID		int 
 AS
+
 /*
 	Created by: [Henry]
 	Date: 2011-04-01
@@ -20,87 +22,87 @@ AS
 		- 20110927@Lukas: modify to be able to put 1 customer into 2 groups
 		- 20130121@Dan: Move sp from DB053/bodb02 to DBAGE/bodb_AGE, change linked server DB03 to DBPOLICY, DB06 to DBARC
 		- 20160729@Percy: insert into setting table if group is extra pt group [RedmineID: #60883]
+		- 20170926@Percy: Move the table: Acc_GroupExtraPTSetting from DBACC.bodb_ACC to DBAGE.bodb02 [RedmineID: #83600]
 */
+
+BEGIN
 	SET NOCOUNT ON 
 	
-	declare @startRun datetime
-	declare @endRun datetime
-	declare @duration int
-	set @startRun = getdate()
+	DECLARE @startRun	DATETIME
+	DECLARE @endRun		DATETIME
+	DECLARE @duration	INT
+	
+	SET @startRun = GETDATE()
 	
 	-- Check permission for account site
 	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission
-		@custid=@UserID,
-		@funcname='[Admin_ManageExAcc]',
-		@ErrCode=@ErrCode output,
-		@ErrMsg=@ErrMsg output,
+		@custid = @UserID,
+		@funcname ='[Admin_ManageExAcc]',
+		@ErrCode = @ErrCode OUTPUT,
+		@ErrMsg = @ErrMsg OUTPUT,
 		@System = 'ACCOUNTING'
 	
 	IF @ErrCode <> 0
 		RETURN
-		
 	
 	DECLARE @RoleID INT
-	DECLARE @CustID INT, @SiteID int
+	DECLARE @CustID INT, @SiteID INT
 	DECLARE @Currency INT
-	DECLARE @SiteName varchar (50)
+	DECLARE @SiteName VARCHAR(50)
 	
-	SELECT 
-		@RoleID = RoleID,@CustID = CustID ,@Currency = Currency, @SiteName = [Site]
-	FROM 
-		DBARC.bodb02.dbo.Customer with (nolock)
-	WHERE 
-		Username = @Username
+	SELECT @RoleID = RoleID, @CustID = CustID, @Currency = Currency, @SiteName = [Site]
+	FROM bodb02.dbo.Customer WITH (NOLOCK)
+	WHERE Username = @Username
 	
 	--Check custid
-	if isnull(@CustID,0) = 0
-	begin
-		Select @ErrMsg = 	N'This username is invalid!'	
+	IF ISNULL(@CustID, 0) = 0
+	BEGIN
+		SELECT @ErrMsg = 	N'This username is invalid!'	
 			, @ErrCode = 101
-			return
-	end
+		RETURN
+	END
 	
 	--Check RoleID, should be super role
-	if isnull(@RoleID,0) <> 4
-	begin
-		Select @ErrMsg = 	N'The role of this username is not super, please check again !'	
+	IF ISNULL(@RoleID, 0) <> 4
+	BEGIN
+		SELECT @ErrMsg = 	N'The role of this username is not super, please check again !'	
 			, @ErrCode = 102
-			return
-	end
+		RETURN
+	END
 	
 	--Check belonging group currency
 	
 	IF (@Currency NOT IN (SELECT exchangeID from bodb02.dbo.[f_CurrencyBySystem](@GroupName)))
-	begin
-		Select @ErrMsg = 	N'The currency of this username does not belong to this group !'
+	BEGIN
+		SELECT @ErrMsg = 	N'The currency of this username does not belong to this group !'
 			, @ErrCode = 103
-			return
-	end
+		RETURN
+	END
 	
 	--Check belonging site
-	select @SiteID = SiteId From bodb02.dbo.[Site] (nolock) 
-	where [site] = @SiteName
+	SELECT @SiteID = SiteId From bodb02.dbo.[Site] WITH (NOLOCK)
+	WHERE [site] = @SiteName
 	
-	IF (@SiteID NOT IN (SELECT siteid from bodb02.dbo.[f_SiteBySystem] (@GroupName)))
-	begin
-		Select @ErrMsg = 	N'The site of this username does not belong to this group !'
+	IF (@SiteID NOT IN (SELECT siteid FROM bodb02.dbo.[f_SiteBySystem] (@GroupName)))
+	BEGIN
+		SELECT @ErrMsg = 	N'The site of this username does not belong to this group !'
 			, @ErrCode = 104
-			return
-	end
+		RETURN
+	END
 	
 	
-	if exists (select 1 from Acc_CustGroup (nolock) where CustID = @CustID AND GroupName = @GroupName)
-	begin
-		Select @ErrMsg = 	N'This username was added before, please check again!'
+	if exists (SELECT 1 FROM dbo.Acc_CustGroup WITH (NOLOCK) WHERE CustID = @CustID AND GroupName = @GroupName)
+	BEGIN
+		SELECT @ErrMsg = 	N'This username was added before, please check again!'
 			, @ErrCode = 105
-			return
-	end
+		RETURN
+	END
 	
-	insert into Acc_CustGroup (CustID,RoleID,GroupName)
-	values (@CustID, @RoleID,@GroupName)
+	INSERT INTO dbo.Acc_CustGroup (CustID, RoleID, GroupName)
+	VALUES (@CustID, @RoleID, @GroupName)
 
 	-- Check Extra PT Group
-	IF EXISTS (SELECT 1 FROM OPENQUERY(DBACC, 'SELECT GroupName FROM bodb_Acc.dbo.Acc_DWLList_ExtraPT WITH(NOLOCK)') WHERE GroupName = @GroupName)
+	IF EXISTS (SELECT 1 FROM DBACC.bodb_Acc.dbo.Acc_DWLList_ExtraPT WITH(NOLOCK) WHERE GroupName = @GroupName)
 	BEGIN
 		UPDATE dbo.Acc_CustGroup WITH(ROWLOCK, UPDLOCK)
 		SET IsPayout = 1
@@ -109,7 +111,7 @@ AS
 		DECLARE @today DATETIME
 		SELECT  @today = CONVERT(DATE, GETDATE())
 
-		IF NOT EXISTS (SELECT TOP 1 1 FROM DBACC.bodb_Acc.dbo.Acc_GroupExtraPTSetting WITH(NOLOCK) WHERE SuperId = @CustID AND @today BETWEEN FromDate AND ToDate)
+		IF NOT EXISTS (SELECT 1 FROM bodb02.dbo.Acc_GroupExtraPTSetting WITH(NOLOCK) WHERE SuperId = @CustID AND @today BETWEEN FromDate AND ToDate)
 		BEGIN
 		SELECT
 			@ErrCode = 106,
@@ -118,15 +120,15 @@ AS
 	END
 
 	--Write log data
-	declare @LogData nvarchar(1000)
+	DECLARE @LogData NVARCHAR(1000)
 	
 	SET @LogData = '<Acc_CustGroupAddByUsername UserID="' + CONVERT(VARCHAR(20), @UserID)
 					+ '" CustID="' + CONVERT(VARCHAR(50), @CustID)
 					+ '" Username="' + CONVERT(VARCHAR(50), @Username)
 					+ '" Group="' + CONVERT(VARCHAR(50), @GroupName) + '" />'
 
-	set @endRun = getdate()
-	set @duration  = datediff (millisecond,@startRun,@endRun)
+	SET @endRun		= GETDATE()
+	SET @duration	= DATEDIFF(MILLISECOND, @startRun, @endRun)
 
 	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 		@UserID = @UserID,
@@ -134,8 +136,5 @@ AS
 		@ActionID = 618,
 		@TrackingValue = @LogData,
 		@duration = @duration
-
+END
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustGroupAddByUsername] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustGroupAddByUsername] TO [vnteam]

@@ -1,4 +1,5 @@
-USE [bodb_Age]
+/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+USE [bodb02]
 GO
 
 ALTER PROCEDURE [dbo].[Acc_CustGroupSelExtraPTGroupByCustID]
@@ -8,11 +9,11 @@ AS
 	Creator: Percy
 	Date: 2016-07-25
 	Task: Select ExtraPT Group by SuperID
-	DB: DBAGE.bodb_Age
+	DB: DBACC.bodb02
 
 	Revisions:
 		- 20170413@Percy: Change way get to-be-primary group [RedmineID: #74292]
-
+		- 20170926@Percy: Move this SP from DBAGE.bodb_Age to DBACC.bodb02 [RedmineID: #83600]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -21,11 +22,10 @@ BEGIN
 	SELECT  @today = CONVERT(DATE, GETDATE())
 
 	DECLARE @GroupExtraPT TABLE (GroupId INT, GroupName VARCHAR(50), EffectiveDate DATETIME, [Primary] BIT)
-	DECLARE @SQL NVARCHAR(MAX)
-	SELECT  @SQL = 'SELECT * FROM OPENQUERY(DBACC, ''SELECT GroupId, GroupName, EffectiveDate, [Primary] FROM bodb_Acc.dbo.f_GetAllGroupExtraPTByCustId(' + CONVERT(NVARCHAR(15), @CustID) + ')'')'
 
 	INSERT INTO @GroupExtraPT (GroupId, GroupName, EffectiveDate, [Primary])
-	EXEC (@SQL)
+	SELECT GroupId, GroupName, EffectiveDate, [Primary]
+	FROM dbo.f_GetAllGroupExtraPTByCustId(@CustID)
 
 	SELECT
 		c.GroupName,
@@ -33,15 +33,10 @@ BEGIN
 		e.[Primary] AS IsPrimary
 	FROM
 		(
-			SELECT GroupName FROM dbo.Acc_CustGroup WITH(NOLOCK) WHERE CustID = @CustID
+			SELECT GroupName FROM DBAGE.bodb_Age.dbo.Acc_CustGroup WITH(NOLOCK) WHERE CustID = @CustID
 			UNION SELECT 'No Extra PT'
 		) c
 		INNER JOIN @GroupExtraPT e ON c.GroupName = e.GroupName
 	ORDER BY CASE WHEN e.GroupId = 0 THEN 0 ELSE 1 END, e.GroupName
 END
-GO
-
-GRANT EXECUTE ON [dbo].[Acc_CustGroupSelExtraPTGroupByCustID] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustGroupSelExtraPTGroupByCustID] TO [vnteam]
 GO

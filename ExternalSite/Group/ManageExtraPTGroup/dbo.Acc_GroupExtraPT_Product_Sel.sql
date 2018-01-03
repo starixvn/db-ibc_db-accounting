@@ -1,5 +1,4 @@
-/*<info serverAlias="DBACC-bodb_ACC" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
-
+/*<info serverAlias="DBACC-bodb_ACC" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 USE [bodb_ACC]
 GO
 
@@ -14,6 +13,7 @@ AS
 	Task: Manage Extra PT Group - Select offer product list [RedmineID: #74292]
 
 	Revisions:
+		- 20170926@Percy: Move table dbo.Acc_GroupExtraPT_Product from DBACC.bodb_ACC to DBCUST.CustDB [RedmineID: #83600]
 
 	Param's Explanation:
 */
@@ -32,7 +32,7 @@ BEGIN
 	ELSE
 	BEGIN
 		INSERT INTO @Product (ProductId)
-		SELECT ProductId FROM dbo.Acc_GroupExtraPT_Product WITH(NOLOCK)
+		SELECT DISTINCT ProductId FROM DBCUST.CustDB.dbo.Acc_GroupExtraPT_Product WITH (NOLOCK)
 
 		DELETE p
 		FROM @Product p
@@ -45,3 +45,4 @@ BEGIN
 	WHERE EXISTS (SELECT 1 FROM @Product gp WHERE p.ProductID = gp.ProductID)
 	ORDER BY p.ProductID
 END
+GO

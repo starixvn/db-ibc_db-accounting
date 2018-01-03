@@ -1,10 +1,12 @@
-﻿USE [bodb_Age]
+﻿/*<info serverAlias="DBAGE-bodb_Age" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+USE [bodb_Age]
 GO
 
 ALTER PROCEDURE  [dbo].[Acc_CustGroupSel]
-	@GroupName varchar(50) = null,
-	@Userid		INT=NULL
+	@GroupName	VARCHAR(50) = NULL,
+	@Userid		INT			= NULL
 AS
+
 /*
 	Created by: [Henry]
 	Date: 2011-04-01
@@ -16,7 +18,9 @@ AS
 		- 20160620@Winnie: #48948 Hide_special_sites_from_unautorized_users
 		- 20160721@Percy: Return NormalGroup and ExtraPTGroup columns [RedmineID: #60883]
 		- 20170413@Percy: Change way get to-be-primary group [RedmineID: #74292]
+		- 20170926@Percy: Move the table: Acc_GroupExtraPTSetting from DBACC.bodb_ACC to DBAGE.bodb02 [RedmineID: #83600]
 */
+
 BEGIN
 	SET NOCOUNT ON 
 
@@ -35,25 +39,26 @@ BEGIN
 	SELECT GroupName FROM OPENQUERY(DBACC, 'SELECT GroupName FROM bodb_Acc.dbo.Acc_DWLList_ExtraPT WITH(NOLOCK)')
 
 	INSERT INTO @GroupExtraPTSetting (SuperId, GroupId, GroupName, EffectiveDate, IsPrimary)
-	SELECT * FROM OPENQUERY(DBACC, 'SELECT SuperId, GroupId, GroupName, EffectiveDate, CONVERT(BIT, 1) AS IsPrimary
-									FROM
-									(
-										SELECT
-											SuperId, GroupId, GroupName, MIN(FromDate) AS EffectiveDate,
-											ROW_NUMBER() OVER(PARTITION BY SuperId, GroupId, GroupName ORDER BY MIN(FromDate) DESC) AS RN
-										FROM bodb_Acc.dbo.Acc_GroupExtraPTSetting WITH(NOLOCK)
-										WHERE CONVERT(DATE, GETDATE()) BETWEEN FromDate AND ToDate
-										GROUP BY SuperId, GroupId, GroupName
-									) A
-									WHERE RN = 1
-									UNION
-									SELECT
-										SuperId, GroupId, GroupName, FromDate, CONVERT(BIT, 0)
-									FROM bodb_Acc.dbo.Acc_GroupExtraPTSetting WITH(NOLOCK)
-									WHERE FromDate > CONVERT(DATE, GETDATE())'
-								)
+	SELECT SuperId, GroupId, GroupName, EffectiveDate, CONVERT(BIT, 1) AS IsPrimary
+	FROM
+	(
+		SELECT
+			SuperId, GroupId, GroupName, MIN(FromDate) AS EffectiveDate,
+			ROW_NUMBER() OVER(PARTITION BY SuperId, GroupId, GroupName ORDER BY MIN(FromDate) DESC) AS RN
+		FROM bodb02.dbo.Acc_GroupExtraPTSetting WITH(NOLOCK)
+		WHERE CONVERT(DATE, GETDATE()) BETWEEN FromDate AND ToDate
+		GROUP BY SuperId, GroupId, GroupName
+	) A
+	WHERE RN = 1
+	
+	UNION
+	SELECT
+		SuperId, GroupId, GroupName, FromDate, CONVERT(BIT, 0)
+	FROM bodb02.dbo.Acc_GroupExtraPTSetting WITH(NOLOCK)
+	WHERE FromDate > CONVERT(DATE, GETDATE())
 	
 	SELECT TOP 1 @GroupId = GroupId FROM @GroupExtraPTSetting WHERE IsPrimary = 1
+
 	DELETE @GroupExtraPTSetting WHERE IsPrimary = 0 AND GroupId = @GroupId
 
 	DELETE tmp
@@ -110,18 +115,17 @@ BEGIN
 		INSERT INTO  @tmp (siteid , site,SpecialGroup)
 		EXECUTE(@SearchQuery)	
 	
-		INSERT INTO #TempCustGroup(CustID ,Username ,Firstname,Lastname ,RoleId ,Groupname ,iplogin,recommendId,site)
-		select 
-			a.CustID, c.username,c.firstname, c.lastname, a.roleid, a.GroupName , c.iplogin,c.recommend,site
-		from 
-			Acc_CustGroup a (nolock) 
-			inner join bodb02.dbo.customer c (nolock) on a.CustID = c.CustID
-		order by GroupName, username	
+		INSERT INTO #TempCustGroup(CustID, Username, Firstname, Lastname, RoleId, Groupname, iplogin, recommendId, site)
+		SELECT a.CustID, c.username, c.firstname, c.lastname, a.roleid, a.GroupName, c.iplogin, c.recommend, site
+		FROM dbo.Acc_CustGroup a WITH (NOLOCK)
+			INNER JOIN bodb02.dbo.Customer c WITH (NOLOCK) ON a.CustID = c.CustID
+		ORDER BY a.GroupName, c.username	
 	
-		UPDATE a SET a.site=b.site
+		UPDATE a
+		SET a.site = b.site
 		FROM #TempCustGroup a
-		INNER JOIN bodb02.dbo.Customer b (NOLOCK) ON a.recommendId=b.custid
-		WHERE a.RoleId=1
+			INNER JOIN bodb02.dbo.Customer b (NOLOCK) ON a.recommendId = b.custid
+		WHERE a.RoleId = 1
 	
 		DELETE FROM #TempCustGroup WHERE site IN (SELECT site FROM @tmp)
 
@@ -152,13 +156,10 @@ BEGIN
 			WHERE a.GroupName = COALESCE(@GroupName,a.GroupName)
 			GROUP BY a.CustID, a.roleid, a.GroupName
 		) a
-		INNER JOIN bodb02.dbo.customer c WITH(NOLOCK) ON a.CustID = c.CustID
+			INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON a.CustID = c.CustID
 		ORDER BY GroupName, username
 
 		DROP TABLE #TempCustGroup
 	END
 END
 GO
-GRANT EXECUTE ON [dbo].[Acc_CustGroupSel] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustGroupSel] TO [vnteam]

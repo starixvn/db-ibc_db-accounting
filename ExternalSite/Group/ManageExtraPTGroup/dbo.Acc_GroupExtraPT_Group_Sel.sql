@@ -1,5 +1,4 @@
-/*<info serverAlias="DBACC-bodb_ACC" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
-
+/*<info serverAlias="DBACC-bodb_ACC" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 USE [bodb_ACC]
 GO
 
@@ -13,6 +12,7 @@ AS
 	Task: Manage Extra PT Group - Select extra pt group [RedmineID: #74292]
 
 	Revisions:
+		- 20170413@Percy: Add new SP [RemineID: #74292]
 
 	Param's Explanation:
 */
@@ -24,3 +24,4 @@ BEGIN
 	FROM dbo.Acc_DWLList_ExtraPT WITH (NOLOCK)
 	ORDER BY GroupId
 END
+GO
