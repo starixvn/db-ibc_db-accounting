@@ -35,7 +35,9 @@ AS
 		- 20170727@Percy: Expand bettype range of OneRNG Casino [RedmineID: #78424]
 		- 20170915@Percy: Change testing dummy account of VS 2 and Lottery [RedmineID: #83298]
 		- 20170915@Percy: Apply Lucky 3 [RedmineID: #83227]
-		 
+		- 20180104@Sophia: Unable to send Automail due to FW winloss = 0 [RedmineID: #89069]
+		
+		
 	Param's Explanation:
 	
 */
@@ -209,6 +211,7 @@ BEGIN
 						END
 		FROM bodb_report.dbo.rptWinLost b WITH(NOLOCK)
 		WHERE b.winlostdate = @_todate
+			  AND b.RealWinLost <> 0
 	END
 	ELSE
 	BEGIN 
@@ -250,6 +253,7 @@ BEGIN
 						END
 		FROM bodb_report.dbo.rptWinLost b WITH(NOLOCK)
 		WHERE b.winlostdate = @_todate
+			AND b.RealWinLost <> 0
 	END 
 
 
