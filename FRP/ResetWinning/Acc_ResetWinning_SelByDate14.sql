@@ -40,6 +40,7 @@ AS
 		- 20170706@Percy: Apply Betradar VS and Keno Lottery [RedmineID: #79521]
 		- 20170727@Percy: Expand bettype range of OneRNG Casino [RedmineID: #78424]
 		- 20170915@Percy: Apply Lucky 3 [RedmineID: #83227]
+		- 20180116@Percy: Apply Exchange [RedmineID: #88810]
 		
 	Explanation's Param:
 
@@ -292,6 +293,7 @@ BEGIN
 			 WHEN bettype BETWEEN 911 AND 914 THEN 'Cash Out'
 			 WHEN bettype BETWEEN 1021 AND 1049 THEN 'Lottery'
 			 WHEN bettype BETWEEN 1600 AND 1610 THEN 'Lucky 3'
+			 WHEN bettype BETWEEN 8000 AND 8099 THEN 'Exchange'
 		   END AS Product,
 		   ISNULL(SUM(winlost), 0) AS winlost
 	 FROM #bettranstmp
@@ -322,6 +324,7 @@ BEGIN
 			OR bettype BETWEEN 911 AND 914
 			OR bettype BETWEEN 1021 AND 1049
 			OR bettype BETWEEN 1600 AND 1610
+			OR bettype BETWEEN 8000 AND 8099
 		   )
 	GROUP BY CASE
 	         WHEN bettype BETWEEN 31 AND 33 THEN 'Racing gross income'
@@ -354,6 +357,7 @@ BEGIN
 			 WHEN bettype BETWEEN 911 AND 914 THEN 'Cash Out'
 			 WHEN bettype BETWEEN 1021 AND 1049 THEN 'Lottery'
 			 WHEN bettype BETWEEN 1600 AND 1610 THEN 'Lucky 3'
+			 WHEN bettype BETWEEN 8000 AND 8099 THEN 'Exchange'
 	         END
 
 	---------------------------------------------------
