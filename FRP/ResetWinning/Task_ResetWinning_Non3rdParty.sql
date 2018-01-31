@@ -46,6 +46,7 @@ AS
 		- 20170727@Percy: Expand bettype range of OneRNG Casino [RedmineID: #78424]
 		- 20170915@Percy: Apply Lucky 3 [RedmineID: #83227]
 		- 20180116@Percy: Apply Exchange [RedmineID: #88810]
+		- 20180313@Percy: Apply Bullfighting, Remove Racing [RedmineID: #84691]
 
 	Param Explanation:
 	    @mode:  0 _ view report
@@ -118,7 +119,8 @@ BEGIN
 		INSERT INTO @dummyBalance (WinlostDate, seq, CustId, Product)
 		SELECT  d.WLDate, CASE WHEN L.seq = 0 THEN 99 ELSE l.seq END  AS seq, l.Custid, l.product
 		FROM bodb_ACC.dbo.Acc_DWLList l WITH (NOLOCK)
-		CROSS JOIN @Date d 
+		CROSS JOIN @Date d
+		WHERE l.IsDeleted = 0
 			
 		INSERT INTO @dummyExtraPT (CustID)
 		SELECT CustID
@@ -130,7 +132,8 @@ BEGIN
 		INSERT INTO @dummyBalance (WinlostDate, seq, CustId, Product)
 		SELECT  d.WLDate, CASE WHEN L.seq = 0 THEN 99 ELSE l.seq END  AS seq, l.Custid, l.product
 		FROM bodb_ACC.dbo.Acc_DWLList_xtest l WITH (NOLOCK)
-		CROSS JOIN @Date d 
+		CROSS JOIN @Date d
+		WHERE l.IsDeleted = 0
 			
 		INSERT INTO @dummyExtraPT (CustID)	
 		SELECT CustID
@@ -182,29 +185,6 @@ BEGIN
 			 
 
     CREATE NONCLUSTERED INDEX #IX_bettranstmp ON #bettranstmp(custid, winlostdate, bettype)
-	 
-	------------------------ 
-
-    DECLARE @RB_LineTotal money
-
-	/*calculating racing net income*/
-	--insert company's comm setting that is recieved from Phumelela into this temp table.
-	DECLARE @tmpIBCFee TABLE
-	(
-	    partnerID int,
-	    IBCFee    bit
-    ) 
-
-	DECLARE @CommSetting TABLE
-	(
-	    winlostdate   smalldatetime,
-	    MatchID		  int,
-		IBCFee		  bit,
-		ToteCommWin	  smallmoney,
-		ToteCommPlace smallmoney,
-		ToteCommWP	  smallmoney,
-		ToteFee		  smallmoney	
-	)
 
 	DECLARE @Winning TABLE 
 	(
@@ -212,55 +192,6 @@ BEGIN
 		product     varchar(50),
 		winlost     money
 	)
-
-	INSERT INTO @tmpIBCFee(partnerID, IBCFee)
-    SELECT 1, 1 --RACE-PHU
-	 UNION ALL
-	SELECT 2, 0 --RACE-ATRUK
-	 UNION ALL
-	SELECT 3, 0 --RACE-ATRIRL
-	 UNION ALL
-    SELECT 4, 0 --RACE-RUK
-	 UNION ALL
-	SELECT 5, 1 --RACE-TABCORP
-	 UNION ALL
-	SELECT 6, 1 --RACE-TABCORPNSW
-	 UNION ALL
-	SELECT 101, 1 --GREY-DTOTEUK
-	 UNION ALL
-	SELECT 102, 1 --GREY-DTOTEIRL
-	 UNION ALL
-	SELECT 103, 1 --GREY-TABCORP
-	 UNION ALL
-	SELECT 104, 1 --GREY-TABCORPNSW
-	 UNION ALL
-	SELECT 201, 1 --HAR-TABCORP
-	 UNION ALL
-	SELECT 202, 1 --HAR-TABCORPNSW
-
-	INSERT INTO @CommSetting
-	(
-	    winlostdate,
-	    MatchID,
-	    IBCFee,
-	    ToteCommWin,
-	    ToteCommPlace,
-	    ToteCommWP,
-	    ToteFee
-    )
-	SELECT o.eventdate,
-	       o.orid,
-	       t.IBCFee,
-	       p.ToteCommWin,
-	       p.ToteCommPlace,
-	       (p.ToteCommWin + p.ToteCommPlace) / 2 as ToteCommWP,
-	       p.ToteFee
-	 FROM dbo.outright o WITH(NOLOCK)
-		INNER JOIN dbo.LeagueDetail p WITH(NOLOCK) ON o.leagueID = p.LeagueID AND p.programDate = o.programDate
-		INNER JOIN dbo.RacingMeeting r WITH(NOLOCK) ON r.meetingID = p.leagueid
-		INNER JOIN @tmpIBCFee t ON r.partnerID = t.partnerID
-	 WHERE o.eventdate BETWEEN @fromdate AND @todate
-
 
 	INSERT INTO @Winning(winlostdate, product, winlost)
 	---- sportsbook live & non-live
@@ -275,7 +206,7 @@ BEGIN
 		(
 			(
 				bettype <= 999
-				AND bettype NOT IN (9, 10, 29, 31, 32, 33, 71, 72) -- Parlay, Outright, Racing, Casino
+				AND bettype NOT IN (9, 10, 29, 71, 72) -- Parlay, Outright, Casino
 				AND (bettype NOT BETWEEN 81 AND 120) -- Number Game
 				AND (bettype NOT BETWEEN 801 AND 899) -- Metric Gaming
 				AND (bettype NOT BETWEEN 901 AND 904) -- Bettrade
@@ -290,9 +221,7 @@ BEGIN
 
 	SELECT winlostdate,
 	       CASE
-	     	 WHEN bettype BETWEEN 31 AND 33 THEN 'Racing gross income'
 			 WHEN bettype BETWEEN 81 AND 120 THEN 'Number Game'	
-			 --WHEN bettype BETWEEN 1101 AND 1199 THEN 'Live Casino'
 			 WHEN
 				bettype IN (71, 72)
 				OR bettype BETWEEN 2101 AND 2399
@@ -311,7 +240,6 @@ BEGIN
 			 WHEN bettype BETWEEN 2008 AND 2009 THEN 'Microgaming - RNG Casino'
 			 WHEN bettype BETWEEN 901 AND 904 THEN 'Bettrade'
 			 WHEN bettype BETWEEN 18000 AND 18099 THEN 'Colossus Bets'
-			 --WHEN bettype = 1003 THEN 'Cockfighting'
 			 WHEN Sporttype = 44 THEN 'Muay Thai'
 			 WHEN bettype BETWEEN 2401 AND 2499 THEN 'Allbet' 
 			 WHEN bettype BETWEEN 4001 AND 7999 THEN 'Macau Games'
@@ -321,14 +249,12 @@ BEGIN
 			 WHEN bettype BETWEEN 1021 AND 1049 THEN 'Lottery'
 			 WHEN bettype BETWEEN 1600 AND 1610 THEN 'Lucky 3'
 			 WHEN bettype BETWEEN 8000 AND 8099 THEN 'Exchange'
+			 WHEN bettype = 1004 THEN 'Bullfighting'
 		   END AS Product,
 		   ISNULL(SUM(winlost), 0) as winlost
 	 FROM #bettranstmp
-	 WHERE (--bettype BETWEEN 1101 AND 1199
-			--OR 
-			bettype BETWEEN 31 AND 33
-			OR bettype BETWEEN 80 AND 120
-			OR bettype IN (71, 72, 73, 10,  9, 29) ---1000
+	 WHERE (bettype BETWEEN 80 AND 120
+			OR bettype IN (71, 72, 73, 10, 9, 29) ---1000
 			OR bettype BETWEEN 1201 AND 1299
 			OR bettype BETWEEN 2700 AND 2899
 			OR bettype BETWEEN 1501 AND 1599
@@ -340,7 +266,6 @@ BEGIN
 			OR bettype BETWEEN 2008 AND 2009 
 			OR bettype BETWEEN 901 AND 904 
 			OR bettype BETWEEN 18000 AND 18099  
-			--OR bettype = 1003
 			OR bettype BETWEEN 2101 AND 2399
 			OR bettype BETWEEN 2901 AND 2999
 			OR Sporttype = 44
@@ -352,11 +277,10 @@ BEGIN
 			OR bettype BETWEEN 1021 AND 1049
 			OR bettype BETWEEN 1600 AND 1610
 			OR bettype BETWEEN 8000 AND 8099
+			OR bettype = 1004
 		   )
 	GROUP BY CASE
-	         WHEN bettype BETWEEN 31 AND 33 THEN 'Racing gross income'
 			 WHEN bettype BETWEEN 81 AND 120 THEN 'Number Game'
-			 --WHEN bettype BETWEEN 1101 AND 1199 THEN 'Live Casino'
 			 WHEN
 				bettype IN (71, 72)
 				OR bettype BETWEEN 2101 AND 2399
@@ -375,7 +299,6 @@ BEGIN
 			 WHEN bettype BETWEEN 2008 AND 2009 THEN 'Microgaming - RNG Casino'
 			 WHEN bettype BETWEEN 901 AND 904 THEN 'Bettrade'
 			 WHEN bettype BETWEEN 18000 AND 18099 THEN 'Colossus Bets'
-			 --WHEN bettype = 1003 THEN 'Cockfighting'
 			 WHEN Sporttype = 44 THEN 'Muay Thai'
 			 WHEN bettype BETWEEN 2401 AND 2499 THEN 'Allbet' 
 			 WHEN bettype BETWEEN 4001 AND 7999 THEN 'Macau Games'
@@ -385,6 +308,7 @@ BEGIN
 			 WHEN bettype BETWEEN 1021 AND 1049 THEN 'Lottery'
 			 WHEN bettype BETWEEN 1600 AND 1610 THEN 'Lucky 3'
 			 WHEN bettype BETWEEN 8000 AND 8099 THEN 'Exchange'
+			 WHEN bettype = 1004 THEN 'Bullfighting'
 		   END, winlostdate
 
 	UNION ALL
@@ -396,65 +320,6 @@ BEGIN
     WHERE CustId = -1
 		-----custid NOT IN (SELECT custid FROM @dummyBalance WHERE custid <> 0)	  
 	GROUP BY winlostdate
-
-	---------------------------------------------------
-
-    ---- get Racing line total
-	INSERT INTO @Winning(winlostdate, product, winlost)
-	SELECT b.winlostdate,
-	       'Racing',
-	       -(SUM((CASE 
-	                WHEN bettype = 33 THEN bm.WLIBC
-	                ELSE -(b.winlost - b.actual_stake) * ISNULL(b.oddsspread, 0)
-	              END) * b.actualrate)
-		   - SUM(CASE
-			       WHEN cs.IBCFee = 0 THEN 0
-				   ELSE (CASE
-						   WHEN b.bettype = 33 THEN bm.TOPhum
-						   WHEN bettype in (31, 32) THEN b.actual_stake * (1 - b.tpositiontaking - ISNULL(b.oddsspread, 0))
-						   ELSE 0 
-						 END) * b.actualrate * cs.ToteFee
-			     END) --FeeDue2 
-		   + SUM((CASE bettype 
-					WHEN 31 THEN b.actual_stake * cs.ToteCommWin * (1 - b.tpositiontaking - ISNULL(oddsspread, 0))
-					WHEN 32 THEN b.actual_stake * cs.ToteCommPlace * (1 - b.tpositiontaking - ISNULL(oddsspread, 0))
-					WHEN 33 THEN bm.TOPhum * cs.ToteCommWP  
-					ELSE 0
-				  END) * b.actualrate) --commIncomeIBC
-		   - SUM(b.scomm*b.actualrate))
-	FROM dbo.bettrans b WITH(NOLOCK)
-			INNER JOIN @CommSetting AS cs ON b.matchid = cs.matchid and b.winlostdate = cs.winlostdate
-			LEFT JOIN (SELECT refno,
-				   SUM(CASE
-				    WHEN bettype = 32 and liveawayscore = 0 THEN 0
-				         ELSE stake * ISNULL(oddsspread, 0)
-				       END) TOIBC,
-				   -SUM((winlost - stake) * ISNULL(oddsspread, 0)) WLIBC,
-				   SUM(CASE
-				         WHEN bettype = 32 and liveawayscore = 0 THEN 0
-				         WHEN bettype = 31 or (bettype = 32 and liveawayscore <> 0) THEN stake * (1 -tpositiontaking - ISNULL(oddsspread, 0))
-				         ELSE 0
-				       END) TOPhum
-  			  FROM bettransm WITH(NOLOCK)
-			  WHERE bettype IN (31,32,33)
-		  GROUP BY refno
-		   ) bm ON b.transid = bm.refno
-	WHERE 1 = 1
-	   AND b.ruben = 1
-	   AND b.bettype in (31, 32, 33)
-	   AND b.matchid > 0
-	   AND b.statusid NOT IN (101, 102, 103, 121)
-	   AND b.winlostdate between @fromdate and @todate
-	GROUP BY b.winlostdate
-	/*end calculating racing net income*/
-	
-	UPDATE w1
-    SET w1.product = 'Racing (Due to Partners)',
-		w1.winlost = w1.winlost - w2.winlost
-	FROM @Winning w1
-	INNER JOIN @Winning w2 on w1.winlostdate = w2.winlostdate
-	WHERE w1.product = 'Racing gross income' 
-	   and w2.product = 'Racing'
 
 	---------------------------------------------------------------------------------------------------------
 	--------------------------------------------Extra PT ---------------------------------------------------
