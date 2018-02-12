@@ -112,12 +112,12 @@ BEGIN
 		@Content_cs = @Content_cs,
 		@Content_th = @Content_th,
 		@Content_vn = @Content_vn,
-		@MsgType = 1,			 -- message to customer (personal)
-		@IsSticky = 0,			 -- Is special Message or not 
-		@Creator = @Creator,
+		@MsgType	= 1,			 -- message to customer (personal)
+		@IsSticky	= 0,			 -- Is special Message or not 
+		@Creator	= @Creator,
 		@CreatorName = @CreatorName,
-		@IsTest = 0,			 -- Is test or not 
-		@IsBatch = 0			 -- normal message (no need to replace the symbol @@ by transid when display)
+		@IsTest		= 0,			 -- Is test or not 
+		@IsBatch	= 0			 -- normal message (no need to replace the symbol @@ by transid when display)
 	
 	-- Handle Master information
 	DECLARE @TempMember AS TABLE (ID INT IDENTITY(1,1), Custid int, Username varchar(30))
@@ -149,10 +149,10 @@ BEGIN
 		SELECT @CustID = custid, @UserName = username FROM @TempMember WHERE ID = @i
 
 		EXEC dbo.Dot_Msg_SetUsrMessage
-		@MessageId = @MessageId,
-		@TargetId = @CustID,
+		@MessageId	= @MessageId,
+		@TargetId	= @CustID,
 		@TargetName = @UserName,
-		@isRead = 0
+		@isRead		= 0
 		
 		SELECT @i = @i + 1
 	END
