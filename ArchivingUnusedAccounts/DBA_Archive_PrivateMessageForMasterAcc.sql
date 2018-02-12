@@ -2,8 +2,8 @@
 GO
 
 ALTER PROCEDURE DBA_Archive_PrivateMessageForMasterAcc
-	@MasterIDs	VARCHAR(2000) = NULL,
-	@Stage		TINYINT = 1
+	@MasterList			VARCHAR(MAX) = NULL,	
+	@Stage				TINYINT = 1
 AS
 /*
 	Created: 20180109@Harper
@@ -17,7 +17,7 @@ AS
 		@Stage: kind of message when sending
 			= 1: stage 1
 			= 2: stage 2
-	EXEC DBA_Archive_PrivateMessageForMasterAcc @MasterIDs = 1176083, @Stage = 2
+	EXEC DBA_Archive_PrivateMessageForMasterAcc @MasterList = N'<ROOT><Master MasterID="791088" UserName="AA"/><Master MasterID="860379" UserName="BB"/></ROOT>', @Stage = 2
 */
 
 BEGIN
@@ -34,9 +34,7 @@ BEGIN
 			, @Content_cs1 NVARCHAR(4000), @Content_cs2 NVARCHAR(4000), @Content_cs NVARCHAR(4000) -- Simplified
 			, @Content_th1 NVARCHAR(4000), @Content_th2 NVARCHAR(4000), @Content_th NVARCHAR(4000) -- Thai
 
-	SELECT @Creator = custid, @CreatorName = username
-	FROM bodb02.dbo.custInfo WITH (NOLOCK)
-	WHERE username = 'starixIT'
+	SELECT @Creator = 10278938, @CreatorName = 'starixIT'	
 
 	-- English
 	SET @Content_en1 = 'Dear valued agents, '
@@ -107,7 +105,7 @@ BEGIN
 		
 	
 	-- Insert message
-	EXEC DBMSG.bodb_message.dbo.Dot_Msg_SetMessage2 
+	EXEC dbo.Dot_Msg_SetMessage2 
 		@MessageId	= @MessageId OUTPUT,
 		@Content_en = @Content_en,
 		@Content_ch = @Content_ch,
@@ -121,16 +119,28 @@ BEGIN
 		@IsTest = 0,			 -- Is test or not 
 		@IsBatch = 0			 -- normal message (no need to replace the symbol @@ by transid when display)
 	
-	-- Insert Message Target
-	DECLARE @TempMember as table(ID INT IDENTITY(1,1), custid int, username varchar(30))
+	-- Handle Master information
+	DECLARE @TempMember AS TABLE (ID INT IDENTITY(1,1), Custid int, Username varchar(30))
+	DECLARE @DocHandler	INT
+
+	BEGIN TRY
+		EXEC sp_xml_preparedocument @DocHandler OUTPUT, @MasterList
+
+		INSERT INTO @TempMember ( Custid, Username )
+		SELECT MasterID, UserName
+		FROM OPENXML(@DocHandler, '/ROOT/Master', 1) WITH (MasterID INT, UserName VARCHAR(30)) AS Data
+
+		EXEC sp_xml_removedocument @DocHandler
+	END TRY
+
+	BEGIN CATCH
+		SELECT ErrCode = 100
+			,ErrMsg = N'Paramter invalid.'
+
+		RETURN
+	END CATCH;	
 	
-	INSERT INTO @TempMember ( custid, username )
-	SELECT ci.custid, ci.username
-	FROM bodb02.dbo.custInfo ci WITH (NOLOCK)
-		INNER JOIN (
-					SELECT VAL AS CustID
-					FROM strSplit(@MasterIDs, ',')
-					) c ON c.CustID = ci.custid
+	-- Insert Message Target	
 	SET @i = 1
 	SELECT @Max = Max(ID) FROM @TempMember
 
@@ -138,10 +148,10 @@ BEGIN
 	BEGIN
 		SELECT @CustID = custid, @UserName = username FROM @TempMember WHERE ID = @i
 
-		EXEC DBMSG.bodb_message.dbo.Dot_Msg_SetUsrMessage
+		EXEC dbo.Dot_Msg_SetUsrMessage
 		@MessageId = @MessageId,
-		@TargetId = @custID,
-		@TargetName = @username,
+		@TargetId = @CustID,
+		@TargetName = @UserName,
 		@isRead = 0
 		
 		SELECT @i = @i + 1
