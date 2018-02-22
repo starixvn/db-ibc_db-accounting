@@ -34,6 +34,9 @@ BEGIN
 			, @Content_cs1 NVARCHAR(4000), @Content_cs2 NVARCHAR(4000), @Content_cs NVARCHAR(4000) -- Simplified
 			, @Content_th1 NVARCHAR(4000), @Content_th2 NVARCHAR(4000), @Content_th NVARCHAR(4000) -- Thai
 
+	DECLARE @PostTime DATETIME
+	SELECT @PostTime = GETDATE()
+
 	SELECT @Creator = 10278938, @CreatorName = 'starixIT'	
 
 	-- English
@@ -152,7 +155,8 @@ BEGIN
 		@MessageId	= @MessageId,
 		@TargetId	= @CustID,
 		@TargetName = @UserName,
-		@isRead		= 0
+		@PostTime	= @PostTime,
+		@isRead		= 0		
 		
 		SELECT @i = @i + 1
 	END
