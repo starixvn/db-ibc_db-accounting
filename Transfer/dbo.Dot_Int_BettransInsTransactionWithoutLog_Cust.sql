@@ -1,4 +1,4 @@
-
+/*<info serverAlias="DBTXN-bodb02" executers="Dot_Member" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Dot_Int_BettransInsTransactionWithoutLog_Cust]
 	@amount				MONEY,	
 	@custid				INT,
@@ -16,7 +16,8 @@ ALTER PROCEDURE  [dbo].[Dot_Int_BettransInsTransactionWithoutLog_Cust]
 	@balance			MONEY				=	0			OUTPUT,
 	@betcheck			VARCHAR(50)			=	'',
 	@TheirPartyType		INT					=	1,
-	@transdate			DATETIME			=	NULL		OUTPUT
+	@transdate			DATETIME			=	NULL		OUTPUT,
+    @BonusID            INT                 = 	NULL
 AS
 /*
 Creator : Thien
@@ -55,6 +56,8 @@ History:
 	- 20160118@Kathy: get balance from bettransRNG & bettransLC [Redmine:#50674]
 	- 20170110@Walter: Insert before balance into bettrans.balance
 	- 20171102:Patrick: Can't make transfer/withdrawal during MB/BU time [Redmine:#82768]
+	- 20170815@Bobby: 80775 - Update bonus info when depositing cash to join into bonus program
+
 
 Param's Explanation:
 @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction
@@ -134,7 +137,8 @@ BEGIN
 		@BalanceType			TINYINT,
 		@IsForced				BIT,
 		@balance_bettransRNG	MONEY,
-		@balance_bettransLC		MONEY
+		@balance_bettransLC		MONEY,
+		@WalletType				TINYINT
 
 	SELECT	@ErrCode		= 0,
 			@ErrMsg			= '',
@@ -145,7 +149,8 @@ BEGIN
 			@DDEP			= 22001,
 			@DWIT			= 22002,
 			@DBON			= 22004,
-			@DTRA			= 22005
+			@DTRA			= 22005,
+			@WalletType = CASE WHEN @BonusID > 0 THEN 2 ELSE NULL END
 
 	/*
 	22006  Playtech casino transfer
@@ -384,10 +389,10 @@ BEGIN
 		SELECT @Count = 2
 		INSERT INTO dbo.bettrans 
 			(custid, username, refno, transdate, matchid, bettype, transdesc,winlost, actual_stake, winlostdate, balance,
-			 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, ruben, status, statusID,ip, betcheck)
+			 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, ruben, status, statusID,ip, betcheck, WalletType,BonusID)
 		VALUES 
 			(@CustID, @username, @RefNo, @transdate, 0, @bettype, @transdesc,@winlost, @actual_stake, CONVERT(NVARCHAR(10), @transdate, 120), @beforebalance,
-			 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency,@actualrate, @currencyName, 1, 'Completed', 131,@ip, @betcheck)
+			 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency,@actualrate, @currencyName, 1, 'Completed', 131,@ip, @betcheck,@WalletType,@BonusID)
 	END TRY
 	BEGIN CATCH
 		--Manually rollback
@@ -421,10 +426,10 @@ BEGIN
 	----ADD DUMMY TRANSACTION
 	INSERT INTO dbo.bettrans 
 		(custid, username, refno, transdate, matchid, bettype, transdesc,winlost, actual_stake, winlostdate, balance,
-		 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, ruben, status, statusID,ip)
+		 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, ruben, status, statusID,ip, WalletType,BonusID)
 	VALUES 
 		(@bal_custID, @bal_Username, @RefNo, @transdate, 0, @bettype, @transdesc, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, CONVERT(NVARCHAR(10), @transdate, 120), @beforebalance,
-		 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 1, 'Completed', 131,@ip)
+		 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 1, 'Completed', 131,@ip,@WalletType,@BonusID)
 		 
 	IF @@ERROR <> 0
 	BEGIN
@@ -462,14 +467,10 @@ BEGIN
 	DECLARE @LogData VARCHAR(300)
 
 	SELECT @LogData = 
-				'Insert trans custid = ' + CONVERT(VARCHAR(20), @custid) + ', bettype = ' + CONVERT(VARCHAR(20), @bettype) + ', amount = ' + CONVERT(VARCHAR(20), @amount)
+				'Insert trans custid = ' + CONVERT(VARCHAR(20), @custid) + ', bettype = ' + CONVERT(VARCHAR(20), @bettype) + ', amount = ' + CONVERT(VARCHAR(20), @amount) 
+				+ CASE WHEN @BonusId > 0 THEN ', bonusId = ' + convert(varchar(20), @BonusId) ELSE '' END
 
 	EXEC dbo.WriteLog_UserLog @UserID = @custid, @Doing = @LogData
 
 END
-
-GO 
- GRANT VIEW DEFINITION ON [dbo].[Dot_Int_BettransInsTransactionWithoutLog_Cust] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[Dot_Int_BettransInsTransactionWithoutLog_Cust] TO [Dot_Member]
 GO 

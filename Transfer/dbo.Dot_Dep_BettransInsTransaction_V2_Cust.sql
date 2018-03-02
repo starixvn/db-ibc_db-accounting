@@ -1,4 +1,4 @@
-﻿
+/*<info serverAlias="DBTXN-bodb02" executers="Dot_Member,Dot_Bonus" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Dot_Dep_BettransInsTransaction_V2_Cust] 
 	@amount money,	
 	@custid int,
@@ -14,7 +14,9 @@ ALTER PROCEDURE  [dbo].[Dot_Dep_BettransInsTransaction_V2_Cust]
 	@ExchangeRate smallmoney = 1,
 	@bal_transid bigint = 0 OUTPUT,
 	@transdate DateTime = NULL OUTPUT,
-	@BetCheck NVARCHAR(50) = NULL
+	@BetCheck NVARCHAR(50) = NULL,
+	@BonusID INT = NULL
+
 AS
 /*
 Creator : Thien
@@ -52,9 +54,10 @@ History:
 	- 20160118@Kathy: get balance from bettransRNG & bettransLC [Redmine:#50674]
 	- 20160921@Scott(DBTrans): Add @BetCheck of parameter for record Licensee DB transation ID.
 	- 20171102:Patrick: Can't make transfer/withdrawal during MB/BU time [Redmine:#82768]
+	- 20170815@Bobby: 80775 - Update bonus info when depositing cash to join into bonus program
 
 Param's Explanation:
-‧ @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction
+? @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction
 				For ex: 12BetManilaBankUS$, 12BetNetellerGBP
 	
 		Full structure of balance accounts:
@@ -64,11 +67,11 @@ Param's Explanation:
 
 		--ACC Member	12BETMBankUS$		12BETMBankEURO
 
-‧ @amount:
+? @amount:
 	Deposit, Withdrawal, Bonus: positive value
 	Adjustment: can be either positive or negative, depend on the inputted amount
 
-‧ @bettype:
+? @bettype:
 		
 	22001: DEPOSIT
 	22002: WITHDRAWAL
@@ -78,13 +81,13 @@ Param's Explanation:
 	22006: TRANSFER BETWEEN IBC AND THIRD PARTY SYSTEM (For Playtech and AsiaBet88)
 	
 	
-‧ @ErrCode:
+? @ErrCode:
 	= 0: Transaction recorded successfully.
 	> 0: Specific Error.
 	
-‧ @ErrMsg: Error description.
+? @ErrMsg: Error description.
 
-‧ @IsCharge:
+? @IsCharge:
 	= 1: is charge transation, so not check the negative balance
 
 */
@@ -128,7 +131,9 @@ declare @username varchar(50),
 	@translogCredit money,
 	@IsForced BIT,
 	@balance_bettransRNG	MONEY,
-	@balance_bettransLC		MONEY
+	@balance_bettransLC		MONEY,
+	@WalletType TINYINT
+
 
 Select @ErrCode = 0,
 		@ErrMsg = '',
@@ -139,7 +144,8 @@ Select @ErrCode = 0,
 		@DDEP = 22001,
 		@DWIT = 22002,
 		@DBON = 22004,
-		@DTRA = 22005
+		@DTRA = 22005,
+		@WalletType = CASE WHEN @BonusID > 0 THEN 2 ELSE NULL END
 
 select @bettype = 
 	case @bettype when 103 then 21003 
@@ -324,10 +330,10 @@ END
 
 	INSERT INTO bettrans 
 		(custid, username, refno, transdate, matchid, bettype, transdesc,winlost, actual_stake, winlostdate, 
-		 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, ruben, status, statusID, ip, betcheck)
+		 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, ruben, status, statusID, ip, betcheck, WalletType,BonusID)
 	VALUES 
 		(@CustID, @username, @RefNo, @transdate, 0, @bettype, @transdesc,@winlost, @actual_stake, convert(nvarchar(10), @transdate, 120), 
-		 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency,@actualrate, @currencyName, 1, 'Completed', 131, @ip, @BetCheck)
+		 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency,@actualrate, @currencyName, 1, 'Completed', 131, @ip, @BetCheck,@WalletType,@BonusID)
 
 	if @@ERROR <> 0
 	BEGIN						
@@ -389,10 +395,10 @@ END
 
 	INSERT INTO bettrans 
 		(custid, username, refno, transdate, matchid, bettype, transdesc,winlost, actual_stake, winlostdate, 
-		 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, ruben, status, statusID, ip)
+		 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, ruben, status, statusID, ip, WalletType,BonusID)
 	VALUES 
 		(@bal_custID, @bal_Username, @RefNo, @transdate, 0, @bettype, @transdesc, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, convert(nvarchar(10), @transdate, 120), 
-		 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 1, 'Completed', 131, @ip)
+		 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 1, 'Completed', 131, @ip,@WalletType,@BonusID)
 
 	if @@ERROR <> 0
 	BEGIN
@@ -438,18 +444,13 @@ END
 	declare @LogData varchar(300)
 
 	Select @LogData = 
-				'Insert trans custid = ' + convert(varchar(20), @custid) + ', bettype = ' + convert(varchar(20), @bettype) + ', amount = ' + convert(varchar(20), @amount)
+				'Insert trans custid = ' + convert(varchar(20), @custid) + ', bettype = ' + convert(varchar(20), @bettype) + ', amount = ' + convert(varchar(20), @amount) 
+				+ CASE WHEN @BonusId > 0 THEN ', bonusId = ' + convert(varchar(20), @BonusId) ELSE '' END
 BEGIN TRY
 	EXEC dbo.WriteLog_UserLog @UserID = @custid, @Doing = @LogData
 END TRY
 BEGIN CATCH
 	-- if write log error: not return error code
 END CATCH
+GO 
 
-GO 
- GRANT VIEW DEFINITION ON [dbo].[Dot_Dep_BettransInsTransaction_V2_Cust] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[Dot_Dep_BettransInsTransaction_V2_Cust] TO [Dot_Member]
-GO 
- GRANT EXECUTE ON [dbo].[Dot_Dep_BettransInsTransaction_V2_Cust] TO [Dot_Bonus]
-GO 
