@@ -93,6 +93,7 @@ Revisions:
 		1. Move code of balance part into new nested sp [RedmineID: #73606]
 		2. Change yesterday balance formula + Integrate Bullfighting [RedmineID: #84692]
 	- 20180125@Winnie: Hide inactive products [RedmineID: #86086]  
+	- 20180328@Robert: Testing [RedmineID: #123456]
 Param's Explanation:
 	@username: username want to get all info related
 */		
