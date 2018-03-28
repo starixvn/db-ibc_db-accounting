@@ -1,3 +1,4 @@
+/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet,bodbDownlineNetView,bodbLicenseeNet" viewers="" isFunction="0" isNested="1"></info>*/
 USE [bodb02]
 GO
 
@@ -13,6 +14,7 @@ AS
 	Revisions:
 		- 20170609@Percy: Create new [RedmineID: #78487]
 		- 20171220@Patrick: check data ready on replicated servers also [RedmineID: #88152]
+		- 20180323@Percy: Enhancement notification [RedmineID: #92391]
 */
 
 BEGIN
@@ -52,33 +54,32 @@ BEGIN
 	SELECT @IsMovingBet_Local_DB052 = VValue FROM DBLIC.bodb02.dbo.SystemSettings WITH(NOLOCK) WHERE VName = 'isMovingBet_Local'
 	SELECT @IsMovingBet_Local_DB052 = ISNULL(@IsMovingBet_Local_DB052, '0')
 
-	--set default value
-	IF @IsArchivingBet = '1' OR @IsMovingBet = '1'
-		OR @IsArchivingBet_Local_DB053 = '1' OR @IsMovingBet_Local_DB053 = '1'
-		OR @IsArchivingBet_Local_DB052 = '1' OR @IsMovingBet_Local_DB052 = '1'
-		OR @IsArchivingBet_Local_DB06 = '1' OR @IsMovingBet_Local_DB06 = '1'
-
-	BEGIN
-		SELECT @EndProcessingTime = DATEADD(MINUTE, 15, @CurrentDateTime) -- default end time = currentime + 15 mins
+	-- checking condition
+	IF @IsArchivingBet = '0' AND @IsMovingBet = '0'
+		AND @IsArchivingBet_Local_DB053 = '0' AND @IsMovingBet_Local_DB053 = '0'
+		AND @IsArchivingBet_Local_DB052 = '0' AND @IsMovingBet_Local_DB052 = '0'
+		AND @IsArchivingBet_Local_DB06 = '0' AND @IsMovingBet_Local_DB06 = '0'
+	BEGIN -- done MB/BU process
+		SELECT @EndProcessingTime = NULL
 	END
-	-- get end time from config
-	SELECT @Config_EndTime = VValue FROM dbo.SystemSettings WITH(NOLOCK) WHERE VName = 'schDataProcessingEndTime'
-
-	IF CONVERT(DATETIME, @Config_EndTime) > @CurrentDateTime
+	ELSE
 	BEGIN
-		SELECT @EndProcessingTime = CONVERT(DATETIME, @Config_EndTime)
+		-- get end time from config
+		SELECT @Config_EndTime = VValue FROM dbo.SystemSettings WITH(NOLOCK) WHERE VName = 'schDataProcessingEndTime'
+		
+		IF CONVERT(DATETIME, @Config_EndTime) > @CurrentDateTime
+		BEGIN
+			SELECT @EndProcessingTime = CONVERT(DATETIME, @Config_EndTime)
+		END
+		ELSE
+		BEGIN
+			-- extend time of config: 15 mins
+			SELECT @EndProcessingTime = DATEADD(MINUTE, 15, CONVERT(DATETIME, @Config_EndTime))
+
+			UPDATE dbo.SystemSettings WITH (ROWLOCK, UPDLOCK)
+			SET VValue = CONVERT(VARCHAR(50), @EndProcessingTime, 121)
+			WHERE VName = 'schDataProcessingEndTime'
+		END
 	END
 END
-GO
-
-GRANT EXECUTE ON [dbo].[Acc_CheckProcessingData] TO [bodbDownlineNet] AS [dbo]
-GO
-
-GRANT EXECUTE ON [dbo].[Acc_CheckProcessingData] TO [bodbDownlineNetView] AS [dbo]
-GO
-
-GRANT EXECUTE ON [dbo].[Acc_CheckProcessingData] TO [bodbLicenseeNet] AS [dbo]
-GO
-
-GRANT VIEW DEFINITION ON [dbo].[Acc_CheckProcessingData] TO [vnteam] AS [dbo]
 GO
