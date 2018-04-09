@@ -20,6 +20,9 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
+	DECLARE @StartTime DATETIME, @Duration INT, @Doing VARCHAR(4000), @SPName VARCHAR(50)
+	SELECT  @StartTime = GETDATE(), @SPName = OBJECT_NAME(@@PROCID)
+
 	SELECT  @EndProcessingTime = NULL
 	
 	DECLARE @CurrentDateTime DATETIME
@@ -79,6 +82,21 @@ BEGIN
 			UPDATE dbo.SystemSettings WITH (ROWLOCK, UPDLOCK)
 			SET VValue = CONVERT(VARCHAR(50), @EndProcessingTime, 121)
 			WHERE VName = 'schDataProcessingEndTime'
+
+			-- write log for extend time
+			SELECT @Duration = DATEDIFF(MILLISECOND, @StartTime, GETDATE())
+			
+			SELECT @Doing = '<Acc_CheckProcessingData '
+							+ 'EstimatedTimeOld="' + @Config_EndTime + '" '
+							+ 'EstimatedTimeNew="' + CONVERT(VARCHAR(50), @EndProcessingTime, 121) + '" />'
+
+			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
+				@UserID = 0,
+				@CustID = 0,
+				@SPName = @SPName,
+				@Doing = @Doing,
+				@ActionID = 80000,	
+				@Duration = @Duration
 		END
 	END
 END
