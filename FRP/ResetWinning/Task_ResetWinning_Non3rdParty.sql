@@ -47,6 +47,7 @@ AS
 		- 20170915@Percy: Apply Lucky 3 [RedmineID: #83227]
 		- 20180116@Percy: Apply Exchange [RedmineID: #88810]
 		- 20180313@Percy: Apply Bullfighting, Remove Racing [RedmineID: #84691]
+		- 20180412@Percy: Apply OneRnG Jackpot [RedmineID: #90357]
 
 	Param Explanation:
 	    @mode:  0 _ view report
@@ -149,6 +150,7 @@ BEGIN
 	    bettype         int,
 	    liveindicator   bit,
 	    winlost         money,
+		winlostDueTo	money,
 		Sporttype		smallint
 	)
 
@@ -160,11 +162,19 @@ BEGIN
 			END AS custid,
 			b.bettype,
 			b.liveindicator,
-			SUM(ISNULL((ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(awinlost, 0) +
-	               ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0)) * (CASE
-	                                                                                  WHEN ISNULL(d.custid, -1) <> -1 AND b.bettype IN (21001, 21002) THEN 1
-	                                                                                  ELSE actualrate
-	                                                                                END), 0)) as winlost,
+			SUM(
+				(ISNULL(winlost,0)-ISNULL(actual_stake,0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)
+					+ CASE WHEN b.bettype IN (2198, 2398, 2998) THEN ISNULL(b.betid/100000000, 0) ELSE 0 END
+				)
+				* (CASE WHEN ISNULL(d.custid, -1) <> -1 AND b.bettype IN (21001, 21002) THEN 1 ELSE actualrate END)
+				) AS winlost,
+			SUM(
+				(CASE
+						WHEN b.bettype IN (2198, 2398, 2998) THEN -ISNULL(b.betid/100000000, 0)
+						WHEN b.bettype IN (2199, 2399, 2999) THEN ISNULL(b.winlost, 0) - ISNULL(b.actual_stake, 0)
+					ELSE 0 END
+				) * b.actualrate
+			) AS winlostDueTo,
 			CASE WHEN ISNULL(m.matchid, 0) <> 0	THEN m.Sporttype ELSE 0 END AS Sporttype
 	FROM dbo.bettrans b WITH(READPAST, INDEX = IX_Report)
 	LEFT JOIN @dummyBalance d ON b.custid = d.custid AND d.WinlostDate= b.WinlostDate
@@ -174,14 +184,24 @@ BEGIN
 	   AND b.ruben = 1
 	   AND b.statusid NOT IN (101, 102, 103, 121)
 	   AND (CASE WHEN b.CustId IN (SELECT CustId FROM @dummyExtraPT) AND Bettype IN (21001,21002) THEN 0 ELSE 1 END = 1)
-	   AND ISNULL((ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(awinlost, 0) +
-	               ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0)) * (CASE
-	                                                                                  WHEN ISNULL(d.custid, -1) <> -1 AND b.bettype IN (21001, 21002) THEN 1
-	                                                                                  ELSE actualrate
-	                                                                                END), 0) <> 0
     GROUP BY b.winlostdate, CASE WHEN b.bettype IN (21001, 21002) AND ISNULL(d.custid, -1) <> - 1 then d.custid ELSE -1 END,
 			 b.bettype, b.liveindicator, 
 			 CASE WHEN ISNULL(m.matchid, 0) <> 0 THEN m.Sporttype ELSE 0 END
+	HAVING
+			SUM(
+				(ISNULL(winlost,0)-ISNULL(actual_stake,0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)
+					+ CASE WHEN b.bettype IN (2198, 2398, 2998) THEN ISNULL(b.betid/100000000, 0) ELSE 0 END
+				)
+				* (CASE WHEN ISNULL(d.custid, -1) <> -1 AND b.bettype IN (21001, 21002) THEN 1 ELSE actualrate END)
+			) <> 0
+		OR
+			SUM(
+				(CASE
+						WHEN b.bettype IN (2198, 2398, 2998) THEN -ISNULL(b.betid/100000000, 0)
+						WHEN b.bettype IN (2199, 2399, 2999) THEN ISNULL(b.winlost, 0) - ISNULL(b.actual_stake, 0)
+					ELSE 0 END
+				) * b.actualrate
+			) <> 0
 			 
 
     CREATE NONCLUSTERED INDEX #IX_bettranstmp ON #bettranstmp(custid, winlostdate, bettype)
@@ -313,6 +333,15 @@ BEGIN
 
 	UNION ALL
 
+	SELECT winlostdate,
+           'Casino (Amount due to Jackpot Pool)',
+           ISNULL(SUM(winlostDueTo), 0) winlost
+    FROM #bettranstmp
+    WHERE bettype IN (2198, 2398, 2998, 2199, 2399, 2999)
+	GROUP BY winlostdate
+
+	UNION ALL
+
     SELECT winlostdate,
            'Total Balance',
            ISNULL(SUM(winlost), 0) winlost
@@ -341,7 +370,13 @@ BEGIN
 			   s.ProductId,
 			   '' AS SubProduct,
 			   SUM((winlost - actual_stake) * actualrate) AS winlost,
-			   SUM((CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END) * b.actualrate) AS newwinlost
+			   SUM((
+				CASE
+					WHEN b.bettype IN (2198, 2398, 2998) THEN ISNULL(b.betid/100000000, 0)
+					WHEN b.bettype IN (2199, 2399, 2999) THEN 0
+					ELSE
+						CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
+					END) * b.actualrate) AS newwinlost
 		FROM dbo.bettrans b WITH(READPAST, INDEX = IX_Report)
 		INNER JOIN @SportBettype s ON s.BetType = b.bettype
 		WHERE  b.winlostdate between @fromdate and @todate
@@ -480,7 +515,7 @@ BEGIN
 			   ROUND(ISNULL(w.winlost, 0), 2) - ROUND(ISNULL(CASE WHEN dm.winlostdate < @EffectedDate THEN e.ExtraPTwinlost ELSE e.NewExtraPTwinlost END, 0), 2) AS WinlostAfterExtraPT,
 	           ROUND(ISNULL(rs.reset, 0), 2) AS reset,
 	           CASE
-	             WHEN  dm.Product IN ('Racing (Due to Partners)', 'Total Balance') THEN 0 
+	             WHEN  dm.Product IN ('Total Balance') THEN 0 
 	             ELSE  -(ROUND(ISNULL(w.winlost, 0), 2) - ROUND(ISNULL(CASE WHEN dm.winlostdate < @EffectedDate THEN e.ExtraPTwinlost ELSE e.NewExtraPTwinlost END, 0), 2)) - ROUND(ISNULL(rs.reset, 0), 2)
 	           END AS latestreset,
 			   dm.seq
@@ -500,7 +535,7 @@ BEGIN
 
 		SELECT @maxseq = MAX(r.seq),              
                @resetCount = ISNULL(SUM(CASE
-                                          WHEN -(ISNULL(r.WinlostAfterExtraPT, 0)) - ISNULL(r.reset, 0) <> 0 AND r.Product NOT IN ('Racing (Due to Partners)', 'Total Balance') THEN 1
+                                          WHEN -(ISNULL(r.WinlostAfterExtraPT, 0)) - ISNULL(r.reset, 0) <> 0 AND r.Product NOT IN ('Total Balance') THEN 1
                                           ELSE 0
                                         END), 0)
         FROM   @reset r
@@ -523,7 +558,6 @@ BEGIN
             FROM @reset r
 				INNER JOIN @dummyBalance d on r.product = d.product AND r.WinlostDate = d.WinlostDate
             WHERE r.seq = @seq
-				AND r.Product NOT IN ('Racing (Due to Partners)') 
 				AND r.WinlostDate = @WinlostDate
 
             IF (@variance <> 0) 
