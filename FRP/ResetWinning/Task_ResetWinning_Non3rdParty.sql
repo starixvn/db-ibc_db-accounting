@@ -389,7 +389,7 @@ BEGIN
 		   AND b.ruben = 1
 		   AND b.statusid NOT IN (101, 102, 103, 121)
 		   AND b.bettype < 19001	  
-		   AND s.ProductID IN (SELECT DISTINCT ProductID FROM bodb_ACC.dbo.Acc_GroupExtraPTSetting WITH(NOLOCK) WHERE ProductID <> 1)
+		   AND s.ProductID IN (SELECT DISTINCT ProductID FROM dbo.Acc_GroupExtraPTSetting WITH(NOLOCK) WHERE ProductID <> 1)
 		GROUP BY b.winlostdate,
 			   b.srecommend,	      
 			   s.ProductId 
@@ -398,7 +398,7 @@ BEGIN
 	INSERT INTO #ExtraPTWL (winlostdate, ProductId, ExtraPTwinlost, NewExtraPTwinlost) 
 	SELECT	w.winlostdate, w.ProductId, SUM(w.winlost * s.ExtraPT), SUM(w.newwinlost * s.ExtraPT)
 	FROM	wl w
-	INNER JOIN bodb_Acc.dbo.Acc_GroupExtraPTSetting s WITH(NOLOCK)
+	INNER JOIN dbo.Acc_GroupExtraPTSetting s WITH(NOLOCK)
 			ON w.srecommend = s.SuperId
 			AND w.ProductId = s.ProductId
 			AND w.SubProduct = s.SubProduct
@@ -458,7 +458,7 @@ BEGIN
 	INSERT INTO #ExtraPTWL (winlostdate, ProductId, ProductName, ExtraPTwinlost, NewExtraPTwinlost) 
 	SELECT	w.winlostdate, w.ProductId, w.ProductName, SUM(w.winlost * s.ExtraPT), SUM(w.newwinlost * s.ExtraPT)
 	FROM	wl w
-	INNER JOIN bodb_Acc.dbo.Acc_GroupExtraPTSetting s WITH(NOLOCK)
+	INNER JOIN dbo.Acc_GroupExtraPTSetting s WITH(NOLOCK)
 			ON w.srecommend = s.SuperId
 			AND w.ProductId = s.ProductId
 			AND w.SubProduct = s.SubProduct

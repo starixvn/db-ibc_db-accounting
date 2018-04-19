@@ -363,7 +363,7 @@ BEGIN
 	INSERT INTO #ExtraPTWL (ProductId, ExtraPTwinlost, NewExtraPTwinlost) 
 	SELECT	w.ProductId, SUM(w.winlost * s.ExtraPT), SUM(w.newwinlost * s.ExtraPT)
 	FROM	wl w
-	INNER JOIN bodb_Acc.dbo.Acc_GroupExtraPTSetting s WITH (NOLOCK)
+	INNER JOIN dbo.Acc_GroupExtraPTSetting s WITH (NOLOCK)
 			ON w.srecommend = s.SuperId
 			AND w.ProductId = s.ProductId
 			AND w.SubProduct = s.SubProduct
@@ -419,7 +419,7 @@ BEGIN
 	INSERT INTO #ExtraPTWL ( ProductId, ProductName, ExtraPTwinlost, NewExtraPTwinlost) 
 	SELECT  w.ProductId, w.ProductName, SUM(w.winlost * s.ExtraPT), SUM(w.newwinlost * s.ExtraPT)
 	FROM	wl w
-	INNER JOIN bodb_Acc.dbo.Acc_GroupExtraPTSetting s WITH (NOLOCK)
+	INNER JOIN dbo.Acc_GroupExtraPTSetting s WITH (NOLOCK)
 			ON w.srecommend = s.SuperId
 			AND w.ProductId = s.ProductId
 			AND w.SubProduct = s.SubProduct

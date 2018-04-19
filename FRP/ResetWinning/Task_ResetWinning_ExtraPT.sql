@@ -21,6 +21,7 @@ AS
 		- 20160331@Sophia: change the way to use Function f_SportBettypeMatrix_Sel [Redmine: #54719]
 		- 20160815@Percy: Apply new bettype of Bettrade: 904 [RedmineID: #61786]
 		- 20170112@Percy: Change Extra PT formula [RedmineID: #70060]
+		- 20180412@Percy: Apply OneRnG Jackpot [RedmineID: #90357]
 
 	Param's explain:
 		@mode:  0 _ view report
@@ -64,7 +65,7 @@ BEGIN
 	INSERT INTO @SportBettype
 	SELECT ProductID, Bettype, SubProduct FROM bodb02.dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
 
-	DELETE @SportBettype WHERE ProductId NOT IN (SELECT DISTINCT ProductID FROM bodb_ACC.dbo.Acc_GroupExtraPTSetting WITH(NOLOCK))
+	DELETE @SportBettype WHERE ProductId NOT IN (SELECT DISTINCT ProductID FROM dbo.Acc_GroupExtraPTSetting WITH(NOLOCK))
 
 	----- End get sport bettype 
 	
@@ -91,11 +92,16 @@ BEGIN
 	-- General data --
 	
 	----Non sportsbook
-
 	;WITH wl AS (
 			SELECT b.srecommend , s.ProductID, 0 AS Sporttype, '' AS SubProduct,
 				SUM((winlost - actual_stake) * actualrate) AS Winlost,
-				SUM((CASE WHEN tpositiontaking = 1 THEN winlost - actual_stake ELSE winlost - actual_stake + scomm / (1 - tpositiontaking) END) * actualrate) AS NewWinlost,
+				SUM((
+					CASE
+						WHEN b.bettype IN (2198, 2398, 2998) THEN ISNULL(b.betid/100000000, 0)
+						WHEN b.bettype IN (2199, 2399, 2999) THEN 0
+						ELSE
+							CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
+						END) * b.actualrate) AS NewWinlost,
 				b.winlostdate
 			FROM bettrans b WITH(READPAST, INDEX = IX_Report)
 			INNER JOIN  @SportBettype s
@@ -110,7 +116,7 @@ BEGIN
 	INSERT INTO #winning (ProductID, Sporttype, SubProduct, Winlost, NewWinlost, Winlostdate, GroupId)
 	SELECT w.ProductID, w.Sporttype, w.SubProduct, SUM(w.Winlost * s.ExtraPT), SUM(w.NewWinlost * s.ExtraPT), w.Winlostdate, s.GroupId
 	FROM wl w
-	INNER JOIN bodb_Acc.dbo.Acc_GroupExtraPTSetting s WITH (NOLOCK)
+	INNER JOIN dbo.Acc_GroupExtraPTSetting s WITH (NOLOCK)
 			ON w.srecommend = s.SuperId
 			AND w.ProductId = s.ProductId
 			AND w.SubProduct = s.SubProduct
@@ -144,7 +150,7 @@ BEGIN
 	INSERT INTO #winning (ProductID, Sporttype, SubProduct, Winlost, NewWinlost, Winlostdate, GroupID)
 	SELECT w.ProductID, w.Sporttype, w.SubProduct, SUM(w.Winlost * s.ExtraPT), SUM(w.NewWinlost * s.ExtraPT), w.Winlostdate, s.GroupId
 	FROM wl w
-	INNER JOIN bodb_Acc.dbo.Acc_GroupExtraPTSetting s WITH (NOLOCK)
+	INNER JOIN dbo.Acc_GroupExtraPTSetting s WITH (NOLOCK)
 			ON w.srecommend = s.SuperId
 			AND w.ProductId = s.ProductId
 			AND w.SubProduct = s.SubProduct
