@@ -322,7 +322,7 @@ BEGIN
 	UNION ALL
 
 	SELECT
-		'Casino (Amount due to Jackpot pool' AS Product,
+		'Casino (Amount due to Jackpot pool)' AS Product,
 		ISNULL(SUM(winlostDueTo), 0) winlost
 	FROM #bettranstmp
 	WHERE bettype IN (2198, 2398, 2998, 2199, 2399, 2999)

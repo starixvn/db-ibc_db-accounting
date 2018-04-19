@@ -350,7 +350,7 @@ BEGIN
 
     SELECT winlostdate,
            'Total Balance',
-           ISNULL(SUM(winlost), 0) winlost
+           SUM(ISNULL(winlost, 0) + ISNULL(winlostDueTo, 0)) winlost
     FROM #bettranstmp
     WHERE CustId = -1
 		-----custid NOT IN (SELECT custid FROM @dummyBalance WHERE custid <> 0)	  
