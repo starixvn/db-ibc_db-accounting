@@ -21,7 +21,9 @@ AS
 		- 20160331@Sophia: change the way to use Function f_SportBettypeMatrix_Sel [Redmine: #54719]
 		- 20160815@Percy: Apply new bettype of Bettrade: 904 [RedmineID: #61786]
 		- 20170112@Percy: Change Extra PT formula [RedmineID: #70060]
-		- 20180412@Percy: Apply OneRnG Jackpot [RedmineID: #90357]
+		- 20180412@Percy:
+			. Apply OneRnG Jackpot [RedmineID: #90357]
+			. Increase Transdesc length to 1000 [RedmineID: #92841]
 
 	Param's explain:
 		@mode:  0 _ view report
@@ -97,7 +99,8 @@ BEGIN
 				SUM((winlost - actual_stake) * actualrate) AS Winlost,
 				SUM((
 					CASE
-						WHEN b.bettype IN (2198, 2398, 2998) THEN ISNULL(b.betid/100000000, 0)
+						WHEN b.bettype IN (2198, 2398, 2998) THEN
+							CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE ISNULL(CONVERT(DECIMAL(19,8), b.betid)/100000000, 0) END
 						WHEN b.bettype IN (2199, 2399, 2999) THEN 0
 						ELSE
 							CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
@@ -233,7 +236,7 @@ BEGIN
                 @winlostdate  SMALLDATETIME,
                 @custid       INT,
                 @resetCount   TINYINT = 0,
-                @transDesc    VARCHAR(300)= '',
+                @transDesc    NVARCHAR(1000)= '',
 				@seq		  TINYINT = 1,
 				@maxseq		  TINYINT
                 
