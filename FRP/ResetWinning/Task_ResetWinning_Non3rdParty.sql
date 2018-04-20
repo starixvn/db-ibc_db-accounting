@@ -47,7 +47,9 @@ AS
 		- 20170915@Percy: Apply Lucky 3 [RedmineID: #83227]
 		- 20180116@Percy: Apply Exchange [RedmineID: #88810]
 		- 20180313@Percy: Apply Bullfighting, Remove Racing [RedmineID: #84691]
-		- 20180412@Percy: Apply OneRnG Jackpot [RedmineID: #90357]
+		- 20180412@Percy:
+			. Apply OneRnG Jackpot [RedmineID: #90357]
+			. Increase Transdesc length to 1000 [RedmineID: #92841]
 
 	Param Explanation:
 	    @mode:  0 _ view report
@@ -166,14 +168,14 @@ BEGIN
 				CASE WHEN b.bettype IN (2199, 2399, 2999) THEN 0
 					ELSE
 					(ISNULL(winlost,0)-ISNULL(actual_stake,0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)
-						+ CASE WHEN b.bettype IN (2198, 2398, 2998) THEN ISNULL(CONVERT(DECIMAL(19,8), b.betid)/100000000, 0) ELSE 0 END
+						+ CASE WHEN b.bettype IN (2198, 2398, 2998) THEN ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) ELSE 0 END
 					)
 					* (CASE WHEN ISNULL(d.custid, -1) <> -1 AND b.bettype IN (21001, 21002) THEN 1 ELSE actualrate END)
 				END
 				) AS winlost,
 			SUM(
 				(CASE
-						WHEN b.bettype IN (2198, 2398, 2998) THEN -ISNULL(CONVERT(DECIMAL(19,8), b.betid)/100000000, 0)
+						WHEN b.bettype IN (2198, 2398, 2998) THEN -ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0)
 						WHEN b.bettype IN (2199, 2399, 2999) THEN ISNULL(b.winlost, 0) - ISNULL(b.actual_stake, 0)
 					ELSE 0 END
 				) * b.actualrate
@@ -195,7 +197,7 @@ BEGIN
 				CASE WHEN b.bettype IN (2199, 2399, 2999) THEN 0
 					ELSE
 					(ISNULL(winlost,0)-ISNULL(actual_stake,0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)
-						+ CASE WHEN b.bettype IN (2198, 2398, 2998) THEN ISNULL(CONVERT(DECIMAL(19,8), b.betid)/100000000, 0) ELSE 0 END
+						+ CASE WHEN b.bettype IN (2198, 2398, 2998) THEN ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) ELSE 0 END
 					)
 					* (CASE WHEN ISNULL(d.custid, -1) <> -1 AND b.bettype IN (21001, 21002) THEN 1 ELSE actualrate END)
 				END
@@ -203,7 +205,7 @@ BEGIN
 		OR
 			SUM(
 				(CASE
-						WHEN b.bettype IN (2198, 2398, 2998) THEN -ISNULL(CONVERT(DECIMAL(19,8), b.betid)/100000000, 0)
+						WHEN b.bettype IN (2198, 2398, 2998) THEN -ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0)
 						WHEN b.bettype IN (2199, 2399, 2999) THEN ISNULL(b.winlost, 0) - ISNULL(b.actual_stake, 0)
 					ELSE 0 END
 				) * b.actualrate
@@ -379,7 +381,7 @@ BEGIN
 			   SUM((
 				CASE
 					WHEN b.bettype IN (2198, 2398, 2998) THEN
-						CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE ISNULL(CONVERT(DECIMAL(19,8), b.betid)/100000000, 0) END
+						CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) END
 					WHEN b.bettype IN (2199, 2399, 2999) THEN 0
 					ELSE
 						CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END

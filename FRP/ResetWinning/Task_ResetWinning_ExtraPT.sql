@@ -100,7 +100,7 @@ BEGIN
 				SUM((
 					CASE
 						WHEN b.bettype IN (2198, 2398, 2998) THEN
-							CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE ISNULL(CONVERT(DECIMAL(19,8), b.betid)/100000000, 0) END
+							CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) END
 						WHEN b.bettype IN (2199, 2399, 2999) THEN 0
 						ELSE
 							CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
