@@ -38,6 +38,7 @@ AS
 		- 20180104@Sophia: Unable to send Automail due to FW winloss = 0 [RedmineID: #89069]
 		- 20180116@Percy: Apply Exchange [RedmineID: #88810]
 		- 20180313@Percy: Apply Bullfighting, Remove Racing [RedmineID: #84691]
+		- 20180412@Percy: Apply OneRnG Jackpot [RedmineID: #90357]
 
 	Param's Explanation:
 	
@@ -180,6 +181,7 @@ BEGIN
 							WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,71,72) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 904) AND (bettype NOT BETWEEN 911 AND 914)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =0 AND Sporttype <> 44 THEN 6911911
 							WHEN bettype IN(9,29 ) THEN 6911913
 							WHEN bettype = 10 THEN 6911914
+							WHEN bettype IN (2198, 2398, 2998, 2199, 2399, 2999) THEN 28601563
 							WHEN
 								bettype IN (71,72)
 								OR bettype BETWEEN 2101 AND 2399
@@ -221,6 +223,7 @@ BEGIN
 							WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,71,72) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 904) AND (bettype NOT BETWEEN 911 AND 914)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =0  AND Sporttype <> 44 THEN 12005466
 							WHEN bettype IN(9,29 ) THEN 12005470
 							WHEN bettype = 10 THEN 12005483
+							WHEN bettype IN (2198, 2398, 2998, 2199, 2399, 2999) THEN 29313344
 							WHEN
 								bettype IN (71,72)
 								OR bettype BETWEEN 2101 AND 2399

@@ -3,7 +3,7 @@ ALTER PROCEDURE [dbo].[Task_ResetWinning_Non3rdParty_Add]
 	@winlostdate SMALLDATETIME,
 	@custid      INT,
 	@amount      MONEY,
-	@transdesc   VARCHAR(300),
+	@transdesc   NVARCHAR(1000),
 	@creator     INT,
 	@ip          VARCHAR(20),
 	@isExtraPT	 BIT = 0,
@@ -22,6 +22,7 @@ AS
 						   . Revise Code
 						   . Apply AG Casino and Vegas Game [#37683]
 		- 20160315@Percy: Add params @isExtra for new function ExtraPT [Redmine: 51721]
+		- 20180412@Percy: Increase Transdesc length to 1000 [RedmineID: #92841]
 		
 
 */
