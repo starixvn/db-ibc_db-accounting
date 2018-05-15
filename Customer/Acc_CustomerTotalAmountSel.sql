@@ -13,6 +13,7 @@ AS
 	Revisions:
 		- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
 		- 20160118@Kathy: get balance from bettransRNG & bettransLC [Redmine:#50674]
+		- 20180515@Percy: Add waiting tickets on translog table [RedmineID: #95219]
 */
 BEGIN	
 	DECLARE @totalAmt_bettransRNG	MONEY = 0
@@ -26,7 +27,7 @@ BEGIN
     SELECT	@totalAmt_translog = SUM(-actual_stake)
     FROM	dbo.translog WITH(NOLOCK)
     WHERE	custid = @CustId
-			AND statusID = 0
+			AND statusID IN (0, 1)
 			
 	-- bettransRNG
 	SELECT	@totalAmt_bettransRNG = SUM(winlost - actual_stake + playercomm)
