@@ -43,6 +43,7 @@ AS
 		- 20180116@Percy: Apply Exchange [RedmineID: #88810]
 		- 20180313@Percy: Apply Bullfighting, Remove Racing [RedmineID: #84691]
 		- 20180412@Percy: Apply OneRnG Jackpot [RedmineID: #90357]
+		- 20180521@Percy: Apply PP - Pragmatic, update bettype range of Macau Games [RedmineID: #95529]
 		
 	Explanation's Param:
 
@@ -250,7 +251,7 @@ BEGIN
 			 WHEN bettype BETWEEN 18000 AND 18099 THEN 'Colossus Bets'
 			 WHEN Sporttype = 44 THEN 'Muay Thai'
 			 WHEN bettype BETWEEN 2401 AND 2499 THEN 'Allbet' 
-			 WHEN bettype BETWEEN 4001 AND 7999 THEN 'Macau Games'
+			 WHEN bettype BETWEEN 4001 AND 4100 THEN 'Macau Games'
 			 WHEN bettype BETWEEN 2501 AND 2699 THEN 'NG2'
 			 WHEN bettype BETWEEN 1011 AND 1020 THEN 'Fishing World'
 			 WHEN bettype BETWEEN 911 AND 914 THEN 'Cash Out'
@@ -258,6 +259,7 @@ BEGIN
 			 WHEN bettype BETWEEN 1600 AND 1610 THEN 'Lucky 3'
 			 WHEN bettype BETWEEN 8000 AND 8099 THEN 'Exchange'
 			 WHEN bettype = 1004 THEN 'Bullfighting'
+			 WHEN bettype BETWEEN 4101 AND 4300 THEN 'PP'
 		   END AS Product,
 		   ISNULL(SUM(winlost), 0) AS winlost
 	 FROM #bettranstmp
@@ -278,7 +280,7 @@ BEGIN
 			OR bettype BETWEEN 2901 AND 2999
 			OR Sporttype = 44
 			OR bettype BETWEEN 2401 AND 2499
-			OR bettype BETWEEN 4001 AND 7999
+			OR bettype BETWEEN 4001 AND 4100
 			OR bettype BETWEEN 2501 AND 2699
 			OR bettype BETWEEN 1011 AND 1020
 			OR bettype BETWEEN 911 AND 914
@@ -286,6 +288,7 @@ BEGIN
 			OR bettype BETWEEN 1600 AND 1610
 			OR bettype BETWEEN 8000 AND 8099
 			OR bettype = 1004
+			OR bettype BETWEEN 4101 AND 4300
 		   )
 	GROUP BY CASE
 			 WHEN bettype BETWEEN 81 AND 120 THEN 'Number Game'
@@ -309,7 +312,7 @@ BEGIN
 			 WHEN bettype BETWEEN 18000 AND 18099 THEN 'Colossus Bets'
 			 WHEN Sporttype = 44 THEN 'Muay Thai'
 			 WHEN bettype BETWEEN 2401 AND 2499 THEN 'Allbet' 
-			 WHEN bettype BETWEEN 4001 AND 7999 THEN 'Macau Games'
+			 WHEN bettype BETWEEN 4001 AND 4100 THEN 'Macau Games'
 			 WHEN bettype BETWEEN 2501 AND 2699 THEN 'NG2'
 			 WHEN bettype BETWEEN 1011 AND 1020 THEN 'Fishing World'
 			 WHEN bettype BETWEEN 911 AND 914 THEN 'Cash Out'
@@ -317,6 +320,7 @@ BEGIN
 			 WHEN bettype BETWEEN 1600 AND 1610 THEN 'Lucky 3'
 			 WHEN bettype BETWEEN 8000 AND 8099 THEN 'Exchange'
 			 WHEN bettype = 1004 THEN 'Bullfighting'
+			 WHEN bettype BETWEEN 4101 AND 4300 THEN 'PP'
 	         END
 
 	UNION ALL
