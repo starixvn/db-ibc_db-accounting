@@ -2,21 +2,20 @@
 USE bodb_Age
 GO
 
-CREATE PROCEDURE [dbo].[Acc_CustomerDateLimitDel] @userId INT
+ALTER PROCEDURE [dbo].[Acc_CustomerDateLimitDel] @userId INT
 	,@custId INT
 	,@ErrCode INT = 0 OUTPUT
 	,@ErrMsg NVARCHAR(200) = '' OUTPUT
 AS
 /*
-	Created: 20180426@Razor
+	Created: 20180429@Razor
 	DB: DBAGE/bodb_AGE
 	Task: 
 
 	Revisions:
-		-20180522@Razor: init - [Readmine: #95553]
+		-20180529@Razor: init - [Readmine: #96025]
 		
 	Param's Explanation:		
-		• @custId: the ID of customer.
 */
 BEGIN
 	SET NOCOUNT ON
@@ -38,8 +37,11 @@ BEGIN
 	WHERE CustId = @custID
 
 	IF (
-			@minDate IS NOT NULL
-			OR @limitDays IS NOT NULL
+			EXISTS (
+				SELECT 1
+				FROM dbo.Age_CustDateLimit WITH (NOLOCK)
+				WHERE CustId = @custID
+				)
 			)
 	BEGIN
 		BEGIN TRY
@@ -63,6 +65,11 @@ BEGIN
 			,@ActionID = @ActionID
 			,@TrackingValue = @LogSPData
 			,@duration = @duration
+	END
+	ELSE
+	BEGIN
+		SELECT @ErrMsg = 'This customer had been deleted.'
+				,@ErrCode = 102
 	END
 END
 GO

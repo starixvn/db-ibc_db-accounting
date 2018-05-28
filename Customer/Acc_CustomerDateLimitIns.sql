@@ -2,23 +2,22 @@
 USE bodb_Age
 GO
 
-CREATE PROCEDURE [dbo].[Acc_CustomerDateLimitIns] @userId INT
-	,@custId INT
-	,@limitDays INT = 0
+ALTER PROCEDURE [dbo].[Acc_CustomerDateLimitIns] @userId INT
+	,@custName NVARCHAR(100)
+	,@limitDays INT = NULL
 	,@minDate DATETIME = NULL
 	,@ErrCode INT = 0 OUTPUT
 	,@ErrMsg NVARCHAR(200) = '' OUTPUT
 AS
 /*
-	Created: 20180426@Razor
+	Created: 20180429@Razor
 	DB: DBAGE/bodb_AGE
 	Task: 
 
 	Revisions:
-		-20180522@Razor: init - [Readmine: #95553]
+		-20180429@Razor: init - [Readmine: #96025]
 		
-	Param's Explanation:		
-		• @custId: the ID of customer.
+	Param's Explanation:
 */
 BEGIN
 	SET NOCOUNT ON
@@ -28,9 +27,36 @@ BEGIN
 		,@duration INT
 		,@LogSPData VARCHAR(max)
 		,@ActionID INT
+		,@custID INT
 
 	SELECT @startRun = GETDATE()
 		,@ActionID = 31501
+
+	SELECT @custID = custID
+	FROM [bodb02].[dbo].[custInfo] WITH (NOLOCK)
+	WHERE userName = @custName
+
+	IF (ISNULL(@custID, 0) = 0)
+	BEGIN
+		SELECT @ErrMsg = 'Error! Do not exist user name = ' + @custName
+			,@ErrCode = 102
+
+		RETURN
+	END
+
+	IF (
+			EXISTS (
+				SELECT 1
+				FROM dbo.Age_CustDateLimit WITH (NOLOCK)
+				WHERE CustId = @custId
+				)
+			)
+	BEGIN
+		SELECT @ErrMsg = 'Error! existed setting for user name = ' + @custName
+			,@ErrCode = 103
+
+		RETURN
+	END
 
 	BEGIN TRY
 		INSERT INTO dbo.Age_CustDateLimit (
@@ -38,15 +64,11 @@ BEGIN
 			,MinDate
 			,LimitDays
 			)
-		SELECT DISTINCT @custId
+		VALUES (
+			@custId
 			,@minDate
 			,@limitDays
-		FROM dbo.Age_CustDateLimit WITH (NOLOCK)
-		WHERE NOT EXISTS (
-				SELECT CustId
-				FROM dbo.Age_CustDateLimit WITH (NOLOCK)
-				WHERE CustId = @custId
-				)
+			)
 	END TRY
 
 	BEGIN CATCH
