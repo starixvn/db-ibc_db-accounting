@@ -39,6 +39,7 @@ AS
 		- 20180116@Percy: Apply Exchange [RedmineID: #88810]
 		- 20180313@Percy: Apply Bullfighting, Remove Racing [RedmineID: #84691]
 		- 20180412@Percy: Apply OneRnG Jackpot [RedmineID: #90357]
+		- 20180521@Percy: Apply PP - Pragmatic, update bettype range of Macau Games [RedmineID: #95529]
 
 	Param's Explanation:
 	
@@ -202,7 +203,7 @@ BEGIN
 							WHEN bettype BETWEEN 18000 AND 18099 THEN 19236210
 							WHEN Sporttype = 44 THEN 20174356
 							WHEN bettype BETWEEN 2401 AND 2499 THEN 20664406
-							WHEN bettype BETWEEN 4001 AND 7999 THEN 21535688
+							WHEN bettype BETWEEN 4001 AND 4100 THEN 21535688
 							WHEN bettype BETWEEN 2501 AND 2699 THEN 23765766
 							WHEN bettype BETWEEN 1011 AND 1020 THEN 24569216
 							WHEN bettype BETWEEN 911 AND 914 THEN 25477229
@@ -210,6 +211,7 @@ BEGIN
 							WHEN bettype BETWEEN 1600 AND 1610 THEN 27233199
 							WHEN bettype BETWEEN 8000 AND 8099 THEN 28435541
 							WHEN bettype = 1004 THEN 27602556
+							WHEN bettype BETWEEN 4101 AND 4300 THEN 29712506
 						END
 		FROM bodb_report.dbo.rptWinLost b WITH(NOLOCK)
 		WHERE b.winlostdate = @_todate
@@ -244,7 +246,7 @@ BEGIN
 							WHEN bettype BETWEEN 18000 AND 18099 THEN 19235780
 							WHEN Sporttype = 44 THEN 20174451
 							WHEN bettype BETWEEN 2401 AND 2499 THEN 20805826
-							WHEN bettype BETWEEN 4001 AND 7999 THEN 21526102
+							WHEN bettype BETWEEN 4001 AND 4100 THEN 21526102
 							WHEN bettype BETWEEN 2501 AND 2699 THEN 23766923
 							WHEN bettype BETWEEN 1011 AND 1020 THEN 24567778
 							WHEN bettype BETWEEN 911 AND 914 THEN 25440545
@@ -252,6 +254,7 @@ BEGIN
 							WHEN bettype BETWEEN 1600 AND 1610 THEN 27234218
 							WHEN bettype BETWEEN 8000 AND 8099 THEN 28435564
 							WHEN bettype = 1004 THEN 27602457
+							WHEN bettype BETWEEN 4101 AND 4300 THEN 29712538
 						END
 		FROM bodb_report.dbo.rptWinLost b WITH(NOLOCK)
 		WHERE b.winlostdate = @_todate
