@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Acc_GetIPInfo_Full]
+﻿/*<info serverAlias="DBCUST-IPDB" executers="bodbAdmin,bodbAdminNet,bodbExtAccNet,bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+USE [IPDB]
+GO
+ALTER PROCEDURE [dbo].[Acc_GetIPInfo_Full]
 	@IP varchar(15)
 AS
 /*
@@ -7,6 +10,8 @@ AS
 	Task: Get IP Info 
 	DB: DB02.IPDB 
 	Original: GetIPInfo_Full
+	Revisions:	
+	- 20180710@Razor: Grant permission for bodbExtAccNet
 	
 */
 SET NOCOUNT ON
@@ -34,10 +39,4 @@ WHERE
 	@IP1 between ipKeyFrom and ipKeyTo
 	and @IPLong between ipFrom and ipTo
 
-GO
-GRANT EXECUTE ON [dbo].[Acc_GetIPInfo_Full] TO [bodbDownlineNet]
-GO
-GRANT EXECUTE ON [dbo].[Acc_GetIPInfo_Full] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_GetIPInfo_Full] TO [VNTeam]
 GO
