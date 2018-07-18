@@ -40,6 +40,7 @@ AS
 		- 20180313@Percy: Apply Bullfighting, Remove Racing [RedmineID: #84691]
 		- 20180412@Percy: Apply OneRnG Jackpot [RedmineID: #90357]
 		- 20180521@Percy: Apply PP - Pragmatic, update bettype range of Macau Games [RedmineID: #95529]
+		- 20180718@Percy: Change checking rule before send mail [RedmineID: #97983]
 
 	Param's Explanation:
 	
@@ -100,7 +101,6 @@ BEGIN
 
     CREATE TABLE #TempYesterday (CustId INT, Winlostyesterday MONEY)
 	CREATE TABLE #TempMonthToDate (WinlostDate DATETIME,CustId int, WinlostMonthToDate money)
-	CREATE TABLE #TempCustTrans (CustId INT)
 	
     
     DECLARE @movebetdate datetime,
@@ -167,112 +167,24 @@ BEGIN
 		WHERE b.winlostdate = @_todate
 		ORDER BY b.custid
 
-/****************************This Section is to check there is no ticklet and no key in action**************************/
-	/*
-	
-		Find product that has no ticket and then identify accounts don't need to transfer. If there is no ticket, transfer account should have winlost amount = 0
-	
-	*/	
-
-	IF @isTest = 0
-	BEGIN 	
-		INSERT INTO #TempCustTrans
-		SELECT DISTINCT custid = CASE 
-							WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,71,72) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 904) AND (bettype NOT BETWEEN 911 AND 914)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =1 AND Sporttype <> 44 THEN 6911909
-							WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,71,72) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 904) AND (bettype NOT BETWEEN 911 AND 914)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =0 AND Sporttype <> 44 THEN 6911911
-							WHEN bettype IN(9,29 ) THEN 6911913
-							WHEN bettype = 10 THEN 6911914
-							WHEN bettype IN (2198, 2398, 2998, 2199, 2399, 2999) THEN 28601563
-							WHEN
-								bettype IN (71,72)
-								OR bettype BETWEEN 2101 AND 2399
-								OR bettype BETWEEN 2901 AND 2999
-								THEN 6911916
-							WHEN bettype BETWEEN 81 AND 120 THEN 6911918
-							WHEN bettype BETWEEN 1201 AND 1299 THEN 8158305
-							WHEN bettype BETWEEN 2700 AND 2899 THEN 26513859
-							WHEN bettype BETWEEN 1501 AND 1599 THEN 14054918
-							WHEN bettype IN (31,32,33) THEN 7723121
-							WHEN bettype BETWEEN 1800 AND 1899 THEN 18188766
-							WHEN bettype = 1900 THEN 18188815
-							WHEN bettype BETWEEN 1700 AND 1799 THEN 18123445
-							WHEN bettype BETWEEN 801 AND 899 THEN 18123442 
-							WHEN bettype BETWEEN 2001 AND 2007 THEN 18256397
-							WHEN bettype BETWEEN 2008 AND 2009 THEN 19692521
-							WHEN bettype BETWEEN 901 AND 904 THEN 18371760
-							WHEN bettype BETWEEN 18000 AND 18099 THEN 19236210
-							WHEN Sporttype = 44 THEN 20174356
-							WHEN bettype BETWEEN 2401 AND 2499 THEN 20664406
-							WHEN bettype BETWEEN 4001 AND 4100 THEN 21535688
-							WHEN bettype BETWEEN 2501 AND 2699 THEN 23765766
-							WHEN bettype BETWEEN 1011 AND 1020 THEN 24569216
-							WHEN bettype BETWEEN 911 AND 914 THEN 25477229
-							WHEN bettype BETWEEN 1021 AND 1049 THEN 26513853
-							WHEN bettype BETWEEN 1600 AND 1610 THEN 27233199
-							WHEN bettype BETWEEN 8000 AND 8099 THEN 28435541
-							WHEN bettype = 1004 THEN 27602556
-							WHEN bettype BETWEEN 4101 AND 4300 THEN 29712506
-						END
-		FROM bodb_report.dbo.rptWinLost b WITH(NOLOCK)
-		WHERE b.winlostdate = @_todate
-			  AND b.RealWinLost <> 0
-	END
-	ELSE
-	BEGIN 
-		INSERT INTO #TempCustTrans
-		SELECT DISTINCT custid = CASE 
-							WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,71,72) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 904) AND (bettype NOT BETWEEN 911 AND 914)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =1  AND Sporttype <> 44 THEN 9398886
-							WHEN ((bettype <= 999 AND bettype NOT IN (9,10,29,71,72) AND (bettype NOT BETWEEN 81 AND 120) AND (bettype NOT BETWEEN 801 AND 899) AND (bettype NOT BETWEEN 901 AND 904) AND (bettype NOT BETWEEN 911 AND 914)) OR bettype BETWEEN 1301 AND 1334) AND liveindicator =0  AND Sporttype <> 44 THEN 12005466
-							WHEN bettype IN(9,29 ) THEN 12005470
-							WHEN bettype = 10 THEN 12005483
-							WHEN bettype IN (2198, 2398, 2998, 2199, 2399, 2999) THEN 29313344
-							WHEN
-								bettype IN (71,72)
-								OR bettype BETWEEN 2101 AND 2399
-								OR bettype BETWEEN 2901 AND 2999
-								THEN 12017095
-							WHEN bettype BETWEEN 81 AND 120 THEN 13062600
-							WHEN bettype BETWEEN 1201 AND 1299 THEN 13062615
-							WHEN bettype BETWEEN 2700 AND 2899 THEN 27234475
-							WHEN bettype BETWEEN 1501 AND 1599 THEN 13062664
-							WHEN bettype IN (31,32,33) THEN 13062630
-							WHEN bettype BETWEEN 1800 AND 1899 THEN 18254399
-							WHEN bettype = 1900 THEN 18254404
-							WHEN bettype BETWEEN 1700 AND 1799 THEN 18254395
-							WHEN bettype BETWEEN 801 AND 899 THEN 18254387 
-							WHEN bettype BETWEEN 2001 AND 2007 THEN 18377344
-							WHEN bettype BETWEEN 2008 AND 2009 THEN 19741787
-							WHEN bettype BETWEEN 901 AND 904 THEN 18377348
-							WHEN bettype BETWEEN 18000 AND 18099 THEN 19235780
-							WHEN Sporttype = 44 THEN 20174451
-							WHEN bettype BETWEEN 2401 AND 2499 THEN 20805826
-							WHEN bettype BETWEEN 4001 AND 4100 THEN 21526102
-							WHEN bettype BETWEEN 2501 AND 2699 THEN 23766923
-							WHEN bettype BETWEEN 1011 AND 1020 THEN 24567778
-							WHEN bettype BETWEEN 911 AND 914 THEN 25440545
-							WHEN bettype BETWEEN 1021 AND 1049 THEN 27234433
-							WHEN bettype BETWEEN 1600 AND 1610 THEN 27234218
-							WHEN bettype BETWEEN 8000 AND 8099 THEN 28435564
-							WHEN bettype = 1004 THEN 27602457
-							WHEN bettype BETWEEN 4101 AND 4300 THEN 29712538
-						END
-		FROM bodb_report.dbo.rptWinLost b WITH(NOLOCK)
-		WHERE b.winlostdate = @_todate
-			AND b.RealWinLost <> 0
-	END 
 
 
 	INSERT INTO #TempYesterday
 	SELECT d.custid,0 
-	FROM @dummyBalance d LEFT JOIN #TempCustTrans c ON d.custid = c.CustId
-	WHERE c.CustId IS NULL AND d.CustId NOT IN(SELECT custid FROM #TempYesterday)
+	FROM @dummyBalance d
+		LEFT JOIN #TempYesterday c ON d.custid = c.CustId
+	WHERE c.CustId IS NULL
 	 
-	/****************************End**************************/
-
-	SELECT @totalrows = COUNT(*) FROM #TempYesterday
-	SELECt @TotalDummy = COUNT(*) FROM @dummyBalance
-	
-	IF(@totalrows = @TotalDummy) SET @AllowSendEmail = 1 ELSE SET @AllowSendEmail = 0
+	IF EXISTS (
+		SELECT 1
+		FROM #TempYesterday ty
+			INNER JOIN @dummyBalance db ON ty.CustId = db.custid
+		WHERE db.[group] = 'SB'
+			AND ty.Winlostyesterday <> 0
+	)
+		SET @AllowSendEmail = 1
+	ELSE
+		SET @AllowSendEmail = 0
 --------------------------------------------------------------------------------------- 
 
 	SELECT [group], c.custid, c.product,
@@ -287,10 +199,7 @@ BEGIN
 	ON c.CustId = mb.CustId
 	ORDER BY c.orderby 
 
-
 	DROP TABLE #TempYesterday
 	DROP TABLE #TempMonthToDate
-	DROP TABLE #TempCustTrans
-
 END
 GO
