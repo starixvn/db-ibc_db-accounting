@@ -1,5 +1,5 @@
 /*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView,bodbExtAccNet" viewers="" isFunction="0" isNested="0"></info>*/
-ALTER PROCEDURE [dbo].[Acc_StatementSel]
+ALTER PROCEDURE [dbo].[Acc_StatementSel_UAT1]
 	@fromdate	SMALLDATETIME,
 	@todate		SMALLDATETIME,
 	@custid		INT
@@ -51,7 +51,7 @@ BEGIN
 	CREATE TABLE #Data (
 		winlostdate			SMALLDATETIME
 		,Bettype			SMALLINT
-		,StatusID			TINYINT
+		,StatusID			SMALLINT
 		,IsOwner			BIT     DEFAULT 0
 		,IsBettrans			BIT     DEFAULT 1
 		,Outstanding		MONEY	NULL
@@ -65,7 +65,7 @@ BEGIN
 
 	CREATE TABLE #rptStatementTable(
 		winlostdate			SMALLDATETIME	
-		,Openningbalance		MONEY	NULL
+		,OpeningBalance		MONEY	NULL
 		,VoidAmt			MONEY	NULL
 		,Outstanding		MONEY	NULL
 		,Turnover			MONEY	NULL
@@ -78,12 +78,12 @@ BEGIN
 		,VoidCount			INT		DEFAULT 0
 		,GrandPrize			MONEY	NULL 
 		,Balance			MONEY		
-		,IsOpenningBalance	BIT		DEFAULT 0
+		,IsOpeningBalance	BIT		DEFAULT 0
 	)
 	
 	IF @custid IN (7214059,7213826,7213962)
 	BEGIN
-		SELECT winlostdate, 0 as CustID,Openningbalance,VoidAmt,Outstanding,Turnover,TransferAmt,Winlost,Comm ,ClosingBalance,GrandPrize
+		SELECT winlostdate, 0 as CustID,OpeningBalance,VoidAmt,Outstanding,Turnover,TransferAmt,Winlost,Comm ,ClosingBalance,GrandPrize
 		FROM #rptStatementTable
 		
 		DROP TABLE #rptStatementTable
@@ -105,7 +105,7 @@ BEGIN
 		SELECT custid FROM dbo.Customer WITH(NOLOCK) WHERE srecommend = @CID AND roleid = 2
 
 
-	DECLARE @total MONEY = 0 -- to calculate Openningbalance
+	DECLARE @total MONEY = 0 -- to calculate OpeningBalance
 	
 	DECLARE @winlostdate SMALLDATETIME = @fromdate
 	DECLARE @tbl TABLE(winlostdate SMALLDATETIME)
@@ -126,11 +126,12 @@ BEGIN
 	IF @roleid = 1
 	BEGIN
 		-- I.1.1. Bettrans
-		INSERT INTO #Data (winlostdate, bettype, StatusID, IsBettrans, Outstanding, Turnover, Winlost, Comm, BetCount)
+		INSERT INTO #Data (winlostdate, bettype, StatusID, IsOwner, IsBettrans, Outstanding, Turnover, OwnerWinloss, Winlost, Comm, BetCount)
 		SELECT
-			winlostdate, bettype, StatusID, 1 AS IsBettrans
+			winlostdate, bettype, StatusID, 1 as IsOwner, 1 AS IsBettrans
 			,SUM(ABS(actual_stake)) as Outstanding
 			,SUM( ABS(stake) ) AS Turnover
+			,SUM(winlost - actual_stake) AS OwnerWinloss
 			,SUM(winlost - actual_stake) AS winlost
 			,SUM(playercomm) AS comm
 			,COUNT(1) AS betcount
@@ -140,9 +141,9 @@ BEGIN
 		GROUP BY winlostdate, bettype, StatusID 			 
 
 		-- I.1.2. BettransLC
-		INSERT INTO #Data (winlostdate, StatusID, IsBettrans, Outstanding, Turnover, Winlost, Comm, BetCount)
+		INSERT INTO #Data (winlostdate, StatusID, IsOwner, IsBettrans, Outstanding, Turnover, Winlost, Comm, BetCount)
 		SELECT
-			winlostdate, StatusID, 0 AS IsBettrans
+			winlostdate, StatusID, 0 as IsOwner,  0 AS IsBettrans
 			,SUM(ABS(actual_stake)) as Outstanding
 			,SUM(CASE WHEN statusID NOT IN (103, 101, 102) THEN ABS(stake) ELSE 0 END) AS Turnover
 			,SUM(winlost - actual_stake) AS winlost
@@ -155,9 +156,9 @@ BEGIN
 		GROUP BY winlostdate, StatusID  
 		
 		-- I.1.3. BettransRNG
-		INSERT INTO #Data (winlostdate, StatusID, IsBettrans, Outstanding, Turnover, Winlost, Comm, BetCount)
+		INSERT INTO #Data (winlostdate, StatusID, IsOwner, IsBettrans, Outstanding, Turnover, Winlost, Comm, BetCount)
 		SELECT
-			winlostdate, StatusID, 0 AS IsBettrans
+			winlostdate, StatusID, 0 as IsOwner, 0 AS IsBettrans
 			,SUM(ABS(actual_stake)) as Outstanding
 			,SUM(CASE WHEN statusID NOT IN (103, 101, 102) THEN ABS(stake) ELSE 0 END) AS Turnover
 			,SUM(winlost - actual_stake) AS winlost
@@ -175,7 +176,7 @@ BEGIN
 	-- Agent --
 	IF @roleid = 2
 	BEGIN 
-		-- I.2.1. Bettrans
+		-- I.2.1. Bettrans (downline and itsefl)
 		INSERT INTO #Data (winlostdate, bettype, StatusID, IsOwner, IsBettrans, Turnover, OwnerWinloss, Winlost, Comm, BetCount)
 		SELECT
 			winlostdate, bettype, StatusID, CASE WHEN recommend = custId THEN 1 ELSE 0 END as IsOwner, 1 AS IsBettrans
@@ -231,12 +232,12 @@ BEGIN
 	IF @roleid = 3
 	BEGIN
 		
-		-- I.3.1. Bettrans
+		-- I.3.1. Bettrans (downline)
 		INSERT INTO #Data (winlostdate, bettype, StatusID, IsOwner, IsBettrans, Turnover, OwnerWinloss, Winlost, Comm, BetCount)
 		SELECT
-			winlostdate, bettype, StatusID, CASE WHEN mrecommend = custId THEN 1 ELSE 0 END as IsOwner, 1 AS IsBettrans
+			winlostdate, bettype, StatusID, 0 as IsOwner, 1 AS IsBettrans
 			,SUM( ABS(stake) ) AS Turnover
-			,SUM(winlost - actual_stake) AS OwnerWinloss
+			,0 --SUM(winlost - actual_stake) AS OwnerWinloss
 			,SUM(mwinlost) AS winlost
 			,SUM(acomm - comm) AS comm
 			,COUNT(1) AS betcount
@@ -244,30 +245,46 @@ BEGIN
 			INNER JOIN @recommend r ON r.recommend = bt.recommend		
 		WHERE bt.winlostdate <= @todate 
 			  AND StatusID NOT IN (0,1)
-		GROUP BY winlostdate, bettype, StatusID, CASE WHEN mrecommend = custId THEN 1 ELSE 0 END 
+		GROUP BY winlostdate, bettype, StatusID
 			 
+
+		-- I.3.1b bettrans (itself, always is transfer tickets )
+		INSERT INTO #Data (winlostdate, bettype, StatusID, IsOwner, IsBettrans, Turnover, OwnerWinloss, Winlost, Comm, BetCount)
+		SELECT
+			Winlostdate, -1 as bettype, -1 as StatusID, 1 as IsOwner, 1 AS IsBettrans
+			,0 --SUM( ABS(stake) ) AS Turnover
+			,SUM(winlost - actual_stake) AS OwnerWinloss
+			,0 --SUM(swinlost) AS winlost
+			,0 --SUM(scomm - acomm) AS comm
+			,COUNT(1) AS betcount
+		FROM dbo.bettrans bt WITH (NOLOCK)			
+		WHERE CustID = @CID
+			  AND winlostdate <= @todate 
+			  AND Ruben = 1 
+		GROUP BY Winlostdate --, bettype, StatusID
+		
 
 		-- I.3.2. BettransLC
 		INSERT INTO #Data (winlostdate, StatusID, IsOwner, IsBettrans, Turnover, OwnerWinloss, Winlost, Comm, BetCount)
 		SELECT
-			winlostdate, StatusID, CASE WHEN mrecommend = custId THEN 1 ELSE 0 END as IsOwner, 0 AS IsBettrans
+			winlostdate, StatusID, 0 as IsOwner, 0 AS IsBettrans
 			,SUM(CASE WHEN statusID NOT IN (103, 101, 102) THEN ABS(stake) ELSE 0 END) AS Turnover
 			,SUM(winlost - actual_stake) AS OwnerWinloss
 			,SUM(mwinlost) AS winlost
 			,SUM(acomm - comm) AS comm
-			,COUNT(1) AS betcount
+			,COUNT(1) AS betcount 
 		FROM dbo.bettransLC bt WITH (NOLOCK)
 			INNER JOIN @recommend r ON r.recommend = bt.recommend	
 		WHERE bt.winlostdate <= @todate
 			AND winlostdate >= @yesterday				
 			AND StatusID NOT IN (0,1)
-		GROUP BY winlostdate, StatusID, CASE WHEN mrecommend = custId THEN 1 ELSE 0 END 
+		GROUP BY winlostdate, StatusID
 		
 
 		-- I.3.3. BettransRNG
 		INSERT INTO #Data (winlostdate, StatusID, IsOwner, IsBettrans, Turnover, OwnerWinloss, Winlost, Comm, BetCount)
 		SELECT
-			winlostdate, StatusId, CASE WHEN mrecommend = custId THEN 1 ELSE 0 END as IsOwner, 0 AS IsBettrans
+			winlostdate, StatusId, 0 as IsOwner, 0 AS IsBettrans
 			,SUM(CASE WHEN statusID NOT IN (103, 101, 102) THEN ABS(stake) ELSE 0 END) AS Turnover
 			,SUM(winlost - actual_stake) AS OwnerWinloss
 			,SUM(mwinlost) AS winlost
@@ -278,7 +295,7 @@ BEGIN
 		WHERE bt.winlostdate <= @todate
 			AND bt.winlostdate >= @yesterday				
 			AND StatusID NOT IN (0,1)
-		GROUP BY winlostdate, StatusId, CASE WHEN mrecommend = custId THEN 1 ELSE 0 END 
+		GROUP BY winlostdate, StatusId
 	END
 	-- End Master --
 		
@@ -288,9 +305,9 @@ BEGIN
 		-- I.4.1 bettrans
 		INSERT INTO #Data (winlostdate, bettype, StatusID, IsOwner, IsBettrans, Turnover, OwnerWinloss, Winlost, Comm, BetCount)
 		SELECT
-			Winlostdate, bettype, StatusID, CASE WHEN srecommend = custId THEN 1 ELSE 0 END as IsOwner, 1 AS IsBettrans
+			Winlostdate, bettype, StatusID, 0 as IsOwner, 1 AS IsBettrans
 			,SUM( ABS(stake) ) AS Turnover
-			,SUM(winlost - actual_stake) AS OwnerWinloss
+			,0 ---SUM(winlost - actual_stake) AS OwnerWinloss
 			,SUM(swinlost) AS winlost
 			,SUM(scomm - acomm) AS comm
 			,COUNT(1) AS betcount
@@ -298,12 +315,27 @@ BEGIN
 			INNER JOIN @recommend r ON r.recommend = bt.recommend	
 		WHERE bt.winlostdate <= @todate 
 			  AND StatusID NOT IN (0,1)	
-		GROUP BY Winlostdate, bettype, StatusID, CASE WHEN srecommend = custId THEN 1 ELSE 0 END 
+		GROUP BY Winlostdate, bettype, StatusID
+
+		-- I.4.1b bettrans (itself, always is transfer tickets )
+		INSERT INTO #Data (winlostdate, bettype, StatusID, IsOwner, IsBettrans, Turnover, OwnerWinloss, Winlost, Comm, BetCount)
+		SELECT
+			Winlostdate, -1 as bettype, -1 as StatusID, 1 as IsOwner, 1 AS IsBettrans
+			,0 --SUM( ABS(stake) ) AS Turnover
+			,SUM(winlost - actual_stake) AS OwnerWinloss
+			,0 --SUM(swinlost) AS winlost
+			,0 --SUM(scomm - acomm) AS comm
+			,COUNT(1) AS betcount
+		FROM dbo.bettrans bt WITH (NOLOCK)			
+		WHERE CustID = @CID
+			  AND winlostdate <= @todate 
+			  AND Ruben = 1 
+		GROUP BY Winlostdate --, bettype, StatusID
 		
 		-- I.4.2. BettransLC
 		INSERT INTO #Data (winlostdate, StatusID, IsOwner, IsBettrans, Turnover, OwnerWinloss, Winlost, Comm, BetCount)
 		SELECT
-			winlostdate, StatusID, CASE WHEN srecommend = custId THEN 1 ELSE 0 END as IsOwner, 0 AS IsBettrans
+			winlostdate, StatusID, 0 as IsOwner, 0 AS IsBettrans
 			,SUM(CASE WHEN statusID NOT IN (103, 101, 102) THEN ABS(stake) ELSE 0 END) AS Turnover
 			,SUM(winlost - actual_stake) AS OwnerWinloss
 			,SUM(swinlost) AS winlost
@@ -314,12 +346,12 @@ BEGIN
 		WHERE bt.winlostdate <= @todate
 			AND winlostdate >= @yesterday				
 			AND StatusID NOT IN (0,1)
-		GROUP BY winlostdate, StatusID, CASE WHEN srecommend = custId THEN 1 ELSE 0 END 
+		GROUP BY winlostdate, StatusID 
 		
 		-- I.4.3. BettransRNG
 		INSERT INTO #Data (winlostdate, StatusID, IsOwner, IsBettrans, Turnover, OwnerWinloss, Winlost, Comm, BetCount)
 		SELECT
-			winlostdate, StatusID, CASE WHEN srecommend = custId THEN 1 ELSE 0 END as IsOwner, 0 AS IsBettrans
+			winlostdate, StatusID, 0 as IsOwner, 0 AS IsBettrans
 			,SUM(CASE WHEN statusID NOT IN (103, 101, 102) THEN ABS(stake) ELSE 0 END) AS Turnover
 			,SUM(winlost - actual_stake) AS OwnerWinloss
 			,SUM(swinlost) AS winlost
@@ -330,7 +362,7 @@ BEGIN
 		WHERE bt.winlostdate <= @todate
 			AND winlostdate >= @yesterday				
 			AND StatusID NOT IN (0,1)
-		GROUP BY winlostdate, StatusID, CASE WHEN srecommend = custId THEN 1 ELSE 0 END 
+		GROUP BY winlostdate, StatusID 
 				
 	END
 	-- End Super --
@@ -481,7 +513,7 @@ BEGIN
 			-- II.2.1.bettrans
 			SELECT
 				CASE WHEN winlostdate < @fromdate THEN @fromdate ELSE DATEADD(DAY, 1, winlostdate) END AS winlostdate,
-				SUM(CASE WHEN IsOwner = 1 THEN OwnerWinloss ELSE winlost + comm END) AS Openningbalance
+				SUM(CASE WHEN IsOwner = 1 THEN OwnerWinloss ELSE winlost + comm END) AS OpeningBalance
 			FROM #Data bt  
 				LEFT JOIN #Sportbettype s ON s.bettype = bt.bettype
 			WHERE	bt.IsBettrans = 1
@@ -497,7 +529,7 @@ BEGIN
 			UNION ALL
 			SELECT
 				CASE WHEN winlostdate < @fromdate THEN @fromdate ELSE DATEADD(DAY, 1, winlostdate) END AS winlostdate,
-				SUM(CASE WHEN IsOwner = 1 THEN OwnerWinloss ELSE  winlost + comm END) AS Openningbalance
+				SUM(CASE WHEN IsOwner = 1 THEN OwnerWinloss ELSE  winlost + comm END) AS OpeningBalance
 			FROM #Data bt
 			WHERE bt.IsBettrans = 0
 				AND statusID NOT IN (0, 1)	
@@ -505,7 +537,7 @@ BEGIN
 				AND winlostdate >= @yesterday							
 			GROUP BY CASE WHEN winlostdate < @fromdate THEN @fromdate ELSE DATEADD(DAY, 1, winlostdate) END
 		)
-		INSERT INTO #rptStatementTable (winlostdate, Balance, IsOpenningBalance)
+		INSERT INTO #rptStatementTable (winlostdate, Balance, IsOpeningBalance)
 		SELECT
 			tmp.winlostdate,
 			SUM(ISNULL(Balance, 0)),
@@ -519,12 +551,12 @@ BEGIN
 		/*Calculate Opening Balance*/
 		SELECT @total = 0
 		UPDATE #rptStatementTable
-		SET Openningbalance = @total, @total = @total + Balance -- running total
-		WHERE IsOpenningBalance = 1
+		SET OpeningBalance = @total, @total = @total + Balance -- running total
+		WHERE IsOpeningBalance = 1
 
 		DELETE #rptStatementTable
-		WHERE winlostdate < (SELECT MIN(winlostdate) FROM #rptStatementTable WHERE Openningbalance <> 0 AND IsOpenningBalance = 1)
-			AND IsOpenningBalance = 1 
+		WHERE winlostdate < (SELECT MIN(winlostdate) FROM #rptStatementTable WHERE OpeningBalance <> 0 AND IsOpeningBalance = 1)
+			AND IsOpeningBalance = 1 
 		/*End Calculate Opening Balance*/
 	END
 
@@ -546,14 +578,14 @@ BEGIN
 	SELECT 
 		winlostdate
 		,@CID AS CustID
-		,SUM(ISNULL(Openningbalance, 0)) AS [Openningbalance]
+		,SUM(ISNULL(OpeningBalance, 0)) AS [OpeningBalance]
 		,SUM(Voidamt) AS [VoidAmt]
 		,SUM(Outstanding) AS [Outstanding]
 		,SUM(CASE WHEN BetCount > 0 THEN Turnover ELSE NULL END) AS [Turnover]
 		,SUM(TransferAmt) AS [TransferAmt]
 		,SUM(CASE WHEN BetCount > 0 THEN Winlost ELSE NULL END) AS [Winlost]
 		,SUM(CASE WHEN BetCount > 0 THEN Comm ELSE NULL END) AS [Comm]
-		,SUM(ISNULL(Openningbalance, 0) + ISNULL([Winlost], 0) + ISNULL([Comm], 0) + ISNULL([TransferAmt], 0)) AS ClosingBalance
+		,SUM(ISNULL(OpeningBalance, 0) + ISNULL([Winlost], 0) + ISNULL([Comm], 0) + ISNULL([TransferAmt], 0)) AS ClosingBalance
 		,SUM(GrandPrize) AS GrandPrize
 	FROM #rptStatementTable
 	GROUP BY winlostdate
@@ -564,20 +596,6 @@ BEGIN
 
 	DROP TABLE #rptStatementTable
 	DROP TABLE #Sportbettype
+	DROP TABLE #data 
 END
 GO
-SET QUOTED_IDENTIFIER OFF 
-GO
- SET ANSI_NULLS OFF 
-GO
-GRANT EXECUTE ON [dbo].[Acc_StatementSel] TO [bodbAdminNet]
-GO
-GRANT EXECUTE ON [dbo].[Acc_StatementSel] TO [bodbDownlineNet]
-GO
-GRANT EXECUTE ON [dbo].[Acc_StatementSel] TO [bodbDownlineNetView]
-GO
-GRANT EXECUTE ON [dbo].[Acc_StatementSel] TO [bodbExtAccNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_StatementSel] TO [vnteam]
-GO
-
