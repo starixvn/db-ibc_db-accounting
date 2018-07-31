@@ -1,5 +1,5 @@
 /*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView,bodbExtAccNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
-ALTER PROCEDURE [dbo].[Acc_StatementSel]
+ALTER PROCEDURE [dbo].[Acc_StatementSel_UAT3]
 	@fromdate	SMALLDATETIME,
 	@todate		SMALLDATETIME,
 	@custid		INT
@@ -75,6 +75,7 @@ BEGIN
 		,BetCount			INT		DEFAULT 0
 		,TransCount			INT		DEFAULT 0
 		,VoidCount			INT		DEFAULT 0
+		,PayoutCount		INT		DEFAULT 0
 		,GrandPrize			MONEY	NULL 
 		,Balance			MONEY		
 		,IsOpeningBalance	BIT		DEFAULT 0
@@ -111,7 +112,7 @@ BEGIN
 		INSERT INTO @mrecommend (mrecommend)
 		SELECT custid FROM dbo.Customer WITH(NOLOCK) WHERE srecommend = @CID AND roleid = 3
 		UNION ALL
-		SELECT @CID --super
+		SELECT @CID 
 
 
 	DECLARE @i BIGINT = 10000000  -- use optimize for
@@ -134,7 +135,7 @@ BEGIN
 	DECLARE @yesterday SMALLDATETIME 
 	SELECT  @yesterday =  CONVERT(DATE, DATEADD(DAY, -1, GETDATE()))
 	
-	
+
 	-- I. Get all data
 			
 	-- Member: get all status of ticket
@@ -587,10 +588,11 @@ BEGIN
 			GROUP BY winlostdate								
 
 		-- 5: Grand Prize
-			INSERT INTO #rptStatementTable (winlostdate, GrandPrize)
+			INSERT INTO #rptStatementTable (winlostdate, GrandPrize, PayoutCount)
 			SELECT
 				winlostdate
 				,SUM(WinAmount) AS GrandPrize
+				,COUNT (1) AS PayoutCount
 			FROM dbo.PayoutTrans WITH(NOLOCK) 
 			WHERE
 				winlostdate BETWEEN @fromdate AND @todate
@@ -679,6 +681,7 @@ BEGIN
 		SUM(BetCount) <> 0 
 		OR SUM(VoidCount) <> 0 
 		OR SUM(TransCount) <> 0
+		OR SUM(PayoutCount) <> 0
 
 	DROP TABLE #rptStatementTable
 	DROP TABLE #Sportbettype
