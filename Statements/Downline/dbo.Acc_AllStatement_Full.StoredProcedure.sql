@@ -1,4 +1,6 @@
-﻿/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView,bodbExtAccNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView,bodbExtAccNet" isFunction="0" isNested="0"></info>*/
+USE [bodb02]
+GO
 
 ALTER PROCEDURE [dbo].[Acc_AllStatement_Full]
 	@custid				INT,
@@ -64,6 +66,7 @@ AS
 		- 20160809@Percy: Change Void tickets label [RedmineID: #62192]
 		- 20170323@Percy: Apply Cash Out [RedmineID: #72164]
 		- 20171020@Percy: Get both waiting and running tickets on translog [RedmineID: #84692]
+		- 20180731@Percy: Expand column transdesc [RedmineID: #92841]
 		
 	Param explanation : 
 		- Transtypeid = 4 - GrandPrize
@@ -112,7 +115,7 @@ BEGIN
 		totalamt		MONEY,
 		transtype		NVARCHAR(100),
 		transtypeid		TINYINT DEFAULT 0,
-		transdesc		NVARCHAR(350),
+		transdesc		NVARCHAR(1000),
 		creator			VARCHAR(50),
 		checkerID		INT NULL,
 		checkerName		VARCHAR(50) NULL,
