@@ -495,7 +495,7 @@ BEGIN
 		(			
 			SELECT
 				winlostdate
-				,SUM(CASE WHEN statusID NOT IN (102,102,103) THEN Turnover ELSE 0 END) AS Turnover
+				,SUM(CASE WHEN statusID NOT IN (101,102,103) THEN Turnover ELSE 0 END) AS Turnover
 				,SUM(winlost) AS winlost
 				,SUM(comm) AS comm
 				,SUM(CASE WHEN bt.bettype = 500 THEN 0 ELSE betcount END) AS betcount
