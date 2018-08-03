@@ -231,8 +231,7 @@ BEGIN
 					SELECT TOP (@i) winlostdate, StatusID, bettype, stake, winlost, actual_stake, awinlost, comm, playercomm
 					FROM dbo.bettrans bt WITH (NOLOCK)		-- use index = IX_recommend					
 					WHERE r.recommend = bt.recommend
-						AND winlostdate <= @todate
-						AND winlostdate >= @yesterday				
+						AND winlostdate <= @todate			
 						AND StatusID NOT IN (0,1)
 					) b
 		GROUP BY winlostdate, bettype, StatusID, CASE WHEN recommend = @CID THEN 1 ELSE 0 END 
