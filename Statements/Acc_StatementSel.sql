@@ -1,5 +1,5 @@
 /*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView,bodbExtAccNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
-ALTER PROCEDURE [dbo].[Acc_StatementSel_UAT3]
+ALTER PROCEDURE [dbo].[Acc_StatementSel]
 	@fromdate	SMALLDATETIME,
 	@todate		SMALLDATETIME,
 	@custid		INT
@@ -220,7 +220,7 @@ BEGIN
 		-- I.2.1. Bettrans (downline and itsefl): Exclude ticket running, waiting, Void, reject
 		INSERT INTO #Data (winlostdate, bettype, StatusID, IsOwner, Turnover, OwnerWinloss, Winlost, Comm, BetCount)
 		SELECT
-			winlostdate, bettype, StatusID, CASE WHEN recommend = @CID THEN 1 ELSE 0 END as IsOwner
+			winlostdate, bettype, StatusID, IsOwner
 			,SUM( ABS(stake) ) AS Turnover
 			,SUM(winlost - actual_stake) AS OwnerWinloss
 			,SUM(awinlost) AS winlost
@@ -228,13 +228,13 @@ BEGIN
 			,COUNT(1) AS betcount
 		FROM @recommend r
 		CROSS APPLY (
-					SELECT TOP (@i) winlostdate, StatusID, bettype, stake, winlost, actual_stake, awinlost, comm, playercomm
+					SELECT TOP (@i) winlostdate, StatusID, bettype, stake, winlost, actual_stake, awinlost, comm, playercomm,  CASE WHEN recommend = CustID THEN 1 ELSE 0 END as IsOwner
 					FROM dbo.bettrans bt WITH (NOLOCK)		-- use index = IX_recommend					
 					WHERE r.recommend = bt.recommend
 						AND winlostdate <= @todate			
 						AND StatusID NOT IN (0,1)
 					) b
-		GROUP BY winlostdate, bettype, StatusID, CASE WHEN recommend = @CID THEN 1 ELSE 0 END 
+		GROUP BY winlostdate, bettype, StatusID, IsOwner 
 		OPTION (OPTIMIZE FOR (@i = 1), HASH GROUP)
 
 
