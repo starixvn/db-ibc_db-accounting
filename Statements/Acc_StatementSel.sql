@@ -310,7 +310,7 @@ BEGIN
 					FROM dbo.bettrans bt WITH(NOLOCK) -- use index on custID
 					WHERE	bt.recommend = r.recommend		
 							AND winlostdate <= @todate 
-							AND StatusID NOT IN (0,1,102,103)
+							AND StatusID NOT IN (0,1,102,101)
 				) b
 		GROUP BY winlostdate, bettype, StatusID
 		OPTION (OPTIMIZE FOR (@i = 1), HASH GROUP)
