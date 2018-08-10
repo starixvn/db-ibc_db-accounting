@@ -1,4 +1,5 @@
-﻿ALTER PROCEDURE [dbo].[Acc_FinanceCrossTransferMulUpd]
+﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+ALTER PROCEDURE [dbo].[Acc_FinanceCrossTransferMulUpd]
     @UserID INT,    
     @FileName VARCHAR(100),
     @FileSize INT,
@@ -18,12 +19,13 @@ AS
 						   Write more log on DBTXN server in case of DBLOG server failure
 		- 20130224@Lukas: move Acc_CustFinanceTransfer to new database bodb_acc
 		- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo by link database)
+		- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 */
 BEGIN
     SET NOCOUNT ON		
 
 --Check permission for account site
-    EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission 
+    EXEC DBPOL.NAP_UserControl.dbo.Acc_Con_CheckPermission 
 				@custid		= @UserID,
 				@funcname	= '[AutomateFinanceTransfer]', 
 				@ErrCode	= @ErrCode OUTPUT,

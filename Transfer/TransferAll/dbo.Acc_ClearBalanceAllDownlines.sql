@@ -1,4 +1,5 @@
-﻿CREATE PROCEDURE [dbo].[Acc_ClearBalanceAllDownlines]
+﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet,bodbExtAccNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+ALTER PROCEDURE [dbo].[Acc_ClearBalanceAllDownlines]
 	@AgentName varchar(50),	-- S99BD
 	@UserID int = 8,
 	@IP nvarchar(15)='', 
@@ -34,6 +35,7 @@ AS
 		- 20151021@Elodie: Set @IsForce = 1 for updating balance debit [Redmine:#40125]
 		- 20150126@Elodie: Include to get balance from bettransRNG + bettransLC [Redmine:#50674]
 		- 20160722@Viet: Improve performance [Redmine:#58288]
+		- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 		 				       
 	Param's Explanation:
 		@AgentName: username of agent/master/super to clear his all downlines' balance
@@ -57,7 +59,7 @@ BEGIN
 	DECLARE @ErrMsg_temp NVARCHAR(4000)
 
 	-- must use temporary variable for @ErrMsg because of nvarchar(max) is not allowed in remote call  
-	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[OtherTrans]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg_temp OUTPUT
+	EXEC DBPOL.NAP_UserControl.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[OtherTrans]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg_temp OUTPUT
 
 	SELECT @ErrMsg = @ErrMsg_temp
 

@@ -1,4 +1,5 @@
-﻿ALTER PROCEDURE [dbo].[Acc_FinanceTransferMulInsTmpExcel]	
+﻿/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+ALTER PROCEDURE [dbo].[Acc_FinanceTransferMulInsTmpExcel]	
 	@UserID INT,
 	@ListTransfer XML,	
 	@ErrCode INT = 0 OUTPUT,
@@ -18,12 +19,13 @@ AS
 		- 20130201@Elodie: Change link server DB03 to DBPOLICY
 		- 20130224@Lukas: move Acc_CustFinanceTransfer to new database bodb_acc
 		- 20130521@Elodie: Get more fields such as MinActualrate, MaxActualRate, MultipliedBy... to verify more new specific cases
+		- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 */
 BEGIN
 SET NOCOUNT ON
 			
 	--Check permission for account site
-	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[AutomateFinanceTransfer]',@ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
+	EXEC NAP_UserControl.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[AutomateFinanceTransfer]',@ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
 	
 	IF @ErrCode <> 0
 		RETURN
@@ -98,7 +100,7 @@ SET NOCOUNT ON
 			INNER JOIN custinfo c2 WITH (NOLOCK) ON t.ToCust = c2.Username
 			INNER JOIN Exchange e1 WITH (NOLOCK) ON c1.currency = e1.exchangeid
 			INNER JOIN Exchange e2 WITH (NOLOCK) ON c2.currency = e2.exchangeid
-			LEFT JOIN DBPOLICY.bodb02.dbo.Acc_ExchangeRate er WITH (NOLOCK) ON er.FromExchangeID = e1.exchangeid and er.ToExchangeID = e2.exchangeid
+			LEFT JOIN DBTXN.bodb02.dbo.Acc_ExchangeRate er WITH (NOLOCK) ON er.FromExchangeID = e1.exchangeid and er.ToExchangeID = e2.exchangeid
 	WHERE ISNUMERIC(Amount)=1 and ISNUMERIC(ExRate)=1
 			and cast(ExRate AS FLOAT) > 0
 			and cast(Amount AS FLOAT) <> 0

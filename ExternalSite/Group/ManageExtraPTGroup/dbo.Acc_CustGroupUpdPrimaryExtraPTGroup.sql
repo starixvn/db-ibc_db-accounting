@@ -1,7 +1,4 @@
 /*<info serverAlias="DBAGE-bodb_Age" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
-USE [bodb_Age]
-GO
-
 ALTER PROCEDURE [dbo].[Acc_CustGroupUpdPrimaryExtraPTGroup]
 	@CustID			INT,
 	@GroupName		VARCHAR(50),
@@ -20,6 +17,7 @@ AS
 
 	Revisions:
 		- 20170926@Percy: Move the nested SP: Acc_GroupExtraPTSetting_Upd from DBACC.bodb_ACC to DBCUST.CustDB [RedmineID: #83600]
+		- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 */
 
 BEGIN
@@ -32,7 +30,7 @@ BEGIN
 		RETURN
 
 	-- Check permission for account site
-	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission
+	EXEC DBPOL.NAP_UserControl.dbo.Acc_Con_CheckPermission
 		@CustID = @UserID,
 		@FuncName = '[Admin_ManageExAcc]',
 		@ErrCode = @ErrCode OUTPUT,

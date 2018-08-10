@@ -1,4 +1,5 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BettransRecoverBet_NumberGame]
+﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+ALTER PROCEDURE [dbo].[Acc_BettransRecoverBet_NumberGame]
     @transid BIGINT,
     @userid int,   
     @IsNegativeBal bit output,
@@ -14,13 +15,15 @@ AS
 		- 20130128@Elodie: Change link server DB03 to DBPOLICY, DB053 to DBAGE
 						   Write more log on DBTXN server in case of DBLOG server failure
 		- 20131108@Elodie: Splitting bodb02 into CustDB (Get credit in CustInfo from CustDB by link database)						   
+		- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
+		
 	Param's Explanation:
 */
 
 SET NOCOUNT ON
 BEGIN
 	--Check permission for account site: @phuc20080213
-	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@userid, @funcname='[SpecialDeleteNumberGame]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
+	EXEC DBPOL.NAP_UserControl.dbo.Acc_Con_CheckPermission @custid=@userid, @funcname='[SpecialDeleteNumberGame]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
 	IF @ErrCode <> 0
 		RETURN
 	--end

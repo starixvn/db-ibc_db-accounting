@@ -1,4 +1,5 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BettransInsCrossTransfer]
+﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+ALTER PROCEDURE [dbo].[Acc_BettransInsCrossTransfer]
 (
 	@FromCustID		INT,
 	@ToCustID		INT,
@@ -32,6 +33,7 @@ AS
 		- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo, Exchange by link database)  					       
 		- 20150808@Elodie: Balance Improvement [Redmine:#40125]
 		- 20151021@Elodie: Set @IsForce = 1 for updating balance debit [Redmine:#40125]
+		- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 */
 BEGIN
 	SET NOCOUNT ON	
@@ -44,7 +46,7 @@ BEGIN
 	END 
 		
 	--Check permission for account site: @phuc20080213
-	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[FinanceTransfer]',@ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
+	EXEC DBPOL.NAP_UserControl.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[FinanceTransfer]',@ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
 	If @ErrCode <> 0
 		RETURN
 		
@@ -404,7 +406,7 @@ BEGIN
 					  ' Trans Ex.Rate' + '(' + @FromCurrName + '/' + @ToCurrName + ') ' + CONVERT(VARCHAR(20),@TransExRate) + ')' + 
 					  ' Ref.No ' + CONVERT(VARCHAR(20), @refno)
 
-	EXEC DBPOLICY.bodb02.dbo.Acc_ExchangeRateCheckValid 
+	EXEC dbo.Acc_ExchangeRateCheckValid 
 				@FromExchangeID = @FromCurrency, 
 				@ToExchangeID	= @ToCurrency, 
 				@ExchangeRate	= @TransExRate,

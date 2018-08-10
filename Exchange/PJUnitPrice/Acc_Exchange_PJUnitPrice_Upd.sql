@@ -1,7 +1,4 @@
 /*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
-USE [CustDB]
-GO
-
 ALTER PROCEDURE [dbo].[Acc_Exchange_PJUnitPrice_Upd]
 	@UserId			INT,
 	@ExchangeId		INT,
@@ -19,13 +16,14 @@ AS
 
 	Revisions:
 		- 20180202@Percy: Initialize SP [RedmineID: #89122]
+		- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 */
 
 BEGIN
 	SET NOCOUNT ON
 
 	-- Check permission --
-	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission
+	EXEC NAP_UserControl.dbo.Acc_Con_CheckPermission
 		@CustID = @UserID,
 		@FuncName = '[PJUnitPrice]',
 		@ErrCode = @ErrCode OUTPUT,
