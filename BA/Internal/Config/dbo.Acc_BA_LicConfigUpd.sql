@@ -1,4 +1,5 @@
-﻿USE bodb_licensee
+﻿/*<info serverAlias="DBLIC-bodb_Licensee" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
+USE bodb_licensee
 GO
 
 ALTER PROCEDURE [dbo].[Acc_BA_LicConfigUpd]
@@ -37,6 +38,7 @@ Revisions:
 	- 20120426@Henry: fix bug due to update wrong groupcomm in LicenseeBAHistory
 	- 20130123@Daniel: Change link server alias
 	- 20170519@Harper: Fix duplicate key when setting BA [RedmineID: #76420]
+	- 20180809@Sophia: HA - remove LicenseeCustInfo table [Redmine: #99464]
 
 Param's Explanation:
 	
@@ -151,7 +153,7 @@ BEGIN
 			SELECT lba.CustID,currency   
 			FROM  
 				LicenseeBAHistory lba WITH (NOLOCK)
-				INNER JOIN LicenseeCustinfo c WITH (NOLOCK) ON lba.CustID = c.Custid
+				INNER JOIN bodb02.dbo.customer c WITH (NOLOCK) ON lba.CustID = c.Custid
 			WHERE LicenseeID = @LicenseeID AND Status = 'Running'
 			
 			
@@ -223,8 +225,5 @@ BEGIN
 	END
 END
 GO
-GRANT EXECUTE ON [dbo].[Acc_BA_LicConfigUpd] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BA_LicConfigUpd] TO [vnteam]
-
+ 
 

@@ -1,4 +1,5 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BA_SpecialCustSearch]
+﻿/*<info serverAlias="DBLIC-bodb_Licensee" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
+ALTER PROCEDURE [dbo].[Acc_BA_SpecialCustSearch]
 	(
 		@LicenseeID  INT =NULL,
 		@Str VARCHAR(MAX)=NULL,
@@ -15,7 +16,8 @@ DB: DB052.bodb_Licensee
 Original:
 
 Revisions:
-	20120417@Henry: enhance performance
+	- 20120417@Henry: enhance performance
+	- 20180809@Sophia: HA - remove LicenseeCustInfo table [Redmine: #99464]
 Param's Explanation:
 	
 */
@@ -37,7 +39,6 @@ BEGIN
 				c.ugroup,
 			 CASE WHEN ISNULL(lb.Custid,0)=0 THEN 'OFF' ELSE 'ON' END BAStatus 	
 	FROM   bodb02.dbo.Customer c (NOLOCK)  
-	--INNER JOIN LicenseeCustinfo l (NOLOCK) ON c.custID=l.CustID
 	INNER JOIN LicenseeCust lc (NOLOCK) ON lc.CustID=c.recommend
 	LEFT JOIN LicenseeBAHistory lb (NOLOCK) ON lb.LicenseeID=@LicenseeID AND lb.CustID=c.CustID AND lb.Status='Running'
 	WHERE c.username IN (SELECT ISNULL(strvalue,c.username) FROM @tmpCustomerList)
@@ -88,10 +89,7 @@ BEGIN
 			
 		END
 END
-GO
-GRANT EXECUTE ON [dbo].[Acc_BA_SpecialCustSearch] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BA_SpecialCustSearch] TO [vnteam] 
+GO 
 
 
 

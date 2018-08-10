@@ -1,7 +1,4 @@
-﻿set ANSI_NULLS ON
-set QUOTED_IDENTIFIER ON
-go
-
+﻿/*<info serverAlias="DBLIC-bodb_Licensee" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_BA_SpecialCustSel]
 (
 	@LicenseeID  INT,
@@ -17,6 +14,7 @@ DB: DB052.bodb_Licensee
 Original:
 
 Revisions:
+	- 20180809@Sophia: HA - remove LicenseeCustInfo table [Redmine: #99464]
 	
 Param's Explanation:
 	
@@ -47,7 +45,7 @@ BEGIN
 		lsc.modifydate,
 		CASE WHEN ISNULL(lb.Custid,0)=0 THEN 'OFF' ELSE 'ON' END BAStatus
 	FROM LicenseeSpecialCust lsc WITH (NOLOCK)
-		INNER JOIN LicenseeCustinfo lc WITH (NOLOCK) ON lc.Custid=lsc.Custid
+		INNER JOIN bodb02.dbo.Customer lc WITH (NOLOCK) ON lc.Custid=lsc.Custid
 		INNER JOIN bodb02.dbo.Customer c WITH (NOLOCK) ON lsc.ModifyBy = C.CustID
 		LEFT JOIN LicenseeBAHistory lb(NOLOCK) ON lb.LicenseeID = lsc.LicenseeID AND lb.CustID=lsc.CustID  AND lb.Status='Running'
 	WHERE 
@@ -70,7 +68,7 @@ BEGIN
 			lsc.modifydate,
 			CASE WHEN ISNULL(lb.Custid,0)=0 THEN 'OFF' ELSE 'ON' END BAStatus
 		FROM LicenseeSpecialCust lsc WITH (NOLOCK)
-			INNER JOIN LicenseeCustinfo lc WITH (NOLOCK) ON lc.Custid=lsc.Custid
+			INNER JOIN bodb02.dbo.Customer lc WITH (NOLOCK) ON lc.Custid=lsc.Custid
 			INNER JOIN bodb02.dbo.Customer c WITH (NOLOCK) ON lsc.ModifyBy = C.CustID
 			LEFT JOIN LicenseeBAHistory lb(NOLOCK) ON lb.LicenseeID = lsc.LicenseeID AND lb.CustID=lsc.CustID  AND lb.Status='Running'
 		WHERE 
@@ -92,7 +90,7 @@ BEGIN
 			lsc.modifydate,
 			CASE WHEN ISNULL(lb.Custid,0)=0 THEN 'OFF' ELSE 'ON' END BAStatus
 		FROM LicenseeSpecialCust lsc WITH (NOLOCK)
-			INNER JOIN LicenseeCustinfo lc WITH (NOLOCK) ON lc.Custid=lsc.Custid
+			INNER JOIN bodb02.dbo.Customer lc WITH (NOLOCK) ON lc.Custid=lsc.Custid
 			INNER JOIN bodb02.dbo.Customer c WITH (NOLOCK) ON lsc.ModifyBy = C.CustID
 			LEFT JOIN LicenseeBAHistory lb(NOLOCK) ON lb.LicenseeID = lsc.LicenseeID AND lb.CustID=lsc.CustID  AND lb.Status='Running'
 		WHERE 
@@ -104,13 +102,4 @@ BEGIN
 END
 
 
-GO
-GRANT EXECUTE ON [dbo].[Acc_BA_SpecialCustSel] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BA_SpecialCustSel] TO [vnteam] 
-
-
-
-
-
-
+GO 
