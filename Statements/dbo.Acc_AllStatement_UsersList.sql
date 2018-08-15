@@ -19,6 +19,7 @@ AS
 		- 20100602@Khoa: put accounts' currency to the temp table #TEMP_USER_LIST 
 		- 20101224@Lukas: Re-arrange bettype
 		- 20180628@Percy: Fix issue duplicated data [RedmineID: #97316]
+		- 20180731@Percy: Expand column transdesc [RedmineID: #92841]
        
 */
 
@@ -42,7 +43,7 @@ BEGIN
 		accdate		SMALLDATETIME,
 		totalamt	MONEY,
 		transtype	NVARCHAR(100),
-		transdesc	NVARCHAR(300),   
+		transdesc	NVARCHAR(1000),   
 		roleid		INT,
 		username	VARCHAR(50),
 		currency	INT

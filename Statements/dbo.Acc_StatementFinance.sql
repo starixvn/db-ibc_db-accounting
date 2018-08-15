@@ -1,6 +1,7 @@
-﻿USE [bodb02]
-GO 
- 
+/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet,bodbExtAccNet" isFunction="0" isNested="0"></info>*/
+USE [bodb02]
+GO
+
 ALTER PROCEDURE [dbo].[Acc_StatementFinance]
     @RefNo BIGINT = 0,
 	@Username VARCHAR(30) = null,
@@ -23,6 +24,7 @@ AS
 			+ bodb_Report --> DBRPT/bodb_Report
 		- 20160602@Percy: Hotfix - Opening balance is shown wrongly [Redmine: #58410]
 		- 20160824@Lukas: add param @UserId for checking permission before query data
+		- 20180731@Percy: Expand column transdesc [RedmineID: #92841]
 
     Param's Explanation:
         - @FilterBy: 1:winlostdate - 2:transdate
@@ -44,7 +46,7 @@ BEGIN
 		RefNo BIGINT,
 		TotalAmt MONEY,
 		TransType NVARCHAR(100),
-		TransDesc NVARCHAR(350),
+		TransDesc NVARCHAR(1000),
 		Creator INT,
 		CheckerID INT NULL,
 		CheckerName VARCHAR(50) NULL,
@@ -473,10 +475,4 @@ BEGIN
 	DROP TABLE #StatementTable
 END 
 
-
 GO
-GRANT EXECUTE ON [dbo].[Acc_StatementFinance] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[Acc_StatementFinance] TO [bodbExtAccNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_StatementFinance] TO [vnteam] AS [dbo]

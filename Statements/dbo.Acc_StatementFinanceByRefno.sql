@@ -1,4 +1,8 @@
-﻿ALTER PROCEDURE [dbo].[Acc_StatementFinanceByRefno]
+/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet,bodbExtAccNet" isFunction="0" isNested="0"></info>*/
+USE [bodb02]
+GO
+
+ALTER PROCEDURE [dbo].[Acc_StatementFinanceByRefno]
     @RefNo BIGINT,
     @FromDate DATETIME,
 	@ToDate DATETIME,
@@ -12,7 +16,8 @@ AS
 	Revisions:
 		- 20130724@Jamie: Change Alias 
 			+ DB053 --> DBSUM
-			+ bodb_Archive --> DBARC 		
+			+ bodb_Archive --> DBARC
+		- 20180731@Percy: Expand column transdesc [RedmineID: #92841]
 
     Param's Explanation:
     
@@ -27,7 +32,7 @@ DECLARE @StatementTable TABLE(
     TransID BIGINT,
     TransDate DATETIME,
     TransType NVARCHAR(100),
-	TransDesc NVARCHAR(350),
+	TransDesc NVARCHAR(1000),
 	TotalAmt MONEY,
 	TotalAmtRM MONEY,
 	IsOwner BIT 
@@ -115,10 +120,4 @@ SELECT
 FROM @StatementTable tmp
 ORDER BY tmp.TransID
 
-
 GO
-GRANT EXECUTE ON [dbo].[Acc_StatementFinanceByRefno] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[Acc_StatementFinanceByRefno] TO [bodbExtAccNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_StatementFinanceByRefno] TO [vnteam] AS [dbo]
