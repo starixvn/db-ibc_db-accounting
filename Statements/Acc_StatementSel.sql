@@ -130,6 +130,7 @@ BEGIN
 	)
 	INSERT INTO @tbl (Winlostdate)
 	SELECT Winlostdate FROM CTE_WinlostDate
+	OPTION (MAXRECURSION 0)
 	 
 		
 	DECLARE @yesterday SMALLDATETIME 
