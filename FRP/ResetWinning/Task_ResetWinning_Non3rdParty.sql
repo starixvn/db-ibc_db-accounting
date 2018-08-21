@@ -51,6 +51,7 @@ AS
 			. Apply OneRnG Jackpot [RedmineID: #90357]
 			. Increase Transdesc length to 1000 [RedmineID: #92841]
 		- 20180521@Percy: Apply PP - Pragmatic, update bettype range of Macau Games [RedmineID: #95529]
+		- 20180821@Percy: Apply Poker Games [RedmineID: #100168]
 
 	Param Explanation:
 	    @mode:  0 _ view report
@@ -169,15 +170,21 @@ BEGIN
 				CASE WHEN b.bettype IN (2199, 2399, 2999) THEN 0
 					ELSE
 					(ISNULL(winlost,0)-ISNULL(actual_stake,0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)
-						+ CASE WHEN b.bettype IN (2198, 2398, 2998) THEN ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) ELSE 0 END
-					)
-					* (CASE WHEN ISNULL(d.custid, -1) <> -1 AND b.bettype IN (21001, 21002) THEN 1 ELSE actualrate END)
-				END
-				) AS winlost,
+						+ CASE
+							-- Jackpot
+							WHEN b.bettype IN (2198, 2398, 2998) THEN ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000),0)
+							-- Poker Games
+							WHEN b.bettype BETWEEN 1401 AND 1499 THEN ISNULL(b.oddsspread,0) * ISNULL(b.modds,0)
+							ELSE 0 END
+					) * (CASE WHEN ISNULL(d.custid, -1) <> -1 AND b.bettype IN (21001, 21002) THEN 1 ELSE actualrate END) END
+			) AS winlost,
 			SUM(
 				(CASE
+						-- Jackpot
 						WHEN b.bettype IN (2198, 2398, 2998) THEN -ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0)
 						WHEN b.bettype IN (2199, 2399, 2999) THEN ISNULL(b.winlost, 0) - ISNULL(b.actual_stake, 0)
+						-- Poker Games
+						WHEN b.bettype BETWEEN 1401 AND 1499 THEN -ISNULL(b.oddsspread,0) * ISNULL(b.modds,0)
 					ELSE 0 END
 				) * b.actualrate
 			) AS winlostDueTo,
@@ -198,16 +205,22 @@ BEGIN
 				CASE WHEN b.bettype IN (2199, 2399, 2999) THEN 0
 					ELSE
 					(ISNULL(winlost,0)-ISNULL(actual_stake,0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)
-						+ CASE WHEN b.bettype IN (2198, 2398, 2998) THEN ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) ELSE 0 END
-					)
-					* (CASE WHEN ISNULL(d.custid, -1) <> -1 AND b.bettype IN (21001, 21002) THEN 1 ELSE actualrate END)
-				END
-			) <> 0
+						+ CASE
+							-- Jackpot
+							WHEN b.bettype IN (2198, 2398, 2998) THEN ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000),0)
+							-- Poker Games
+							WHEN b.bettype BETWEEN 1401 AND 1499 THEN ISNULL(b.oddsspread,0) * ISNULL(b.modds,0)
+							ELSE 0 END
+					) * (CASE WHEN ISNULL(d.custid, -1) <> -1 AND b.bettype IN (21001, 21002) THEN 1 ELSE actualrate END) END
+				) <> 0
 		OR
 			SUM(
 				(CASE
+						-- Jackpot
 						WHEN b.bettype IN (2198, 2398, 2998) THEN -ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0)
 						WHEN b.bettype IN (2199, 2399, 2999) THEN ISNULL(b.winlost, 0) - ISNULL(b.actual_stake, 0)
+						-- Poker Games
+						WHEN b.bettype BETWEEN 1401 AND 1499 THEN -ISNULL(b.oddsspread,0) * ISNULL(b.modds,0)
 					ELSE 0 END
 				) * b.actualrate
 			) <> 0
@@ -280,6 +293,7 @@ BEGIN
 			 WHEN bettype BETWEEN 8000 AND 8099 THEN 'Exchange'
 			 WHEN bettype = 1004 THEN 'Bullfighting'
 			 WHEN bettype BETWEEN 4101 AND 4300 THEN 'PP'
+			 WHEN bettype BETWEEN 1401 AND 1499 THEN 'Poker Games'
 		   END AS Product,
 		   ISNULL(SUM(winlost), 0) as winlost
 	 FROM #bettranstmp
@@ -309,6 +323,7 @@ BEGIN
 			OR bettype BETWEEN 8000 AND 8099
 			OR bettype = 1004
 			OR bettype BETWEEN 4101 AND 4300
+			OR bettype BETWEEN 1401 AND 1499
 		   )
 	GROUP BY CASE
 			 WHEN bettype BETWEEN 81 AND 120 THEN 'Number Game'
@@ -341,6 +356,7 @@ BEGIN
 			 WHEN bettype BETWEEN 8000 AND 8099 THEN 'Exchange'
 			 WHEN bettype = 1004 THEN 'Bullfighting'
 			 WHEN bettype BETWEEN 4101 AND 4300 THEN 'PP'
+			 WHEN bettype BETWEEN 1401 AND 1499 THEN 'Poker Games'
 		   END, winlostdate
 
 	UNION ALL
@@ -350,6 +366,15 @@ BEGIN
            ISNULL(SUM(winlostDueTo), 0) winlost
     FROM #bettranstmp
     WHERE bettype IN (2198, 2398, 2998, 2199, 2399, 2999)
+	GROUP BY winlostdate
+
+	UNION ALL
+
+	SELECT winlostdate,
+           'Poker Games (Due To Partners)',
+           ISNULL(SUM(winlostDueTo), 0) winlost
+    FROM #bettranstmp
+    WHERE bettype BETWEEN 1401 AND 1499
 	GROUP BY winlostdate
 
 	UNION ALL
@@ -384,9 +409,12 @@ BEGIN
 			   SUM((winlost - actual_stake) * actualrate) AS winlost,
 			   SUM((
 				CASE
+					-- Jackpot
 					WHEN b.bettype IN (2198, 2398, 2998) THEN
 						CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) END
 					WHEN b.bettype IN (2199, 2399, 2999) THEN 0
+					-- Poker Games
+					WHEN b.bettype BETWEEN 1401 AND 1499 THEN -ISNULL(b.oddsspread, 0)
 					ELSE
 						CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
 					END) * b.actualrate) AS newwinlost
