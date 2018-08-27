@@ -11,7 +11,7 @@ DB: DBACC/BODB02
 Original: 
 Revisions:	
 	- 20130201@Elodie: Change link server DB03 to DBPOLICY
-	- 20130224@Lukas: move SP to new database bodb_acc
+	- 20130224@Lukas: move Acc_CustFinanceTransfer to new database bodb_acc
 	- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 */
 SET NOCOUNT ON
