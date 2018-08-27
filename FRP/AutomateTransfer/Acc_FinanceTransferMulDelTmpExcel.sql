@@ -21,9 +21,9 @@ SET NOCOUNT ON
 	IF @ErrCode <> 0
 		RETURN
 		
-	IF EXISTS (SELECT 1 FROM dbo.Acc_CustFinanceTransfer WHERE UserID=@UserID)
+	IF EXISTS (SELECT 1 FROM bodb_acc.dbo.Acc_CustFinanceTransfer WHERE UserID=@UserID)
 	BEGIN
-		DELETE FROM dbo.Acc_CustFinanceTransfer WHERE UserID=@UserID
+		DELETE FROM bodb_acc.dbo.Acc_CustFinanceTransfer WHERE UserID=@UserID
 		
 		IF @@ERROR <> 0
 		BEGIN
