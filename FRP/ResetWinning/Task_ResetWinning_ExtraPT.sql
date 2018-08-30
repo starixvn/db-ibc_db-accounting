@@ -24,6 +24,7 @@ AS
 		- 20180412@Percy:
 			. Apply OneRnG Jackpot [RedmineID: #90357]
 			. Increase Transdesc length to 1000 [RedmineID: #92841]
+		- 20180821@Percy: Apply Poker Games [RedmineID: #100168]
 
 	Param's explain:
 		@mode:  0 _ view report
@@ -99,9 +100,12 @@ BEGIN
 				SUM((winlost - actual_stake) * actualrate) AS Winlost,
 				SUM((
 					CASE
+						-- Jackpot
 						WHEN b.bettype IN (2198, 2398, 2998) THEN
 							CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) END
 						WHEN b.bettype IN (2199, 2399, 2999) THEN 0
+						-- Poker Games
+						WHEN b.bettype BETWEEN 1401 AND 1499 THEN -ISNULL(b.oddsspread, 0)
 						ELSE
 							CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
 						END) * b.actualrate) AS NewWinlost,
