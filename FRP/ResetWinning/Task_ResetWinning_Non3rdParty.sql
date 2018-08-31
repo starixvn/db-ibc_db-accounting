@@ -175,7 +175,7 @@ BEGIN
 							-- Jackpot
 							WHEN b.bettype IN (2198, 2398, 2998) THEN ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000),0)
 							-- Poker Games
-							WHEN b.bettype BETWEEN 1401 AND 1499 THEN - (-ISNULL(b.oddsspread,0) * ISNULL(b.modds,0) + ISNULL(transid2,0) / 10000 *  ISNULL(hdp2,0))
+							WHEN b.bettype BETWEEN 1401 AND 1499 THEN - (-ISNULL(b.oddsspread,0) * ISNULL(b.modds,0) + ISNULL(transid2,0) / CONVERT(DECIMAL(19,8),10000) *  ISNULL(hdp2,0))
 							ELSE 0 END
 					) * (CASE WHEN ISNULL(d.custid, -1) <> -1 AND b.bettype IN (21001, 21002) THEN 1 ELSE actualrate END) END
 			) AS winlost,
@@ -185,7 +185,7 @@ BEGIN
 						WHEN b.bettype IN (2198, 2398, 2998) THEN -ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0)
 						WHEN b.bettype IN (2199, 2399, 2999) THEN ISNULL(b.winlost, 0) - ISNULL(b.actual_stake, 0)
 						-- Poker Games
-						WHEN b.bettype BETWEEN 1401 AND 1499 THEN (-ISNULL(b.oddsspread,0) * ISNULL(b.modds,0) + ISNULL(transid2,0) / 10000 *  ISNULL(hdp2,0))
+						WHEN b.bettype BETWEEN 1401 AND 1499 THEN (-ISNULL(b.oddsspread,0) * ISNULL(b.modds,0) + ISNULL(transid2,0) / CONVERT(DECIMAL(19,8),10000) *  ISNULL(hdp2,0))
 					ELSE 0 END
 				) * b.actualrate
 			) AS winlostDueTo,
@@ -210,7 +210,7 @@ BEGIN
 							-- Jackpot
 							WHEN b.bettype IN (2198, 2398, 2998) THEN ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000),0)
 							-- Poker Games
-							WHEN b.bettype BETWEEN 1401 AND 1499 THEN -(-ISNULL(b.oddsspread,0) * ISNULL(b.modds,0) + ISNULL(transid2,0) / 10000 *  ISNULL(hdp2,0))
+							WHEN b.bettype BETWEEN 1401 AND 1499 THEN -(-ISNULL(b.oddsspread,0) * ISNULL(b.modds,0) + ISNULL(transid2,0) / CONVERT(DECIMAL(19,8),10000) *  ISNULL(hdp2,0))
 							ELSE 0 END
 					) * (CASE WHEN ISNULL(d.custid, -1) <> -1 AND b.bettype IN (21001, 21002) THEN 1 ELSE actualrate END) END
 				) <> 0
@@ -221,7 +221,7 @@ BEGIN
 						WHEN b.bettype IN (2198, 2398, 2998) THEN -ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0)
 						WHEN b.bettype IN (2199, 2399, 2999) THEN ISNULL(b.winlost, 0) - ISNULL(b.actual_stake, 0)
 						-- Poker Games
-						WHEN b.bettype BETWEEN 1401 AND 1499 THEN (-ISNULL(b.oddsspread,0) * ISNULL(b.modds,0) + ISNULL(transid2,0) / 10000 *  ISNULL(hdp2,0))
+						WHEN b.bettype BETWEEN 1401 AND 1499 THEN (-ISNULL(b.oddsspread,0) * ISNULL(b.modds,0) + ISNULL(transid2,0) / CONVERT(DECIMAL(19,8),10000) *  ISNULL(hdp2,0))
 					ELSE 0 END
 				) * b.actualrate
 			) <> 0
@@ -415,7 +415,7 @@ BEGIN
 						CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) END
 					WHEN b.bettype IN (2199, 2399, 2999) THEN 0
 					-- Poker Games
-					WHEN b.bettype BETWEEN 1401 AND 1499 THEN ISNULL(transid2,0) / 10000    
+					WHEN b.bettype BETWEEN 1401 AND 1499 THEN ISNULL(transid2,0) / CONVERT(DECIMAL(19,8),10000)    
 					ELSE
 						CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
 					END) * b.actualrate) AS newwinlost,

@@ -45,6 +45,7 @@ AS
 		- 20180412@Percy: Apply OneRnG Jackpot [RedmineID: #90357]
 		- 20180521@Percy: Apply PP - Pragmatic, update bettype range of Macau Games [RedmineID: #95529]
 		- 20180821@Percy: Apply Poker Games [RedmineID: #100168]
+		- 20180830@Sophia: Apply Poker Games Phase 2 - Insurance [RedmineID: #100168]
 		
 	Explanation's Param:
 
@@ -167,7 +168,7 @@ BEGIN
 						-- Jackpot
 						WHEN b.bettype IN (2198, 2398, 2998) THEN ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000),0)
 						-- Poker Games
-						WHEN b.bettype BETWEEN 1401 AND 1499 THEN ISNULL(b.oddsspread,0) * ISNULL(b.modds,0)
+						WHEN b.bettype BETWEEN 1401 AND 1499 THEN - (-ISNULL(b.oddsspread,0) * ISNULL(b.modds,0) + ISNULL(transid2,0) / CONVERT(DECIMAL(19,8),10000) *  ISNULL(hdp2,0))
 						ELSE 0 END
 					) * b.actualrate END
 			) AS winlost,
@@ -177,7 +178,7 @@ BEGIN
 						WHEN b.bettype IN (2198, 2398, 2998) THEN -ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0)
 						WHEN b.bettype IN (2199, 2399, 2999) THEN ISNULL(b.winlost, 0) - ISNULL(b.actual_stake, 0)
 						-- Poker Games
-						WHEN b.bettype BETWEEN 1401 AND 1499 THEN -ISNULL(b.oddsspread,0) * ISNULL(b.modds,0)
+						WHEN b.bettype BETWEEN 1401 AND 1499 THEN (-ISNULL(b.oddsspread,0) * ISNULL(b.modds,0) + ISNULL(transid2,0) / CONVERT(DECIMAL(19,8),10000) *  ISNULL(hdp2,0))
 					ELSE 0 END
 				) * b.actualrate
 			) AS winlostDueTo,
@@ -200,7 +201,7 @@ BEGIN
 						-- Jackpot
 						WHEN b.bettype IN (2198, 2398, 2998) THEN ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000),0)
 						-- Poker Games
-						WHEN b.bettype BETWEEN 1401 AND 1499 THEN ISNULL(b.oddsspread,0) * ISNULL(b.modds,0)
+						WHEN b.bettype BETWEEN 1401 AND 1499 THEN -(-ISNULL(b.oddsspread,0) * ISNULL(b.modds,0) + ISNULL(transid2,0) / CONVERT(DECIMAL(19,8),10000) *  ISNULL(hdp2,0))
 						ELSE 0 END
 					) * b.actualrate END
 			) <> 0
@@ -211,7 +212,7 @@ BEGIN
 						WHEN b.bettype IN (2198, 2398, 2998) THEN -ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0)
 						WHEN b.bettype IN (2199, 2399, 2999) THEN ISNULL(b.winlost, 0) - ISNULL(b.actual_stake, 0)
 						-- Poker Games
-						WHEN b.bettype BETWEEN 1401 AND 1499 THEN -ISNULL(b.oddsspread,0) * ISNULL(b.modds,0)
+						WHEN b.bettype BETWEEN 1401 AND 1499 THEN (-ISNULL(b.oddsspread,0) * ISNULL(b.modds,0) + ISNULL(transid2,0) / CONVERT(DECIMAL(19,8),10000) *  ISNULL(hdp2,0))
 					ELSE 0 END
 				) * b.actualrate
 			) <> 0
@@ -381,10 +382,14 @@ BEGIN
 						CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) END
 					WHEN b.bettype IN (2199, 2399, 2999) THEN 0
 					-- Poker Games
-					WHEN b.bettype BETWEEN 1401 AND 1499 THEN -ISNULL(b.oddsspread, 0)
+					WHEN b.bettype BETWEEN 1401 AND 1499 THEN ISNULL(transid2,0) / CONVERT(DECIMAL(19,8),10000)  
 					ELSE
 						CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
-					END) * b.actualrate) AS newwinlost
+					END) * b.actualrate) AS newwinlost,
+					SUM((					
+					-- Poker Games
+					CASE WHEN b.bettype BETWEEN 1401 AND 1499 THEN  -ISNULL(b.oddsspread, 0) 
+					ELSE 0 END) * b.actualrate) AS newcomm	
 		FROM dbo.bettrans14 b WITH(NOLOCK)
 		INNER JOIN @SportBettype s ON s.BetType = b.bettype
 		WHERE  b.winlostdate = @winlostdate
@@ -394,16 +399,28 @@ BEGIN
 		GROUP BY b.srecommend,	      
 			   s.ProductId 
 			   )
-	INSERT INTO #ExtraPTWL (ProductId, ExtraPTwinlost, NewExtraPTwinlost) 
-	SELECT	w.ProductId, SUM(w.winlost * s.ExtraPT), SUM(w.newwinlost * s.ExtraPT)
-	FROM	wl w
-	INNER JOIN dbo.Acc_GroupExtraPTSetting s WITH (NOLOCK)
-			ON w.srecommend = s.SuperId
-			AND w.ProductId = s.ProductId
-			AND w.SubProduct = s.SubProduct
-			AND w.Sporttype = s.Sporttype 
-			AND @winlostdate BETWEEN s.FromDate AND s.ToDate
-	GROUP BY w.Sporttype, w.ProductId, w.SubProduct
+	INSERT INTO #ExtraPTWL (ProductId, ExtraPTwinlost, NewExtraPTwinlost)
+	SELECT  ProductId, SUM (ExtraPTwinlost) as ExtraPTwinlost, SUM (NewExtraPTwinlost) AS NewExtraPTwinlost
+	FROM ( 
+			SELECT	w.ProductId, SUM(w.winlost * s.ExtraPT) as ExtraPTwinlost, SUM(w.newwinlost * s.ExtraPT) as NewExtraPTwinlost
+			FROM	wl w
+			INNER JOIN dbo.Acc_GroupExtraPTSetting s WITH (NOLOCK)
+					ON w.srecommend = s.SuperId
+					AND w.ProductId = s.ProductId
+					AND w.SubProduct = s.SubProduct
+					AND w.Sporttype = s.Sporttype 					
+			GROUP BY w.Sporttype, w.ProductId, w.SubProduct
+			UNION ALL 
+			SELECT	w.ProductId, 0 , SUM(w.newcomm * s.ExtraCommRate)
+			FROM	wl w
+			INNER JOIN dbo.Acc_GroupExtraCommRateSetting s WITH(NOLOCK)
+					ON w.srecommend = s.SuperId
+					AND w.ProductId = s.ProductId
+					AND w.SubProduct = s.SubProduct
+					AND w.Sporttype = s.Sporttype 
+			GROUP BY w.Sporttype, w.ProductId, w.SubProduct
+			) A 
+	GROUP BY ProductId
 
 	UPDATE e 
 	SET ProductName = CASE WHEN e.ProductId = 6 THEN 'Casino' ELSE p.ProductName END
