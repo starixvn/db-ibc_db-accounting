@@ -408,7 +408,8 @@ BEGIN
 					ON w.srecommend = s.SuperId
 					AND w.ProductId = s.ProductId
 					AND w.SubProduct = s.SubProduct
-					AND w.Sporttype = s.Sporttype 					
+					AND w.Sporttype = s.Sporttype 		
+					AND @winlostdate BETWEEN s.FromDate AND s.ToDate					
 			GROUP BY w.Sporttype, w.ProductId, w.SubProduct
 			UNION ALL 
 			SELECT	w.ProductId, 0 , SUM(w.newcomm * s.ExtraCommRate)
@@ -418,6 +419,7 @@ BEGIN
 					AND w.ProductId = s.ProductId
 					AND w.SubProduct = s.SubProduct
 					AND w.Sporttype = s.Sporttype 
+					AND @winlostdate BETWEEN s.FromDate AND s.ToDate
 			GROUP BY w.Sporttype, w.ProductId, w.SubProduct
 			) A 
 	GROUP BY ProductId
