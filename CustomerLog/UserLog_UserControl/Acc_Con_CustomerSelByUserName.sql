@@ -1,4 +1,5 @@
-﻿ ALTER PROCEDURE [dbo].[Acc_Con_CustomerSelByUserName]
+﻿/*<info serverAlias="DBCUST-NAP_UserControl" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+ALTER PROCEDURE [dbo].[Acc_Con_CustomerSelByUserName]
 	@TypeID TINYINT,
 	@Name NVARCHAR(50) = '',
 	@System VARCHAR(50) = 'ACCOUNTING',
@@ -11,11 +12,13 @@ AS
 /*
 	Created by: 20120607@Sophia
 	Task: Check valid and select ID from @Name, used for select view log of user control
-	DB: DB03.BODB02
-
+	DB: DBCUST/NAP_UserControl
+	
 	Revisions:
 		- 20120720@Johnson: Remove checking in accCustomer_1
 		- 20120828@Elodie: IT admin's log are only be seen by IT department users.
+		- 20180808@Helen: DB05.DBPOLICY migration  [Redmine:99462]
+		
 	Explain @Paramater:
 		- @TypeID:
 			0: used for Group
@@ -50,7 +53,7 @@ IF(@ShowInternalGroup = 0)
 begin
 	Declare @UserGroupID int
 	select @UserGroupID = GroupID
-	from accCustomer_1 with (NOLOCK)	
+	from accCustomer with (NOLOCK)	
 	where custid = @UserID
 end
 
@@ -58,7 +61,7 @@ end
 IF @TypeID = 0   
 BEGIN 
 	SELECT	@CustID = GroupID
-	FROM	Acc_GroupInfo_1 WITH (NOLOCK)  
+	FROM	Acc_GroupInfo WITH (NOLOCK)  
 	WHERE	GroupName = @Name AND 
 			System = @System and
 			GroupID <> CASE WHEN @UserGroupID = 1 or @ShowInternalGroup = 1 THEN 0 ELSE 1 end
@@ -73,7 +76,7 @@ END
 --- Admin
 ELSE 
 BEGIN 
-	IF ISNULL((SELECT RoleID FROM BODB02.dbo.Custinfo WITH (NOLOCK) WHERE Username = @Name),0) < 5
+	IF ISNULL((SELECT RoleID FROM CUSTDB.dbo.Custinfo WITH (NOLOCK) WHERE Username = @Name),0) < 5
 		BEGIN 
 			SELECT	@ErrCode = 503,
 					@ErrMsg = N'This admin does not exist!'  
@@ -82,8 +85,8 @@ BEGIN
 	ELSE	
 	BEGIN 
 		SELECT	@CustID = c.CustID 
-		FROM	Custinfo c WITH(NOLOCK)  	
-				inner JOIN accCustomer_1 ac with (NOLOCK) ON c.custid = ac.custid	
+		FROM	CUSTDB.dbo.Custinfo c WITH(NOLOCK)  	
+				inner JOIN accCustomer ac with (NOLOCK) ON c.custid = ac.custid	
 		WHERE	c.Username = @Name and
 				ac.GroupID <> CASE WHEN @UserGroupID = 1 or @ShowInternalGroup = 1 THEN 0 ELSE 1 end
 

@@ -1,4 +1,5 @@
-﻿ALTER PROCEDURE [dbo].[Acc_BettransDelTransaction]
+﻿/*<info serverAlias="DBTXN-BODB02" executers="bodbAdminNet,bodbExtAccNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+ALTER PROCEDURE [dbo].[Acc_BettransDelTransaction]
 	@refno bigint = 0,
 	@custid int, --CustId of selected account
 	@UserID int, --CustID of Login Admin
@@ -31,155 +32,160 @@ AS
 						   Write more log on DBTXN server in case of DBLOG server failure
 		- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo by link database)  	
 		- 20141226@Tom: Update Transfer Amount in bodb_report.dbo.rptStatement table before move bet day(Redmine#15274)							   						   
+		- 20150808@Elodie: Balance Improvement [Redmine:#40125]
+		- 20151021@Elodie: Set @IsForce = 1 for updating balance debit [Redmine:#40125]
+		- 20180808@Helen: Get Code from Production  + DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 */
-SET NOCOUNT ON 
---Check permission for account site: @phuc20080213
-EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[DeleteTrans]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
-If @ErrCode <> 0
-	RETURN
-
-IF @refno <> 0 
 BEGIN
-	DECLARE	@winlostdate	DATETIME,
-			@liveindicator	BIT,
-			@transdesc		NVARCHAR(300)
-			
 
-	DECLARE @Reversal TABLE (	TransID BIGINT,
-								custid INT,
-								transdate DATETIME,
-								Username NVARCHAR(50),
-								refno BIGINT,
-								winlost MONEY,
-								actual_stake MONEY,
-								winlostdate SMALLDATETIME,
-								transdesc NVARCHAR(300),
-								creator INT,
-								bettype SMALLINT,
-								matchid INT,
-								actualrate FLOAT,
-								recommend INT,
-								mrecommend INT,
-								srecommend INT,
-								currency TINYINT,
-								CurrencyName NVARCHAR(50),
-								ip NVARCHAR(15) ,
-								status NVARCHAR(10),
-								statusID TINYINT,
-								ruben TINYINT,
-								liveindicator BIT
-							)
+	SET NOCOUNT ON 
+	--Check permission for account site: @phuc20080213
+	EXEC DBPOL.NAP_UserControl.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[DeleteTrans]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
+	If @ErrCode <> 0
+		RETURN
 
-	DECLARE @TransIDs AS TABLE (transID BIGINT)
+	IF @refno <> 0 
+	BEGIN
+		DECLARE	@winlostdate	DATETIME,
+				@liveindicator	BIT,
+				@transdesc		NVARCHAR(300)
+				
 
-----insert transfer data into @Reversal
-	INSERT INTO @Reversal 
-		(	transid, custid, transdate, Username, refno, winlost, actual_stake, winlostdate, transdesc, creator,
-			bettype, matchid, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, ip, status, statusID, ruben, liveindicator )
-	SELECT	transid, custid, transdate, Username, refno, winlost, actual_stake, winlostdate, transdesc, creator,
-			bettype, matchid, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, ip, status, statusID, ruben, liveindicator
-	FROM	bettrans WITH (NOLOCK)
-	WHERE	refno = @refno AND matchid = 0 AND bettype > 20000 
+		DECLARE @Reversal TABLE (	TransID BIGINT,
+									custid INT,
+									transdate DATETIME,
+									Username NVARCHAR(50),
+									refno BIGINT,
+									winlost MONEY,
+									actual_stake MONEY,
+									winlostdate SMALLDATETIME,
+									transdesc NVARCHAR(300),
+									creator INT,
+									bettype SMALLINT,
+									matchid INT,
+									actualrate FLOAT,
+									recommend INT,
+									mrecommend INT,
+									srecommend INT,
+									currency TINYINT,
+									CurrencyName NVARCHAR(50),
+									ip NVARCHAR(15) ,
+									status NVARCHAR(10),
+									statusID TINYINT,
+									ruben TINYINT,
+									liveindicator BIT
+								)
+
+		DECLARE @TransIDs AS TABLE (transID BIGINT)
+
+	----insert transfer data into @Reversal
+		INSERT INTO @Reversal 
+			(	transid, custid, transdate, Username, refno, winlost, actual_stake, winlostdate, transdesc, creator,
+				bettype, matchid, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, ip, status, statusID, ruben, liveindicator )
+		SELECT	transid, custid, transdate, Username, refno, winlost, actual_stake, winlostdate, transdesc, creator,
+				bettype, matchid, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, ip, status, statusID, ruben, liveindicator
+		FROM	bettrans WITH (NOLOCK)
+		WHERE	refno = @refno AND matchid = 0 AND bettype > 20000 
 
 
-	SELECT	top 1 @winlostdate = winlostdate, @liveindicator = liveindicator, @transdesc = transdesc
-	FROM	@Reversal
+		SELECT	top 1 @winlostdate = winlostdate, @liveindicator = liveindicator, @transdesc = transdesc
+		FROM	@Reversal
 
---------------------------vvvvv-------------------------------------
---Check to not allow to transfer before balance up date
-Declare @BalanceUpDay smalldatetime
+	--------------------------vvvvv-------------------------------------
+	--Check to not allow to transfer before balance up date
+	Declare @BalanceUpDay smalldatetime
 
-SELECT TOP 1 @BalanceUpDay = winlostdate
-FROM Bettrans WITH(NOLOCK)
-WHERE bettype = 20000 and matchid = 0 and custid = 3
+	SELECT TOP 1 @BalanceUpDay = winlostdate
+	FROM Bettrans WITH(NOLOCK)
+	WHERE bettype = 20000 and matchid = 0 and custid = 3
 
--- at this time, server is processing adding tickets into transfer_fi table. So not allow to transfer.
-if datename(weekday, getdate()) in ('Thursday') AND datepart(hour, getdate())>= 12
-	AND @BalanceUpDay + 7 < getdate() --this week BU not processed yet
-BEGIN
-	if @winlostdate < @BalanceUpDay +7 --Last Saturday
+	-- at this time, server is processing adding tickets into transfer_fi table. So not allow to transfer.
+	if datename(weekday, getdate()) in ('Thursday') AND datepart(hour, getdate())>= 12
+		AND @BalanceUpDay + 7 < getdate() --this week BU not processed yet
+	BEGIN
+		if @winlostdate < @BalanceUpDay +7 --Last Saturday
+		BEGIN
+			SELECT @ErrMsg =  case @Language
+							when 'E' then 'Not allow to add transaction before balance up date - '+ convert(nvarchar(10), @BalanceUpDay +7 ,120)  +'.'
+						end, @ErrCode = 100
+			return
+		END
+	END
+	ELSE IF @winlostdate < @BalanceUpDay --Before last BU date
 	BEGIN
 		SELECT @ErrMsg =  case @Language
-						when 'E' then 'Not allow to add transaction before balance up date - '+ convert(nvarchar(10), @BalanceUpDay +7 ,120)  +'.'
-					end, @ErrCode = 100
+							when 'E' then 'Not allow to add transaction before balance up date - '+ convert(nvarchar(10), @BalanceUpDay ,120)  +'.'
+						end, @ErrCode = 101
 		return
 	END
-END
-ELSE IF @winlostdate < @BalanceUpDay --Before last BU date
-BEGIN
-	SELECT @ErrMsg =  case @Language
-						when 'E' then 'Not allow to add transaction before balance up date - '+ convert(nvarchar(10), @BalanceUpDay ,120)  +'.'
-					end, @ErrCode = 101
-	return
-END
-----------------------^^^^^^----------------------------------
+	----------------------^^^^^^----------------------------------
 
------Check settled Date
-	EXEC dbo.Acc_CheckSettledDate @winlostdate = @winlostdate,@UserID = @UserID,@ErrCode = @ErrCode OUTPUT,	@ErrMsg = @ErrMsg OUTPUT
-	
-	IF @ErrCode <> 0 RETURN
-
-
------- Check transaction had been deleted or not
-	IF @liveindicator = 1
-	BEGIN 
-		SELECT	@ErrMsg ='Unable to delete this transaction due to it is marked as "Deleted"!',
-				@ErrCode = 102
-		RETURN 		
-	END
-
----*** Update balance
-	CREATE TABLE #BeforeUpd (
-			custid		 INT,
-			balance		 MONEY)
+	-----Check settled Date
+		EXEC dbo.Acc_CheckSettledDate @winlostdate = @winlostdate,@UserID = @UserID,@ErrCode = @ErrCode OUTPUT,	@ErrMsg = @ErrMsg OUTPUT
 		
-	CREATE TABLE #AfterUpd(
+		IF @ErrCode <> 0 RETURN
+
+
+	------ Check transaction had been deleted or not
+		IF @liveindicator = 1
+		BEGIN 
+			SELECT	@ErrMsg ='Unable to delete this transaction due to it is marked as "Deleted"!',
+					@ErrCode = 102
+			RETURN 		
+		END
+
+	---*** Update balance
+		CREATE TABLE #BeforeUpd (
 				custid		 INT,
 				balance		 MONEY)
-				
-	--Get data before update
-	INSERT INTO #BeforeUpd (custid, balance)
-	SELECT	b.custid, SUM (b.winlost - b.actual_stake + b.playercomm) balance
-	FROM	bettrans b WITH (NOLOCK)
-		INNER JOIN	CustDB.dbo.custInfo c WITH (NOLOCK) 
-		ON	b.custid = c.custID
-	WHERE	b.refno = @refno AND matchid = 0 AND bettype > 20000
-			AND c.roleid = 1
-	GROUP BY b.CustID
-	
+			
+		CREATE TABLE #AfterUpd(
+					custid		 INT,
+					balance		 MONEY)
+					
+		--Get data before update
+		INSERT INTO #BeforeUpd (custid, balance)
+		SELECT	b.custid, SUM (b.winlost - b.actual_stake + b.playercomm) balance
+		FROM	bettrans b WITH (NOLOCK)
+			INNER JOIN	CustDB.dbo.custInfo c WITH (NOLOCK) 
+			ON	b.custid = c.custID
+		WHERE	b.refno = @refno AND matchid = 0 AND bettype > 20000
+				AND c.roleid = 1
+		GROUP BY b.CustID
+		
 
 
----- Begin reversal
-	SET @transdesc = '(Reversal) ' + @transdesc
-	
-	INSERT INTO bettrans (	custid, transdate, Username, refno, winlost, actual_stake, winlostdate, transdesc, creator,
-							bettype, matchid, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, ip, status, statusID, ruben, liveindicator)
-	OUTPUT  INSERTED.transid into @TransIDs
-	SELECT	custid, CURRENT_TIMESTAMP, Username, refno, actual_stake, winlost, winlostdate, @transdesc, @UserID,
-			bettype, matchid, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, @IP, status, statusID, ruben, 1
-	FROM	@Reversal
+	---- Begin reversal
+		SET @transdesc = '(Reversal) ' + @transdesc
+		
+		INSERT INTO bettrans (	custid, transdate, Username, refno, winlost, actual_stake, winlostdate, transdesc, creator,
+								bettype, matchid, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, ip, status, statusID, ruben, liveindicator)
+		OUTPUT  INSERTED.transid into @TransIDs
+		SELECT	custid, CURRENT_TIMESTAMP, Username, refno, actual_stake, winlost, winlostdate, @transdesc, @UserID,
+				bettype, matchid, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, @IP, status, statusID, ruben, 1
+		FROM	@Reversal
 
-	IF @@ERROR <> 0
-	BEGIN
-		SELECT	@ErrMsg ='Delete the transaction unsuccessfully!',
-				@ErrCode = 103
-		RETURN 
-	END
+		IF @@ERROR <> 0
+		BEGIN
+			SELECT	@ErrMsg ='Delete the transaction unsuccessfully!',
+					@ErrCode = 103
+			RETURN 
+		END
 
- ---Update Liveindicator = 1 for marking deleted transaction
-	UPDATE	bettrans WITH (UPDLOCK, ROWLOCK) 
-	SET		liveindicator = 1
-	WHERE	transid IN (Select transid from @Reversal)
+	 ---Update Liveindicator = 1 for marking deleted transaction
+		UPDATE	bettrans WITH (UPDLOCK, ROWLOCK) 
+		SET		liveindicator = 1
+		WHERE	transid IN (Select transid from @Reversal)
 
-	IF @@ERROR <> 0
-	BEGIN
-		DELETE  bettrans WITH (UPDLOCK, ROWLOCK) 
-		WHERE	transid IN (SELECT transid FROM @TransIDs)
-	
-		SELECT	@ErrMsg ='Delete the transaction unsuccessfully!',
-				@ErrCode = 104
-		RETURN 
-	END
+		IF @@ERROR <> 0
+		BEGIN
+			DELETE  bettrans WITH (UPDLOCK, ROWLOCK) 
+			WHERE	transid IN (SELECT transid FROM @TransIDs)
+		
+			SELECT	@ErrMsg ='Delete the transaction unsuccessfully!',
+					@ErrCode = 104
+			RETURN 
+		END
 
 		-- Update Transfer Amount in bodb_report.dbo.rptStatement table before move bet day
 		DECLARE @MoveBetsDay DATETIME
@@ -198,17 +204,22 @@ END
 				,@winlostdate = @winlostdate
 				,@ErrCode = @ErrCode OUTPUT
 				,@ErrMsg = @ErrMsg OUTPUT
-		
+			
 			IF @ErrCode <> 0
 				BEGIN
 					DELETE  dbo.bettrans WITH (UPDLOCK, ROWLOCK) 
 					WHERE	transid IN (SELECT transid FROM @TransIDs)
-	
+						
+					--20150808@Elodie: rollback liveindicator = 0
+					UPDATE	bettrans WITH (UPDLOCK, ROWLOCK) 
+					SET		liveindicator = 0
+					WHERE	transid IN (Select transid from @Reversal)
+
 					SELECT	@ErrMsg ='Delete the transaction unsuccessfully!',
 							@ErrCode = 105
 					RETURN 
 				END
-					
+						
 			SELECT TOP 1 @custid = custid,@amount = -(b.winlost - b.actual_stake) FROM	@Reversal b WHERE @custid <> custid
 
 			IF @@ROWCOUNT = 1
@@ -219,11 +230,16 @@ END
 					,@winlostdate = @winlostdate
 					,@ErrCode = @ErrCode OUTPUT
 					,@ErrMsg = @ErrMsg OUTPUT		
-		
+			
 				IF @ErrCode <> 0
 					BEGIN
 						DELETE  dbo.bettrans WITH (UPDLOCK, ROWLOCK) 
 						WHERE	transid IN (SELECT transid FROM @TransIDs)
+
+						--20150808@Elodie: rollback liveindicator = 0
+						UPDATE	bettrans WITH (UPDLOCK, ROWLOCK) 
+						SET		liveindicator = 0
+						WHERE	transid IN (Select transid from @Reversal)
 
 						SELECT TOP 1 @custid = custid,@amount = (b.winlost - b.actual_stake) FROM	@Reversal b WHERE @custid <> custid
 
@@ -233,7 +249,7 @@ END
 							,@winlostdate = @winlostdate
 							--,@ErrCode = @ErrCode OUTPUT
 							--,@ErrMsg = @ErrMsg OUTPUT
-	
+		
 						SELECT	@ErrMsg ='Delete the transaction unsuccessfully!',
 								@ErrCode = 106
 						RETURN 
@@ -241,53 +257,91 @@ END
 			END
 		END
 
+	--Get data after update
+		INSERT INTO #AfterUpd (custid, balance)
+		SELECT	b.custid, SUM (b.winlost - b.actual_stake + b.playercomm) balance
+		FROM	bettrans b WITH (NOLOCK)
+			INNER JOIN	CustDB.dbo.custInfo c WITH (NOLOCK) 
+			ON	b.custid = c.custID
+		WHERE	b.refno = @refno AND matchid = 0 AND bettype > 20000
+				AND c.roleid = 1
+		GROUP BY b.CustID
 
+	--	DECLARE @tblDebitPending BalanceList
+	--	DECLARE @tblCreditPending BalanceList
 
---Get data after update
-	INSERT INTO #AfterUpd (custid, balance)
-	SELECT	b.custid, SUM (b.winlost - b.actual_stake + b.playercomm) balance
-	FROM	bettrans b WITH (NOLOCK)
-		INNER JOIN	CustDB.dbo.custInfo c WITH (NOLOCK) 
-		ON	b.custid = c.custID
-	WHERE	b.refno = @refno AND matchid = 0 AND bettype > 20000
-			AND c.roleid = 1
-	GROUP BY b.CustID
+	-----insert data into pending balance table 
+	--	INSERT INTO @tblCreditPending (custid, Balance)
+	--	SELECT		a.custid, (a.balance - b.balance) as Balance
+	--	FROM		#BeforeUpd b
+	--	INNER JOIN	#AfterUpd a 	
+	--			ON	a.custid = b.custid
+	--	WHERE	    (a.balance - b.balance) > 0
 
----insert data into pending balance table 
-		INSERT INTO BalancePendingCredit (custid,Balance)
+	--	IF @@rowcount <> 0
+	--		EXEC dbo.Dot_BalancePendingCreditIns 
+	--			@BalancePending = @tblCreditPending
+	--			,@Type			= 2
+
+	--	INSERT INTO @tblDebitPending (custid,Balance)
+	--	SELECT		a.custid, ABS(a.balance - b.balance) as Balance
+	--	FROM		#BeforeUpd b
+	--	INNER JOIN	#AfterUpd a 	
+	--			ON	a.custid = b.custid
+	--	WHERE	    (a.balance - b.balance) < 0
+
+	--	IF @@rowcount <> 0
+	--		EXEC dbo.Dot_BalancePendingDebitIns 
+	--			@BalancePending = @tblDebitPending
+	--			,@Type			= 2
+
+		DECLARE @tblPending TABLE (CustID INT, Balance	MONEY)
+		DECLARE @MemID INT, @Balance	MONEY
+		INSERT INTO @tblPending (CustID, Balance)
 		SELECT		a.custid, (a.balance - b.balance) as Balance
 		FROM		#BeforeUpd b
 		INNER JOIN	#AfterUpd a 	
 				ON	a.custid = b.custid
-		WHERE	    (a.balance - b.balance) > 0
+		
+		DECLARE CS_MemBal 
+		CURSOR FOR  
+		SELECT CustID, Balance
+		FROM @tblPending 
+	   		 
+		OPEN CS_MemBal  
+		FETCH NEXT FROM CS_MemBal INTO @MemID, @Balance
+		WHILE @@FETCH_STATUS = 0  
+		BEGIN
+			IF @Balance > 0
+				EXEC Dot_BalanceCreditUpd @CustID = @MemID, @balance = @Balance, @type = 2
 
-		INSERT INTO BalancePendingDebit (custid,Balance)
-		SELECT		a.custid, ABS(a.balance - b.balance) as Balance
-		FROM		#BeforeUpd b
-		INNER JOIN	#AfterUpd a 	
-				ON	a.custid = b.custid
-		WHERE	    (a.balance - b.balance) < 0
+			IF @Balance < 0
+			BEGIN
+				DECLARE @ABS_Balance MONEY
+				SELECT @ABS_Balance = ABS(@Balance)
+							EXEC Dot_BalanceDebitUpd @CustID = @MemID, @balance = @ABS_Balance, @type = 2, @IsForced = 1
+			END
 
+			FETCH NEXT FROM CS_MemBal INTO @MemID, @Balance 
+		END  
+	  
+		CLOSE CS_MemBal  
+		DEALLOCATE CS_MemBal  
 
+		EXEC dbo.Acc_ExchangeRateUpdisDeleted @refNo = @refno
 
-	EXEC DBPOLICY.bodb02.dbo.Acc_ExchangeRateUpdisDeleted @refNo = @refno
+		declare @LogData varchar(200)
+		Select @LogData = 'Delete transaction for custid :' + convert(varchar(20), @CustID) + ' Ref.NO ' + convert(varchar(20), @RefNo)
+		
+		BEGIN TRY
 
-	declare @LogData varchar(200)
-	Select @LogData = 'Delete transaction for custid :' + convert(varchar(20), @CustID) + ' Ref.NO ' + convert(varchar(20), @RefNo)
-	
-	BEGIN TRY
-		EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = 0, @ToCustID = @CustID, @IP = @IP, @Doing = @LogData
-	END TRY
-	BEGIN CATCH 
-		Select @LogData = @LogData + ' ErrMsg=' + error_message()
-		EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = 0, @ToCustID = @CustID, @IP = @IP, @Doing = @LogData
-	END CATCH
+			EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = 0, @ToCustID = @CustID, @IP = @IP, @Doing = @LogData
+		END TRY
+		BEGIN CATCH 
+			Select @LogData = @LogData + ' ErrMsg=' + error_message()
+			EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = 0, @ToCustID = @CustID, @IP = @IP, @Doing = @LogData
+		END CATCH
 
+	END
 END
-
-
-
-GO
-GRANT EXECUTE ON [dbo].[Acc_BettransDelTransaction] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransDelTransaction] TO [vnteam] AS [dbo]
+GO	

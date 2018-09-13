@@ -20,7 +20,8 @@ AS
 	Revisions:
 		- 20170413@Percy: Get setting of group from new table [RedmineID: #74292]
 		- 20170926@Percy: Migrate this SP from DBACC.bodb_ACC to DBCUST.CustDB [RedmineID: #83600]
-
+		- 20180808@Helen: DB05.DBPOLICY migration - [Redmine:99462]
+		
 	Param's Explanation:
 		- @EffectiveDate
 			+ IS NULL: remove @CustID from @GroupName
@@ -31,7 +32,7 @@ BEGIN
 	SET NOCOUNT ON
 
 	-- Check permission for account site
-	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission
+	EXEC NAP_UserControl.dbo.Acc_Con_CheckPermission
 		@CustID = @UserID,
 		@FuncName = '[Admin_ManageExAcc]',
 		@ErrCode = @ErrCode OUTPUT,

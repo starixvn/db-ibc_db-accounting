@@ -1,7 +1,4 @@
 /*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
-USE [CustDB]
-GO
-
 ALTER PROCEDURE [dbo].[Acc_GroupExtraPT_GroupByProduct_Del]
 	@UserId				INT,
 	@GroupId			TINYINT,
@@ -22,7 +19,8 @@ AS
 
 	Revisions:
 		- 20170926@Percy: Move this SP from DBACC.bodb_ACC to DBCUST.CustDB [RedmineID: #83600]
-
+		- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
+		
 	Param's Explanation:
 */
 
@@ -40,7 +38,7 @@ BEGIN
 	END
 
 	-- Check permission --
-	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission
+	EXEC NAP_UserControl.dbo.Acc_Con_CheckPermission
 		@CustID = @UserID,
 		@FuncName = '[ManageExtraPTGroup]',
 		@ErrCode = @ErrCode OUTPUT,

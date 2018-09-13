@@ -1,7 +1,4 @@
-﻿/*<info serverAlias="DBLIC-bodb_Licensee" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
-USE bodb_licensee
-GO
-
+﻿/*<info serverAlias="DBLIC-bodb_Licensee" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_BA_LicConfigUpd]
 (
 	@LicenseeID		INT,
@@ -39,6 +36,7 @@ Revisions:
 	- 20130123@Daniel: Change link server alias
 	- 20170519@Harper: Fix duplicate key when setting BA [RedmineID: #76420]
 	- 20180809@Sophia: HA - remove LicenseeCustInfo table [Redmine: #99464]
+	- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 
 Param's Explanation:
 	
@@ -47,7 +45,7 @@ BEGIN
 	SET NOCOUNT ON
 	
 	--Check permission 	
-	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[BACommSetting]',@ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
+	EXEC DBPOL.NAP_UserControl.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[BACommSetting]',@ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
 	IF @ErrCode <> 0
 		RETURN
 	--Check exist in Licensees
@@ -226,4 +224,8 @@ BEGIN
 END
 GO
  
+GRANT EXECUTE ON [dbo].[Acc_BA_LicConfigUpd] TO [bodbAdminNet]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_BA_LicConfigUpd] TO [vnteam]
+
 

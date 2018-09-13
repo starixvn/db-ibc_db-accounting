@@ -1,4 +1,5 @@
-﻿ALTER PROCEDURE [dbo].[Acc_FinanceCrossTransferMulInsTmpExcel]	
+﻿/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+ALTER PROCEDURE [dbo].[Acc_FinanceCrossTransferMulInsTmpExcel]	
 	@UserID INT,
 	@arrFromCust VARCHAR(4000),
 	@arrToCust VARCHAR(4000),	
@@ -17,13 +18,15 @@ AS
 	Revisions:		
 		- 20111130@Lukas: expand the trans description length
 		- 20130201@Elodie: Change link server DB03 to DBPOLICY
-		- 20130224@Lukas: Move Acc_CustFinanceTransfer to new database bodb_acc			  
+		- 20130224@Lukas: Move Acc_CustFinanceTransfer to new database bodb_acc		
+		- 20130418@Lukas: hot fix modify condition of checking valid amount	  
+		- 20180808@Helen: Get code from PRO + DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 */
 BEGIN
 SET NOCOUNT ON
 			
 	--Check permission for account site
-	EXEC DBPOLICY.bodb02.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[AutomateFinanceTransfer]',@ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
+	EXEC DBPOL.NAP_UserControl.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[AutomateFinanceTransfer]',@ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
 	
 	IF @ErrCode <> 0
 		RETURN
@@ -55,7 +58,7 @@ SET NOCOUNT ON
 		Description	NVARCHAR(200),
 		Reason NVARCHAR(100)
 	)
-	-- check if there is no  (char(8)) at the end of string
+	-- check if there is no (char(8)) at the end of string
 	IF (SELECT CHARINDEX(CHAR(8),@arrFromCust,LEN(@arrFromCust))) = 0
 		OR 
 		(SELECT CHARINDEX(CHAR(8),@arrToCust,LEN(@arrToCust))) = 0
@@ -110,7 +113,7 @@ SET NOCOUNT ON
 	--Failed Transaction
 	INSERT INTO @tblFail(FromCust, ToCust ,	Amount,	ToAmount, Description, Reason)
 	SELECT	FromCust, ToCust, Amount, ToAmount, Description,
-			CASE WHEN ISNUMERIC(Amount)=0 OR ISNUMERIC(ToAmount)= 0 OR CONVERT(MONEY,Amount)/CONVERT(MONEY,ToAmount) <= 0 THEN '<b>Invalid Amount.</b>'
+			CASE WHEN ISNUMERIC(Amount)=0 OR ISNUMERIC(ToAmount)= 0 OR CONVERT(MONEY,Amount)/CONVERT(MONEY,ToAmount) < 0 THEN '<b>Invalid Amount.</b>'
 				 WHEN ISNULL(FromCust,'') = ''  OR ISNULL(ToCust,'') = '' THEN '<b>Username cannot be blanked.</b>' 
 				 WHEN FromCust = ToCust THEN '<b>From Cust must different To Cust.</b>' 
 				 WHEN LEN(Description) > 200 THEN '<b>Maximum length of Description is 200 characters</b>' 
@@ -149,9 +152,4 @@ SET NOCOUNT ON
 	SELECT * FROM @tblFail 
 
 END
-
-
 GO
-GRANT  EXECUTE  ON [dbo].[Acc_FinanceCrossTransferMulInsTmpExcel]  TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_FinanceCrossTransferMulInsTmpExcel] TO [vnteam]
