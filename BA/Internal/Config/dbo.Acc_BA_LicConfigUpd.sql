@@ -37,6 +37,7 @@ Revisions:
 	- 20170519@Harper: Fix duplicate key when setting BA [RedmineID: #76420]
 	- 20180809@Sophia: HA - remove LicenseeCustInfo table [Redmine: #99464]
 	- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
+	- 20180914@Helen: Hotfix - CHANGE link server to update BA Member - DBCUST/CUSTDB - [Redmine:101501]
 
 Param's Explanation:
 	
@@ -173,7 +174,7 @@ BEGIN
 				
 				IF @FlagUpdateBAStatus=1 AND @EnableBA=0
 				BEGIN
-					EXEC DBTXN.bodb02.dbo.Lrf_CustomerUpdMemberBAStatus
+					EXEC DBCUST.CUSTDB.dbo.Lrf_CustomerUpdMemberBAStatus
 					@LicenseeID = @LicenseeID,
 					@CustID = @BACustID,
 					@ModifyBy = @UserID,
@@ -188,7 +189,7 @@ BEGIN
 					IF @FlagUpdateComm=1
 					BEGIN
 						--Update commission for BA Member
-						EXEC DBTXN.bodb02.dbo.[Lrf_CustomerUpdMemberBAComm]
+						EXEC DBCUST.CUSTDB.dbo.Lrf_CustomerUpdMemberBAComm
 						@LicenseeID = @LicenseeID,
 						@CustID = @BACustID,
 						@ModifyBy = @UserID,
