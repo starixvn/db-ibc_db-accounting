@@ -1,3 +1,4 @@
+/*<info serverAlias="DBCUST-CustDB" executers="" viewers="" isFunction="0" isNested="1"></info>*/
 USE [CustDB]
 GO
 /****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetSelBACustomer]    Script Date: 03/25/2015 09:34:10 ******/
@@ -13,12 +14,13 @@ AS
 /*  Created: Henry  
 	Date: 2012-07-06
     Task : Get BA Customer
-    DB: DBTrans.bodb02  
+    DB: DBCUST-CustDB
    
     Revisions:  
         - 20130123@Daniel:  Change link server alias
         - 20140805@Logan:   Separate live & non-live setting
         - 20150323@Kathy: Support 2 more bettype 1x2 & 1st 1x2 [Redmine:#30394]   
+		- 20180926@Sophia: migrate bodb_Licensee from DB052 to DBCUST - remove linked server DBLIC [redmine: #99855]
   
 		
 	Param's Explanation:  
@@ -40,7 +42,7 @@ BEGIN
 		)
 	SELECT LicenseeID
 		,CustID
-	FROM DBLIC.bodb_licensee.dbo.LicenseeBAHistory WITH (NOLOCK)
+	FROM bodb_licensee.dbo.LicenseeBAHistory WITH (NOLOCK)
 	WHERE STATUS = 'running'
 		AND (
 			@LicenseeID = 0
@@ -78,7 +80,7 @@ BEGIN
 		,COALESCE(cf.custid, 0, 1)
 	FROM Customer c WITH (NOLOCK)
 		INNER JOIN #TempBACust lba ON c.custid = lba.custid
-		INNER JOIN DBLIC.bodb_licensee.dbo.Licensees l WITH (NOLOCK) ON lba.LicenseeID = l.LicenseeID
+		INNER JOIN bodb_licensee.dbo.Licensees l WITH (NOLOCK) ON lba.LicenseeID = l.LicenseeID
 		LEFT JOIN Cust_FollowBet cf WITH (NOLOCK) ON c.custid = cf.custid
 	ORDER BY l.Licenseename
 		,c.username
