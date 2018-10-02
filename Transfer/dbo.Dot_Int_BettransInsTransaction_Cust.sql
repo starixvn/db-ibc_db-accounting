@@ -53,6 +53,7 @@ History:
 	- 20151106@Cooper: remove hardcode value = 1 for temporary
 	- 20160118@Kathy: get balance from bettransRNG & bettransLC [Redmine:#50674]
 	- 20171102:Patrick: Can't make transfer/withdrawal during MB/BU time [Redmine:#82768]
+	- 20180913@Dominic: Add a new bettype (23203) to transfer money for dormant members in deposit archive process [Redmine:#99882]
 
 Param's Explanation:
 ‧ @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction
@@ -77,6 +78,7 @@ Param's Explanation:
 	21003: ADJUSTMENT
 	22005: TRANSFER
 	22006: TRANSFER BETWEEN IBC AND THIRD PARTY SYSTEM (For Playtech and AsiaBet88)
+	23203: TRANSFER MONEY FOR DORMANT MEMBERS IN DEPOSIT ARCHIVE PROCESS
 	
 ‧ @ErrCode:
 	= 0: Transaction recorded successfully.
@@ -140,6 +142,7 @@ BEGIN
 		@DBON					SMALLINT,
 		@DADJ					SMALLINT,
 		@DTRA					SMALLINT,
+		@DTRAARC					SMALLINT,
 		@DTRATP					SMALLINT,
 
 		@BalanceType			TINYINT,
@@ -156,7 +159,8 @@ BEGIN
 			@DDEP			= 22001,
 			@DWIT			= 22002,
 			@DBON			= 22004,
-			@DTRA			= 22005
+			@DTRA			= 22005,
+			@DTRAARC		= 23203
 
 	/*
 	22006  Playtech casino transfer
@@ -238,6 +242,7 @@ BEGIN
 							WHEN @DBON THEN 'Bonus'
 							WHEN @DADJ THEN 'Adjustment'
 							WHEN @DTRA THEN 'Transfer'
+							WHEN @DTRAARC THEN 'Transfer'
 							WHEN @DTRATP THEN
 									CASE 
 										WHEN (@amount >0) THEN 'Transfer from third party' 
@@ -248,7 +253,7 @@ BEGIN
 					+ CASE WHEN @transdesc <> '' THEN ' - ' + @transdesc END
 
 	SELECT 
-		@winlost = CASE WHEN @bettype = @DDEP OR @bettype = @DBON OR @bettype = @DTRA OR @bettype = @DADJ OR @bettype = @DTRATP THEN @amount ELSE 0 END,
+		@winlost = CASE WHEN @bettype = @DDEP OR @bettype = @DBON OR @bettype = @DTRA OR @bettype = @DTRAARC OR @bettype = @DADJ OR @bettype = @DTRATP THEN @amount ELSE 0 END,
 		@actual_stake = CASE @bettype WHEN @DWIT THEN ABS(@amount) ELSE 0 END
 
 	IF @winlost < 0 --then swap the winlost and actual_stake
@@ -267,7 +272,7 @@ BEGIN
 	END
 
 	--//1st check: MB/BU is running?
-	EXEC dbo.Acc_Core_IsMainProcessRunning
+		EXEC dbo.Acc_Core_IsMainProcessRunning
 		  @CustId = @custid
 		, @UplineId = @recommend
 		, @IsDepositMember = 1
@@ -300,7 +305,7 @@ BEGIN
 			AND IsSum=0
 	
 	--//2nd check: MB/BU is running?
-	EXEC dbo.Acc_Core_IsMainProcessRunning
+		EXEC dbo.Acc_Core_IsMainProcessRunning
 		  @CustId = @custid
 		, @UplineId = @recommend
 		, @IsDepositMember = 1
