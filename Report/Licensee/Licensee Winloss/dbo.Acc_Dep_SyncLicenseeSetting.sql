@@ -1,3 +1,4 @@
+/*<info serverAlias="DBCUST-bodb_Licensee" executers="bodbLicenseeNet" viewers="vnteam" isFunction="0"></info>*/ 
 USE bodb_licensee
 GO
 
@@ -10,8 +11,9 @@ AS
 /*  
  Created by: 20131028@Jim
  Task: AccSite - Licensee Setting Configuration (feature #6303)
- DB: DBLIC.bodb_licensee
+ DB: DBCUST-bodb_Licensee
  Revisions:  
+	- 20181003@Sophia: Migrate SP from DB052 to DBCUST [Redmine: #99855]
    
 */ 
 
@@ -20,13 +22,13 @@ DECLARE @LicenseeName VARCHAR(10)
 DECLARE @SuperWildCard VARCHAR(20)
 
 SELECT @Site=site
-FROM bodb02.dbo.customer WITH (NOLOCK)
+FROM CUSTDB.dbo.customer WITH (NOLOCK)
 WHERE username=@name
 
 IF ISNULL(@Site,'')=''
 BEGIN 
 	SELECT @Site=Site
-	FROM bodb02.dbo.customer WITH (NOLOCK)
+	FROM CUSTDB.dbo.customer WITH (NOLOCK)
 	WHERE Site=@name
 	IF @@ROWCOUNT = 0 
 	SELECT @ErrCode = 2
@@ -39,7 +41,7 @@ SELECT @LicenseeName=LicenseeName FROM dbo.Licensees WITH (NOLOCK) WHERE License
 IF  ISNULL(@LicenseeName,'')=''
 	BEGIN 
 		SELECT @SuperWildCard=@Site+'Super%'
-		EXEC [dbo].DBA_CreateNewLicensee
+		EXEC [dbo].DBA_Lrf_CreateNewLicensee
 				@LicenseeName=@Site ,
 				@SuperWildCard =@SuperWildCard,
 				@ResellerID  =0,
