@@ -1,7 +1,4 @@
 ﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,bodbExtAccNet" viewers="" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
 ALTER PROCEDURE [dbo].[Acc_CustomerSelClearBalance]
 	@custid		INT,
 	@pageIndex	INT = 1,
@@ -28,7 +25,8 @@ Revisions:
 	- 20161006@Percy: Support Super and Master levels [RedmineID: #63209]
 	- 20170622@Percy: Return ClosedReason column to apply color for closed accounts [RedmineID : #74494]
 	- 20171018@Percy: Get status waiting from translog [RedmineID: #84692]
-
+	- 20181003@Helen: Modify code to adapt indexes changed on DB053 [Redmine:101405]
+	
 Param's Explanation:
 	
 */
@@ -50,17 +48,12 @@ BEGIN
 	SELECT  @roleID = roleID FROM dbo.custInfo WITH(NOLOCK) WHERE custid = @custid
 
 	CREATE TABLE #data (custid INT, yesterday_balance MONEY, balance MONEY, yesterday_cash MONEY, cash MONEY, outstanding MONEY)
-	CREATE TABLE #recommend (recommend INT)
 
 	DECLARE @srecommend INT
 	SELECT  @srecommend = srecommend FROM dbo.custInfo WITH(NOLOCK) WHERE custid = @custid
 
 	IF @roleID = 4 -- Super
 	BEGIN
-		-- insert recommend to use index recommend bettrans
-		INSERT INTO #recommend (recommend)
-		SELECT custid FROM dbo.custInfo WITH(NOLOCK) WHERE srecommend = @custid AND roleid = 2
-		
 		-- bettrans
 		INSERT INTO #data (custid, yesterday_balance, balance, yesterday_cash, cash, outstanding)
 		SELECT
@@ -131,31 +124,27 @@ BEGIN
 			0 cash,
 			ISNULL(SUM(ABS(actual_stake*mpositiontaking)), 0) outstanding
 		FROM translog t (NOLOCK)
-			INNER JOIN #recommend r ON t.recommend = r.recommend
-		WHERE statusID IN (0, 1)
+		WHERE t.srecommend = @custid
+			AND statusID IN (0, 1)
 		GROUP BY t.mrecommend
 	END
 	ELSE IF @roleID = 3
 	BEGIN
-		-- insert recommend to use index recommend bettrans
-		INSERT INTO #recommend (recommend)
-		SELECT custid FROM dbo.custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND roleid = 2
 		
 		-- bettrans
 		INSERT INTO #data (custid, yesterday_balance, balance, yesterday_cash, cash, outstanding)
 		SELECT
 			b.recommend,
 			ISNULL(SUM(CASE WHEN ruben = 1 AND (winlostdate < @today OR (winlostdate = @today AND b.bettype > 20000)) THEN CASE WHEN custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END), 0)
-			+ ISNULL(SUM(CASE WHEN ruben = 1 AND (winlostdate < @today OR (winlostdate = @today AND b.bettype > 20000)) THEN CASE WHEN b.custid<>b.recommend THEN winlost-actual_stake+playercomm ELSE 0 END ELSE 0 END),0) yesterday_balance,
+			+ ISNULL(SUM(CASE WHEN ruben = 1 AND (winlostdate < @today OR (winlostdate = @today AND b.bettype > 20000)) THEN CASE WHEN b.custid <> b.recommend AND b.custid <> b.mrecommend THEN winlost-actual_stake+playercomm ELSE 0 END ELSE 0 END),0) yesterday_balance,
 			ISNULL(SUM(CASE WHEN ruben = 1 THEN CASE WHEN custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END), 0)
-			+ ISNULL(SUM(CASE WHEN ruben = 1 THEN CASE WHEN b.custid<>b.recommend THEN winlost-actual_stake+playercomm ELSE 0 END ELSE 0 END),0) balance,
+			+ ISNULL(SUM(CASE WHEN ruben = 1 THEN CASE WHEN b.custid<> b.recommend AND b.custid <> b.mrecommend THEN winlost-actual_stake+playercomm ELSE 0 END ELSE 0 END),0) balance,
 			ISNULL(SUM(CASE WHEN ruben = 1 AND (winlostdate < @today OR (winlostdate = @today AND b.bettype > 20000)) THEN CASE WHEN custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END), 0) yesterday_cash,
 			ISNULL(SUM(CASE WHEN ruben = 1 THEN CASE WHEN custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END), 0) cash,
 			ISNULL(SUM(CASE WHEN ruben = 0 THEN ABS(actual_stake*apositiontaking) END), 0) outstanding
 		FROM dbo.bettrans b WITH(NOLOCK)
-			INNER JOIN #recommend r ON b.recommend = r.recommend
 			LEFT JOIN #SportBettypeMatrix s ON b.bettype = s.Bettype
-		WHERE
+		WHERE b.mrecommend = @custid AND
 			((b.ruben = 0 AND ISNULL(s.RefTable, 0) = 0) OR b.ruben <> 0)
 			AND ((winlostdate >= @yesterday AND ISNULL(s.RefTable, 0) NOT IN (1,2)) OR winlostdate < @yesterday)
 		GROUP BY b.recommend
@@ -206,8 +195,7 @@ BEGIN
 			0 cash,
 			ISNULL(SUM(ABS(actual_stake*apositiontaking)), 0) outstanding
 		FROM translog t (NOLOCK)
-			INNER JOIN #recommend r ON t.recommend = r.recommend
-		WHERE statusID IN (0, 1)
+		WHERE t.mrecommend = @custid AND statusID IN (0, 1)
 		GROUP BY t.recommend
 	END
 	ELSE IF @roleID = 2
