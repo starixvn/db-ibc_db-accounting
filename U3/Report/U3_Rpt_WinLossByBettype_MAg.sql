@@ -1,7 +1,4 @@
 /*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
 ALTER PROCEDURE [dbo].[U3_Rpt_WinLossByBettype_MAg]
 	@CustID INT,
 	@FromDate SMALLDATETIME,
@@ -17,6 +14,7 @@ AS
 
 	Revisions:
 		- 20170830@Percy: Integrate Lucky 3 [RedmineID: #76770]
+		- 20181003@Helen: Modify code to adapt indexes changed on DB053 [Redmine:101405]
 */
 
 BEGIN	
@@ -101,7 +99,7 @@ BEGIN
 			,isnull(SUM(mwinlost), 0) + isnull(SUM(acomm), 0) - SUM(comm)
 			,- (isnull(SUM(awinlost), 0) + isnull(SUM(mwinlost), 0) + isnull(SUM(acomm), 0) + isnull(SUM(winlost - actual_stake), 0))
 			,COUNT(transid) AS NoOfTicket
-		FROM dbo.bettrans14 b WITH (NOLOCK, INDEX = IX_bettrans4)
+		FROM dbo.bettrans14 b WITH (NOLOCK)
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype	
 		WHERE 1 = 1
 			AND winlostdate BETWEEN @FromDate AND @ToDate					
@@ -123,7 +121,7 @@ BEGIN
 			,isnull(SUM(mwinlost), 0) + isnull(SUM(acomm), 0) - SUM(comm)
 			,- (isnull(SUM(awinlost), 0) + isnull(SUM(mwinlost), 0) + isnull(SUM(acomm), 0) + isnull(SUM(winlost - actual_stake), 0))
 			,COUNT(transid) AS NoOfTicket
-		FROM dbo.bettrans14 b WITH (NOLOCK, INDEX = IX_bettrans4)
+		FROM dbo.bettrans14 b WITH (NOLOCK)
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype	
 		WHERE 1 = 1
 			AND winlostdate BETWEEN @FromDate AND @ToDate					
