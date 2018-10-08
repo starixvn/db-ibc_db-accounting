@@ -375,7 +375,6 @@ BEGIN
 	ORDER BY rownum
 	
 	DROP TABLE #data
-	DROP TABLE #recommend
 	DROP TABLE #SportBettypeMatrix
 	DROP TABLE #ClosedReason
 END
