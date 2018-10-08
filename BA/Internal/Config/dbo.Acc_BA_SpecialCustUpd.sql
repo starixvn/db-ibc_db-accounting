@@ -1,37 +1,38 @@
-﻿SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
+﻿/*<info serverAlias="DBCUST-bodb_Licensee" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/ 
 
-
+USE bodb_Licensee
+GO
 
 ALTER PROCEDURE [dbo].[Acc_BA_SpecialCustUpd]
-	(
-		@LicenseeID  INT ,
-		@CustID INT ,
-		@SystemID   varchar(50)='',
-		@ugroup VARCHAR(3),
-		@modifyby INT,
-		@IP VARCHAR(50),
-		@ErrCode	INT = 0 OUTPUT,		
-		@ErrMsg		varchar(1000)='' OUTPUT 
-	)
+(
+	@LicenseeID  INT ,
+	@CustID INT ,
+	@SystemID   varchar(50)='',
+	@ugroup VARCHAR(3),
+	@modifyby INT,
+	@IP VARCHAR(50),
+	@ErrCode	INT = 0 OUTPUT,		
+	@ErrMsg		varchar(1000)='' OUTPUT 
+)
 AS
-
 /*
-Created: Jim
-Date: 5-03-2012
-Task : Replace hardcode member spread by web application
-DB: DBLIC.bodb_Licensee
+	Created: Jim
+	Date: 5-03-2012
+	Task : Replace hardcode member spread by web application
+	DB: DBCUST/bodb_Licensee
 
-Original:
+	Original:
 
-Revisions:
-    - 20130123@Daniel: Change link server alias
-	
-Param's Explanation:
+	Revisions:
+		- 20130123@Daniel: Change link server alias
+		- 20131113@winnie: Change link to DBTXN.CustDB
+		- 20150606@Kathy: Change link server DBTXN.CustDB to DBCust.CustDB [Redmine:#36216]
+		- 20180924@Elodie: Migrate bodb_Licensee to DBCUST [Redmine:#99855]
+
+	Param's Explanation:
 	
 */
+BEGIN
 	DECLARE @ugroup_old VARCHAR(3),@isBA BIT
 
 	-- Get old ugroup of Customer from LicenseeSpecialCust table
@@ -66,21 +67,21 @@ Param's Explanation:
 				WHERE LicenseeID=@LicenseeID AND CustID=@CustID AND Status='Running'
 
 				-- Update comm for BA member
-				EXEC DBTXN.bodb02.dbo.Lrf_CustomerUpdMemberBAComm
-				@LicenseeID=@LicenseeID,
-				@custid=@CustID,
-				@ModifyBy=@Modifyby,
-				@IsBA=@isBA,
-				@IP=@IP,
-				@IsAdmin=1,
-				@ErrCode = @ErrCode OUTPUT,
-				@ErrMsg = @ErrMsg OUTPUT
+				EXEC CustDB.dbo.Lrf_CustomerUpdMemberBAComm
+					@LicenseeID=@LicenseeID,
+					@custid=@CustID,
+					@ModifyBy=@Modifyby,
+					@IsBA=@isBA,
+					@IP=@IP,
+					@IsAdmin=1,
+					@ErrCode = @ErrCode OUTPUT,
+					@ErrMsg = @ErrMsg OUTPUT
 
 			END
 			ELSE -- Normal member
 			BEGIN
 				-- Update ugroup to Customer table
-				EXEC DBTXN.bodb02.dbo.Acc_BA_SpecialCustUpdUgroup
+				EXEC CustDB.dbo.Acc_BA_SpecialCustUpdUgroup
 				@custid = @CustID,
 				@ugroup = @ugroup,
 				@userid = @modifyby,
@@ -91,8 +92,14 @@ Param's Explanation:
 				SELECT @ErrMsg=N'Process  is successful !',@ErrCode=0
 			END
 			-- Write log
-			INSERT INTO UserLog_LicenseeSpecialCust(LicenseeID,CustID,ugroup,ugroup_old,modifyby,modifydate,IP,ActionType)
-			VALUES (@LicenseeID,@CustID,@ugroup,@ugroup_old,@modifyby,getdate(),@IP,'Update')
+			EXEC Lrf_WriteLog_UserLog_LicenseeSpecialCust_Wrapper
+				@LicenseeID = @LicenseeID,
+				@CustID = @CustID,
+				@ugroup = @ugroup,
+				@ugroup_old = @ugroup_old,
+				@UserId = @modifyby, 
+				@IP = @IP,
+				@ActionType = 'Update'
 		END
 		ELSE 
 		BEGIN
@@ -100,10 +107,6 @@ Param's Explanation:
 			RETURN
 		END
 	END
-
+END
 GO
-GRANT EXECUTE ON [dbo].[Acc_BA_SpecialCustUpd] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BA_SpecialCustUpd] TO [vnteam] 
-
 
