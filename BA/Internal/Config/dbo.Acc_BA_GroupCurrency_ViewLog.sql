@@ -1,6 +1,6 @@
-﻿/*<info serverAlias="DBLIC-bodb_Licensee" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/ 
+﻿/*<info serverAlias="DBLOG-bodb_CustomerLog" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/ 
 
-USE bodb_Licensee
+USE bodb_CustomerLog
 GO
 
 ALTER PROCEDURE [dbo].[Acc_BA_GroupCurrency_ViewLog]
@@ -12,7 +12,7 @@ AS
 	Created: Jim
 	Date: 20111118
 	Task : View BA_GroupCurrency_ViewLog
-	DB: DBLIC/bodb_Licensee
+	DB: DBLOG/bodb_CustomerLog
 	Original:
 
 	Revisions:
@@ -34,8 +34,8 @@ BEGIN
 		A.ModifyDate,
 		A.IP
 	FROM 
-		DBLOG.bodb_CustomerLog.dbo.UserLog_LicenseeCurrencyBAGroup A WITH (NOLOCK)
-	INNER JOIN Licensees B WITH (NOLOCK) ON A.LicenseeID = B.LicenseeID
+		dbo.UserLog_LicenseeCurrencyBAGroup A WITH (NOLOCK)
+	INNER JOIN bodb_licensee.dbo.Licensees B WITH (NOLOCK) ON A.LicenseeID = B.LicenseeID
 	INNER JOIN bodb02.dbo.Custinfo C WITH (NOLOCK) ON A.ModifyBy = C.CustID
 	INNER JOIN bodb02.dbo.exchange e  WITH (NOLOCK) ON A.Currency=e.exchangeid
 	WHERE 

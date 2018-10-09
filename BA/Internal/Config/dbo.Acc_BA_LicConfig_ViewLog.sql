@@ -1,6 +1,6 @@
-﻿/*<info serverAlias="DBLIC-bodb_Licensee" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/ 
+﻿/*<info serverAlias="DBLOG-bodb_CustomerLog" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/ 
 
-USE bodb_Licensee
+USE bodb_CustomerLog
 GO
 
 ALTER PROCEDURE [dbo].[Acc_BA_LicConfig_ViewLog]
@@ -10,7 +10,7 @@ AS
 	Created: Henry
 	Date: 20110613
 	Task : View BA Commission Log
-	DB: DBLIC/bodb_Licensee
+	DB: DBLOG/bodb_CustomerLog
 	Original:
 
 	Revisions:
@@ -38,8 +38,8 @@ BEGIN
 		LA.ActionNameEN AS [description],
 		A.ModifyDate
 	FROM 
-		DBLOG.bodb_CustomerLog.dbo.UserLog_LicenseeBAConfig A WITH (NOLOCK)
-	INNER JOIN Licensees B WITH (NOLOCK) ON A.LicenseeID = B.LicenseeID
+		dbo.UserLog_LicenseeBAConfig A WITH (NOLOCK)
+	INNER JOIN bodb_licensee.dbo.Licensees B WITH (NOLOCK) ON A.LicenseeID = B.LicenseeID
 	INNER JOIN bodb02.dbo.Custinfo C WITH (NOLOCK) ON A.ModifyBy = C.CustID
 	INNER JOIN bodb_CustomerLog.dbo.LogAction LA  WITH (NOLOCK) ON A.ActionID = LA.ActionID
 	WHERE 

@@ -72,7 +72,7 @@ BEGIN
 				INSERT INTO @SpecialCustIDList(CustID,ugroup)
 				SELECT  custid,ugroup FROM LicenseeSpecialCust (NOLOCK) 
 			
-				INSERT @CurrencyList(strvalue)  SELECT VAL FROM strSplit(@str,',')
+				INSERT @CurrencyList(strvalue)  SELECT VAL FROM Lrf_f_StringSplit(@str,',')
 				SET @i=1
 				WHILE (@i<=(SELECT MAX(ID) FROM @CurrencyList))
 				BEGIN	 

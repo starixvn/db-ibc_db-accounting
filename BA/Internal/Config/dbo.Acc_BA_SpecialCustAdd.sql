@@ -39,7 +39,7 @@ BEGIN
 	DECLARE @MaxID INT,@CustID INT ,@i INT ,@isBA BIT,@ERROR INT ,@mess VARCHAR(MAX)
 
 	INSERT INTO @CustomerList(strvalue) 
-	SELECT RTRIM(LTRIM(VAL)) FROM strSplit(@str,',')					
+	SELECT RTRIM(LTRIM(VAL)) FROM Lrf_f_StringSplit(@str,',')					
 
 	INSERT INTO @CustomerID (CustID,Username) 
 	SELECT CustID,username FROM CustDB.dbo.customer WITH (NOLOCK) WHERE username IN (SELECT RTRIM(LTRIM(strvalue)) FROM @CustomerList)
