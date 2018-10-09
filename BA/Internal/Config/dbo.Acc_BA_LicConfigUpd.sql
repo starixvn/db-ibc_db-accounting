@@ -50,7 +50,7 @@ BEGIN
 	SET NOCOUNT ON
 	
 	--Check permission 	
-	EXEC DBPOL.NAP_UserControl.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[BACommSetting]',@ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
+	EXEC NAP_UserControl.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[BACommSetting]',@ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
 	IF @ErrCode <> 0
 		RETURN
 	--Check exist in Licensees
@@ -230,6 +230,7 @@ BEGIN
 			@groupa = @groupa,
 			@groupb = @groupb,
 			@groupc = @groupc, 
+			@groupd =  @groupd,
 			@1x2Comm = @1x2Comm, 
 			@OtherComm = @OtherComm, 
 			@EnableBA = @EnableBA, 
