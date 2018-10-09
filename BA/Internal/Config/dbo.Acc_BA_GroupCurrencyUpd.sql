@@ -1,6 +1,6 @@
-﻿/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/ 
+﻿/*<info serverAlias="DBCUST-bodb_Licensee" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/ 
 
-USE CustDB
+USE bodb_Licensee
 GO
 
 ALTER PROCEDURE [dbo].[Acc_BA_GroupCurrencyUpd]
@@ -15,7 +15,7 @@ AS
 /*
 	Created: 20111114@Jim
 	Task : Update BAGroup  WHEN Currency list is Selection
-	DB: DBCUST/CustDB
+	DB: DBCUST/bodb_Licensee
 	Revisions:
 		- 20111212@Henry: hardcode Alog members to just only allow group a
 		- 20120208@Jim:  hardcode to change point spread for members (group a and group d)
