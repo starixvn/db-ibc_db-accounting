@@ -108,7 +108,7 @@ BEGIN
 			   isnull(SUM(awinlost), 0) + isnull(SUM(comm - playercomm), 0) as AgTotal,
 			   -SUM(winlost - actual_stake + awinlost + comm),
 			   COUNT(transid) as NoOfTicket
-		FROM Bettrans14 b WITH(NOLOCK)
+		FROM Bettrans14 b WITH(NOLOCK, INDEX = IX_recommend)
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype		
 		WHERE 1 = 1		 
 			AND winlostdate BETWEEN @FromDate AND @ToDate
@@ -132,7 +132,7 @@ BEGIN
 			   isnull(SUM(awinlost), 0) + isnull(SUM(comm-playercomm), 0) as AgTotal,
 			   -SUM(winlost - actual_stake + awinlost+comm),
 			   COUNT(transid) as NoOfTicket
-		FROM Bettrans14 b WITH(NOLOCK)
+		FROM Bettrans14 b WITH(NOLOCK, INDEX = IX_recommend)
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype	
 		WHERE 1 = 1
 		    AND winlostdate BETWEEN @FromDate AND @ToDate

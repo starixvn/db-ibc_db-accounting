@@ -99,7 +99,7 @@ BEGIN
 			,isnull(SUM(mwinlost), 0) + isnull(SUM(acomm), 0) - SUM(comm)
 			,- (isnull(SUM(awinlost), 0) + isnull(SUM(mwinlost), 0) + isnull(SUM(acomm), 0) + isnull(SUM(winlost - actual_stake), 0))
 			,COUNT(transid) AS NoOfTicket
-		FROM dbo.bettrans14 b WITH (NOLOCK)
+		FROM dbo.bettrans14 b WITH (NOLOCK, INDEX =IX_mrecommend )
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype	
 		WHERE 1 = 1
 			AND winlostdate BETWEEN @FromDate AND @ToDate					
@@ -121,7 +121,7 @@ BEGIN
 			,isnull(SUM(mwinlost), 0) + isnull(SUM(acomm), 0) - SUM(comm)
 			,- (isnull(SUM(awinlost), 0) + isnull(SUM(mwinlost), 0) + isnull(SUM(acomm), 0) + isnull(SUM(winlost - actual_stake), 0))
 			,COUNT(transid) AS NoOfTicket
-		FROM dbo.bettrans14 b WITH (NOLOCK)
+		FROM dbo.bettrans14 b WITH (NOLOCK, INDEX =IX_mrecommend)
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype	
 		WHERE 1 = 1
 			AND winlostdate BETWEEN @FromDate AND @ToDate					
