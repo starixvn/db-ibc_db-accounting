@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb_AGE" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0"></info>*/
+/*<info serverAlias="DBAGE-bodb_AGE" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0"></info>*/
 USE bodb_Age
 GO
 
