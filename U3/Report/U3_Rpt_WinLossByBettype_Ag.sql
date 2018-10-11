@@ -1,7 +1,4 @@
 /*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
 ALTER PROCEDURE [dbo].[U3_Rpt_WinLossByBettype_Ag]
 	@CustID 	INT,
 	@FromDate 	SMALLDATETIME,
@@ -17,6 +14,7 @@ AS
 
 	Revisions:
 		- 20170830@Percy: Integrate Lucky 3 [RedmineID: #76770]
+		- 20181003@Helen: Modify code to adapt indexes changed on DB053 [Redmine:101405]
 */
 
 BEGIN
@@ -110,7 +108,7 @@ BEGIN
 			   isnull(SUM(awinlost), 0) + isnull(SUM(comm - playercomm), 0) as AgTotal,
 			   -SUM(winlost - actual_stake + awinlost + comm),
 			   COUNT(transid) as NoOfTicket
-		FROM Bettrans14 b WITH(NOLOCK, index = bettrans143)
+		FROM Bettrans14 b WITH(NOLOCK, INDEX = IX_recommend)
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype		
 		WHERE 1 = 1		 
 			AND winlostdate BETWEEN @FromDate AND @ToDate
@@ -134,7 +132,7 @@ BEGIN
 			   isnull(SUM(awinlost), 0) + isnull(SUM(comm-playercomm), 0) as AgTotal,
 			   -SUM(winlost - actual_stake + awinlost+comm),
 			   COUNT(transid) as NoOfTicket
-		FROM Bettrans14 b WITH(NOLOCK, index = bettrans143)
+		FROM Bettrans14 b WITH(NOLOCK, INDEX = IX_recommend)
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype	
 		WHERE 1 = 1
 		    AND winlostdate BETWEEN @FromDate AND @ToDate
