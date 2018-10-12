@@ -41,7 +41,7 @@ BEGIN
 		dbo.UserLog_LicenseeBAConfig A WITH (NOLOCK)
 	INNER JOIN bodb_licensee.dbo.Licensees B WITH (NOLOCK) ON A.LicenseeID = B.LicenseeID
 	INNER JOIN bodb02.dbo.Custinfo C WITH (NOLOCK) ON A.ModifyBy = C.CustID
-	INNER JOIN bodb_CustomerLog.dbo.LogAction LA  WITH (NOLOCK) ON A.ActionID = LA.ActionID
+	INNER JOIN dbo.LogAction LA  WITH (NOLOCK) ON A.ActionID = LA.ActionID
 	WHERE 
 		A.LicenseeID = COALESCE(@LicenseeID,A.LicenseeID)
 	ORDER BY A.LicenseeID, A.ModifyDate DESC
