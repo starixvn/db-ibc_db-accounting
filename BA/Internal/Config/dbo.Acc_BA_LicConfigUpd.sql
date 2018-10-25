@@ -1,4 +1,7 @@
-﻿/*<info serverAlias="DBLIC-bodb_Licensee" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBCUST-bodb_Licensee" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+USE bodb_Licensee
+GO
+
 ALTER PROCEDURE [dbo].[Acc_BA_LicConfigUpd]
 (
 	@LicenseeID		INT,
@@ -17,36 +20,37 @@ ALTER PROCEDURE [dbo].[Acc_BA_LicConfigUpd]
 )
 AS
 /* 
-Date: 20110606
-Task : Update Commission Template of a Licensee 
-DB: DB0LIC/bodb_Licensee
-Original:
+	Date: 20110606
+	Task : Update Commission Template of a Licensee 
+	DB: DBCUST/bodb_Licensee
+	Original:
 
-Revisions:
-	- 20110707@Henry: Add/Remove ProductID in LicenseeProduct3rd when enable/disable BA
-	- 20110823@Johnson: change to use commission by group for handicap, odd/even, over/under bettype
-	- 20110906@Henry: update all BA members to normal when disable BA
-	- 20111118@Jim: change  ugroup variable reference and update commission separate by currency 
-	- 20111209@Henry: hardcode Alog members to just only allow group a
-	- 20120208@Jim:  hardcode to change point spread for members (group a and group d)
-	- 20120215@Henry: add more customer for hard-code group a
-	- 20120223@Jim: add more customer for spread member (group a and group d)
-	- 20120403@Jim: get SpecialCust from LicenseeSpecialCust replace for hard-code
-	- 20120426@Henry: fix bug due to update wrong groupcomm in LicenseeBAHistory
-	- 20130123@Daniel: Change link server alias
-	- 20170519@Harper: Fix duplicate key when setting BA [RedmineID: #76420]
-	- 20180809@Sophia: HA - remove LicenseeCustInfo table [Redmine: #99464]
-	- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
-	- 20180914@Helen: Hotfix - CHANGE link server to update BA Member - DBCUST/CUSTDB - [Redmine:101501]
+	Revisions:
+		- 20110707@Henry: Add/Remove ProductID in LicenseeProduct3rd when enable/disable BA
+		- 20110823@Johnson: change to use commission by group for handicap, odd/even, over/under bettype
+		- 20110906@Henry: update all BA members to normal when disable BA
+		- 20111118@Jim: change  ugroup variable reference and update commission separate by currency 
+		- 20111209@Henry: hardcode Alog members to just only allow group a
+		- 20120208@Jim:  hardcode to change point spread for members (group a and group d)
+		- 20120215@Henry: add more customer for hard-code group a
+		- 20120223@Jim: add more customer for spread member (group a and group d)
+		- 20120403@Jim: get SpecialCust from LicenseeSpecialCust replace for hard-code
+		- 20120426@Henry: fix bug due to update wrong groupcomm in LicenseeBAHistory
+		- 20130123@Daniel: Change link server alias
+		- 20170519@Harper: Fix duplicate key when setting BA [RedmineID: #76420]
+		- 20180809@Sophia: HA - remove LicenseeCustInfo table [Redmine: #99464]
+		- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
+		- 20180914@Helen: Hotfix - CHANGE link server to update BA Member - DBCUST/CUSTDB - [Redmine:101501]
+		- 20180924@Elodie: Migrate bodb_Licensee to DBCUST [Redmine:#99855]
 
-Param's Explanation:
+	Param's Explanation:
 	
 */
 BEGIN
 	SET NOCOUNT ON
 	
 	--Check permission 	
-	EXEC DBPOL.NAP_UserControl.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[BACommSetting]',@ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
+	EXEC NAP_UserControl.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[BACommSetting]',@ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
 	IF @ErrCode <> 0
 		RETURN
 	--Check exist in Licensees
@@ -63,18 +67,19 @@ BEGIN
 	END
 	--Get old VALUES
 	DECLARE 
-	@currency int , 
-	@ugroup VARCHAR(3),
-	@groupa_Old DECIMAL(9,8) ,
-	@groupb_Old DECIMAL(9,8) ,
-	@groupc_Old DECIMAL(9,8) ,
-	@groupd_Old DECIMAL(9,8) ,
-	@1x2Comm_Old DECIMAL(9,8),
-	@OtherComm_Old DECIMAL(9,8),	
-	@EnableBA_Old BIT,
-	@FlagUpdateComm BIT,
-	@FlagUpdateBAStatus BIT,
-	@ModifyDate DATETIME
+		@currency int , 
+		@ugroup VARCHAR(3),
+		@groupa_Old DECIMAL(9,8) ,
+		@groupb_Old DECIMAL(9,8) ,
+		@groupc_Old DECIMAL(9,8) ,
+		@groupd_Old DECIMAL(9,8) ,
+		@1x2Comm_Old DECIMAL(9,8),
+		@OtherComm_Old DECIMAL(9,8),	
+		@EnableBA_Old BIT,
+		@FlagUpdateComm BIT,
+		@FlagUpdateBAStatus BIT,
+		@ModifyDate DATETIME
+
 	SET @FlagUpdateComm = 0
 	SET @FlagUpdateBAStatus=0
 	SET @ModifyDate = GETDATE()
@@ -152,7 +157,7 @@ BEGIN
 			SELECT lba.CustID,currency   
 			FROM  
 				LicenseeBAHistory lba WITH (NOLOCK)
-				INNER JOIN bodb02.dbo.customer c WITH (NOLOCK) ON lba.CustID = c.Custid
+				INNER JOIN CustDB.dbo.customer c WITH (NOLOCK) ON lba.CustID = c.Custid
 			WHERE LicenseeID = @LicenseeID AND Status = 'Running'
 			
 			
@@ -168,13 +173,14 @@ BEGIN
 				END
 				ELSE
 				BEGIN
-					SELECT @ugroup = ugroup FROM LicenseeCurrencyBAGroup lc WITH (NOLOCK)
-										WHERE LicenseeID = @LicenseeID AND Currency = @currency
+					SELECT @ugroup = ugroup 
+					FROM LicenseeCurrencyBAGroup lc WITH (NOLOCK)
+					WHERE LicenseeID = @LicenseeID AND Currency = @currency
 				END
 				
 				IF @FlagUpdateBAStatus=1 AND @EnableBA=0
 				BEGIN
-					EXEC DBCUST.CUSTDB.dbo.Lrf_CustomerUpdMemberBAStatus
+					EXEC CUSTDB.dbo.Lrf_CustomerUpdMemberBAStatus
 					@LicenseeID = @LicenseeID,
 					@CustID = @BACustID,
 					@ModifyBy = @UserID,
@@ -189,7 +195,7 @@ BEGIN
 					IF @FlagUpdateComm=1
 					BEGIN
 						--Update commission for BA Member
-						EXEC DBCUST.CUSTDB.dbo.Lrf_CustomerUpdMemberBAComm
+						EXEC CUSTDB.dbo.Lrf_CustomerUpdMemberBAComm
 						@LicenseeID = @LicenseeID,
 						@CustID = @BACustID,
 						@ModifyBy = @UserID,
@@ -219,14 +225,21 @@ BEGIN
 		END
 		--write log 
 		
-		INSERT INTO UserLog_LicenseeBAConfig (LicenseeID, groupa, groupb, groupc, groupd,[1x2Comm], [OtherComm], EnableBA, IP, ActionID, ModifyBy, ModifyDate)
-		VALUES (@LicenseeID, @groupa , @groupb, @groupc, @groupd,  @1x2Comm, @OtherComm, @EnableBA , @IP, 218, @UserID, @ModifyDate)		
+		EXEC Lrf_WriteLog_UserLog_LicenseeBAConfig_Wrapper 
+			@LicenseeID = @LicenseeID,
+			@groupa = @groupa,
+			@groupb = @groupb,
+			@groupc = @groupc, 
+			@groupd =  @groupd,
+			@1x2Comm = @1x2Comm, 
+			@OtherComm = @OtherComm, 
+			@EnableBA = @EnableBA, 
+			@IP = @IP,
+			@ActionId = 218,
+			@UserID = @UserID			
 	END
 END
 GO
- 
-GRANT EXECUTE ON [dbo].[Acc_BA_LicConfigUpd] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BA_LicConfigUpd] TO [vnteam]
+
 
 

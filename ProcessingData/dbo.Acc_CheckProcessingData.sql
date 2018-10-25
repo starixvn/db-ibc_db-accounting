@@ -16,6 +16,7 @@ AS
 		- 20171220@Patrick: check data ready on replicated servers also [RedmineID: #88152]
 		- 20180323@Percy: Enhancement notification [RedmineID: #92391]
 		- 20180518@Percy: also check data ready on DB054 [RedmineID: #89953]
+		- 20181003@Sophia: Correct linked server DBLIC to DBEXT.bodb02 [Redmine: #99855]
 */
 
 BEGIN
@@ -54,9 +55,9 @@ BEGIN
 	SELECT @IsMovingBet_Local_DB06 = ISNULL(@IsMovingBet_Local_DB06, '0')
 
 	--//DB052
-	SELECT @IsArchivingBet_Local_DB052 = VValue FROM DBLIC.bodb02.dbo.SystemSettings WITH(NOLOCK) WHERE VName = 'isArchivingBet_Local'
+	SELECT @IsArchivingBet_Local_DB052 = VValue FROM DBEXT.bodb02.dbo.SystemSettings WITH(NOLOCK) WHERE VName = 'isArchivingBet_Local'
 	SELECT @IsArchivingBet_Local_DB052 = ISNULL(@IsArchivingBet_Local_DB052, '0')
-	SELECT @IsMovingBet_Local_DB052 = VValue FROM DBLIC.bodb02.dbo.SystemSettings WITH(NOLOCK) WHERE VName = 'isMovingBet_Local'
+	SELECT @IsMovingBet_Local_DB052 = VValue FROM DBEXT.bodb02.dbo.SystemSettings WITH(NOLOCK) WHERE VName = 'isMovingBet_Local'
 	SELECT @IsMovingBet_Local_DB052 = ISNULL(@IsMovingBet_Local_DB052, '0')
 
 	--//DB054
