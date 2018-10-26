@@ -26,7 +26,7 @@ Task : record all kinds of transactions for Deposit sites
 DB: DBTXN/bodb02
 User: API Licensee/12Bet
 
-History:
+Revision:
 	- V2_20080623: Add @bettype param to handle all kinds of transactions
 	- 20080906: + Transfer between dummies and Adjustment will use 111-bettype
 				+ Add @ExchangeRate to support transfer with different currency accounts
