@@ -1,5 +1,5 @@
 /*<info serverAlias="DBTXN-bodb02" executers="Dot_Member" viewers="vnteam" isFunction="0" isNested="0"></info>*/
-ALTER PROCEDURE  [dbo].[Dot_Int_BettransInsTransactionWithoutLog_Cust]
+ALTER PROCEDURE [dbo].[Dot_Int_BettransInsTransactionWithoutLog_Cust]
 	@amount				MONEY,	
 	@custid				INT,
 	@bal_custid			INT,	
@@ -57,6 +57,7 @@ History:
 	- 20170110@Walter: Insert before balance into bettrans.balance
 	- 20171102:Patrick: Can't make transfer/withdrawal during MB/BU time [Redmine:#82768]
 	- 20170815@Bobby: 80775 - Update bonus info when depositing cash to join into bonus program
+	- 20180514@Patrick: Remove check deposit case during MBU process
 
 
 Param's Explanation:
@@ -247,18 +248,21 @@ BEGIN
 		RETURN
 	END
 
-	--//1st check: MB/BU is running?
-	 EXEC dbo.Acc_Core_IsMainProcessRunning
-		  @CustId = @custid
-		, @UplineId = @recommend
-		, @IsDepositMember = 1
-		, @ErrCode = @ErrCode OUTPUT
-		, @ErrMsg = @ErrMsg OUTPUT
-
-	IF @ErrCode <> 0
+	IF (@bettype = @DWIT AND @IsCharge = 0) OR (@bettype = @DTRATP AND @amount < 0) --only check when not Charge transaction, and is Withdrawal
 	BEGIN
-		SELECT @ErrMsg = @ErrMsg, @ErrCode = 333	
-		RETURN
+		--//1st check: MB/BU is running?
+		EXEC dbo.Acc_Core_IsMainProcessRunning
+			  @CustId = @custid
+			, @UplineId = @recommend
+			, @IsDepositMember = 1
+			, @ErrCode = @ErrCode OUTPUT
+			, @ErrMsg = @ErrMsg OUTPUT
+
+		IF @ErrCode <> 0
+		BEGIN
+			SELECT @ErrMsg = @ErrMsg, @ErrCode = 333	
+			RETURN
+		END
 	END
 	----------------------------------
 	--Check enough balance for withdrawing
@@ -279,18 +283,21 @@ BEGIN
 	WHERE	custid = @custID 
 			AND IsSum=0
 	
-	--//2nd check: MB/BU is running?
-	 EXEC dbo.Acc_Core_IsMainProcessRunning
-		  @CustId = @custid
-		, @UplineId = @recommend
-		, @IsDepositMember = 1
-		, @ErrCode = @ErrCode OUTPUT
-		, @ErrMsg = @ErrMsg OUTPUT
-
-	IF @ErrCode <> 0
+	IF (@bettype = @DWIT AND @IsCharge = 0) OR (@bettype = @DTRATP AND @amount < 0) --only check when not Charge transaction, and is Withdrawal
 	BEGIN
-		SELECT @ErrMsg = @ErrMsg, @ErrCode = 333	
-		RETURN
+		--//2nd check: MB/BU is running?
+		 EXEC dbo.Acc_Core_IsMainProcessRunning
+			  @CustId = @custid
+			, @UplineId = @recommend
+			, @IsDepositMember = 1
+			, @ErrCode = @ErrCode OUTPUT
+			, @ErrMsg = @ErrMsg OUTPUT
+
+		IF @ErrCode <> 0
+		BEGIN
+			SELECT @ErrMsg = @ErrMsg, @ErrCode = 333	
+			RETURN
+		END
 	END
 
 	SELECT @balance_bettransRNG = ISNULL(@balance_bettransRNG,0)
@@ -375,7 +382,7 @@ BEGIN
 		IF @Cust_Balance < 0 
 		BEGIN
 			--EXEC dbo.Dot_BalanceUpdDebit @custid = @CustID, @Balance = @Cust_Balance_ABS
-			EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_balance_ABS, @type = @BalanceType, @IsForced = @IsForced, @errCode = @ErrCode OUTPUT
+						EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_balance_ABS, @type = @BalanceType, @IsForced = @IsForced, @errCode = @ErrCode OUTPUT
 			IF @ErrCode <> 0
 			BEGIN
 				SELECT	@ErrCode = 105	
@@ -410,7 +417,7 @@ BEGIN
 		IF @Cust_balance < 0 
 		BEGIN 
 			--EXEC dbo.Dot_BalanceUpdCredit @custid = @CustID, @Balance = @Cust_Balance_ABS
-			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_Balance_ABS, @type = @BalanceType
+						EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_Balance_ABS, @type = @BalanceType
 		END 
 		RETURN
 	END CATCH
@@ -420,7 +427,7 @@ BEGIN
 	IF @Cust_Balance > 0  --Update BalanceCredit 
 	BEGIN
 		--EXEC dbo.Dot_BalanceUpdCredit @custid = @CustID, @Balance = @Cust_Balance
-		EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_Balance, @type = @BalanceType
+				EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_Balance, @type = @BalanceType
 	END 
 
 	----ADD DUMMY TRANSACTION
@@ -446,12 +453,12 @@ BEGIN
 		IF @Cust_balance < 0  --Rollback BalanceDebit 
 		BEGIN 
 			--EXEC dbo.Dot_BalanceUpdCredit @custid = @CustID, @Balance = @Cust_Balance_ABS
-			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_Balance_ABS, @type = @BalanceType
+						EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_Balance_ABS, @type = @BalanceType
 		END 
 		ELSE  --Rollback BalanceCredit 
 		BEGIN
 			--EXEC dbo.Dot_BalanceUpdDebit @custid = @CustID, @Balance = @Cust_Balance
-			EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_Balance, @type = @BalanceType, @IsForced = 1
+						EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_Balance, @type = @BalanceType, @IsForced = 1
 		END	
 		RETURN
 	END
@@ -473,4 +480,3 @@ BEGIN
 	EXEC dbo.WriteLog_UserLog @UserID = @custid, @Doing = @LogData
 
 END
-GO 
