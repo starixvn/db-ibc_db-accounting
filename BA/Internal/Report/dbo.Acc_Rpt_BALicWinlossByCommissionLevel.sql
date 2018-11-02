@@ -1,4 +1,8 @@
-﻿ALTER PROCEDURE [dbo].[Acc_Rpt_BALicWinlossByCommissionLevel]  
+﻿/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+USE [bodb02]
+GO
+
+ALTER PROCEDURE [dbo].[Acc_Rpt_BALicWinlossByCommissionLevel]  
 	@LicenseeID	INT,
 	@FromDate SMALLDATETIME,
 	@ToDate SMALLDATETIME,
@@ -12,8 +16,9 @@ AS
     DB: DBRPT/bodb02  
    
     Revisions:  
-		-- 20120214@Jim: change to use  table ExchangeDaily by use function Lrf_f_GetExchangeDaily  
-     - 20130123@Daniel: Change link server alias
+		- 20120214@Jim: change to use  table ExchangeDaily by use function Lrf_f_GetExchangeDaily  
+		- 20130123@Daniel: Change link server alias
+		- 20181031@Percy: Remove linked-server DBLIC [RedmineID: #103660]
 		
 	Param's Explanation:  
 		+ @drawfilter: 'No Draw' filter is supportted (1:Normal 2:No Draw 3:No Draw for Turnover only)
@@ -41,11 +46,11 @@ SELECT
 
 IF @Currency = 0   
 BEGIN  
-	INSERT INTO @tmpAg (custID) SELECT custID FROM DBLIC.bodb_Licensee.dbo.LicenseeCust WITH(NOLOCK) WHERE LicenseeID = @LicenseeID
+	INSERT INTO @tmpAg (custID) SELECT custID FROM bodb_Licensee.dbo.LicenseeCust WITH(NOLOCK) WHERE LicenseeID = @LicenseeID
 END  
 ELSE   
 BEGIN  
-	INSERT INTO @tmpAg (custID) SELECT custID FROM DBLIC.bodb_Licensee.dbo.LicenseeCust WITH(NOLOCK) WHERE LicenseeID = @LicenseeID AND Currency=@Currency
+	INSERT INTO @tmpAg (custID) SELECT custID FROM bodb_Licensee.dbo.LicenseeCust WITH(NOLOCK) WHERE LicenseeID = @LicenseeID AND Currency=@Currency
 END  
 
 CREATE TABLE #tmp
@@ -94,7 +99,7 @@ BEGIN
 				ELSE 1 END
 			   BetCount	 
 	FROM bettrans b WITH (NOLOCK,INDEX=PK_bettrans)
-		INNER JOIN DBLIC.bodb_Licensee.dbo.LicenseeBATransaction BA WITH (NOLOCK) ON b.transid = BA.transid
+		INNER JOIN bodb_Licensee.dbo.LicenseeBATransaction_active BA WITH (NOLOCK) ON b.transid = BA.transid
 	WHERE
 		b.winlostdate BETWEEN @TempFromDate AND @Tdate AND
 		b.recommend IN (SELECT CustID FROM @tmpAg) AND
@@ -139,7 +144,7 @@ BEGIN
 				ELSE 1 END
 			   BetCount	 
 	FROM bettrans14 b WITH (NOLOCK,INDEX=PK_bettrans14)
-		INNER JOIN DBLIC.bodb_Licensee.dbo.LicenseeBATransaction BA WITH (NOLOCK) ON b.transid = BA.transid
+		INNER JOIN bodb_Licensee.dbo.LicenseeBATransaction_bk BA WITH (NOLOCK) ON b.transid = BA.transid
 	WHERE
 		b.winlostdate BETWEEN @BalanceUpDay AND @TempToDate AND 
 		b.recommend IN (SELECT CustID FROM @tmpAg) AND
@@ -182,7 +187,7 @@ BEGIN
 				ELSE 1 END
 			   BetCount	 
 	FROM bodb_archive.dbo.bettrans_BK b WITH (NOLOCK,INDEX=IX_Transid)
-		INNER JOIN DBLIC.bodb_Licensee.dbo.LicenseeBATransaction BA WITH (NOLOCK) ON b.transid = BA.transid
+		INNER JOIN bodb_Licensee.dbo.LicenseeBATransaction_bk BA WITH (NOLOCK) ON b.transid = BA.transid
 	WHERE
 		b.winlostdate BETWEEN @FDate AND @TempToDate AND 
 		b.recommend IN (SELECT CustID FROM @tmpAg) AND
@@ -235,8 +240,4 @@ ORDER BY
  
 DROP TABLE #tmp 
 DROP TABLE #TempExchange
- 
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_BALicWinlossByCommissionLevel] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_BALicWinlossByCommissionLevel] TO [vnteam]   
