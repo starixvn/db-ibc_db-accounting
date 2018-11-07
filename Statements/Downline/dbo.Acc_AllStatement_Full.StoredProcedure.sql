@@ -67,6 +67,7 @@ AS
 		- 20170323@Percy: Apply Cash Out [RedmineID: #72164]
 		- 20171020@Percy: Get both waiting and running tickets on translog [RedmineID: #84692]
 		- 20180731@Percy: Expand column transdesc [RedmineID: #92841]
+		- 20181107@Louis: Credit Collection [Redmine: #98621]
 		
 	Param explanation : 
 		- Transtypeid = 4 - GrandPrize
@@ -163,7 +164,11 @@ BEGIN
 						WHEN statusID IN (0, 1) THEN 0 -- 'running', 'waiting'
 						ELSE 131 END AS statusID,
 					CASE WHEN b.bettype <= 19999 THEN NULL ELSE transdate END AS transdate,
-					CASE WHEN b.bettype <= 19999 THEN '' ELSE transdesc END AS transdesc,
+					CASE 
+						WHEN b.bettype <= 19999 THEN '' 
+						WHEN b.oddsId = 0 THEN transdesc 						
+						ELSE 'Coll' 
+					END transdesc,
 					SUM(actual_stake) AS actual_stake,
 					SUM(winlost) AS winlost
 				FROM
@@ -186,7 +191,11 @@ BEGIN
 						WHEN statusID IN (0, 1) THEN 0
 						ELSE 131 END,
 					CASE WHEN b.bettype <= 19999 THEN NULL ELSE transdate END,
-					CASE WHEN b.bettype <= 19999 THEN '' ELSE transdesc END			
+					CASE 
+						WHEN b.bettype <= 19999 THEN '' 
+						WHEN b.oddsId = 0 THEN transdesc
+						ELSE 'Coll' 
+					END			
 			
 				---- 1.2 translog
 				UNION ALL
@@ -337,7 +346,7 @@ BEGIN
 				transdate accdate,
 				refno,
 				SUM(winlost-actual_stake) totalamt,
-				bt.typenamee transtype,
+				CASE WHEN b.oddsId = 0 THEN bt.typenamee ELSE 'Coll' END transtype,
 				0,
 				transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END transdesc, 
 				ISNULL(c.username,'') Creator,
@@ -359,6 +368,7 @@ BEGIN
 				transdate,
 				refno,
 				bt.typenamee,
+				oddsId,
 				transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END,
 				transid,
 				bt.typeid,
@@ -521,7 +531,7 @@ BEGIN
 				transdate accdate,
 				refno,
 				SUM(winlost-actual_stake) totalamt,
-				typenamee transtype,
+				CASE WHEN oddsId = 0 THEN typenamee ELSE 'Coll' END transtype,
 				0,
 				transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END transdesc, 			
 				ISNULL(c.username,'') Creator,
@@ -541,6 +551,7 @@ BEGIN
 					transdate,
 					b.refno,
 					typenamee,
+					oddsId,
 					transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END,
 					transid,
 					bt.typeid,
@@ -638,7 +649,7 @@ BEGIN
 				transdate accdate,
 				refno,
 				SUM(winlost-actual_stake) totalamt,
-				typenamee transtype,
+				CASE WHEN oddsId = 0 THEN typenamee ELSE 'Coll' END transtype,
 				0,
 				transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END transdesc, 
 				ISNULL(c.username,'') Creator,
@@ -658,6 +669,7 @@ BEGIN
 				transdate,
 				b.refno,
 				typenamee,
+				oddsId,
 				transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END,		
 				transid,
 				bt.typeid,
@@ -757,7 +769,7 @@ BEGIN
 				transdate accdate,
 				refno,
 				SUM(winlost-actual_stake) totalamt,
-				typenamee transtype,
+				CASE WHEN oddsId = 0 THEN typenamee ELSE 'Coll' END transtype,
 				0,
 				transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END transdesc,
 				ISNULL(c.username,'') as Creator,
@@ -778,6 +790,7 @@ BEGIN
 				transdate,
 				b.refno,
 				typenamee,
+				oddsId,
 				transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END,		
 				transid,
 				bt.typeid,
