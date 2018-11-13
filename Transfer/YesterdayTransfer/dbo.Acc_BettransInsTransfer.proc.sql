@@ -185,7 +185,6 @@ BEGIN
 				delete Transfer_Coll
 				where  custid in (@FromCustID, @ToCustID)
 					and refno = @refno 
-					and matchid = 0
 					and bettype = 21003
 					
 				return
@@ -220,8 +219,7 @@ BEGIN
 				
 				delete Transfer_Coll
 				where  custid in (@FromCustID, @ToCustID)
-					and refno = @refno 
-					and matchid = 0
+					and refno = @refno  
 					and bettype = 21003
 					
 				return
@@ -265,8 +263,7 @@ BEGIN
 
 					delete Transfer_Coll
 					where  custid in (@FromCustID, @ToCustID)
-					and refno = @refno 
-					and matchid = 0
+					and refno = @refno  
 					and bettype = 21003			
 				
 					return
@@ -307,8 +304,7 @@ BEGIN
 					
 				delete Transfer_Coll
 				where  custid in (@FromCustID, @ToCustID)
-					and refno = @refno 
-					and matchid = 0
+					and refno = @refno  
 					and bettype = 21003
 
 				--- rollback @ToCustID
@@ -351,8 +347,7 @@ BEGIN
 				
 				delete Transfer_Coll
 				where  custid in (@FromCustID, @ToCustID)
-					and refno = @refno 
-					and matchid = 0
+					and refno = @refno  
 					and bettype = 21003
 					
 				return
@@ -410,8 +405,7 @@ BEGIN
 					
 				delete Transfer_Coll
 				where  custid in (@FromCustID, @ToCustID)
-					and refno = @refno 
-					and matchid = 0
+					and refno = @refno  
 					and bettype = 21003
 					
 				---rollback @FromCustID
@@ -453,8 +447,7 @@ BEGIN
 				
 				delete Transfer_Coll
 				where  custid in (@FromCustID, @ToCustID)
-					and refno = @refno 
-					and matchid = 0
+					and refno = @refno  
 					and bettype = 21003
 					
 				return
@@ -489,8 +482,7 @@ BEGIN
 					
 				delete Transfer_Coll
 				where  custid in (@FromCustID, @ToCustID)
-					and refno = @refno 
-					and matchid = 0
+					and refno = @refno  
 					and bettype = 21003
 					
 				---rollback @FromCustID
@@ -532,8 +524,7 @@ BEGIN
 				
 				delete Transfer_Coll
 				where  custid in (@FromCustID, @ToCustID)
-					and refno = @refno 
-					and matchid = 0
+					and refno = @refno  
 					and bettype = 21003
 					
 				return
