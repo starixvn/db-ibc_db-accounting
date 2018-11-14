@@ -13,7 +13,8 @@ ALTER PROCEDURE [dbo].[Acc_BettransInsCrossTransfer]
 	@IP				NVARCHAR(15)='',
 	@ErrCode		INT = 0 OUTPUT,
 	@ErrMsg			NVARCHAR(200) = '' OUTPUT,
-	@Language		VARCHAR(2)= 'E'
+	@Language		VARCHAR(2)= 'E',
+	@isCollection 	BIT = 0
 )
 AS
 /*
@@ -34,6 +35,7 @@ AS
 		- 20150808@Elodie: Balance Improvement [Redmine:#40125]
 		- 20151021@Elodie: Set @IsForce = 1 for updating balance debit [Redmine:#40125]
 		- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
+		- 20181112@Sophia: Add Transfer Collection [redmine: #98621]
 */
 BEGIN
 	SET NOCOUNT ON	
@@ -54,7 +56,8 @@ BEGIN
 			@winlostdate	DATETIME, 
 			@transdate		DATETIME,
 			@RemarkFromCurr	NVARCHAR(70),
-			@RemarkToCurr	NVARCHAR(70)
+			@RemarkToCurr	NVARCHAR(70),
+			@TransId		BIGINT
 
 
 	DECLARE @FromUsername	NVARCHAR(50),
@@ -196,13 +199,17 @@ BEGIN
 		END
 	END
 
+	--- Insert Bettrans
 	INSERT INTO bettrans (creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 						 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
-						 scomm, swinlost,ip,statusID)
+						 scomm, swinlost,ip,statusID, OddsID)
 	VALUES(@UserID, @FromCustID, @FromUsername, @refno, @transdate, 0, 21003, 'To Customer: ' + @ForexUsername + '('+ @Remark +')' + @RemarkToCurr, 
 						CASE WHEN @FromAmount > 0 THEN @FromAmount ELSE 0 END , CASE WHEN @FromAmount > 0 THEN 0 ELSE ABS(@FromAmount) END,
 						'Completed',1, @winlostdate, @FromCurrency, @FromActualRate, @FromCurrName, @FromRecommend, @FromMrecommend, @FromSrecommend,
-						0, 0, @ip,131)
+						0, 0, @ip,131, @IsCollection)
+						
+	SELECT 	@TransID = @@Identity 
+	
 	IF @@ERROR <> 0
 	BEGIN
 		SELECT  @ErrMsg = CASE @Language WHEN 'E'  THEN 'Transfer failed. Please try again.'
@@ -218,11 +225,55 @@ BEGIN
 			AND matchid = 0 
 			AND bettype = 21003
 			
+		DELETE Transfer_Coll
+		WHERE  custid in (@FromCustID, @ForexCustID, @ToCustID)
+			AND refno = @refno 
+			AND bettype = 21003
+					
 		--- rollback credit
 		IF @FromAmount < 0 AND @FromRoleID = 1
 			EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @tmp
 		RETURN
 	END
+	
+	--- Insert Transfer_Coll
+		INSERT INTO Transfer_Coll 
+				( CustId, WinlostDate, TransDate, Bettype, Debit, Credit, Currency, ActualRate, 
+				TransID, RefNo, Username, Recommend, MRecommend, SRecommend, 
+				Creator ,TransDesc, IP )
+		SELECT 	CustId, WinlostDate, TransDate, Bettype, Actual_Stake, Winlost, Currency, ActualRate, 
+				TransID, RefNo, Username, Recommend, MRecommend, SRecommend, 
+				Creator ,TransDesc, IP
+		FROM dbo.Bettrans WITH (NOLOCK) 
+		WHERE TransID = @TransID
+	  
+	
+	IF @@ERROR <> 0
+	BEGIN
+		SELECT  @ErrMsg = CASE @Language WHEN 'E'  THEN 'Transfer failed. Please try again.'
+										 WHEN 'CS' THEN N'Transfer failed. Please try again.'
+										 WHEN 'J'  THEN N'払戻処理上にエラーが発生しました。もう一度確認してください。'
+										 ELSE N'Transfer failed. Please try again.'
+						 END, 
+				@ErrCode = 104		
+				
+		DELETE bettrans WITH(ROWLOCK,UPDLOCK) 
+		WHERE custid in (@FromCustID, @ForexCustID, @ToCustID)
+			AND refno = @refno 
+			AND matchid = 0 
+			AND bettype = 21003
+			
+		DELETE Transfer_Coll
+		WHERE  custid in (@FromCustID, @ForexCustID, @ToCustID)
+			AND refno = @refno 
+			AND bettype = 21003
+					
+		--- rollback credit
+		IF @FromAmount < 0 AND @FromRoleID = 1
+			EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @tmp
+		RETURN
+	END
+	
 	---- update @FromCustID's credit if this action increase balance
 	IF @FromAmount > 0 AND @FromRoleID = 1	
 	EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @FromAmount	
