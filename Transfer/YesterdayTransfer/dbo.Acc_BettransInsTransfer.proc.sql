@@ -176,13 +176,13 @@ BEGIN
 							else N'Transfer failed. Please try again.'
 						end, @ErrCode = 103		
 				
-				delete bettrans 
+				delete bettrans WITH(ROWLOCK)
 				where custid in (@FromCustID, @ToCustID)
 					and refno = @refno 
 					and matchid = 0
 					and bettype = 21003
 				
-				delete Transfer_Coll
+				delete Transfer_Coll WITH(ROWLOCK)
 				where  custid in (@FromCustID, @ToCustID)
 					and refno = @refno 
 					and bettype = 21003
@@ -211,13 +211,13 @@ BEGIN
 							else N'Transfer failed. Please try again.'
 						end, @ErrCode = 103		
 				
-				delete bettrans 
+				delete bettrans WITH(ROWLOCK)
 				where custid in (@FromCustID, @ToCustID)
 					and refno = @refno 
 					and matchid = 0
 					and bettype = 21003
 				
-				delete Transfer_Coll
+				delete Transfer_Coll WITH(ROWLOCK)
 				where  custid in (@FromCustID, @ToCustID)
 					and refno = @refno  
 					and bettype = 21003
@@ -255,13 +255,13 @@ BEGIN
 											EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @amount, @Type = 2, @IsForced = 1
 					END 
 
-					delete bettrans 
+					delete bettrans WITH(ROWLOCK)
 					where custid in (@FromCustID, @ToCustID)
 						and refno = @refno 
 						and matchid = 0
 						and bettype = 21003		
 
-					delete Transfer_Coll
+					delete Transfer_Coll WITH(ROWLOCK)
 					where  custid in (@FromCustID, @ToCustID)
 					and refno = @refno  
 					and bettype = 21003			
@@ -296,13 +296,13 @@ BEGIN
 									EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @amount, @Type = 2, @IsForced = 1
 				END 
 
-				delete bettrans 
+				delete bettrans WITH(ROWLOCK)
 				where custid in (@FromCustID, @ToCustID)
 					and refno = @refno 
 					and matchid = 0
 					and bettype = 21003
 					
-				delete Transfer_Coll
+				delete Transfer_Coll WITH(ROWLOCK)
 				where  custid in (@FromCustID, @ToCustID)
 					and refno = @refno  
 					and bettype = 21003
@@ -339,13 +339,13 @@ BEGIN
 							else N'Transfer failed. Please try again.'
 						end, @ErrCode = 103		
 				
-				delete bettrans 
+				delete bettrans WITH(ROWLOCK)
 				where custid in (@FromCustID, @ToCustID)
 					and refno = @refno 
 					and matchid = 0
 					and bettype = 21003
 				
-				delete Transfer_Coll
+				delete Transfer_Coll WITH(ROWLOCK)
 				where  custid in (@FromCustID, @ToCustID)
 					and refno = @refno  
 					and bettype = 21003
@@ -397,13 +397,13 @@ BEGIN
 							else N'Transfer failed. Please try again.'
 						end, @ErrCode = 105
 				
-				delete bettrans 
+				delete bettrans WITH(ROWLOCK)
 				where custid in (@FromCustID, @ToCustID)
 					and refno = @refno 
 					and matchid = 0
 					and bettype = 21003
 					
-				delete Transfer_Coll
+				delete Transfer_Coll WITH(ROWLOCK)
 				where  custid in (@FromCustID, @ToCustID)
 					and refno = @refno  
 					and bettype = 21003
@@ -439,13 +439,13 @@ BEGIN
 							else N'Transfer failed. Please try again.'
 						end, @ErrCode = 103		
 				
-				delete bettrans 
+				delete bettrans WITH(ROWLOCK)
 				where custid in (@FromCustID, @ToCustID)
 					and refno = @refno 
 					and matchid = 0
 					and bettype = 21003
 				
-				delete Transfer_Coll
+				delete Transfer_Coll WITH(ROWLOCK)
 				where  custid in (@FromCustID, @ToCustID)
 					and refno = @refno  
 					and bettype = 21003
@@ -474,13 +474,13 @@ BEGIN
 							else N'Transfer failed. Please try again.'
 						end, @ErrCode = 106
 				
-				delete bettrans 
+				delete bettrans WITH(ROWLOCK)
 				where custid in (@FromCustID, @ToCustID)
 					and refno = @refno 
 					and matchid = 0
 					and bettype = 21003
 					
-				delete Transfer_Coll
+				delete Transfer_Coll WITH(ROWLOCK)
 				where  custid in (@FromCustID, @ToCustID)
 					and refno = @refno  
 					and bettype = 21003
@@ -516,13 +516,13 @@ BEGIN
 							else N'Transfer failed. Please try again.'
 						end, @ErrCode = 103		
 				
-				delete bettrans 
+				delete bettrans WITH(ROWLOCK)
 				where custid in (@FromCustID, @ToCustID)
 					and refno = @refno 
 					and matchid = 0
 					and bettype = 21003
 				
-				delete Transfer_Coll
+				delete Transfer_Coll WITH(ROWLOCK)
 				where  custid in (@FromCustID, @ToCustID)
 					and refno = @refno  
 					and bettype = 21003
