@@ -103,7 +103,8 @@ BEGIN
 			 @UserID		= @UserID, --custid of Admin  
 			 @IP			= @IP,  
 			 @ErrCode		= @ErrCode OUTPUT,  
-			 @ErrMsg		= @ErrMsg OUTPUT	
+			 @ErrMsg		= @ErrMsg OUTPUT,
+			 @IsCollection  = @IsCollection
 
 		IF @ErrCode = 0--Success transaction		
 		BEGIN
