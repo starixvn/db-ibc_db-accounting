@@ -6,7 +6,8 @@ ALTER PROCEDURE [dbo].[Acc_BettransDelTransaction]
 	@IP nvarchar(15)='',
 	@Language varchar(2)= 'E',
 	@ErrCode int = 0 OUTPUT,
-	@ErrMsg nvarchar(200) = '' OUTPUT	
+	@ErrMsg nvarchar(200) = '' OUTPUT,
+	@IsCollection BIT = 0
 AS
 /*	Created by: [Creator]
 	Task:	For Delete Transaction (transfer)
@@ -35,6 +36,7 @@ AS
 		- 20150808@Elodie: Balance Improvement [Redmine:#40125]
 		- 20151021@Elodie: Set @IsForce = 1 for updating balance debit [Redmine:#40125]
 		- 20180808@Helen: Get Code from Production  + DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
+		- 20181112@Sophia: Add Transfer Collection [redmine: #98621]
 */
 BEGIN
 
@@ -73,7 +75,8 @@ BEGIN
 									status NVARCHAR(10),
 									statusID TINYINT,
 									ruben TINYINT,
-									liveindicator BIT
+									liveindicator BIT,
+									OddsID INT
 								)
 
 		DECLARE @TransIDs AS TABLE (transID BIGINT)
@@ -81,9 +84,9 @@ BEGIN
 	----insert transfer data into @Reversal
 		INSERT INTO @Reversal 
 			(	transid, custid, transdate, Username, refno, winlost, actual_stake, winlostdate, transdesc, creator,
-				bettype, matchid, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, ip, status, statusID, ruben, liveindicator )
+				bettype, matchid, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, ip, status, statusID, ruben, liveindicator, OddsID )
 		SELECT	transid, custid, transdate, Username, refno, winlost, actual_stake, winlostdate, transdesc, creator,
-				bettype, matchid, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, ip, status, statusID, ruben, liveindicator
+				bettype, matchid, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, ip, status, statusID, ruben, liveindicator, OddsID
 		FROM	bettrans WITH (NOLOCK)
 		WHERE	refno = @refno AND matchid = 0 AND bettype > 20000 
 
@@ -158,11 +161,12 @@ BEGIN
 	---- Begin reversal
 		SET @transdesc = '(Reversal) ' + @transdesc
 		
+		-----Bettrans
 		INSERT INTO bettrans (	custid, transdate, Username, refno, winlost, actual_stake, winlostdate, transdesc, creator,
-								bettype, matchid, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, ip, status, statusID, ruben, liveindicator)
+								bettype, matchid, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, ip, status, statusID, ruben, liveindicator, OddsID)
 		OUTPUT  INSERTED.transid into @TransIDs
 		SELECT	custid, CURRENT_TIMESTAMP, Username, refno, actual_stake, winlost, winlostdate, @transdesc, @UserID,
-				bettype, matchid, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, @IP, status, statusID, ruben, 1
+				bettype, matchid, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, @IP, status, statusID, ruben, 1, OddsID
 		FROM	@Reversal
 
 		IF @@ERROR <> 0
@@ -173,13 +177,16 @@ BEGIN
 		END
 
 	 ---Update Liveindicator = 1 for marking deleted transaction
-		UPDATE	bettrans WITH (UPDLOCK, ROWLOCK) 
+		UPDATE	bettrans WITH (ROWLOCK) 
 		SET		liveindicator = 1
 		WHERE	transid IN (Select transid from @Reversal)
 
 		IF @@ERROR <> 0
 		BEGIN
-			DELETE  bettrans WITH (UPDLOCK, ROWLOCK) 
+			DELETE  bettrans WITH (ROWLOCK) 
+			WHERE	transid IN (SELECT transid FROM @TransIDs)
+			
+			DELETE  Transfer_Coll WITH (ROWLOCK) 
 			WHERE	transid IN (SELECT transid FROM @TransIDs)
 		
 			SELECT	@ErrMsg ='Delete the transaction unsuccessfully!',
@@ -187,6 +194,33 @@ BEGIN
 			RETURN 
 		END
 
+		-----Transfer_Coll 
+		INSERT INTO Transfer_Coll 
+				(CustId, WinlostDate, TransDate, Bettype, Debit, Credit, Currency, ActualRate, 
+				TransID, RefNo, Username, Recommend, MRecommend, SRecommend, Creator ,TransDesc, IP )
+		SELECT 	CustId, WinlostDate, TransDate, Bettype, Actual_Stake, Winlost, Currency, ActualRate, 
+				TransID, RefNo, Username, Recommend, MRecommend, SRecommend, Creator ,TransDesc, IP
+		FROM 	dbo.Bettrans WITH (NOLOCK) 
+		WHERE 	TransID IN (SELECT transid FROM @TransIDs)
+		
+		IF @@ERROR <> 0
+		BEGIN
+			DELETE  bettrans WITH (ROWLOCK) 
+			WHERE	transid IN (SELECT transid FROM @TransIDs)
+			
+			DELETE  Transfer_Coll WITH (ROWLOCK) 
+			WHERE	transid IN (SELECT transid FROM @TransIDs)		
+		
+			UPDATE	bettrans WITH (ROWLOCK) 
+			SET		liveindicator = 0
+			WHERE	transid IN (Select transid from @Reversal)
+					
+			SELECT	@ErrMsg ='Delete the transaction unsuccessfully!',
+					@ErrCode = 104
+			RETURN 
+		END
+				
+		
 		-- Update Transfer Amount in bodb_report.dbo.rptStatement table before move bet day
 		DECLARE @MoveBetsDay DATETIME
 		SELECT @MoveBetsDay = MAX(eventdate)
@@ -207,11 +241,14 @@ BEGIN
 			
 			IF @ErrCode <> 0
 				BEGIN
-					DELETE  dbo.bettrans WITH (UPDLOCK, ROWLOCK) 
+					DELETE  dbo.bettrans WITH (ROWLOCK) 
+					WHERE	transid IN (SELECT transid FROM @TransIDs)
+					
+					DELETE  Transfer_Coll WITH (ROWLOCK) 
 					WHERE	transid IN (SELECT transid FROM @TransIDs)
 						
 					--20150808@Elodie: rollback liveindicator = 0
-					UPDATE	bettrans WITH (UPDLOCK, ROWLOCK) 
+					UPDATE	bettrans WITH (ROWLOCK) 
 					SET		liveindicator = 0
 					WHERE	transid IN (Select transid from @Reversal)
 
@@ -233,11 +270,14 @@ BEGIN
 			
 				IF @ErrCode <> 0
 					BEGIN
-						DELETE  dbo.bettrans WITH (UPDLOCK, ROWLOCK) 
+						DELETE  dbo.bettrans WITH (ROWLOCK) 
+						WHERE	transid IN (SELECT transid FROM @TransIDs)
+						
+						DELETE  Transfer_Coll WITH (ROWLOCK) 
 						WHERE	transid IN (SELECT transid FROM @TransIDs)
 
 						--20150808@Elodie: rollback liveindicator = 0
-						UPDATE	bettrans WITH (UPDLOCK, ROWLOCK) 
+						UPDATE	bettrans WITH (ROWLOCK) 
 						SET		liveindicator = 0
 						WHERE	transid IN (Select transid from @Reversal)
 
@@ -267,33 +307,6 @@ BEGIN
 				AND c.roleid = 1
 		GROUP BY b.CustID
 
-	--	DECLARE @tblDebitPending BalanceList
-	--	DECLARE @tblCreditPending BalanceList
-
-	-----insert data into pending balance table 
-	--	INSERT INTO @tblCreditPending (custid, Balance)
-	--	SELECT		a.custid, (a.balance - b.balance) as Balance
-	--	FROM		#BeforeUpd b
-	--	INNER JOIN	#AfterUpd a 	
-	--			ON	a.custid = b.custid
-	--	WHERE	    (a.balance - b.balance) > 0
-
-	--	IF @@rowcount <> 0
-	--		EXEC dbo.Dot_BalancePendingCreditIns 
-	--			@BalancePending = @tblCreditPending
-	--			,@Type			= 2
-
-	--	INSERT INTO @tblDebitPending (custid,Balance)
-	--	SELECT		a.custid, ABS(a.balance - b.balance) as Balance
-	--	FROM		#BeforeUpd b
-	--	INNER JOIN	#AfterUpd a 	
-	--			ON	a.custid = b.custid
-	--	WHERE	    (a.balance - b.balance) < 0
-
-	--	IF @@rowcount <> 0
-	--		EXEC dbo.Dot_BalancePendingDebitIns 
-	--			@BalancePending = @tblDebitPending
-	--			,@Type			= 2
 
 		DECLARE @tblPending TABLE (CustID INT, Balance	MONEY)
 		DECLARE @MemID INT, @Balance	MONEY

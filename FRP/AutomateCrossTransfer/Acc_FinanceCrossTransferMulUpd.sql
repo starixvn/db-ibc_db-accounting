@@ -7,7 +7,8 @@ ALTER PROCEDURE [dbo].[Acc_FinanceCrossTransferMulUpd]
     --@Index INT,
     @Ip varchar(15) = '',
     @ErrCode INT = 0 OUTPUT ,
-    @ErrMsg NVARCHAR(200) = '' OUTPUT
+    @ErrMsg NVARCHAR(200) = '' OUTPUT,
+	@IsCollection BIT = 0
 AS 
 /*
 	Created: 
