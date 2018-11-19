@@ -52,7 +52,9 @@ BEGIN
 			@ToCurr int, @ToActualrate float, @ToCurrName nvarchar(10), @RemarkFromCurr nvarchar(70), @RemarkToCurr nvarchar(70), @ToRoleID tinyint 
 	Declare @FromMrecommend int, @FromRecommend int, @FromSrecommend int, 
 			@FromCurr int, @FromActualrate float , @FromCurrName nvarchar(10),@FromUsername varchar(30), @FromRoleID tinyint
-	Declare @LogData varchar(200), @TransID BIGINT
+	Declare @LogData varchar(200) 
+	
+	DECLARE @TransIDs AS TABLE (transID BIGINT)	
 
 	Declare @refno bigint, @winlostdate datetime, @transdate datetime, @BalanceAmount MONEY
 
@@ -161,12 +163,11 @@ BEGIN
 				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 				 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 				 scomm, swinlost,ip,statusID, OddsId)
+			OUTPUT INSERTED.TransID INTO @TransIDs
 			VALUES (@UserID, @FromCustID, @FromUsername, @refno, @Transdate, 0, 21003, 'To Customer: ' + @ToUserName + '('+ @Remark +')' + @RemarkToCurr, @amount, 0, 
 				 'Completed', 1, @winlostdate, @FromCurr, @FromActualrate, @FromCurrName, @FromRecommend, @FromMrecommend, @FromSrecommend, 
 				 0, 0,@ip,131, @IsCollection)
-			
-			SELECT 	@TransID = @@Identity
-				
+								
 			if @@Error <> 0
 			BEGIN
 				Select @ErrMsg = case @Language 
@@ -199,7 +200,7 @@ BEGIN
 				TransID, RefNo, Username, Recommend, MRecommend, SRecommend, 
 				Creator ,TransDesc, IP
 			FROM dbo.Bettrans WITH (NOLOCK) 
-			WHERE TransID = @TransID
+			WHERE TransID IN (SELECT TransID FROM @TransIDs)
 						
 				 
 			if @@Error <> 0
@@ -275,11 +276,11 @@ BEGIN
 				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 				 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 				 scomm, swinlost,ip,statusID, OddsId)
+			OUTPUT INSERTED.TransID INTO @TransIDs
 			VALUES (@UserID, @ToCustID, @ToUsername, @refno, @Transdate, 0, 21003, 'From Customer: ' + @FromUserName + '('+ @Remark +')' + @RemarkFromCurr, 0, @amount * @ExchangeRate, 
 				 'Completed', 1, @winlostdate, @ToCurr, @ToActualrate, @ToCurrName, @ToRecommend, @ToMrecommend, @ToSrecommend, 
 				 0, 0,@ip,131, @IsCollection)
 				 
-			SELECT 	@TransID = @@Identity 			
 				 
 			if @@Error <> 0
 			BEGIN
@@ -327,7 +328,7 @@ BEGIN
 				TransID, RefNo, Username, Recommend, MRecommend, SRecommend, 
 				Creator ,TransDesc, IP
 			FROM dbo.Bettrans WITH (NOLOCK) 
-			WHERE TransID = @TransID
+			WHERE TransID IN (SELECT TransID FROM @TransIDs)
 						
 				 
 			if @@Error <> 0
@@ -382,11 +383,10 @@ BEGIN
 				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 				 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 				 scomm, swinlost,ip,statusID, OddsId)
+			OUTPUT INSERTED.TransID INTO @TransIDs
 			VALUES (@UserID, @FromCustID, @FromUsername, @refno, @Transdate, 0, 21003, 'To Customer: ' + @ToUserName + '('+ @Remark +')'+@RemarkToCurr, 0, @amount, 
 				 'Completed', 1, @winlostdate, @FromCurr, @FromActualrate, @FromCurrName, @FromRecommend, @FromMrecommend, @FromSrecommend, 
 				 0, 0,@ip,131,@IsCollection)
-			
-			SELECT 	@TransID = @@Identity
 			
 			if @@Error <> 0
 			BEGIN
@@ -427,7 +427,7 @@ BEGIN
 				TransID, RefNo, Username, Recommend, MRecommend, SRecommend, 
 				Creator ,TransDesc, IP
 			FROM dbo.Bettrans WITH (NOLOCK) 
-			WHERE TransID = @TransID
+			WHERE TransID IN (SELECT TransID FROM @TransIDs)
 						
 				 
 			if @@Error <> 0
@@ -459,12 +459,11 @@ BEGIN
 				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 				 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 				 scomm, swinlost,ip,statusID, OddsId)
+			OUTPUT INSERTED.TransID INTO @TransIDs
 			VALUES (@UserID, @ToCustID, @ToUsername, @refno, @Transdate, 0, 21003, 'From Customer: ' + @FromUserName + '('+ @Remark +')' + @RemarkFromCurr, @amount * @ExchangeRate, 0, 
 				 'Completed', 1, @winlostdate, @ToCurr, @ToActualrate, @ToCurrName, @ToRecommend, @ToMrecommend, @ToSrecommend, 
 				 0, 0,@ip,131, @IsCollection)
-			
-			SELECT 	@TransID = @@Identity
-			
+						
 			if @@Error <> 0
 			BEGIN
 				Select @ErrMsg = case @Language 
@@ -504,7 +503,7 @@ BEGIN
 				TransID, RefNo, Username, Recommend, MRecommend, SRecommend, 
 				Creator ,TransDesc, IP
 			FROM dbo.Bettrans WITH (NOLOCK) 
-			WHERE TransID = @TransID
+			WHERE TransID IN (SELECT TransID FROM @TransIDs)
 						
 				 
 			if @@Error <> 0
