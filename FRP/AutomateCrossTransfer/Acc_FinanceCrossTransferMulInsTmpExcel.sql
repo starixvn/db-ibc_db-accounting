@@ -6,6 +6,7 @@ ALTER PROCEDURE [dbo].[Acc_FinanceCrossTransferMulInsTmpExcel]
 	@arrAmount VARCHAR(4000),
 	@arrToAmount VARCHAR(4000),	
 	@arrDescription NVARCHAR(4000),
+	@arrIsCollection NVARCHAR(4000),
 	@ErrCode INT = 0 OUTPUT,
 	@ErrMsg NVARCHAR(80) = '' OUTPUT
 AS
@@ -21,6 +22,7 @@ AS
 		- 20130224@Lukas: Move Acc_CustFinanceTransfer to new database bodb_acc		
 		- 20130418@Lukas: hot fix modify condition of checking valid amount	  
 		- 20180808@Helen: Get code from PRO + DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
+		- 20181112@Sophia: Add Transfer Collection [redmine: #98621]
 */
 BEGIN
 SET NOCOUNT ON
@@ -37,7 +39,8 @@ SET NOCOUNT ON
 		ToCust VARCHAR(30),		
 		Amount VARCHAR(20),
 		ToAmount VARCHAR(20),		
-		Description	NVARCHAR(200)
+		Description	NVARCHAR(200),
+		IsCollection BIT
 	)
 	
 	DECLARE @tblSucc TABLE (
@@ -47,7 +50,8 @@ SET NOCOUNT ON
 		Amount VARCHAR(20),
 		ToAmount VARCHAR(20),		
 		Description	NVARCHAR(200),
-		Reason NVARCHAR(100)
+		Reason NVARCHAR(100),
+		IsCollection BIT
 	)
 
 	DECLARE @tblFail TABLE (
@@ -56,7 +60,8 @@ SET NOCOUNT ON
 		Amount VARCHAR(20),		
 		ToAmount VARCHAR(20),
 		Description	NVARCHAR(200),
-		Reason NVARCHAR(100)
+		Reason NVARCHAR(100),
+		IsCollection BIT 
 	)
 	-- check if there is no (char(8)) at the end of string
 	IF (SELECT CHARINDEX(CHAR(8),@arrFromCust,LEN(@arrFromCust))) = 0
@@ -68,34 +73,39 @@ SET NOCOUNT ON
 		(SELECT CHARINDEX(CHAR(8),@arrToAmount,LEN(@arrToAmount))) = 0
 		OR 
 		(SELECT CHARINDEX(CHAR(8),@arrDescription,LEN(@arrDescription))) = 0
+		OR 
+		(SELECT CHARINDEX(CHAR(8),@arrIsCollection,LEN(@arrIsCollection))) = 0
 	BEGIN
 		SELECT	@ErrMsg = 'Param input is invalid.',
 				@ErrCode = 100
 		RETURN	
 	END
 
-	INSERT INTO @tblCust(Rank, FromCust, ToCust, Amount, ToAmount, Description)
+	INSERT INTO @tblCust(Rank, FromCust, ToCust, Amount, ToAmount, Description, IsCollection)
 	SELECT	fc.Rank AS Rank,
 			fc.val AS FromCust, 
 			tc.val AS ToCust,
 			fa.Val AS Amount,
 			ta.val AS ToAmount,
-			de.Val AS Description
+			de.Val AS Description,
+			cl.Val AS IsCollection
 	FROM	dbo.strSplit(@arrFromCust, CHAR(8)) fc
 			INNER JOIN dbo.strSplit(@arrToCust, CHAR(8)) tc ON fc.RANK = tc.RANK
 			INNER JOIN dbo.strSplit(@arrAmount, CHAR(8)) fa ON fc.RANK = fa.RANK
 			INNER JOIN dbo.strSplit(@arrToAmount,CHAR(8)) ta ON fa.RANK = ta.RANK	
 			INNER JOIN dbo.strSplit(@arrDescription, CHAR(8)) de ON ta.RANK=de.RANK
+			INNER JOIN dbo.strSplit(@arrIsColection, CHAR(8)) cl ON de.RANK=cl.RANK
 			
 	
 	--Validate transaction
-	INSERT INTO @tblSucc(Rank, FromCust, ToCust, Amount, ToAmount, Description)
+	INSERT INTO @tblSucc(Rank, FromCust, ToCust, Amount, ToAmount, Description, IsCollection)
 	SELECT	t.Rank,			
 			FromCust, 
 			ToCust ,	
 			Amount,	
 			ToAmount,
-			Description
+			Description,
+			IsCollection
 	FROM	@tblCust AS t
 			INNER JOIN custinfo c1 WITH(NOLOCK) ON t.FromCust = c1.Username
 			INNER JOIN custinfo c2 WITH(NOLOCK) ON t.ToCust = c2.Username
@@ -108,17 +118,19 @@ SET NOCOUNT ON
 			AND ISNULL(ToCust,'') <> ''
 			AND FromCust <> ToCust
 			AND LEN(Description) <= 200
+			AND IsCollecttion IN (0,1)
 			AND c1.currency <> c2.currency
 			
 	--Failed Transaction
-	INSERT INTO @tblFail(FromCust, ToCust ,	Amount,	ToAmount, Description, Reason)
+	INSERT INTO @tblFail(FromCust, ToCust ,	Amount,	ToAmount, Description, Reason, IsCollecttion)
 	SELECT	FromCust, ToCust, Amount, ToAmount, Description,
 			CASE WHEN ISNUMERIC(Amount)=0 OR ISNUMERIC(ToAmount)= 0 OR CONVERT(MONEY,Amount)/CONVERT(MONEY,ToAmount) < 0 THEN '<b>Invalid Amount.</b>'
 				 WHEN ISNULL(FromCust,'') = ''  OR ISNULL(ToCust,'') = '' THEN '<b>Username cannot be blanked.</b>' 
 				 WHEN FromCust = ToCust THEN '<b>From Cust must different To Cust.</b>' 
 				 WHEN LEN(Description) > 200 THEN '<b>Maximum length of Description is 200 characters</b>' 
 				 WHEN c1.currency = c2.currency THEN '<b>Not support the same currency</b>' 
-				 ELSE '<b>Invalid From Cust or To Cust.</b>' END AS Reason 	
+				 ELSE '<b>Invalid From Cust or To Cust.</b>' END AS Reason
+			,IsCollecttion			 
 
 	FROM	(	SELECT * 
 				FROM @tblCust 
@@ -129,14 +141,15 @@ SET NOCOUNT ON
 			
 
 	--Insert data to temp table Acc_CustFinanceTransfer to transer after clicking "Update Now" button
-	INSERT INTO bodb_acc.dbo.Acc_CustFinanceTransfer(UserId, FromCust, ToCust, Amount, ToAmount, Description, ExRate)
+	INSERT INTO bodb_acc.dbo.Acc_CustFinanceTransfer(UserId, FromCust, ToCust, Amount, ToAmount, Description, ExRate, IsCollecttion)
 	SELECT	@UserId,
 			FromCust, 
 			ToCust ,	
 			Amount,
 			ToAmount,	
 			Description,
-			-1
+			-1,
+			IsCollecttion
 	FROM	@tblSucc AS t
 	
 	
