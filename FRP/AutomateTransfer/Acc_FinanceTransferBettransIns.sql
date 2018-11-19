@@ -136,6 +136,8 @@ BEGIN
 
 		IF @amount > 0
 		BEGIN
+			DELETE @TransIDs
+		
 			INSERT INTO bettrans 
 				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 				 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
@@ -228,6 +230,8 @@ BEGIN
 											EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @amount, @type = 2, @IsForced = 1
 				END
 			END
+			
+			DELETE @TransIDs
 			
 			INSERT INTO bettrans 
 				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
@@ -345,6 +349,8 @@ BEGIN
 				END
 			END
 			
+			DELETE @TransIDs
+			
 			INSERT INTO bettrans 
 				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 				 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
@@ -421,6 +427,8 @@ BEGIN
 			END
 			
 			-----------------------------------------------
+			DELETE @TransIDs
+			
 			INSERT INTO bettrans 
 				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 				 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 

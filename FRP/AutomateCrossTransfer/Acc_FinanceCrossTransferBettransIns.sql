@@ -21,7 +21,7 @@ AS
 	DB: DBTXN/BODB02
 
 	Revisions:
-		- 20111026@Lukas: update member's balance (credit/Debit tables)
+		- 20111026@Lukas: update member's balance (credit/Debit tables) 
 		- 20120731@Sophia: Check To account not the same From account 
 		- 20120813@Lukas: modify to avoid losing precision when convert a money datatype to varchar (remark)
 		- 20121113@Viet: revise SP
@@ -186,6 +186,8 @@ BEGIN
 		END
 	END
 
+	DELETE @TransIDs
+	
 	INSERT INTO bettrans (creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 						 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 						 scomm, swinlost,ip,statusID, OddsID)
@@ -259,7 +261,8 @@ BEGIN
 	IF @FromAmount > 0 AND @FromRoleID = 1	
 		EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2
 
-
+	DELETE @TransIDs
+	
 	INSERT INTO bettrans (creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 						 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 						 scomm, swinlost,ip,statusID, OddsID)
@@ -338,7 +341,8 @@ BEGIN
 	SELECT	@RemarkFromCurr =   ' - ' + @ForexCurrName	+ ' '+ CONVERT(NVARCHAR(50),CONVERT(NUMERIC(20,4),@ToAmount* @ToExRate)),
 			@RemarkToCurr   =   ' - ' +	@ToCurrName		+ ' '+ CONVERT(NVARCHAR(50),@ToAmount )
 	
-
+	DELETE @TransIDs
+	
 	INSERT INTO bettrans (creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 						 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 						 scomm, swinlost,ip,statusID, OddsID)
@@ -444,6 +448,9 @@ BEGIN
 		RETURN
 	END
 
+	-------------------------
+	DELETE @TransIDs
+	
 	INSERT INTO bettrans (creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 						 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 						 scomm, swinlost,ip,statusID, OddsID)

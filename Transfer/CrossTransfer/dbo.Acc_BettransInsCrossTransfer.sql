@@ -200,6 +200,8 @@ BEGIN
 	END
 
 	--- Insert Bettrans
+	DELETE @TransIDs
+	
 	INSERT INTO bettrans (creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 						 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 						 scomm, swinlost,ip,statusID, OddsID)
@@ -279,6 +281,7 @@ BEGIN
 
 	
 	---- update Forex account's credit
+	DELETE @TransIDs
 	
 	INSERT INTO bettrans (creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 						 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
@@ -368,6 +371,8 @@ BEGIN
 				@RemarkToCurr   =   ' - ' +	@ToCurrName		+ ' '+ CONVERT(NVARCHAR(50),ABS(@ToAmount) )
 	END
 
+	DELETE @TransIDs
+	
 	INSERT INTO bettrans (creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 						 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 						 scomm, swinlost,ip,statusID, OddsID)
@@ -476,6 +481,8 @@ BEGIN
 		EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @tmp			
 		RETURN
 	END
+	
+	DELETE @TransIDs
 	
 	INSERT INTO bettrans (creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 						 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 

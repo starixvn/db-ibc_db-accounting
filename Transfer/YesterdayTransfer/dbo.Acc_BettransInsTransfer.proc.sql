@@ -158,6 +158,7 @@ BEGIN
 		BEGIN
 			
 			---Insert into Bettrans
+			DELETE @TransIDs
 			
 			INSERT INTO bettrans 
 				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
@@ -272,6 +273,8 @@ BEGIN
 			END
 			
 			--- Inseret into bettrans
+			DELETE @TransIDs
+			
 			INSERT INTO bettrans 
 				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 				 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
@@ -379,6 +382,8 @@ BEGIN
 				END
 			END
 			
+			DELETE @TransIDs
+			
 			INSERT INTO bettrans 
 				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 				 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
@@ -454,7 +459,8 @@ BEGIN
 			END		
 
 			--------------------------------------------------------------
-
+			DELETE @TransIDs
+			
 			INSERT INTO bettrans 
 				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 				 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
