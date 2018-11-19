@@ -49,10 +49,10 @@ BEGIN
 			@winlostdate	DATETIME, 
 			@transdate		DATETIME,
 			@RemarkFromCurr	NVARCHAR(70),
-			@RemarkToCurr	NVARCHAR(70),
-			@TransId		BIGINT
+			@RemarkToCurr	NVARCHAR(70)
 
-
+	DECLARE @TransIDs AS TABLE (transID BIGINT)			
+			
 	DECLARE @FromUsername	NVARCHAR(50),
 			@FromCurrency	INT,
 			--@FromActualRate FLOAT,
@@ -189,12 +189,11 @@ BEGIN
 	INSERT INTO bettrans (creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 						 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 						 scomm, swinlost,ip,statusID, OddsID)
+	OUTPUT INSERTED.TransID INTO @TransIDs
 	VALUES(@UserID, @FromCustID, @FromUsername, @refno, @transdate, 0, 21003, 'To Customer: ' + @ForexUsername + '('+ @Remark +')' + @RemarkToCurr, 
 						CASE WHEN @FromAmount > 0 THEN @FromAmount ELSE 0 END , CASE WHEN @FromAmount > 0 THEN 0 ELSE ABS(@FromAmount) END,
 						'Completed',1, @winlostdate, @FromCurrency, @FromExRate, @FromCurrName, @FromRecommend, @FromMrecommend, @FromSrecommend,
 						0, 0, @ip,131, @IsCollection)
-	
-	SELECT 	@TransID = @@Identity 
 						
 	IF @@ERROR <> 0
 	BEGIN
@@ -229,7 +228,7 @@ BEGIN
 				TransID, RefNo, Username, Recommend, MRecommend, SRecommend, 
 				Creator ,TransDesc, IP
 		FROM dbo.Bettrans WITH (NOLOCK) 
-		WHERE TransID = @TransID
+		WHERE TransID IN (SELECT TransID FROM @TransIDs)
 		
 		IF @@ERROR <> 0
 		BEGIN
@@ -264,12 +263,12 @@ BEGIN
 	INSERT INTO bettrans (creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 						 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 						 scomm, swinlost,ip,statusID, OddsID)
+	OUTPUT INSERTED.TransID INTO @TransIDs
 	VALUES(@UserID,@ForexCustID,@ForexUsername, @refno, @transdate, 0, 21003, 'From Customer: ' + @FromUsername + '('+ @Remark +')' + @RemarkFromCurr, 
 						CASE WHEN @FromAmount > 0 THEN 0 ELSE ABS(@FromAmount)*@FromExRate END, CASE WHEN @FromAmount > 0 THEN @FromAmount*@FromExRate ELSE 0 END,
 						'Completed', 1, @winlostdate, @ForexCurrency, @ForexActualRate, @ForexCurrName, @ForexRecommend, @ForexMrecommend, @ForexSrecommend,
 						0, 0, @ip,131, @IsCollection)
 	
-	SELECT 	@TransID = @@Identity 
 
 	IF @@ERROR <> 0
 	BEGIN
@@ -306,7 +305,7 @@ BEGIN
 				TransID, RefNo, Username, Recommend, MRecommend, SRecommend, 
 				Creator ,TransDesc, IP
 		FROM dbo.Bettrans WITH (NOLOCK) 
-		WHERE TransID = @TransID
+		WHERE TransID IN (SELECT TransID FROM @TransIDs)
 	
 		IF @@ERROR <> 0
 		BEGIN
@@ -343,12 +342,12 @@ BEGIN
 	INSERT INTO bettrans (creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 						 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 						 scomm, swinlost,ip,statusID, OddsID)
+	OUTPUT INSERTED.TransID INTO @TransIDs
 	VALUES(@UserID,@ForexCustID,@ForexUsername, @refno, @transdate, 0, 21003, 'To Customer: ' + @ToUsername + '('+ @Remark +')' + @RemarkToCurr, 
 						CASE WHEN @FromAmount > 0 THEN @ToAmount*@ToExRate ELSE 0 END, CASE WHEN @FromAmount > 0 THEN 0 ELSE ABS(@ToAmount)*@ToExRate END,
 						'Completed', 1, @winlostdate, @ForexCurrency, @ForexActualRate, @ForexCurrName, @ForexRecommend, @ForexMrecommend, @ForexSrecommend,
 						0, 0, @ip,131, @IsCollection)
 	
-	SELECT 	@TransID = @@Identity 
 
 	IF @@ERROR <> 0
 	BEGIN
@@ -386,7 +385,7 @@ BEGIN
 				TransID, RefNo, Username, Recommend, MRecommend, SRecommend, 
 				Creator ,TransDesc, IP
 		FROM dbo.Bettrans WITH (NOLOCK) 
-		WHERE TransID = @TransID
+		WHERE TransID IN (SELECT TransID FROM @TransIDs)
 	
 		IF @@ERROR <> 0
 		BEGIN
@@ -448,12 +447,12 @@ BEGIN
 	INSERT INTO bettrans (creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 						 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 						 scomm, swinlost,ip,statusID, OddsID)
+	OUTPUT INSERTED.TransID INTO @TransIDs
 	VALUES(@UserID, @ToCustID, @ToUsername, @refno, @transdate, 0, 21003, 'From Customer: ' + @ForexUsername + '('+ @Remark +')' + @RemarkFromCurr, 
 						CASE WHEN @FromAmount > 0 THEN 0 ELSE ABS(@ToAmount) END, CASE WHEN @FromAmount > 0 THEN ABS(@ToAmount) ELSE 0 END,
 						'Completed',1, @winlostdate, @ToCurrency, @ToExRate, @ToCurrName, @ToRecommend, @ToMrecommend, @ToSrecommend,
 						0, 0, @ip,131, @IsCollection)	
-						
-	SELECT 	@TransID = @@Identity 
+
 	
 	IF @@ERROR <> 0
 	BEGIN
@@ -492,7 +491,7 @@ BEGIN
 				TransID, RefNo, Username, Recommend, MRecommend, SRecommend, 
 				Creator ,TransDesc, IP
 		FROM dbo.Bettrans WITH (NOLOCK) 
-		WHERE TransID = @TransID
+		WHERE TransID IN (SELECT TransID FROM @TransIDs)
 		
 		IF @@ERROR <> 0
 		BEGIN
