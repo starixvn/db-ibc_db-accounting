@@ -5,7 +5,8 @@ ALTER PROCEDURE [dbo].[Acc_FinanceTransferMulUpd]
     @FileSize INT,
     @Ip varchar(15) = '',
     @ErrCode INT = 0 OUTPUT ,
-    @ErrMsg NVARCHAR(200) = '' OUTPUT
+    @ErrMsg NVARCHAR(200) = '' OUTPUT,
+	@IsCollection BIT = 0
 AS 
 /*
 Created: 
@@ -24,6 +25,7 @@ Revisions:
 	- 20130224@Lukas: move Acc_CustFinanceTransfer to new database bodb_acc
 	- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo by link database)
 	- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
+	- 20181112@Sophia: Add @IsCollection [redmine: #98621]
 	
 */
 BEGIN
@@ -86,7 +88,8 @@ BEGIN
 			 @UserID = @UserId, --custid of Admin  
 			 @IP = @Ip,  
 			 @ErrCode = @ErrCode OUTPUT,  
-			 @ErrMsg = @ErrMsg OUTPUT
+			 @ErrMsg = @ErrMsg OUTPUT,
+			 @IsCollection = @IsCollection
 		
 	
 		If @ErrCode = 0--Success transaction		

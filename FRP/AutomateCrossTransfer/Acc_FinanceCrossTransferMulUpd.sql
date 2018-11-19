@@ -21,6 +21,7 @@ AS
 		- 20130224@Lukas: move Acc_CustFinanceTransfer to new database bodb_acc
 		- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo by link database)
 		- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
+		- 20181112@Sophia: Add @IsCollection [redmine: #98621]
 */
 BEGIN
     SET NOCOUNT ON		
