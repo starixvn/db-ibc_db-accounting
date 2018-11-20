@@ -94,7 +94,7 @@ SET NOCOUNT ON
 			INNER JOIN dbo.strSplit(@arrAmount, CHAR(8)) fa ON fc.RANK = fa.RANK
 			INNER JOIN dbo.strSplit(@arrToAmount,CHAR(8)) ta ON fa.RANK = ta.RANK	
 			INNER JOIN dbo.strSplit(@arrDescription, CHAR(8)) de ON ta.RANK=de.RANK
-			INNER JOIN dbo.strSplit(@arrIsColection, CHAR(8)) cl ON de.RANK=cl.RANK
+			INNER JOIN dbo.strSplit(@arrIsCollection, CHAR(8)) cl ON de.RANK=cl.RANK
 			
 	
 	--Validate transaction
@@ -118,11 +118,11 @@ SET NOCOUNT ON
 			AND ISNULL(ToCust,'') <> ''
 			AND FromCust <> ToCust
 			AND LEN(Description) <= 200
-			AND IsCollecttion IN (0,1)
+			AND IsCollection IN (0,1)
 			AND c1.currency <> c2.currency
 			
 	--Failed Transaction
-	INSERT INTO @tblFail(FromCust, ToCust ,	Amount,	ToAmount, Description, Reason, IsCollecttion)
+	INSERT INTO @tblFail(FromCust, ToCust ,	Amount,	ToAmount, Description, Reason, IsCollection)
 	SELECT	FromCust, ToCust, Amount, ToAmount, Description,
 			CASE WHEN ISNUMERIC(Amount)=0 OR ISNUMERIC(ToAmount)= 0 OR CONVERT(MONEY,Amount)/CONVERT(MONEY,ToAmount) < 0 THEN '<b>Invalid Amount.</b>'
 				 WHEN ISNULL(FromCust,'') = ''  OR ISNULL(ToCust,'') = '' THEN '<b>Username cannot be blanked.</b>' 
@@ -130,7 +130,7 @@ SET NOCOUNT ON
 				 WHEN LEN(Description) > 200 THEN '<b>Maximum length of Description is 200 characters</b>' 
 				 WHEN c1.currency = c2.currency THEN '<b>Not support the same currency</b>' 
 				 ELSE '<b>Invalid From Cust or To Cust.</b>' END AS Reason
-			,IsCollecttion			 
+			,IsCollection			 
 
 	FROM	(	SELECT * 
 				FROM @tblCust 
@@ -141,7 +141,7 @@ SET NOCOUNT ON
 			
 
 	--Insert data to temp table Acc_CustFinanceTransfer to transer after clicking "Update Now" button
-	INSERT INTO bodb_acc.dbo.Acc_CustFinanceTransfer(UserId, FromCust, ToCust, Amount, ToAmount, Description, ExRate, IsCollecttion)
+	INSERT INTO bodb_acc.dbo.Acc_CustFinanceTransfer(UserId, FromCust, ToCust, Amount, ToAmount, Description, ExRate, IsCollection)
 	SELECT	@UserId,
 			FromCust, 
 			ToCust ,	
@@ -149,7 +149,7 @@ SET NOCOUNT ON
 			ToAmount,	
 			Description,
 			-1,
-			IsCollecttion
+			IsCollection
 	FROM	@tblSucc AS t
 	
 	

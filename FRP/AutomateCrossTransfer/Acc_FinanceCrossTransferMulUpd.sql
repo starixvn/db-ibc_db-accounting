@@ -122,7 +122,7 @@ BEGIN
 			VALUES(@FromUserName, @ToUserName, @FromAmount, @ToAmount, @Remark, '; <b>' + @ErrMsg + '</b>', @IsCollection)
 		END
 		
-		FETCH NEXT FROM cur_FinanceTransfer INTO @FromCustID, @FromUsername, @ToCustID, @ToUsername, @FromAmount, @ToAmount, @Remark
+		FETCH NEXT FROM cur_FinanceTransfer INTO @FromCustID, @FromUsername, @ToCustID, @ToUsername, @FromAmount, @ToAmount, @Remark, @IsCollection
 		SELECT @ErrCode = 0, @ErrMsg = ''
 	END
     
