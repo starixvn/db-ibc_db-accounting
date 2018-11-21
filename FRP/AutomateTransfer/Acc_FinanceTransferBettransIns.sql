@@ -169,6 +169,7 @@ BEGIN
 			END
 			
 			--- Insert Transfer_Coll
+			IF @IsCollection = 1
 			INSERT INTO Transfer_Coll 
 					( CustId, WinlostDate, TransDate, Bettype, Debit, Credit, Currency, ActualRate, 
 					TransID, RefNo, Username, Recommend, MRecommend, SRecommend, 
@@ -279,6 +280,7 @@ BEGIN
 			END
 			
 			--- Insert Transfer_Coll
+			IF @IsCollection = 1
 			INSERT INTO Transfer_Coll 
 					( CustId, WinlostDate, TransDate, Bettype, Debit, Credit, Currency, ActualRate, 
 					TransID, RefNo, Username, Recommend, MRecommend, SRecommend, 
@@ -389,6 +391,7 @@ BEGIN
 			END
 			
 			--- Insert Transfer_Coll
+			IF @IsCollection = 1
 			INSERT INTO Transfer_Coll 
 					( CustId, WinlostDate, TransDate, Bettype, Debit, Credit, Currency, ActualRate, 
 					TransID, RefNo, Username, Recommend, MRecommend, SRecommend, 
@@ -466,6 +469,7 @@ BEGIN
 			END	
 			
 			--- Insert Transfer_Coll
+			IF @IsCollection = 1
 			INSERT INTO Transfer_Coll 
 					( CustId, WinlostDate, TransDate, Bettype, Debit, Credit, Currency, ActualRate, 
 					TransID, RefNo, Username, Recommend, MRecommend, SRecommend, 
