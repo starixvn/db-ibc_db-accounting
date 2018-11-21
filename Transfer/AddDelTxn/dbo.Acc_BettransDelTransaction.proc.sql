@@ -6,8 +6,7 @@ ALTER PROCEDURE [dbo].[Acc_BettransDelTransaction]
 	@IP nvarchar(15)='',
 	@Language varchar(2)= 'E',
 	@ErrCode int = 0 OUTPUT,
-	@ErrMsg nvarchar(200) = '' OUTPUT,
-	@IsCollection BIT = 0
+	@ErrMsg nvarchar(200) = '' OUTPUT 
 AS
 /*	Created by: [Creator]
 	Task:	For Delete Transaction (transfer)
@@ -50,7 +49,8 @@ BEGIN
 	BEGIN
 		DECLARE	@winlostdate	DATETIME,
 				@liveindicator	BIT,
-				@transdesc		NVARCHAR(300)
+				@transdesc		NVARCHAR(300),
+				@IsCollection   BIT
 				
 
 		DECLARE @Reversal TABLE (	TransID BIGINT,
@@ -91,7 +91,7 @@ BEGIN
 		WHERE	refno = @refno AND matchid = 0 AND bettype > 20000 
 
 
-		SELECT	top 1 @winlostdate = winlostdate, @liveindicator = liveindicator, @transdesc = transdesc
+		SELECT	top 1 @winlostdate = winlostdate, @liveindicator = liveindicator, @transdesc = transdesc, @IsCollection = OddsID
 		FROM	@Reversal
 
 	--------------------------vvvvv-------------------------------------
@@ -195,6 +195,7 @@ BEGIN
 		END
 
 		-----Transfer_Coll 
+		IF @IsCollection = 1
 		INSERT INTO Transfer_Coll 
 				(CustId, WinlostDate, TransDate, Bettype, Debit, Credit, Currency, ActualRate, 
 				TransID, RefNo, Username, Recommend, MRecommend, SRecommend, Creator ,TransDesc, IP )
