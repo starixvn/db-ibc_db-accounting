@@ -1,7 +1,4 @@
-/*<info serverAlias="DBAGE-bodb_AGE" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0"></info>*/
-USE bodb_Age
-GO
-
+/*<info serverAlias="DBCUST-CUSTDB" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_CustomerDateLimitSel] @userName NVARCHAR(100) = ''
 	,@PageSize INT = 0
 	,@PageIndex INT = 0
@@ -9,11 +6,12 @@ ALTER PROCEDURE [dbo].[Acc_CustomerDateLimitSel] @userName NVARCHAR(100) = ''
 AS
 /*
 	Created: 20180429@Razor
-	DB: DBAGE/bodb_AGE
+	DB: DBCUST-CUSTDB
 	Task: 
 
 	Revisions:
 		-20180429@Razor: init - [Readmine: #96025]
+		- 20181123@Helen: DB053.bodb_AGE/BODB02 & DB052.bodb_Summary Migration [Redmine: 104770]
 		
 	Param's Explanation:	
 */
@@ -51,7 +49,7 @@ BEGIN
 			ORDER BY c.UserName
 			) AS RowNum
 	FROM dbo.Age_CustDateLimit l WITH (NOLOCK)
-		INNER JOIN [bodb02].[dbo].[custInfo] c WITH (NOLOCK) ON c.custId = l.custId
+		INNER JOIN [dbo].[custInfo] c WITH (NOLOCK) ON c.custId = l.custId
 	WHERE c.UserName LIKE '%' + @userName + '%'
 
 	SELECT UserName, CustId, MinDate, LimitDays

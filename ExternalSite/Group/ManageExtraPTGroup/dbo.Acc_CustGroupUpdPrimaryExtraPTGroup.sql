@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb_Age" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CUSTDB" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_CustGroupUpdPrimaryExtraPTGroup]
 	@CustID			INT,
 	@GroupName		VARCHAR(50),
@@ -13,11 +13,12 @@ AS
 	Creator: Percy
 	Date: 20160721
 	Task: Change Primary ExtraPTGroup
-	DB: DBAGE.bodb_Age
+	DB: DBCUST-CUSTDB
 
 	Revisions:
 		- 20170926@Percy: Move the nested SP: Acc_GroupExtraPTSetting_Upd from DBACC.bodb_ACC to DBCUST.CustDB [RedmineID: #83600]
 		- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
+		- 20181123@Helen: DB053.bodb_AGE/BODB02 & DB052.bodb_Summary Migration [Redmine: 104770]
 */
 
 BEGIN
@@ -30,7 +31,7 @@ BEGIN
 		RETURN
 
 	-- Check permission for account site
-	EXEC DBPOL.NAP_UserControl.dbo.Acc_Con_CheckPermission
+	EXEC NAP_UserControl.dbo.Acc_Con_CheckPermission
 		@CustID = @UserID,
 		@FuncName = '[Admin_ManageExAcc]',
 		@ErrCode = @ErrCode OUTPUT,
@@ -60,7 +61,7 @@ BEGIN
 	END
 
 	-- Update table Acc_GroupExtraPTSetting
-	EXEC DBCUST.CustDB.dbo.Acc_GroupExtraPTSetting_Upd
+	EXEC dbo.Acc_GroupExtraPTSetting_Upd
 		@CustID = @CustID,
 		@GroupName = @GroupName,
 		@EffectiveDate = @EffectiveDate,
@@ -82,7 +83,7 @@ BEGIN
 	SELECT @EndRun = GETDATE()
 	SELECT @Duration = DATEDIFF(MILLISECOND, @StartRun, @EndRun)
 
-	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
+	EXEC Acc_WriteLog_UserLog_RunSP_Wrapper
 		@UserID = @UserID,
 		@CustID = @CustID,
 		@ActionID = 662,
