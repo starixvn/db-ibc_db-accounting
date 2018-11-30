@@ -1,4 +1,4 @@
-/*<info serverAlias="DBEAS-bodb_EAS" executers="bodbAdminNet,bodbExtAccNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBEAS-bodb_EAS" executers="bodbAdminNet,bodbExtAccNet" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_ExternalGroupSel]
 AS
 
