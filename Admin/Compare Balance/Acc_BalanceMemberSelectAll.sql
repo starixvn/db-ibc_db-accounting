@@ -19,8 +19,9 @@ BEGIN
 	SET NOCOUNT ON
 	
 	DECLARE
-		@CustId INT, @Credit MONEY
-		,@TotalCash MONEY -- total cash of tickets (bettrans/translog/bettransRnG/bettransLC + Net Position)
+		@CustId INT
+		,@TotalCash MONEY -- total cash
+		,@OutStanding MONEY -- outstanding
 		,@CreditSports MONEY, @DebitSports MONEY -- BalCreditSports/BalDebitSports
 		,@CreditCasino MONEY, @DebitCasino MONEY -- BalCreditCasino/BalDebitCasino
 		,@CreditOthers MONEY, @DebitOthers MONEY -- BalCreditOthers/BalDebitOthers
@@ -28,7 +29,7 @@ BEGIN
 		,@CreditNetPosition MONEY, @DebitNetPosition MONEY -- BalNetPosition (credit/debit)
 		,@CreditBonusWallet MONEY, @DebitBonusWallet MONEY -- BonusWalletCredit/BonusWalletDebit
 
-	SELECT @CustId = custid, @Credit = ISNULL(credit, 0) FROM CustDB.dbo.custInfo WITH (NOLOCK) WHERE username = @Username AND roleId = 1
+	SELECT @CustId = custid FROM CustDB.dbo.custInfo WITH (NOLOCK) WHERE username = @Username AND roleId = 1
 
 	IF @CustId IS NOT NULL
 	BEGIN
@@ -48,7 +49,7 @@ BEGIN
 		SELECT @DebitBonusWallet	= SUM(ISNULL(Amount, 0))  FROM dbo.BonusWalletDebit		WITH (NOLOCK) WHERE CustID = @CustId
 
 		-- Total cash of tickets (bettrans/translog/bettransRnG/bettransLC + Net Position)
-		CREATE TABLE #BalanceInfo (winlostdate SMALLDATETIME, bettype INT, statusId TINYINT, Amount MONEY)
+		CREATE TABLE #BalanceInfo (winlostdate SMALLDATETIME, bettype INT, statusId TINYINT, winlost MONEY, actual_stake MONEY, playercomm MONEY)
 
 		CREATE TABLE #SportBettype (bettype INT, refTable TINYINT)
 		INSERT INTO #SportBettype (bettype, refTable)
@@ -58,8 +59,8 @@ BEGIN
 		SELECT  @yesterday = DATEADD(DAY, -1, CONVERT(DATE, GETDATE()))
 		
 			-- bettrans
-		INSERT INTO #BalanceInfo (winlostdate, bettype, statusId, Amount)
-		SELECT winlostdate, bettype, statusId, SUM(winlost - actual_stake + playercomm) AS amount
+		INSERT INTO #BalanceInfo (winlostdate, bettype, statusId, winlost, actual_stake, playercomm)
+		SELECT winlostdate, bettype, statusId, SUM(winlost), SUM(actual_stake), SUM(playercomm)
 		FROM dbo.bettrans WITH (NOLOCK)
 		WHERE custid = @CustId
 		GROUP BY winlostdate, bettype, statusId
@@ -77,28 +78,30 @@ BEGIN
 		DROP TABLE #SportBettype
 
 			-- translog
-		INSERT INTO #BalanceInfo (Amount)
-		SELECT SUM(- actual_stake) AS Amount
+		INSERT INTO #BalanceInfo (statusId, actual_stake)
+		SELECT 0 AS statusId, SUM(actual_stake)
 		FROM dbo.translog WITH (NOLOCK)
 		WHERE custid = @CustId AND statusId IN (0,1)
 
 			-- bettransRnG
-		INSERT INTO #BalanceInfo (Amount)
-		SELECT SUM(winlost - actual_stake + playercomm) AS amount
+		INSERT INTO #BalanceInfo (statusId, winlost, actual_stake, playercomm)
+		SELECT statusId, SUM(winlost), SUM(actual_stake), SUM(playercomm)
 		FROM dbo.bettransRnG WITH (NOLOCK)
 		WHERE custid = @CustId
 			AND (statusId IN (0,1) OR winlostdate >= @yesterday)
+		GROUP BY statusId
 
 			-- bettransLC
-		INSERT INTO #BalanceInfo (Amount)
-		SELECT SUM(winlost - actual_stake + playercomm) AS amount
-		FROM dbo.bettrans WITH (NOLOCK)
+		INSERT INTO #BalanceInfo (statusId, winlost, actual_stake, playercomm)
+		SELECT statusId, SUM(winlost), SUM(actual_stake), SUM(playercomm)
+		FROM dbo.bettransLC WITH (NOLOCK)
 		WHERE custid = @CustId
 			AND (statusId IN (0,1) OR winlostdate >= @yesterday)
+		GROUP BY statusId
 
-		SELECT @TotalCash = SUM(ISNULL(Amount, 0)) FROM #BalanceInfo
-
-		SELECT @TotalCash = ISNULL(@TotalCash, 0) + ISNULL(@CreditNetPosition, 0) - ISNULL(@DebitNetPosition, 0)
+		SELECT	@TotalCash		= SUM(CASE WHEN statusId IN (0,1) THEN 0 ELSE ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(playercomm, 0) END)
+				,@OutStanding	= SUM(CASE WHEN statusId IN (0,1) THEN ISNULL(actual_stake, 0) ELSE 0 END)
+		FROM #BalanceInfo
 		
 		DROP TABLE #BalanceInfo
 	END
@@ -107,8 +110,8 @@ BEGIN
 	SELECT
 		@CustId				AS CustId
 		,@Username			AS Username
-		,@Credit			AS credit
 		,@TotalCash			AS TotalCash
+		,@OutStanding		AS OutStanding
 		,@CreditSports		AS CreditSports
 		,@DebitSports		AS DebitSports
 		,@CreditCasino		AS CreditCasino
