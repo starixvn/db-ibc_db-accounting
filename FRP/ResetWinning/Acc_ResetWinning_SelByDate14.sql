@@ -46,6 +46,7 @@ AS
 		- 20180521@Percy: Apply PP - Pragmatic, update bettype range of Macau Games [RedmineID: #95529]
 		- 20180821@Percy: Apply Poker Games [RedmineID: #100168]
 		- 20180830@Sophia: Apply Poker Games Phase 2 - Insurance [RedmineID: #100168]
+		- 20181130@Percy: Apply E-Sports & Happy 5 [RedmineID: #105112]
 		
 	Explanation's Param:
 
@@ -238,7 +239,8 @@ BEGIN
 				AND (bettype NOT BETWEEN 901 AND 904) -- Bettrade
 				AND (bettype NOT BETWEEN 911 AND 914) -- Cash Out
 			)
-			OR bettype BETWEEN 1301 AND 1334		
+			OR bettype BETWEEN 1301 AND 1334
+			OR bettype BETWEEN 9001 AND 9399
 		) 
 		AND (Sporttype <> 44) -- Muay Thai
 	GROUP BY liveindicator
@@ -246,7 +248,7 @@ BEGIN
   	UNION ALL
 
 	SELECT  CASE
-			 WHEN bettype BETWEEN 81 AND 120 THEN 'Number Game'	
+			 WHEN bettype BETWEEN 81 AND 120 OR bettype BETWEEN 8101 AND 8120 THEN 'Number Game'	
 			 WHEN
 				bettype IN (71, 72)
 				OR bettype BETWEEN 2101 AND 2399
@@ -280,7 +282,7 @@ BEGIN
 		   END AS Product,
 		   ISNULL(SUM(winlost), 0) AS winlost
 	 FROM #bettranstmp
-	 WHERE (bettype BETWEEN 80 AND 120
+	 WHERE (bettype BETWEEN 80 AND 120 OR bettype BETWEEN 8101 AND 8120
 			OR bettype IN (71, 72, 10, 9, 29) ---1000
 			OR bettype BETWEEN 1201 AND 1299
 			OR bettype BETWEEN 2700 AND 2899
@@ -309,7 +311,7 @@ BEGIN
 			OR bettype BETWEEN 1401 AND 1499
 		   )
 	GROUP BY CASE
-			 WHEN bettype BETWEEN 81 AND 120 THEN 'Number Game'
+			 WHEN bettype BETWEEN 81 AND 120 OR bettype BETWEEN 8101 AND 8120 THEN 'Number Game'
 			 WHEN
 				bettype IN(71, 72)
 				OR bettype BETWEEN 2101 AND 2399
