@@ -18,6 +18,7 @@ AS
 			+ DB053 --> DBSUM
 			+ bodb_Archive --> DBARC
 		- 20180731@Percy: Expand column transdesc [RedmineID: #92841]
+		- 20181107@Louis: Credit Collection [Redmine: #98621]
 
     Param's Explanation:
     
@@ -58,7 +59,7 @@ INSERT INTO @StatementTable(TransID, TransDate, TransType, TransDesc, TotalAmt, 
     SELECT 
         b.transid,
         b.transdate,
-        bettype.typenamee transtype,
+        CASE WHEN b.oddsId = 0 THEN bettype.typenamee ELSE 'Coll' END transtype,
         b.transdesc + ' - Ex.Rate: ' + CAST(b.actualrate AS VARCHAR(10)) transdesc,
         (b.winlost - b.actual_stake),
         CASE WHEN b.custid = @CustID THEN 1 ELSE 0 END IsOwner,

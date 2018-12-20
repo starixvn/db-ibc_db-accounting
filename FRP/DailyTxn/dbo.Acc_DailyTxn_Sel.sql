@@ -1,4 +1,4 @@
-﻿
+﻿/*<info serverAlias="DBACC-BODB02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_DailyTxn_Sel]
 	@fromdate	datetime,	
 	@Type		nvarchar(30) = '',
@@ -11,7 +11,7 @@ as
 Created by: Jamie
 Date: 2010-09-18
 Task : Daily Transaction 
-DB: DB06.bodb02
+DB: DBACC.bodb02
 Original: Acc_RptStatementDaily
 
 Revisions:
@@ -19,6 +19,7 @@ Revisions:
 	Select all transactions what verified by that user.	
 	- 20101225@Lukas: Re-arrange bettype
 	- 20111015@Lukas: remove paging
+	- 20181105@Louis: Credit Collection Summary  [RedmineID: #98621]
 
 Param's Explanation: Daily transaction
 	@Type   : Dep, Trac, ..
@@ -56,7 +57,7 @@ begin
 			b.transdate,
 			b.winlost-b.actual_stake amount,
 			b.transdesc, 
-			bt.typenamee,
+			CASE WHEN bt.typeId = 21003 AND b.OddsId = 1 THEN 'Coll' ELSE bt.typenamee END typenamee,
 			creator.username creator
 	FROM bettrans b with (nolock)
 		inner join CustSuper s with (nolock) on b.srecommend = s.custid 
@@ -68,7 +69,8 @@ begin
 		creator.roleid>4 and
 		s.isInternal = 1 and 
 		b.winlostdate between @fromdate and Dateadd(d,1,@fromdate) and
-		case when @Type <> '' then bt.typenamee else @Type end = @Type and
+		case when @Type <> '' AND @Type <> 'Coll' then bt.typenamee else @Type end = @Type and
+		((@Type LIKE 'Trac' AND b.OddsId = 0) OR (@Type LIKE 'Coll' AND b.OddsId = 1) OR (@Type NOT LIKE 'Trac' AND @Type NOT LIKE 'Coll')) AND 
 		case when @Creator <> '' then creator.username else @Creator end = @Creator and 	
 		case when @checkerName <> '' and @checkerID = 1 then b.betcheck else @checkerName end = @checkerName 
 			and
@@ -90,7 +92,7 @@ BEGIN
 			b.transdate,
 			b.winlost-b.actual_stake amount,
 			b.transdesc, 
-			bt.typenamee,
+			CASE WHEN bt.typeId = 21003 AND b.OddsId = 1 THEN 'Coll' ELSE bt.typenamee END typenamee,
 			creator.username creator
 	FROM bettrans b WITH(NOLOCK)
 		inner join CustSuper s WITH(NOLOCK) ON b.srecommend = s.custid 
@@ -102,7 +104,8 @@ BEGIN
 		creator.roleid>4 and
 		s.isInternal = 1 and 
 		b.winlostdate between @fromdate and Dateadd(d,1,@fromdate) and
-		case when @Type <> '' then bt.typenamee else @Type end = @Type and
+		case when @Type <> '' AND @Type <> 'Coll' then bt.typenamee else @Type end = @Type and
+		((@Type LIKE 'Trac' AND b.OddsId = 0) OR (@Type LIKE 'Coll' AND b.OddsId = 1) OR (@Type NOT LIKE 'Trac' AND @Type NOT LIKE 'Coll')) AND 
 		case when @Creator <> '' then creator.username else @Creator end = @Creator and
 		case when @checkerName <> '' then b.betcheck else @checkerName end = @checkerName and
 		ISNULL(b.betid,0)<> 0 
@@ -117,14 +120,3 @@ ORDER BY transid
 DROP TABLE #StatementDaily 
 
 END
-
-
-
-
-
-
-GO
-GRANT EXECUTE ON [dbo].[Acc_DailyTxn_Sel] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_DailyTxn_Sel] TO [vnteam]
-

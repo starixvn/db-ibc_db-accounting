@@ -1,13 +1,15 @@
-﻿ALTER PROCEDURE [dbo].[Acc_DailyTxn_FinanceBettype_Sel]  
+﻿/*<info serverAlias="DBACC-BODB02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+ALTER PROCEDURE [dbo].[Acc_DailyTxn_FinanceBettype_Sel]  
 AS  
 /*
 Created by: Kiet Mai
 Date: Nov 24 2010
 Task: daily finance transaction	
-DB: DB06.BODB02 
+DB: DBACC.BODB02 
 	Revision:
 		- 20101225@Lukas: Re-arrange bettype
 		- 20120405@Hurri: Add bettype 23102 (P2P Pending) into condition
+		- 20181105@Louis: Credit Collection Summary  [RedmineID: #98621]
 */ 
 BEGIN
 	SET NOCOUNT ON 
@@ -16,11 +18,6 @@ BEGIN
 	FROM bettype WITH(NOLOCK)
 	WHERE	typeid > 20000
 			AND typeID NOT IN (23001,23002,23101,23102,23201,23202) ---(112,113,114,117,118) --Transfer to Casino/Bingo/P2P
+	UNION
+	SELECT 0 AS typeid, 'Coll' AS typenamee  		
 END
-
-
-GO
-GRANT EXECUTE ON [dbo].[Acc_DailyTxn_FinanceBettype_Sel] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_DailyTxn_FinanceBettype_Sel] TO [vnteam]
-GO 

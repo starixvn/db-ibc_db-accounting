@@ -25,6 +25,7 @@ AS
 		- 20160602@Percy: Hotfix - Opening balance is shown wrongly [Redmine: #58410]
 		- 20160824@Lukas: add param @UserId for checking permission before query data
 		- 20180731@Percy: Expand column transdesc [RedmineID: #92841]
+		- 20181107@Louis: Credit Collection [Redmine: #98621]
 
     Param's Explanation:
         - @FilterBy: 1:winlostdate - 2:transdate
@@ -132,7 +133,7 @@ BEGIN
 				b.winlostdate,
 				b.refno,
 				(b.winlost - b.actual_stake) totalamt,
-				bettype.typenamee transtype,
+				CASE WHEN b.oddsId = 0 THEN bettype.typenamee ELSE 'Coll' END transtype,
 				b.transdesc + ' - Ex.Rate: ' + CAST(b.actualrate AS VARCHAR(10)) transdesc, 
 				b.creator,
 				CASE 
@@ -225,7 +226,7 @@ BEGIN
 				b.winlostdate,
 				b.refno,
 				(b.winlost - b.actual_stake) totalamt,
-				bettype.typenamee transtype,
+				CASE WHEN b.oddsId = 0 THEN bettype.typenamee ELSE 'Coll' END transtype,
 				b.transdesc + ' - Ex.Rate: ' + CAST(b.actualrate AS VARCHAR(10)) transdesc, 
 				b.creator,
 				CASE 
