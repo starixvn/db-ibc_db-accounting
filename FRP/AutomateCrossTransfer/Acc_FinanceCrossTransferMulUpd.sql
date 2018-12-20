@@ -20,6 +20,7 @@ AS
 		- 20130224@Lukas: move Acc_CustFinanceTransfer to new database bodb_acc
 		- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo by link database)
 		- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
+		- 20181112@Sophia: Add Transfer Collection [redmine: #98621]
 */
 BEGIN
     SET NOCOUNT ON		
@@ -41,7 +42,8 @@ BEGIN
 		ToUsername		NVARCHAR(50),
 		FromAmount		MONEY,
 		ToAmount		MONEY,
-		Remark			NVARCHAR(200)
+		Remark			NVARCHAR(200),
+		IsCollection    BIT
     )
         
     --Declare Table temp to store succeed trans and failed trans
@@ -52,7 +54,8 @@ BEGIN
 		FromAmount MONEY, 
 		ToAmount MONEY, 		
 		Description NVARCHAR(200), 
-		Reason NVARCHAR(200)
+		Reason NVARCHAR(200),
+		IsCollection    BIT
 	)    
 
     DECLARE @Success TABLE
@@ -61,18 +64,20 @@ BEGIN
 		ToUserName NVARCHAR(50),
 		FromAmount MONEY,
 		ToAmount   MONEY,
-		Description NVARCHAR(200)
+		Description NVARCHAR(200),
+		IsCollection    BIT
 	)
     
 
-    INSERT  INTO @tmpTransfer(FromCustID, FromUsername, ToCustID, ToUsername, FromAmount, ToAmount, Remark)
+    INSERT  INTO @tmpTransfer(FromCustID, FromUsername, ToCustID, ToUsername, FromAmount, ToAmount, Remark, IsCollection)
     SELECT  c1.CustID,
 			c1.Username,
             c2.CustID,
 			c2.Username,
             a.Amount,
 			a.ToAmount,            
-            a.Description
+            a.Description,
+			a.IsCollection
     FROM DBACC.bodb_acc.dbo.Acc_CustFinanceTransfer a WITH(NOLOCK)
 		INNER JOIN CustDB.dbo.custinfo c1 WITH(NOLOCK) ON a.FromCust = c1.Username
 		INNER JOIN CustDB.dbo.custinfo c2 WITH(NOLOCK) ON a.ToCust = c2.Username
@@ -81,15 +86,15 @@ BEGIN
     
     --Transfer Code
     DECLARE cur_FinanceTransfer CURSOR FOR
-    SELECT FromCustID, FromUsername, ToCustID, ToUsername, FromAmount, ToAmount, Remark
+    SELECT FromCustID, FromUsername, ToCustID, ToUsername, FromAmount, ToAmount, Remark, IsCollection
     FROM @tmpTransfer
     
     DECLARE @FromCustID INT, @ToCustID INT, @FromAmount MONEY, @ToAmount MONEY, @Remark NVARCHAR(200),
-			@FromUsername NVARCHAR(50), @ToUsername NVARCHAR(50)
+			@FromUsername NVARCHAR(50), @ToUsername NVARCHAR(50), @IsCollection BIT
     
 	OPEN cur_FinanceTransfer 
     
-	FETCH NEXT FROM cur_FinanceTransfer INTO @FromCustID, @FromUsername, @ToCustID, @ToUsername, @FromAmount, @ToAmount, @Remark
+	FETCH NEXT FROM cur_FinanceTransfer INTO @FromCustID, @FromUsername, @ToCustID, @ToUsername, @FromAmount, @ToAmount, @Remark, @IsCollection
 	While @@FETCH_STATUS = 0
 	BEGIN		
 		--Call transfer SP here
@@ -103,20 +108,21 @@ BEGIN
 			 @UserID		= @UserID, --custid of Admin  
 			 @IP			= @IP,  
 			 @ErrCode		= @ErrCode OUTPUT,  
-			 @ErrMsg		= @ErrMsg OUTPUT	
+			 @ErrMsg		= @ErrMsg OUTPUT,
+			 @IsCollection  = @IsCollection
 
 		IF @ErrCode = 0--Success transaction		
 		BEGIN
-			INSERT INTO @Success(FromUserName, ToUserName, FromAmount, ToAmount, Description)
-			VALUES(@FromUserName, @ToUserName, @FromAmount, @ToAmount, @Remark)
+			INSERT INTO @Success(FromUserName, ToUserName, FromAmount, ToAmount, Description, IsCollection)
+			VALUES(@FromUserName, @ToUserName, @FromAmount, @ToAmount, @Remark, @IsCollection)
 		END
 		ELSE
 		BEGIN
-			INSERT INTO @Fail(FromUserName, ToUserName, FromAmount, ToAmount, Description, Reason)
-			VALUES(@FromUserName, @ToUserName, @FromAmount, @ToAmount, @Remark, '; <b>' + @ErrMsg + '</b>')
+			INSERT INTO @Fail(FromUserName, ToUserName, FromAmount, ToAmount, Description, Reason, IsCollection)
+			VALUES(@FromUserName, @ToUserName, @FromAmount, @ToAmount, @Remark, '; <b>' + @ErrMsg + '</b>', @IsCollection)
 		END
 		
-		FETCH NEXT FROM cur_FinanceTransfer INTO @FromCustID, @FromUsername, @ToCustID, @ToUsername, @FromAmount, @ToAmount, @Remark
+		FETCH NEXT FROM cur_FinanceTransfer INTO @FromCustID, @FromUsername, @ToCustID, @ToUsername, @FromAmount, @ToAmount, @Remark, @IsCollection
 		SELECT @ErrCode = 0, @ErrMsg = ''
 	END
     
@@ -141,7 +147,7 @@ BEGIN
 	
 	select @Doing ='<Acc_FinanceCrossTransferMulUpd TotalUser="'
             + CONVERT(VARCHAR(20), @TotalUsers) + '" FileName="' + @FileName
-            + '" Size="' + CONVERT(VARCHAR(20), @FileSize) + '" />'
+            + '" Size="' + CONVERT(VARCHAR(20), @FileSize) + '" />'			
             
     BEGIN TRY
 		EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @TotalUsers, @ToCustID = 0, @IP = @IP, @Doing = @Doing

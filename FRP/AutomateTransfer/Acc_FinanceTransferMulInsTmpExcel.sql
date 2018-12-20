@@ -20,6 +20,7 @@ AS
 		- 20130224@Lukas: move Acc_CustFinanceTransfer to new database bodb_acc
 		- 20130521@Elodie: Get more fields such as MinActualrate, MaxActualRate, MultipliedBy... to verify more new specific cases
 		- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
+		- 20181112@Sophia: Add @IsCollection [redmine: #98621]
 */
 BEGIN
 SET NOCOUNT ON
@@ -36,7 +37,8 @@ SET NOCOUNT ON
 		ToCust VARCHAR(30),
 		Amount VARCHAR(20),
 		ExRate VARCHAR(20),
-		Description	NVARCHAR(200)
+		Description	NVARCHAR(200),
+		IsCollection BIT
 	)
 	
 	DECLARE @tblSucc TABLE (
@@ -52,7 +54,8 @@ SET NOCOUNT ON
 		MinActualrate SMALLMONEY, 	
 		MaxActualrate SMALLMONEY,
 		MultipliedBy INT,
-		CurrencyName VARCHAR(5)
+		CurrencyName VARCHAR(5),
+		IsCollection BIT
 	)
 
 	DECLARE @tblFail TABLE (
@@ -62,20 +65,22 @@ SET NOCOUNT ON
 		Amount VARCHAR(20),
 		ExRate VARCHAR(20),
 		Description	NVARCHAR(200),
-		Reason NVARCHAR(100)
+		Reason NVARCHAR(100),
+		IsCollection BIT
 	)
 	
-	INSERT INTO @tblCust(Seq, FromCust, ToCust, Amount,	ExRate,	Description)				
+	INSERT INTO @tblCust(Seq, FromCust, ToCust, Amount,	ExRate,	Description, IsCollection)				
 	SELECT	T.C.value('./@Seq', 'int'),
 			T.C.value('./@FromCust', 'varchar(30)'),
 			T.C.value('./@ToCust', 'varchar(30)'),
 			T.C.value('./@Amount', 'varchar(20)'),
 			T.C.value('./@ExRate', 'varchar(20)'),
-			T.C.value('./@Description', 'nvarchar(200)')
+			T.C.value('./@Description', 'nvarchar(200)'),
+			T.C.value('./@IsCollection', 'BIT')
 	FROM @ListTransfer.nodes('/ListTransfer/Transfer') AS T(C)
 	
 	--Validate transaction
-	INSERT INTO @tblSucc(Seq, FromCust, ToCust, FromCurrency, ToCurrency, Amount, ExRate, Description, CurrentExRate, MinActualrate, MaxActualrate, MultipliedBy, CurrencyName)
+	INSERT INTO @tblSucc(Seq, FromCust, ToCust, FromCurrency, ToCurrency, Amount, ExRate, Description, CurrentExRate, MinActualrate, MaxActualrate, MultipliedBy, CurrencyName, IsCollection)
 	SELECT	t.Seq,			
 			t.FromCust, 
 			t.ToCust ,	
@@ -94,7 +99,8 @@ SET NOCOUNT ON
 				 ELSE e1.MultipliedBy END,
 			CASE WHEN c2.currency = 2 THEN e1.currency 
 				 WHEN c1.currency = 2 THEN e2.currency
-				 ELSE e1.currency END			
+				 ELSE e1.currency END,
+			t.IsCollection				 
 	FROM	@tblCust as t
 			INNER JOIN custinfo c1 WITH (NOLOCK) on t.FromCust = c1.Username
 			INNER JOIN custinfo c2 WITH (NOLOCK) ON t.ToCust = c2.Username
@@ -111,25 +117,27 @@ SET NOCOUNT ON
 			
 	
 	--Failed Transaction
-	INSERT INTO @tblFail(Seq, FromCust, ToCust, Amount,	ExRate,	Description, Reason)
+	INSERT INTO @tblFail(Seq, FromCust, ToCust, Amount,	ExRate,	Description, Reason, IsCollection)
 	SELECT	Seq, FromCust, ToCust ,	Amount,	ExRate,	Description,  
 			CASE WHEN ISNUMERIC(Amount)=0 or ISNUMERIC(ExRate)=0 or cast(ExRate AS FLOAT) <= 0 or cast(Amount AS FLOAT) = 0 THEN '<b>Invalid Amount or Actual Rate.</b>'
 				 WHEN ISNULL(FromCust,'') ='' and ISNULL(ToCust,'') ='' THEN '<b>Username cannot be blanked.</b>' 
 				 WHEN FromCust = ToCust THEN '<b>From Cust must different To Cust.</b>' 
 				 WHEN len(Description) > 200 THEN '<b>Maximum length of Description is 200 characters</b>' 				 
-				 ELSE '<b>Invalid From Cust or To Cust.</b>' END AS Reason 	
+				 ELSE '<b>Invalid From Cust or To Cust.</b>' END AS Reason
+			, IsCollection
 	FROM	(SELECT * FROM @tblCust WHERE Seq not in (SELECT Seq FROM @tblSucc)) AS temp
 			
 			
 	--Insert data to temp table Acc_CustFinanceTransfer to transer after clicking "Update Now" button
-	INSERT INTO bodb_acc.dbo.Acc_CustFinanceTransfer(UserId, FromCust, ToCust, Amount, ExRate, Description, Seq)
+	INSERT INTO bodb_acc.dbo.Acc_CustFinanceTransfer(UserId, FromCust, ToCust, Amount, ExRate, Description, Seq, IsCollection)
 	SELECT	@UserId,
 			FromCust, 
 			ToCust ,	
 			Amount,	
 			ExRate,	
 			Description,
-			Seq			
+			Seq,
+			IsCollection			
 	FROM	@tblSucc as t
 	
 	
