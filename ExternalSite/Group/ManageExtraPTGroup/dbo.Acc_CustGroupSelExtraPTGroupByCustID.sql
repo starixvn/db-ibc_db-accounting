@@ -1,6 +1,4 @@
 /*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
 
 ALTER PROCEDURE [dbo].[Acc_CustGroupSelExtraPTGroupByCustID]
 	@CustID INT
@@ -9,11 +7,13 @@ AS
 	Creator: Percy
 	Date: 2016-07-25
 	Task: Select ExtraPT Group by SuperID
-	DB: DBACC.bodb02
+	DB: DBACC/bodb02
 
 	Revisions:
 		- 20170413@Percy: Change way get to-be-primary group [RedmineID: #74292]
 		- 20170926@Percy: Move this SP from DBAGE.bodb_Age to DBACC.bodb02 [RedmineID: #83600]
+		- 20181122@Elodie: DB053/bodb_Age Migration [Redmine:#104770]
+
 */
 BEGIN
 	SET NOCOUNT ON
@@ -33,7 +33,7 @@ BEGIN
 		e.[Primary] AS IsPrimary
 	FROM
 		(
-			SELECT GroupName FROM DBAGE.bodb_Age.dbo.Acc_CustGroup WITH(NOLOCK) WHERE CustID = @CustID
+			SELECT GroupName FROM dbo.Acc_CustGroup WITH(NOLOCK) WHERE CustID = @CustID
 			UNION SELECT 'No Extra PT'
 		) c
 		INNER JOIN @GroupExtraPT e ON c.GroupName = e.GroupName
