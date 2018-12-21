@@ -1,7 +1,4 @@
-/*<info serverAlias="DBAGE-bodb_AGE" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0"></info>*/
-USE bodb_Age
-GO
-
+/*<info serverAlias="DBCUST-CUSTDB" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_CustomerDateLimitIns] @userId INT
 	,@custName NVARCHAR(100)
 	,@limitDays INT = NULL
@@ -11,11 +8,12 @@ ALTER PROCEDURE [dbo].[Acc_CustomerDateLimitIns] @userId INT
 AS
 /*
 	Created: 20180429@Razor
-	DB: DBAGE/bodb_AGE
+	DB: DBCUST/CUSTDB
 	Task: 
 
 	Revisions:
 		-20180429@Razor: init - [Readmine: #96025]
+		- 20181123@Helen: DB053.bodb_AGE/BODB02 & DB052.bodb_Summary Migration [Redmine: 104770]
 		
 	Param's Explanation:
 */
@@ -33,7 +31,7 @@ BEGIN
 		,@ActionID = 31501
 
 	SELECT @custID = custID
-	FROM [bodb02].[dbo].[custInfo] WITH (NOLOCK)
+	FROM [dbo].[custInfo] WITH (NOLOCK)
 	WHERE userName = @custName
 
 	IF (ISNULL(@custID, 0) = 0)
@@ -81,7 +79,7 @@ BEGIN
 	SET @endRun = GETDATE()
 	SET @duration = DATEDIFF(MILLISECOND, @startRun, @endRun)
 
-	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP @UserID = @userID
+	EXEC Acc_WriteLog_UserLog_RunSP_Wrapper @UserID = @userID
 		,@CustID = @custID
 		,@ActionID = @ActionID
 		,@TrackingValue = @LogSPData
