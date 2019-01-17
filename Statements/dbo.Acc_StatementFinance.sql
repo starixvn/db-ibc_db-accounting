@@ -154,7 +154,7 @@ BEGIN
 					ELSE 1 
 				END isAllowVerify,
 				CASE b.bettype WHEN 20000 THEN 1 ELSE b.liveindicator END isReversal
-			FROM DBEXT.bodb02.dbo.bettrans b WITH(NOLOCK) 
+			FROM bodb02.dbo.bettrans b WITH(NOLOCK) 
 				LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = b.bettype 
 			WHERE 
 				b.matchid = 0
