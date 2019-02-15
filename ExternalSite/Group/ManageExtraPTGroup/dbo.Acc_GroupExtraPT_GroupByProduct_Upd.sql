@@ -23,6 +23,7 @@ AS
 	Revisions:
 		- 20170926@Percy: Move this SP from DBACC.bodb_ACC to DBCUST.CustDB [RedmineID: #83600]
 		- 20180808@Helen: DB05.DBPOLICY migration - [Redmine:99462]
+		- 20190214@Percy: Fix issue setting of supers is not updated when change extra PT amount [RedmineID: #108875]
 		
 	Param's Explanation:
 */
@@ -182,7 +183,7 @@ BEGIN
 				IF @OldExtraPT <> @NewExtraPT
 				BEGIN
 					UPDATE dbo.Acc_GroupExtraPTSetting WITH(ROWLOCK, UPDLOCK)
-					SET @OldExtraPT = CASE WHEN ProductId = 1 AND SubProduct IN ('BT-Bought', 'BT-Comm', 'BT-Sold', 'BT-Winloss') THEN 0 ELSE @NewExtraPT END
+					SET ExtraPT = CASE WHEN ProductId = 1 AND SubProduct IN ('BT-Bought', 'BT-Comm', 'BT-Sold', 'BT-Winloss') THEN 0 ELSE @NewExtraPT END
 					WHERE GroupId = @GroupId AND ProductId = @ProductId
 						AND FromDate >= @OldEffectiveDate AND ToDate <= @OldEndDate
 				END
