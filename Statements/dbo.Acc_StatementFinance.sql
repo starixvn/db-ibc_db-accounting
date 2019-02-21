@@ -26,6 +26,7 @@ AS
 		- 20160824@Lukas: add param @UserId for checking permission before query data
 		- 20180731@Percy: Expand column transdesc [RedmineID: #92841]
 		- 20181107@Louis: Credit Collection [Redmine: #98621]
+		- 20190114@Sophia: Move table transfer_fi from DBSUM.bodb_summary to DBARC.bodb_archive [Redmine: #105415]
 
     Param's Explanation:
         - @FilterBy: 1:winlostdate - 2:transdate
@@ -153,7 +154,7 @@ BEGIN
 					ELSE 1 
 				END isAllowVerify,
 				CASE b.bettype WHEN 20000 THEN 1 ELSE b.liveindicator END isReversal
-			FROM DBEXT.bodb02.dbo.bettrans b WITH(NOLOCK) 
+			FROM bodb02.dbo.bettrans b WITH(NOLOCK) 
 				LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = b.bettype 
 			WHERE 
 				b.matchid = 0
@@ -192,7 +193,7 @@ BEGIN
 						NULL checkTime,
 						0 isAllowVerify,
 						ISNULL(isReversal,0) isReversal
-					FROM DBSUM.bodb_Summary.dbo.transfer_fi tf WITH(NOLOCK)
+					FROM bodb_archive.dbo.transfer_fi tf WITH(NOLOCK)
 						LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = tf.bettype 
 					WHERE tf.refno = @_RefNo
 
@@ -285,7 +286,7 @@ BEGIN
 			SELECT @_ToDate = DATEADD(day, 1, @_BalanceUpDay)
 	
 		SELECT TOP 1 @_FromDate = ISNULL(accdate,@FromDate_Bk)
-		FROM DBRPT.bodb_Report.dbo.Statement WITH (NOLOCK)
+		FROM bodb_Report.dbo.Statement WITH (NOLOCK)
 		WHERE 
 			custid = @CustID 
 			AND accdate <= @FromDate_Bk
@@ -320,7 +321,7 @@ BEGIN
 				NULL checkTime,
 				0 isAllowVerify,
 				1 isReversal
-			FROM DBRPT.bodb_Report.dbo.Statement WITH (NOLOCK) 
+			FROM bodb_Report.dbo.Statement WITH (NOLOCK) 
 			WHERE 
 				custid = @CustID 
 				AND accdate >= @_FromDate AND accdate < @_ToDate
@@ -354,7 +355,7 @@ BEGIN
 				NULL checkTime,
 				0 isAllowVerify,
 				ISNULL(isReversal,0) isReversal
-			FROM DBSUM.bodb_Summary.dbo.transfer_fi tf WITH(NOLOCK)
+			FROM bodb_archive.dbo.transfer_fi tf WITH(NOLOCK)
 				LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = tf.bettype 
 			WHERE 
 				tf.custid = @CustID
@@ -368,7 +369,7 @@ BEGIN
 			;WITH CTE_Statement AS (
 				SELECT s.refno
 				FROM #StatementTable s
-					LEFT JOIN DBSUM.bodb_Summary.dbo.transfer_fi tf WITH(NOLOCK) ON s.refno = tf.refno
+					LEFT JOIN bodb_archive.dbo.transfer_fi tf WITH(NOLOCK) ON s.refno = tf.refno
 				WHERE tf.winlostdate >= s.winlostdate
 				GROUP BY s.refno
 				HAVING COUNT(*) > 1

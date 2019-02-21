@@ -19,6 +19,7 @@ AS
 			+ bodb_Archive --> DBARC
 		- 20180731@Percy: Expand column transdesc [RedmineID: #92841]
 		- 20181107@Louis: Credit Collection [Redmine: #98621]
+		- 20190114@Sophia: Move table transfer_fi from DBSUM.bodb_summary to DBARC.bodb_archive [Redmine: #105415]
 
     Param's Explanation:
     
@@ -83,7 +84,7 @@ BEGIN
             (tf.winlost - tf.actual_stake),
             CASE WHEN tf.custid = @CustID THEN 1 ELSE 0 END IsOwner,
             (tf.winlost - tf.actual_stake) * tf.actualrate
-        FROM DBSUM.bodb_Summary.dbo.transfer_fi tf WITH(NOLOCK)
+        FROM bodb_archive.dbo.transfer_fi tf WITH(NOLOCK)
             LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = tf.bettype 
         WHERE 
             tf.winlostdate >= @_FromDate AND tf.winlostdate < @_ToDate
@@ -101,7 +102,7 @@ BEGIN
                 tf.transdesc,
                 (tf.credit - tf.debit) totalamt,
                 CASE WHEN tf.custid = @CustID THEN 1 ELSE 0 END IsOwner
-            FROM DBARC.bodb_Archive.dbo.transfer_bk tf (NOLOCK)
+            FROM bodb_Archive.dbo.transfer_bk tf (NOLOCK)
                 LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = tf.bettype 
             WHERE 
                 tf.winlostdate >= @_FromDate AND tf.winlostdate < @_ToDate
