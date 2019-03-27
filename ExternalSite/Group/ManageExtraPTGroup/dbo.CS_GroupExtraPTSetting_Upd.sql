@@ -126,12 +126,6 @@ BEGIN
 			DELETE dbo.Acc_GroupExtraPTSetting WITH(ROWLOCK, UPDLOCK)
 			WHERE SuperId = @CustID AND GroupId = @GroupId AND FromDate > @today
 
-			IF @GroupName IN ('ACCTHAI2','ACCTHAI56','ACCTHAI99')
-			BEGIN
-				DELETE dbo.Acc_GroupExtraPTSetting WITH(ROWLOCK, UPDLOCK)
-				WHERE SuperId = @CustID AND GroupName = 'BC' AND FromDate > @today
-			END
-
 			IF EXISTS (
 				SELECT TOP 1 1 FROM dbo.Acc_GroupExtraPTSetting WITH(NOLOCK)
 				WHERE SuperId = @CustID AND @today BETWEEN FromDate AND ToDate
