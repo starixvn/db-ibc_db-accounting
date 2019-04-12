@@ -4,7 +4,7 @@ GO
 
 ALTER PROCEDURE [dbo].[CS_GroupExtraPTSetting_Upd]
 	@CustID			INT,
-	@GroupName		VARCHAR(50),
+	@HeadlineId		INT, 
 	@EffectiveDate	DATETIME = NULL,
 	@UserID			INT,
 	@ErrCode		INT = 0 OUTPUT,
@@ -18,7 +18,8 @@ AS
 	Original SP: Acc_GroupExtraPTSetting_Upd
 	
 	Revisions:
-		- 20190327@Sophia: initial SP[RedmineID: #105338] 	
+		- 20190327@Sophia: initial SP[RedmineID: #105338] 
+		- 20190410@Sophia: add param @HeadlineId [RedmineID: #111696]
 	
 	Param's Explanation:
 		- @EffectiveDate
@@ -31,10 +32,15 @@ BEGIN
 	
 	DECLARE @today DATETIME, @EndDate DATETIME
 	SELECT  @today = CONVERT(DATE, GETDATE()), @EndDate = '9999-12-31'
-
-	DECLARE @GroupId INT
-	SELECT TOP 1 @GroupId = GroupId FROM dbo.Acc_GroupExtraPT_Product WITH(NOLOCK) WHERE GroupName = @GroupName
-
+	DECLARE @GroupId INT, @GroupName VARCHAR(50) 
+	
+	
+	SELECT @GroupId = GroupId
+	FROM  dbo.CS_HeadlineExtraPTGroup WITH (NOLOCK) 
+	WHERE HeadlineId = @HeadlineId
+	
+	SELECT TOP 1 @GroupName = GroupName FROM dbo.Acc_GroupExtraPT_Product WITH(NOLOCK) WHERE GroupId = @GroupId
+	
 	DECLARE @Setting TABLE (GroupId INT, FromDate DATETIME)
 
 	IF @EffectiveDate IS NOT NULL -- change @GroupName is Primary Extra PT Group of @CustID
