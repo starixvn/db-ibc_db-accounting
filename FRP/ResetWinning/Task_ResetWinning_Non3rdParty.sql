@@ -404,19 +404,21 @@ BEGIN
 
 	UNION ALL
 
-	SELECT
-		'Bet Builder (Due To Partners)' AS Product,
-		ISNULL(SUM(winlostDueTo), 0) winlost
-	FROM #bettranstmp
-	WHERE bettype = 38
+	SELECT winlostdate,
+           'Bet Builder (Due To Partners)',
+           ISNULL(SUM(winlostDueTo), 0) winlost
+    FROM #bettranstmp
+    WHERE bettype = 38
+	GROUP BY winlostdate
 
 	UNION ALL
 
-	SELECT
-		'PP (Due To Partners)' AS Product,
-		ISNULL(SUM(winlostDueTo), 0) winlost
-	FROM #bettranstmp
-	WHERE bettype BETWEEN 4101 AND 4300
+	SELECT winlostdate,
+           'PP (Due To Partners)',
+           ISNULL(SUM(winlostDueTo), 0) winlost
+    FROM #bettranstmp
+    WHERE bettype BETWEEN 4101 AND 4300
+	GROUP BY winlostdate
 
 	UNION ALL
 
