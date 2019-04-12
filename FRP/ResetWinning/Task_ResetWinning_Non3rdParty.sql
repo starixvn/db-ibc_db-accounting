@@ -173,7 +173,7 @@ BEGIN
 			b.bettype,
 			b.liveindicator,
 			SUM(
-				CASE WHEN b.bettype IN (2199, 2399, 2999) THEN 0
+				CASE WHEN b.bettype IN (2199, 2399, 2999, 4300) THEN 0
 					ELSE
 					(ISNULL(winlost,0)-ISNULL(actual_stake,0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)
 						+ CASE
@@ -217,7 +217,7 @@ BEGIN
 			 CASE WHEN ISNULL(m.matchid, 0) <> 0 THEN m.Sporttype ELSE 0 END
 	HAVING
 			SUM(
-				CASE WHEN b.bettype IN (2199, 2399, 2999) THEN 0
+				CASE WHEN b.bettype IN (2199, 2399, 2999, 4300) THEN 0
 					ELSE
 					(ISNULL(winlost,0)-ISNULL(actual_stake,0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)
 						+ CASE
