@@ -255,7 +255,7 @@ BEGIN
 		(
 			(
 				bettype <= 999
-				AND bettype NOT IN (9, 10, 29, 71, 72) -- Parlay, Outright, Casino
+				AND bettype NOT IN (9, 10, 29, 71, 72, 38) -- Parlay, Outright, Casino, Bet Builder
 				AND (bettype NOT BETWEEN 81 AND 120) -- Number Game
 				AND (bettype NOT BETWEEN 801 AND 899) -- Metric Gaming
 				AND (bettype NOT BETWEEN 901 AND 904) -- Bettrade
@@ -301,11 +301,12 @@ BEGIN
 			 WHEN bettype = 1004 THEN 'Bullfighting'
 			 WHEN bettype BETWEEN 4101 AND 4300 THEN 'PP'
 			 WHEN bettype BETWEEN 1401 AND 1499 THEN 'Poker Games'
+			 WHEN bettype = 38 THEN 'Bet Builder'
 		   END AS Product,
 		   ISNULL(SUM(winlost), 0) AS winlost
 	 FROM #bettranstmp
 	 WHERE (bettype BETWEEN 80 AND 120 OR bettype BETWEEN 8101 AND 8120
-			OR bettype IN (71, 72, 10, 9, 29) ---1000
+			OR bettype IN (71, 72, 10, 9, 29, 38) ---1000
 			OR bettype BETWEEN 1201 AND 1299
 			OR bettype BETWEEN 2700 AND 2899
 			OR bettype BETWEEN 1501 AND 1599
@@ -364,6 +365,7 @@ BEGIN
 			 WHEN bettype = 1004 THEN 'Bullfighting'
 			 WHEN bettype BETWEEN 4101 AND 4300 THEN 'PP'
 			 WHEN bettype BETWEEN 1401 AND 1499 THEN 'Poker Games'
+			 WHEN bettype = 38 THEN 'Bet Builder'
 	         END
 
 	UNION ALL
