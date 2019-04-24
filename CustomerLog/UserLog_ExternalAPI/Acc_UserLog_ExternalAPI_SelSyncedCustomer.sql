@@ -42,7 +42,7 @@ BEGIN
 				AND ActionID = 1404
 				AND isNotified = 0 
 	END
-	IF @ToDate < @__archiveDate
+	ELSE IF @ToDate < @__archiveDate
 	BEGIN
 		INSERT INTO #__tmpCustLog(LogId, CustId)
 		SELECT	LogID, CustID 

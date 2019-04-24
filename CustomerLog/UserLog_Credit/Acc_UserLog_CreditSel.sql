@@ -102,7 +102,7 @@ BEGIN
 			) AS MyTable
 			WHERE   RowNum BETWEEN @lbound AND @ubound
 		END
-		IF @ToDate < @__archiveDate
+		ELSE IF @ToDate < @__archiveDate
 		BEGIN
 			SELECT	LogID,
 					UserID,
@@ -274,7 +274,7 @@ BEGIN
 					) AS MyTable
 			WHERE   RowNum BETWEEN @lbound AND @ubound
 		END
-		IF @ToDate < @__archiveDate
+		ELSE IF @ToDate < @__archiveDate
 		BEGIN
 			SELECT	LogID,
 				UserID,

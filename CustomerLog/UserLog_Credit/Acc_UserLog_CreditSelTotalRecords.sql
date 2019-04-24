@@ -41,7 +41,7 @@ BEGIN
 			AND LogDate BETWEEN @FromDate AND @ToDate                           
 			AND IsInternal <= @IsInternal
 	END
-	IF @ToDate < @__archiveDate
+	ELSE IF @ToDate < @__archiveDate
 	BEGIN
 		SELECT COUNT(LogID)                      
 		FROM bodb_CustomerLog_Archive.dbo.UserLog_Credit AS uc WITH (NOLOCK)
@@ -87,7 +87,7 @@ BEGIN
 			AND IsInternal <= @IsInternal
 			AND ci.roleid <= 4
 	END
-	IF @ToDate < @__archiveDate
+	ELSE IF @ToDate < @__archiveDate
 	BEGIN
 		SELECT COUNT(LogID)                           
 		FROM bodb_CustomerLog_Archive.dbo.UserLog_Credit AS uc WITH (NOLOCK)
