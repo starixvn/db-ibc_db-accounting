@@ -10,7 +10,7 @@ AS
 	DB: DBLOG.BODB_CUSTOMERLOG
 
 	Revisions:
-		20190411@Lukas: archive a part of old log records to new database
+		20190411@Lukas: archive a part of old log records to new database [Redmine: #111476]
 	Param's Explanation:
 		@ReturnValue: Returned value of API
 		@ReturnCode: Returned code of API: <>0 failed, 0 succeeded.

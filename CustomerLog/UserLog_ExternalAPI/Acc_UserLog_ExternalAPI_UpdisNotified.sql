@@ -9,6 +9,7 @@ DB: DBLOG.bodb_CustomerLog
 Original:
 
 Revisions:
+	- 20190405@Patrick: Support archive date range [Redmine: #111476]
 
 Param's Explanation:
 

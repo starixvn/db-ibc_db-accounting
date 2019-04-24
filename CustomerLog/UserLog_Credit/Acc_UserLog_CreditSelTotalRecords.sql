@@ -20,6 +20,7 @@ AS
 
 	Revisions:
 		- 20140708@Dom: Do not show any log info (including log of Supers, Masters, Agents and Members) updated by Admin relate to all log categories [Redmine: #18125]
+		- 20190405@Patrick: Support archive date range [Redmine: #111476]
 	
 */
 -- SET NOCOUNT ON added to prevent extra result sets from
