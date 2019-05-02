@@ -27,6 +27,7 @@ AS
 		- 20180731@Percy: Expand column transdesc [RedmineID: #92841]
 		- 20181107@Louis: Credit Collection [Redmine: #98621]
 		- 20190114@Sophia: Move table transfer_fi from DBSUM.bodb_summary to DBARC.bodb_archive [Redmine: #105415]
+		- 20190502@Percy: Fix issue duplicate data when BU process (copy data) [RedmineID: #112525]
 
     Param's Explanation:
         - @FilterBy: 1:winlostdate - 2:transdate
@@ -92,7 +93,7 @@ BEGIN
 
 	DECLARE @_ToDate AS DATETIME
 	SET @_ToDate = @ToDate
-	SET @_ToDate = DATEADD(day,1,@_ToDate)
+	SET @_ToDate = DATEADD(day,1,@_ToDate) -- where statement winlostdate/transdate < @_ToDate
 
 	DECLARE @_FromDate AS DATETIME
 	SET @_FromDate = @FromDate
@@ -283,7 +284,7 @@ BEGIN
 	BEGIN
 
 		IF DATEADD(day,-1,@_ToDate) >= DATEADD(day,-1,@_BalanceUpDay)
-			SELECT @_ToDate = DATEADD(day, 1, @_BalanceUpDay)
+			SELECT @_ToDate = @_BalanceUpDay -- where statement winlostdate/transdate < @_ToDate
 	
 		SELECT TOP 1 @_FromDate = ISNULL(accdate,@FromDate_Bk)
 		FROM bodb_Report.dbo.Statement WITH (NOLOCK)
