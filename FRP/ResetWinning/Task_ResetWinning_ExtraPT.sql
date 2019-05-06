@@ -26,6 +26,7 @@ AS
 			. Increase Transdesc length to 1000 [RedmineID: #92841]
 		- 20180821@Percy: Apply Poker Games [RedmineID: #100168]
 		- 20180830@Sophia: Apply Poker Games Phase 2 - Insurance [RedmineID: #100168]
+		- 20190412@Percy: Apply BetBuilder - Add Sub Product 'Bet Builder' [RedmineID: #106981]
 
 	Param's explain:
 		@mode:  0 _ view report
@@ -41,7 +42,7 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	DECLARE @EffectedDate DATETIME -- 20160112@Percy: Applying date of changing extra PT formula [RedmineID: #70060]
+	DECLARE @EffectedDate DATETIME -- 20170112@Percy: Applying date of changing extra PT formula [RedmineID: #70060]
 	SELECT  @EffectedDate = '2017-01-19'
 
 	DECLARE @dummy TABLE (CustID INT, GroupID TINYINT, GroupName VARCHAR(50), Winlostdate SMALLDATETIME)
@@ -155,7 +156,7 @@ BEGIN
 	;WITH wl AS (
 			SELECT	b.srecommend, 1 AS ProductID, 
 					CASE WHEN ISNULL(m.matchid, 0) <> 0 THEN m.Sporttype ELSE 0 END AS Sporttype, 
-					CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss') THEN s.SubProduct ELSE '' END AS SubProduct,
+					CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss','Bet Builder') THEN s.SubProduct ELSE '' END AS SubProduct,
 					SUM((winlost - actual_stake) * actualrate) AS Winlost,
 					SUM((CASE WHEN tpositiontaking = 1 THEN winlost - actual_stake ELSE winlost - actual_stake + scomm / (1 - tpositiontaking) END) * actualrate) AS NewWinlost,
 					b.winlostdate
@@ -171,7 +172,7 @@ BEGIN
 				AND s.productID = 1 
 			GROUP BY b.winlostdate, b.srecommend,
 					CASE WHEN ISNULL(m.matchid, 0) <> 0	THEN m.Sporttype ELSE 0 END, 
-					CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss') THEN s.SubProduct ELSE '' END
+					CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss','Bet Builder') THEN s.SubProduct ELSE '' END
 			)
 	INSERT INTO #winning (ProductID, Sporttype, SubProduct, Winlost, NewWinlost, Winlostdate, GroupID)
 	SELECT w.ProductID, w.Sporttype, w.SubProduct, SUM(w.Winlost * s.ExtraPT), SUM(w.NewWinlost * s.ExtraPT), w.Winlostdate, s.GroupId
