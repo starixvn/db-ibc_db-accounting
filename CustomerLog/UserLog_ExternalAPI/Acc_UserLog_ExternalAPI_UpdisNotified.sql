@@ -1,3 +1,4 @@
+/*<info serverAlias="DBLOG-bodb_CustomerLog" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_UserLog_ExternalAPI_UpdisNotified]
 @LogIDs		VARCHAR(MAX)= ''
 AS
@@ -8,6 +9,7 @@ DB: DBLOG.bodb_CustomerLog
 Original:
 
 Revisions:
+	- 20190405@Patrick: Support archive date range [Redmine: #111476]
 
 Param's Explanation:
 
@@ -15,13 +17,15 @@ Param's Explanation:
 BEGIN
 	SET NOCOUNT ON 
 
+	--//active range
 	UPDATE	UserLog_ExternalAPI WITH (UPDLOCK,ROWLOCK)
+	SET		isNotified = 1
+	WHERE	LogID IN (SELECT CAST(RTRIM(LTRIM(Val)) AS BIGINT) FROM strSplit(@LogIDs,','))
+
+	--//archive range
+	UPDATE	bodb_CustomerLog_Archive.dbo.UserLog_ExternalAPI WITH (UPDLOCK,ROWLOCK)
 	SET		isNotified = 1
 	WHERE	LogID IN (SELECT CAST(RTRIM(LTRIM(Val)) AS BIGINT) FROM strSplit(@LogIDs,','))
 END
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_UserLog_ExternalAPI_UpdisNotified] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_UserLog_ExternalAPI_UpdisNotified] TO [vnteam] AS [dbo]
-GO 
