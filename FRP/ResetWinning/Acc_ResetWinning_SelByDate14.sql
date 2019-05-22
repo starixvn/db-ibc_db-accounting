@@ -48,6 +48,7 @@ AS
 		- 20180830@Sophia: Apply Poker Games Phase 2 - Insurance [RedmineID: #100168]
 		- 20181130@Percy: Apply E-Sports & Happy 5 [RedmineID: #105112]
 		- 20190412@Percy: Apply BetBuilder & Pragmatic [RedmineID: #106981]
+		- 20190522@Sophia: Rename Keno to RNG Keno [RedmineID: #113490]
 		
 	Explanation's Param:
 
@@ -280,7 +281,7 @@ BEGIN
 			 WHEN bettype IN (9, 29) THEN 'Parlay'
 			 WHEN bettype BETWEEN 1201 AND 1299 THEN 'Virtual Sports'
 			 WHEN bettype BETWEEN 2700 AND 2899 THEN 'Virtual Sports 2'
-			 WHEN bettype BETWEEN 1501 AND 1599 THEN 'Keno'
+			 WHEN bettype BETWEEN 1501 AND 1599 THEN 'RNG Keno'
 			 WHEN bettype BETWEEN 1800 AND 1899 THEN 'AG Casino'
 			 WHEN bettype = 1900 THEN 'Macau'
 			 WHEN bettype BETWEEN 1700 AND 1799 THEN 'Gold Deluxe'
@@ -344,7 +345,7 @@ BEGIN
 			 WHEN bettype IN (9, 29) THEN 'Parlay'
 			 WHEN bettype BETWEEN 1201 AND 1299 THEN 'Virtual Sports'
 			 WHEN bettype BETWEEN 2700 AND 2899 THEN 'Virtual Sports 2'
-			 WHEN bettype BETWEEN 1501 AND 1599 THEN 'Keno'
+			 WHEN bettype BETWEEN 1501 AND 1599 THEN 'RNG Keno'
 			 WHEN bettype BETWEEN 1800 AND 1899 THEN 'AG Casino'
 			 WHEN bettype = 1900 THEN 'Macau'
 			 WHEN bettype BETWEEN 1700 AND 1799 THEN 'Gold Deluxe'
