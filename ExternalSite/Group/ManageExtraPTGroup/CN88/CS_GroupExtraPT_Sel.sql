@@ -3,7 +3,8 @@ USE [CustDB]
 GO
 
 ALTER PROCEDURE [dbo].[CS_GroupExtraPT_Sel]
-	@CustID			INT    
+	@CustID			INT,
+	@Username 		VARCHAR(30) = ''  OUTPUT
 AS
 
 /*
@@ -23,6 +24,8 @@ BEGIN
 
 	DECLARE @today DATETIME 
 	SELECT  @today = CONVERT(DATE, GETDATE()) 
+	
+	SELECT @Username = Username FROM dbo.CustInfo WITH (NOLOCK) WHERE CustID = @CustID
 	
 	SELECT DISTINCT
 		'Current' AS Type,

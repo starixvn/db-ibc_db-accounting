@@ -5,7 +5,7 @@ GO
 ALTER PROCEDURE [dbo].[CS_GroupExtraPT_Ins]
 	@CustID			INT,
 	@HeadlineId		INT, 	
-	@EffectiveDate	DATETIME ,
+	@EffectiveDate	DATETIME,
 	@UserID			INT,
 	@IP				VARCHAR(15)='',
 	@IsRollBack		BIT = 0,

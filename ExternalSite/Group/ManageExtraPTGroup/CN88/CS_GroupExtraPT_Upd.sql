@@ -3,7 +3,6 @@ USE [CustDB]
 GO
 CREATE PROCEDURE [dbo].[CS_GroupExtraPT_Upd]
 	@CustID				INT,
-	@HeadlineId			INT,	
 	@ExtraPTSetting		VARCHAR(MAX),	
 	@EffectiveDate 		DATE, 	
 	@UserID				INT,
@@ -38,7 +37,7 @@ BEGIN
 	
 	DECLARE @today DATETIME, @EndDate DATETIME, @FromDate DATETIME
 	SELECT  @today = CONVERT(DATE, GETDATE()), @EndDate = '9999-12-31'
-	DECLARE @GroupId INT, @GroupName VARCHAR(50), @HeadlineUsername	VARCHAR(30)			
+	DECLARE @GroupId INT, @GroupName VARCHAR(50), @HeadlineId INT,  @HeadlineUsername	VARCHAR(30)			
 
 	DECLARE @ExtraPTTmp	TABLE(ProductId INT, ExtraPT MONEY) 	
 		
@@ -114,7 +113,12 @@ BEGIN
 	END	
 	
 	---- Log before update
-	SELECT @HeadlineUsername = username FROM Customer WITH (NOLOCK) WHERE CustID = @HeadlineId AND roleid = 0
+		
+	SELECT @HeadlineId = UplineId
+	FROM dbo.CustSuper WITH (NOLOCK) 
+	WHERE CustID = @CustID	
+	
+	SELECT @HeadlineUsername = username FROM dbo.CustInfo WITH (NOLOCK) WHERE CustID = @HeadlineId AND roleid = 0
 
 	SELECT  TOP 1 @TrackingValue2 =  '<R Headline="'+ @HeadlineUsername
 					+ '" GroupName="' + GroupName 
