@@ -4,7 +4,8 @@ GO
 
 ALTER PROCEDURE [dbo].[CS_GroupExtraPT_Sel]
 	@CustID			INT,
-	@Username 		VARCHAR(30) = ''  OUTPUT
+	@Username 		VARCHAR(30) = ''  OUTPUT,
+	@HasMember		BIT = 0 OUTPUT
 AS
 
 /*
@@ -26,6 +27,16 @@ BEGIN
 	SELECT  @today = CONVERT(DATE, GETDATE()) 
 	
 	SELECT @Username = Username FROM dbo.CustInfo WITH (NOLOCK) WHERE CustID = @CustID
+	
+	IF EXISTS (SELECT 1 FROM dbo.CustInfo WITH (NOLOCK) WHERE srecommend = @CustID and RoleID = 1)
+	BEGIN 
+		SELECT @HasMember = 1
+	END 
+	ELSE 
+	BEGIN 
+		SELECT @HasMember = 0
+	END
+	
 	
 	SELECT DISTINCT
 		'Current' AS Type,
@@ -59,7 +70,7 @@ BEGIN
 		AND FromDate > @Today		
 	ORDER BY Type, GroupId, ProductId, EffectiveDate
 		
-	
+
 	
 END
 GO
