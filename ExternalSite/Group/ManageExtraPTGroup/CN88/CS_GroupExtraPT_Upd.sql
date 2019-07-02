@@ -1,7 +1,7 @@
 /*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet,bodbDownlineNet" isFunction="0" isNested="1"></info>*/
 USE [CustDB]
 GO
-CREATE PROCEDURE [dbo].[CS_GroupExtraPT_Upd]
+ALTER PROCEDURE [dbo].[CS_GroupExtraPT_Upd]
 	@CustID				INT,
 	@ExtraPTSetting		VARCHAR(MAX),	
 	@EffectiveDate 		DATE, 	
@@ -101,7 +101,7 @@ BEGIN
 		IF NOT EXISTS (
 			SELECT TOP 1 1 FROM dbo.Acc_GroupExtraPTSetting WITH(NOLOCK)
 			WHERE SuperId = @CustID 
-				AND GroupId <> @GroupId 
+				AND GroupId <> @GroupId
 				AND FromDate > @today
 		)
 		BEGIN
@@ -130,12 +130,12 @@ BEGIN
 
 	---- delete and update lated rows if any
 	DELETE dbo.Acc_GroupExtraPTSetting WITH(ROWLOCK, UPDLOCK)
-	WHERE SuperId = @CustID AND FromDate >= @EffectiveDate
+	WHERE SuperId = @CustID AND FromDate > @Today
 		AND ToDate >= @today
 
 	UPDATE dbo.Acc_GroupExtraPTSetting WITH(ROWLOCK, UPDLOCK)
 	SET ToDate = DATEADD(DAY, -1, @EffectiveDate)
-	WHERE SuperId = @CustID AND FromDate < @EffectiveDate
+	WHERE SuperId = @CustID AND FromDate <= @EffectiveDate
 		AND ToDate >= @today
 	 
 	----- Insert new setting PT		
