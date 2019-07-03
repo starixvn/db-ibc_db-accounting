@@ -58,6 +58,7 @@ AS
 		- 20190516@Percy: Bet Builder - Change Due to Partner's formula [RedmineID: #113550]
 		- 20190522@Sophia: Rename Keno to RNG Keno [RedmineID: #113490]
 		- 20190701@Percy: Remove WL due to partner [RedmineID: #115802]
+		- 20190701@Percy: Apply Card Club [RedmineID: #107706]
 
 	Param Explanation:
 	    @mode:  0 _ view report
@@ -297,6 +298,7 @@ BEGIN
 			 WHEN bettype BETWEEN 4101 AND 4300 THEN 'PP'
 			 WHEN bettype BETWEEN 1401 AND 1499 THEN 'Poker Games'
 			 WHEN bettype = 38 THEN 'Bet Builder'
+			 WHEN bettype BETWEEN 1901 AND 1999 THEN 'Card Club'
 		   END AS Product,
 		   ISNULL(SUM(winlost), 0) as winlost
 	 FROM #bettranstmp
@@ -327,6 +329,7 @@ BEGIN
 			OR bettype = 1004
 			OR bettype BETWEEN 4101 AND 4300
 			OR bettype BETWEEN 1401 AND 1499
+			OR bettype BETWEEN 1901 AND 1999
 		   )
 	GROUP BY CASE
 			 WHEN bettype BETWEEN 81 AND 120 OR bettype BETWEEN 8101 AND 8120 THEN 'Number Game'
@@ -361,6 +364,7 @@ BEGIN
 			 WHEN bettype BETWEEN 4101 AND 4300 THEN 'PP'
 			 WHEN bettype BETWEEN 1401 AND 1499 THEN 'Poker Games'
 			 WHEN bettype = 38 THEN 'Bet Builder'
+			 WHEN bettype BETWEEN 1901 AND 1999 THEN 'Card Club'
 		   END, winlostdate
 
 	UNION ALL
