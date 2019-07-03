@@ -130,7 +130,7 @@ BEGIN
 
 	---- delete and update lated rows if any
 	DELETE dbo.Acc_GroupExtraPTSetting WITH(ROWLOCK, UPDLOCK)
-	WHERE SuperId = @CustID AND FromDate > @Today
+	WHERE SuperId = @CustID AND (FromDate > @Today OR FromDate >= @EffectiveDate)
 		AND ToDate >= @today
 
 	UPDATE dbo.Acc_GroupExtraPTSetting WITH(ROWLOCK, UPDLOCK)
