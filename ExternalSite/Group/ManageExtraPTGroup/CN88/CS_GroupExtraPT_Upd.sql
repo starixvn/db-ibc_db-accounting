@@ -49,7 +49,7 @@ BEGIN
 		RETURN		 
 	END	
 	
-	IF EXISTS (SELECT 1 FROM dbo.CustInfo WITH (NOLOCK) WHERE srecommend = @CustID and RoleID = 1)
+	IF EXISTS (SELECT 1 FROM dbo.CustInfo WITH (NOLOCK) WHERE srecommend = @CustID and RoleID = 1) AND @EffectiveDate = @today
 	BEGIN 
 		SELECT
 			@ErrCode = 101,
