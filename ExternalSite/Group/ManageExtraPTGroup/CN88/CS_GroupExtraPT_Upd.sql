@@ -44,10 +44,20 @@ BEGIN
 	IF @EffectiveDate < @today
 	BEGIN			 
 		SELECT
-			@ErrCode = 101,
+			@ErrCode = 100,
 			@ErrMsg = N'Invalid effective date.'
 		RETURN		 
 	END	
+	
+	IF EXISTS (SELECT 1 FROM dbo.CustInfo WITH (NOLOCK) WHERE srecommend = @CustID and RoleID = 1)
+	BEGIN 
+		SELECT
+			@ErrCode = 101,
+			@ErrMsg = N'This account has members already, new effective date cannot be today.'
+		RETURN	
+	
+	END
+	
 		
 	-- get Rate
 	DECLARE @DocHandler INT
@@ -61,7 +71,7 @@ BEGIN
 		EXEC sp_xml_removedocument @DocHandler
 	END TRY
 	BEGIN CATCH
-		SELECT ErrCode = 100
+		SELECT ErrCode = 102
 			,ErrMsg = N'Paramter invalid.'
 		RETURN
 		
@@ -83,7 +93,7 @@ BEGIN
 	IF @GroupName IS NULL OR @GroupID IS NULL
 	BEGIN			 
 		SELECT
-			@ErrCode = 102,
+			@ErrCode = 103,
 			@ErrMsg = N'Invalid rates.'
 		RETURN		 
 	END
@@ -106,7 +116,7 @@ BEGIN
 		)
 		BEGIN
 			SELECT
-				@ErrCode = 103,
+				@ErrCode = 104,
 				@ErrMsg = N'There is no change to be updated.'
 			RETURN
 		END
