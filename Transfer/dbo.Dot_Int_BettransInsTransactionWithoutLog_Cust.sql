@@ -1,4 +1,7 @@
-/*<info serverAlias="DBTXN-bodb02" executers="Dot_Member" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBTXN-bodb02" executers="Dot_Member" isFunction="0" isNested="0"></info>*/
+USE [bodb02]
+GO
+
 ALTER PROCEDURE [dbo].[Dot_Int_BettransInsTransactionWithoutLog_Cust]
 	@amount				MONEY,	
 	@custid				INT,
@@ -485,3 +488,4 @@ BEGIN
 	EXEC dbo.WriteLog_UserLog @UserID = @custid, @Doing = @LogData
 
 END
+GO

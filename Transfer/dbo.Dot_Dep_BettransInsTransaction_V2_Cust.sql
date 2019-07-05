@@ -1,5 +1,8 @@
-/*<info serverAlias="DBTXN-bodb02" executers="Dot_Member,Dot_Bonus" viewers="vnteam" isFunction="0" isNested="0"></info>*/
-ALTER PROCEDURE  [dbo].[Dot_Dep_BettransInsTransaction_V2_Cust] 
+/*<info serverAlias="DBTXN-bodb02" executers="Dot_Member,Dot_Bonus" isFunction="0" isNested="0"></info>*/
+USE [bodb02]
+GO
+
+ALTER PROCEDURE [dbo].[Dot_Dep_BettransInsTransaction_V2_Cust] 
 	@amount money,	
 	@custid int,
 	@bal_custid int,	
@@ -318,7 +321,7 @@ END
 	BEGIN 
 		SELECT @Cust_balance_ABS = ABS(@Cust_balance)
 		--EXEC Dot_BalanceUpdDebit @custid = @CustID, @Balance = @Cust_balance_ABS
-		EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_balance_ABS, @type = 2, @IsForced = @IsForced, @errCode = @ErrCode OUTPUT
+				EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_balance_ABS, @type = 2, @IsForced = @IsForced, @errCode = @ErrCode OUTPUT
 		IF @ErrCode <> 0
 		BEGIN
 			Select @ErrMsg = 'Insert transaction failed.', @ErrCode = 105	
@@ -347,7 +350,7 @@ END
 		BEGIN 
 			SELECT @Cust_balance_ABS = ABS(@Cust_balance)
 			--EXEC Dot_BalanceUpdCredit @custid = @CustID, @Balance = @Cust_balance_ABS
-			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_balance_ABS, @type = 2
+						EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_balance_ABS, @type = 2
 		END  
 		return
 	END
@@ -357,7 +360,7 @@ END
 	IF @Cust_balance > 0 
 	BEGIN 
 		--EXEC Dot_BalanceUpdCredit @custid = @CustID, @Balance = @Cust_balance
-		EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_balance, @type = 2
+				EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_balance, @type = 2
 	END 
 
 ---------------------------------------------------------------
@@ -368,7 +371,7 @@ END
 	--BEGIN 
 	--	SELECT @bal_balance_ABS = ABS(@bal_balance)
 	--	--EXEC Dot_BalanceUpdDebit @custid = @bal_custID, @Balance = @bal_balance_ABS
-	--	EXEC Dot_BalanceDebitUpd @CustID = @bal_custID, @balance = @bal_balance_ABS, @type = 2, @IsForced = 1, @errCode = @ErrCode OUTPUT
+	--		EXEC Dot_BalanceDebitUpd @CustID = @bal_custID, @balance = @bal_balance_ABS, @type = 2, @IsForced = 1, @errCode = @ErrCode OUTPUT
 	--	IF @ErrCode <> 0
 	--	BEGIN
 	--		Select @ErrMsg = 'Insert transaction failed.', @ErrCode = 106
@@ -380,13 +383,13 @@ END
 	--		BEGIN 
 	--			SELECT @Cust_balance_ABS = ABS(@Cust_balance)
 	--			--EXEC Dot_BalanceUpdCredit @custid = @CustID, @Balance = @Cust_balance_ABS
-	--			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_balance_ABS, @type = 2
+	--						EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_balance_ABS, @type = 2
 	--		END 
 	--		ELSE
 	--		IF @Cust_balance > 0 
 	--		BEGIN 
 	--			--EXEC Dot_BalanceUpdDebit @custid = @CustID, @Balance = @Cust_balance
-	--			EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_balance, @type = 2, @isForced = 1
+	--						EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_balance, @type = 2, @isForced = 1
 	--		END 				
 	--		return
 	--	END
@@ -411,20 +414,20 @@ END
 		BEGIN 
 			SELECT @Cust_balance_ABS = ABS(@Cust_balance)
 			--EXEC Dot_BalanceUpdCredit @custid = @CustID, @Balance = @Cust_balance_ABS
-			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_balance_ABS, @type = 2
+						EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_balance_ABS, @type = 2
 		END 
 		ELSE
 		IF @Cust_balance > 0 
 		BEGIN 
 			--EXEC Dot_BalanceUpdDebit @custid = @CustID, @Balance = @Cust_balance
-			EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_balance, @type = 2, @isForced = 1
+						EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_balance, @type = 2, @isForced = 1
 		END 	
 		----rollback balance @bal_custID
 		--IF @bal_balance < 0 
 		--BEGIN 
 		--	SELECT @bal_balance_ABS = ABS(@bal_balance)
 		--	--EXEC Dot_BalanceUpdCredit @custid = @bal_custID, @Balance = @bal_balance_ABS
-		--	EXEC Dot_BalanceCreditUpd @CustID = @bal_custID, @balance = @bal_balance_ABS, @type = 2
+		--		EXEC Dot_BalanceCreditUpd @CustID = @bal_custID, @balance = @bal_balance_ABS, @type = 2
 		--END 	
 		return
 	END
@@ -436,7 +439,7 @@ END
 	--IF @bal_balance > 0 
 	--BEGIN 
 	--	--EXEC Dot_BalanceUpdCredit @custid = @bal_custID, @Balance = @bal_balance
-	--	EXEC Dot_BalanceCreditUpd @CustID = @bal_custID, @balance = @bal_balance, @type = 2
+	--		EXEC Dot_BalanceCreditUpd @CustID = @bal_custID, @balance = @bal_balance, @type = 2
 	--END 
 
 	---------------------------------------------------------------------------------------------------
@@ -452,5 +455,4 @@ END TRY
 BEGIN CATCH
 	-- if write log error: not return error code
 END CATCH
-GO 
-
+GO
