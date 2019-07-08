@@ -163,6 +163,7 @@ BEGIN
 	    bettype         int,
 	    liveindicator   bit,
 	    winlost         money,
+		winlostDueTo	money,
 		Sporttype		smallint
 	)
 
@@ -174,9 +175,24 @@ BEGIN
 			END AS custid,
 			b.bettype,
 			b.liveindicator,
-			SUM((ISNULL(winlost, 0) - ISNULL(actual_stake, 0)
-				+ ISNULL(awinlost, 0) + ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0)
-				) * (CASE WHEN ISNULL(d.custid, -1) <> -1 AND b.bettype IN (21001, 21002) THEN 1 ELSE actualrate END)) AS winlost,
+			SUM(
+				CASE WHEN b.bettype IN (2199, 2399, 2999) THEN 0
+					ELSE
+					(ISNULL(winlost,0)-ISNULL(actual_stake,0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)
+						+ CASE
+							-- Jackpot
+							WHEN b.bettype IN (2198, 2398, 2998) THEN ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000),0)
+							ELSE 0 END
+					) * (CASE WHEN ISNULL(d.custid, -1) <> -1 AND b.bettype IN (21001, 21002) THEN 1 ELSE actualrate END) END
+			) AS winlost,
+			SUM(
+				(CASE
+						-- Jackpot
+						WHEN b.bettype IN (2198, 2398, 2998) THEN -ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0)
+						WHEN b.bettype IN (2199, 2399, 2999) THEN ISNULL(b.winlost, 0) - ISNULL(b.actual_stake, 0)
+					ELSE 0 END
+				) * b.actualrate
+			) AS winlostDueTo,
 			CASE WHEN ISNULL(m.matchid, 0) <> 0	THEN m.Sporttype ELSE 0 END AS Sporttype
 	FROM dbo.bettrans b WITH(READPAST, INDEX = IX_Report)
 	LEFT JOIN @dummyBalance d ON b.custid = d.custid AND d.WinlostDate= b.WinlostDate
@@ -189,9 +205,27 @@ BEGIN
     GROUP BY b.winlostdate, CASE WHEN b.bettype IN (21001, 21002) AND ISNULL(d.custid, -1) <> - 1 then d.custid ELSE -1 END,
 			 b.bettype, b.liveindicator, 
 			 CASE WHEN ISNULL(m.matchid, 0) <> 0 THEN m.Sporttype ELSE 0 END
-	HAVING SUM((ISNULL(winlost, 0) - ISNULL(actual_stake, 0)
-				+ ISNULL(awinlost, 0) + ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0)
-				) * (CASE WHEN ISNULL(d.custid, -1) <> -1 AND b.bettype IN (21001, 21002) THEN 1 ELSE actualrate END)) <> 0
+	HAVING
+			SUM(
+				CASE WHEN b.bettype IN (2199, 2399, 2999) THEN 0
+					ELSE
+					(ISNULL(winlost,0)-ISNULL(actual_stake,0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)
+						+ CASE
+							-- Jackpot
+							WHEN b.bettype IN (2198, 2398, 2998) THEN ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000),0)
+							ELSE 0 END
+					) * (CASE WHEN ISNULL(d.custid, -1) <> -1 AND b.bettype IN (21001, 21002) THEN 1 ELSE actualrate END) END
+				) <> 0
+		OR
+			SUM(
+				(CASE
+						-- Jackpot
+						WHEN b.bettype IN (2198, 2398, 2998) THEN -ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0)
+						WHEN b.bettype IN (2199, 2399, 2999) THEN ISNULL(b.winlost, 0) - ISNULL(b.actual_stake, 0)
+					ELSE 0 END
+				) * b.actualrate
+			) <> 0
+			 
 
     CREATE NONCLUSTERED INDEX #IX_bettranstmp ON #bettranstmp(custid, winlostdate, bettype)
 
@@ -331,9 +365,18 @@ BEGIN
 
 	UNION ALL
 
+	SELECT winlostdate,
+           'Casino (Amount due to Jackpot Pool)',
+           ISNULL(SUM(winlostDueTo), 0) winlost
+    FROM #bettranstmp
+    WHERE bettype IN (2198, 2398, 2998, 2199, 2399, 2999)
+	GROUP BY winlostdate
+
+	UNION ALL
+
     SELECT winlostdate,
            'Total Balance',
-           SUM(ISNULL(winlost, 0)) winlost
+           SUM(ISNULL(winlost, 0) + ISNULL(winlostDueTo, 0)) winlost
     FROM #bettranstmp
     WHERE CustId = -1
 		-----custid NOT IN (SELECT custid FROM @dummyBalance WHERE custid <> 0)	  
@@ -359,9 +402,15 @@ BEGIN
 			   s.ProductId,
 			   '' AS SubProduct,
 			   SUM((winlost - actual_stake) * actualrate) AS winlost,
-			   SUM((CASE WHEN b.tpositiontaking = 1 THEN 0
-						ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
-					) * b.actualrate) AS newwinlost
+			   SUM((
+				CASE
+					-- Jackpot
+					WHEN b.bettype IN (2198, 2398, 2998) THEN
+						CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) END
+					WHEN b.bettype IN (2199, 2399, 2999) THEN 0
+					ELSE
+						CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
+					END) * b.actualrate) AS newwinlost
 		FROM dbo.bettrans b WITH(READPAST, INDEX = IX_Report)
 		INNER JOIN @SportBettype s ON s.BetType = b.bettype
 		WHERE  b.winlostdate between @fromdate and @todate

@@ -101,9 +101,15 @@ BEGIN
 	;WITH wl AS (
 			SELECT b.srecommend , s.ProductID, 0 AS Sporttype, '' AS SubProduct,
 				SUM((winlost - actual_stake) * actualrate) AS Winlost,
-				SUM((CASE WHEN b.tpositiontaking = 1 THEN 0
-						ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
-					) * b.actualrate) AS NewWinlost,
+				SUM((
+					CASE
+						-- Jackpot
+						WHEN b.bettype IN (2198, 2398, 2998) THEN
+							CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) END
+						WHEN b.bettype IN (2199, 2399, 2999) THEN 0
+						ELSE
+							CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
+						END) * b.actualrate) AS NewWinlost,
 				b.winlostdate
 			FROM bettrans b WITH(READPAST, INDEX = IX_Report)
 			INNER JOIN  @SportBettype s
@@ -125,7 +131,6 @@ BEGIN
 			AND w.Sporttype = s.Sporttype 
 			AND w.winlostdate BETWEEN s.FromDate AND s.ToDate	
 	GROUP BY w.ProductID, w.Sporttype, w.SubProduct, w.Winlostdate, s.GroupId
- 
 
 	-- SportBook  	
 	;WITH wl AS (
