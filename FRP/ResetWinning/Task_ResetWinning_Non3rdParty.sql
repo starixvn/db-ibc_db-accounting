@@ -176,7 +176,7 @@ BEGIN
 			b.liveindicator,
 			SUM((ISNULL(winlost, 0) - ISNULL(actual_stake, 0)
 				+ ISNULL(awinlost, 0) + ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0)
-				) * b.actualrate) AS winlost,
+				) * (CASE WHEN ISNULL(d.custid, -1) <> -1 AND b.bettype IN (21001, 21002) THEN 1 ELSE actualrate END)) AS winlost,
 			CASE WHEN ISNULL(m.matchid, 0) <> 0	THEN m.Sporttype ELSE 0 END AS Sporttype
 	FROM dbo.bettrans b WITH(READPAST, INDEX = IX_Report)
 	LEFT JOIN @dummyBalance d ON b.custid = d.custid AND d.WinlostDate= b.WinlostDate
@@ -191,7 +191,7 @@ BEGIN
 			 CASE WHEN ISNULL(m.matchid, 0) <> 0 THEN m.Sporttype ELSE 0 END
 	HAVING SUM((ISNULL(winlost, 0) - ISNULL(actual_stake, 0)
 				+ ISNULL(awinlost, 0) + ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0)
-				) * b.actualrate) <> 0
+				) * (CASE WHEN ISNULL(d.custid, -1) <> -1 AND b.bettype IN (21001, 21002) THEN 1 ELSE actualrate END)) <> 0
 
     CREATE NONCLUSTERED INDEX #IX_bettranstmp ON #bettranstmp(custid, winlostdate, bettype)
 
