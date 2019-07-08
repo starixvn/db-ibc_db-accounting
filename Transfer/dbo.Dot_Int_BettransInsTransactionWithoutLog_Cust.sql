@@ -59,6 +59,7 @@ Revision:
 	- 20170815@Bobby: 80775 - Update bonus info when depositing cash to join into bonus program
 	- 20180514@Patrick: Remove check deposit case during MBU process
 	- 20180913@Dominic: Add a new bettype (23203) to transfer money for dormant members in deposit archive process [Redmine:#99882]
+	- 20190705@Percy: Add Rebate Bonus [RedmineID: #116358]
 	- 20190710@Jamie: Check Bonus wallet if a member is joining a Bonus campaign [Redmine:#116273]
 
 Param's Explanation:
@@ -156,8 +157,9 @@ BEGIN
 			@DBON			= 22004,
 			@DTRA			= 22005,
 			@DTRAARC		= 23203,
-
-			@WalletType = CASE WHEN @BonusID > 0 THEN 2 ELSE NULL END,
+			@WalletType		= CASE	WHEN @bettype IN (22202, 22203) THEN 1 -- Rebate bonus
+									WHEN @BonusID > 0 THEN 2
+									ELSE NULL END,
 			@BonusWalletFlag = 0 
 
 	/*

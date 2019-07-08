@@ -55,6 +55,7 @@ Revisions:
 	- 20160921@Scott(DBTrans): Add @BetCheck of parameter for record Licensee DB transation ID.
 	- 20171102:Patrick: Can't make transfer/withdrawal during MB/BU time [Redmine:#82768]
 	- 20170815@Bobby: 80775 - Update bonus info when depositing cash to join into bonus program
+	- 20190705@Percy: Add Rebate Bonus [RedmineID: #116358]
 	- 20190710@Jamie: Check Bonus wallet if a member is joining a Bonus campaign [Redmine:#116273]
 
 Param's Explanation:
@@ -147,8 +148,10 @@ Select @ErrCode = 0,
 		@DWIT = 22002,
 		@DBON = 22004,
 		@DTRA = 22005,
-		@WalletType = CASE WHEN @BonusID > 0 THEN 2 ELSE NULL END,
-		@BonusWalletFlag = 0 
+		@WalletType = CASE	WHEN @bettype IN (22202, 22203) THEN 1 -- Rebate bonus
+							WHEN @BonusID > 0 THEN 2
+							ELSE NULL END,
+		@BonusWalletFlag = 0
 
 select @bettype = 
 	case @bettype when 103 then 21003 
