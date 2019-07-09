@@ -146,7 +146,10 @@ BEGIN
 		@balance_bettransRNG	MONEY,
 		@balance_bettransLC		MONEY,
 		@WalletType				TINYINT,
-		@BonusWalletFlag		BIT 
+		@BonusWalletFlag		BIT,
+		-- Rebate bonus
+		@DBONRTRA				SMALLINT,
+		@DBONRADJ				SMALLINT
 
 	SELECT	@ErrCode		= 0,
 			@ErrMsg			= '',
