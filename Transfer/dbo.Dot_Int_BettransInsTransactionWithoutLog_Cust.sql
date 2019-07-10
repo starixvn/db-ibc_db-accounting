@@ -1,7 +1,4 @@
 /*<info serverAlias="DBTXN-bodb02" executers="Dot_Member" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
 ALTER PROCEDURE [dbo].[Dot_Int_BettransInsTransactionWithoutLog_Cust]
 	@amount				MONEY,	
 	@custid				INT,
@@ -62,7 +59,7 @@ Revision:
 	- 20170815@Bobby: 80775 - Update bonus info when depositing cash to join into bonus program
 	- 20180514@Patrick: Remove check deposit case during MBU process
 	- 20180913@Dominic: Add a new bettype (23203) to transfer money for dormant members in deposit archive process [Redmine:#99882]
-
+	- 20190710@Jamie: Check Bonus wallet if a member is joining a Bonus campaign [Redmine:#116273]
 
 Param's Explanation:
 @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction
@@ -145,7 +142,8 @@ BEGIN
 		@IsForced				BIT,
 		@balance_bettransRNG	MONEY,
 		@balance_bettransLC		MONEY,
-		@WalletType				TINYINT
+		@WalletType				TINYINT,
+		@BonusWalletFlag		BIT 
 
 	SELECT	@ErrCode		= 0,
 			@ErrMsg			= '',
@@ -158,7 +156,9 @@ BEGIN
 			@DBON			= 22004,
 			@DTRA			= 22005,
 			@DTRAARC		= 23203,
-			@WalletType = CASE WHEN @BonusID > 0 THEN 2 ELSE NULL END
+
+			@WalletType = CASE WHEN @BonusID > 0 THEN 2 ELSE NULL END,
+			@BonusWalletFlag = 0 
 
 	/*
 	22006  Playtech casino transfer
@@ -209,20 +209,35 @@ BEGIN
 		RETURN		
 	END
 
-	SELECT @username = username, @currency = ci.currency, @currencyName = e.currency, @actualrate = e.actualrate,
-		@mrecommend = mrecommend, @recommend = recommend, @srecommend = srecommend, @roleid = roleid
-	FROM CustDB.dbo.custinfo AS ci WITH(NOLOCK) 
-		INNER JOIN CustDB.dbo.exchange AS e WITH(NOLOCK) ON ci.currency = e.exchangeid
+	SELECT @username = username
+		,@currency = ci.currency
+		,@currencyName = e.currency
+		,@actualrate = e.actualrate
+		,@mrecommend = mrecommend
+		,@recommend = recommend
+		,@srecommend = srecommend
+		,@roleid = roleid
+		,@BonusWalletFlag = ISNULL(BonusWalletFlag,0) 
+	FROM CustDB.dbo.custinfo AS ci WITH (NOLOCK)
+	INNER JOIN CustDB.dbo.exchange AS e WITH (NOLOCK) ON ci.currency = e.exchangeid
 	WHERE ci.custid = @custid
-	
+
 	IF @@rowcount = 0
 	BEGIN
-			SELECT @username = username, @currency = ci.currency, @currencyName = e.currency, @actualrate = e.actualrate,
-					@mrecommend = mrecommend, @recommend = recommend, @srecommend = srecommend, @roleid = roleid
-			FROM DBCUST.CustDB.dbo.custinfo AS ci WITH(NOLOCK) 
-				INNER JOIN DBCUST.CustDB.dbo.exchange AS e WITH(NOLOCK) ON ci.currency = e.exchangeid
-			WHERE ci.custid = @custid
+		SELECT @username = username
+			,@currency = ci.currency
+			,@currencyName = e.currency
+			,@actualrate = e.actualrate
+			,@mrecommend = mrecommend
+			,@recommend = recommend
+			,@srecommend = srecommend
+			,@roleid = roleid
+			,@BonusWalletFlag = ISNULL(BonusWalletFlag,0) 
+		FROM DBCUST.CustDB.dbo.custinfo AS ci WITH (NOLOCK)
+		INNER JOIN DBCUST.CustDB.dbo.exchange AS e WITH (NOLOCK) ON ci.currency = e.exchangeid
+		WHERE ci.custid = @custid
 	END
+
 
 	SELECT @transdesc = @username + ' - ' +
 						CASE @bettype 
@@ -313,9 +328,12 @@ BEGIN
 
 	SELECT @beforebalance = @balance + @balance_bettransRNG + @balance_bettransLC  - @translogCredit
 	SELECT @postbalance = @balance + @balance_bettransRNG + @balance_bettransLC + @winlost - @actual_stake - @translogCredit
+
 	IF (@bettype=@DWIT AND @IsCharge = 0) OR (@bettype=@DTRATP AND @amount < 0) --only check when not Charge transaction, and is Withdrawal
 	BEGIN
-				
+		----------------------------------------------------------
+		--- Check Member's Balance for WITHDRAWAL or TRANSFER OUT 
+		----------------------------------------------------------	
 		IF @postbalance < 0
 		BEGIN
 			SELECT @ErrMsg = 
@@ -325,6 +343,29 @@ BEGIN
 				END, @ErrCode = 103
 			RETURN
 		END
+		----------------------------------
+		-- Check Bonus Wallet 
+		----------------------------------
+		DECLARE @FinalBalance	MONEY
+		DECLARE @BonusAmount	MONEY
+		SELECT	@FinalBalance	= 0,
+				@BonusAmount	= 0  
+		IF @BonusWalletFlag = 1
+		BEGIN
+			EXEC dbo.Dot_BalanceMemberSel @CustID = @CustID, @Balance = @FinalBalance OUT, @BonusWalletFlag = @BonusWalletFlag, @Amount = @BonusAmount OUT 
+
+			IF (@postbalance-@BonusAmount) <0 
+			BEGIN
+				SELECT @ErrMsg = 
+					CASE @bettype 
+						WHEN @DWIT THEN 'Sorry, you do not have enough money to withdraw.'
+						ELSE 'Sorry, you do not have enough money to trasfer out.' 
+					END, @ErrCode = 201
+				RETURN
+			END
+		END
+		------------------------------
+
 	END
 	----------------------------------
 
