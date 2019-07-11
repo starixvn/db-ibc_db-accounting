@@ -27,7 +27,7 @@ BEGIN
 	END
 	ELSE
 	BEGIN
-		SELECT countrySHORT, countryLONG
+		SELECT TOP 0 countrySHORT, countryLONG
 		FROM ipTable_mini WITH (NOLOCK)
 		WHERE @IPNumber BETWEEN ipFrom AND ipTo
 	END
