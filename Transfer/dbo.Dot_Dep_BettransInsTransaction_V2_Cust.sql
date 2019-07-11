@@ -211,8 +211,8 @@ BEGIN
 											when @DBON then 'Bonus'
 											when @DADJ then 'Adjustment'
 											when @DTRA then 'Transfer'
-											when @DBONRTRA then 'Rebate Bonus Transfer'
-											when @DBONRADJ then 'Rebate Bonus Adjustment'
+											when @DBONRTRA then 'Bonus'
+											when @DBONRADJ then 'Bonus'
 											else '' end				
 						+ case when @transdesc <> '' then ' - ' + @transdesc end
 
