@@ -298,6 +298,7 @@ END
 			IF (@balance + @balance_bettransRNG + @balance_bettransLC + @winlost-@actual_stake-@translogCredit-@BonusAmount) <0 
 			BEGIN
 				SELECT	@ErrMsg = 'Sorry, you do not have enough money to withdraw.', @ErrCode = 201	
+				RETURN
 			END
 		END
 		----------------------------------
