@@ -50,6 +50,7 @@ AS
 		- 20190412@Percy: Apply BetBuilder & Pragmatic [RedmineID: #106981]
 		- 20190516@Percy: Bet Builder - Change Due to Partner's formula [RedmineID: #113550]
 		- 20190522@Sophia: Rename Keno to RNG Keno [RedmineID: #113490]
+		- 20190701@Percy: Remove WL due to partner [RedmineID: #115802]
 		
 	Explanation's Param:
 
@@ -168,18 +169,12 @@ BEGIN
 	SELECT	b.custid, b.bettype,
 			b.liveindicator,
 			SUM(
-				CASE WHEN b.bettype IN (2199, 2399, 2999, 4300) THEN 0
+				CASE WHEN b.bettype IN (2199, 2399, 2999) THEN 0
 					ELSE
 					(ISNULL(winlost,0)-ISNULL(actual_stake,0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)
 					+ CASE
 						-- Jackpot
 						WHEN b.bettype IN (2198, 2398, 2998) THEN ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000),0)
-						-- Poker Games
-						WHEN b.bettype BETWEEN 1401 AND 1499 THEN - (-ISNULL(b.oddsspread,0) * ISNULL(b.modds,0) + ISNULL(transid2,0) / CONVERT(DECIMAL(19,8),10000) *  ISNULL(hdp2,0))
-						-- Bet Builder
-						WHEN b.bettype = 38 THEN - ((ISNULL(b.winlost,0) - ISNULL(b.actual_stake,0) + ISNULL(b.scomm,0)) * ISNULL(b.oddsspread,0))
-						-- Pragmatic
-						WHEN b.bettype BETWEEN 4101 AND 4299 AND b.winlostdate >= @PPEffectedDate THEN - ((ISNULL(b.winlost,0) - ISNULL(b.actual_stake,0)) * ISNULL(b.hdp2,0))
 						ELSE 0 END
 					) * b.actualrate END
 			) AS winlost,
@@ -188,13 +183,6 @@ BEGIN
 						-- Jackpot
 						WHEN b.bettype IN (2198, 2398, 2998) THEN -ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0)
 						WHEN b.bettype IN (2199, 2399, 2999) THEN ISNULL(b.winlost, 0) - ISNULL(b.actual_stake, 0)
-						-- Poker Games
-						WHEN b.bettype BETWEEN 1401 AND 1499 THEN (-ISNULL(b.oddsspread,0) * ISNULL(b.modds,0) + ISNULL(transid2,0) / CONVERT(DECIMAL(19,8),10000) *  ISNULL(hdp2,0))
-						-- Bet Builder
-						WHEN b.bettype = 38 THEN (ISNULL(b.winlost,0) - ISNULL(b.actual_stake,0) + ISNULL(b.scomm,0)) * ISNULL(b.oddsspread,0)
-						-- Pragmatic
-						WHEN b.bettype BETWEEN 4101 AND 4299 AND b.winlostdate >= @PPEffectedDate THEN (ISNULL(b.winlost,0) - ISNULL(b.actual_stake,0)) * ISNULL(b.hdp2,0)
-						WHEN b.bettype = 4300 AND b.winlostdate >= @PPEffectedDate THEN ISNULL(winlost,0)-ISNULL(actual_stake,0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)
 					ELSE 0 END
 				) * b.actualrate
 			) AS winlostDueTo,
@@ -210,18 +198,12 @@ BEGIN
 			 CASE WHEN ISNULL(m.Sporttype, 0) <> 0 THEN m.Sporttype ELSE 0 END
 	HAVING
 			SUM(
-				CASE WHEN b.bettype IN (2199, 2399, 2999, 4300) THEN 0
+				CASE WHEN b.bettype IN (2199, 2399, 2999) THEN 0
 					ELSE
 					(ISNULL(winlost,0)-ISNULL(actual_stake,0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)
 					+ CASE
 						-- Jackpot
 						WHEN b.bettype IN (2198, 2398, 2998) THEN ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000),0)
-						-- Poker Games
-						WHEN b.bettype BETWEEN 1401 AND 1499 THEN - (-ISNULL(b.oddsspread,0) * ISNULL(b.modds,0) + ISNULL(transid2,0) / CONVERT(DECIMAL(19,8),10000) *  ISNULL(hdp2,0))
-						-- Bet Builder
-						WHEN b.bettype = 38 THEN - ((ISNULL(b.winlost,0) - ISNULL(b.actual_stake,0) + ISNULL(b.scomm,0)) * ISNULL(b.oddsspread,0))
-						-- Pragmatic
-						WHEN b.bettype BETWEEN 4101 AND 4299 AND b.winlostdate >= @PPEffectedDate THEN - ((ISNULL(b.winlost,0) - ISNULL(b.actual_stake,0)) * ISNULL(b.hdp2,0))
 						ELSE 0 END
 					) * b.actualrate END
 			) <> 0
@@ -231,13 +213,6 @@ BEGIN
 						-- Jackpot
 						WHEN b.bettype IN (2198, 2398, 2998) THEN -ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0)
 						WHEN b.bettype IN (2199, 2399, 2999) THEN ISNULL(b.winlost, 0) - ISNULL(b.actual_stake, 0)
-						-- Poker Games
-						WHEN b.bettype BETWEEN 1401 AND 1499 THEN (-ISNULL(b.oddsspread,0) * ISNULL(b.modds,0) + ISNULL(transid2,0) / CONVERT(DECIMAL(19,8),10000) *  ISNULL(hdp2,0))
-						-- Bet Builder
-						WHEN b.bettype = 38 THEN (ISNULL(b.winlost,0) - ISNULL(b.actual_stake,0) + ISNULL(b.scomm,0)) * ISNULL(b.oddsspread,0)
-						-- Pragmatic
-						WHEN b.bettype BETWEEN 4101 AND 4299 AND b.winlostdate >= @PPEffectedDate THEN (ISNULL(b.winlost,0) - ISNULL(b.actual_stake,0)) * ISNULL(b.hdp2,0)
-						WHEN b.bettype = 4300 AND b.winlostdate >= @PPEffectedDate THEN ISNULL(winlost,0)-ISNULL(actual_stake,0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)
 					ELSE 0 END
 				) * b.actualrate
 			) <> 0
@@ -377,30 +352,6 @@ BEGIN
 		ISNULL(SUM(winlostDueTo), 0) winlost
 	FROM #bettranstmp
 	WHERE bettype IN (2198, 2398, 2998, 2199, 2399, 2999)
-
-	UNION ALL
-
-	SELECT
-		'Poker Games (Due To Partners)' AS Product,
-		ISNULL(SUM(winlostDueTo), 0) winlost
-	FROM #bettranstmp
-	WHERE bettype BETWEEN 1401 AND 1499
-
-	UNION ALL
-
-	SELECT
-		'Bet Builder (Due To Partners)' AS Product,
-		ISNULL(SUM(winlostDueTo), 0) winlost
-	FROM #bettranstmp
-	WHERE bettype = 38
-
-	UNION ALL
-
-	SELECT
-		'PP (Due To Partners)' AS Product,
-		ISNULL(SUM(winlostDueTo), 0) winlost
-	FROM #bettranstmp
-	WHERE bettype BETWEEN 4101 AND 4300
 
 	---------------------------------------------------------------------------------------------------------
 	--------------------------------------------Extra PT ---------------------------------------------------

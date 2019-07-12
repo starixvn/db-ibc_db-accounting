@@ -27,6 +27,7 @@ AS
 		- 20180821@Percy: Apply Poker Games [RedmineID: #100168]
 		- 20180830@Sophia: Apply Poker Games Phase 2 - Insurance [RedmineID: #100168]
 		- 20190412@Percy: Apply BetBuilder - Add Sub Product 'Bet Builder' [RedmineID: #106981]
+		- 20190701@Percy: Remove WL due to partner [RedmineID: #115802]
 
 	Param's explain:
 		@mode:  0 _ view report
@@ -106,15 +107,9 @@ BEGIN
 						WHEN b.bettype IN (2198, 2398, 2998) THEN
 							CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) END
 						WHEN b.bettype IN (2199, 2399, 2999) THEN 0
-						-- Poker Games
-						WHEN b.bettype BETWEEN 1401 AND 1499 THEN ISNULL(transid2,0) / CONVERT(DECIMAL(19,8),10000)
 						ELSE
 							CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
 						END) * b.actualrate) AS NewWinlost,
-				SUM((					
-					-- Poker Games
-					CASE WHEN b.bettype BETWEEN 1401 AND 1499 THEN  -ISNULL(b.oddsspread, 0) 
-					ELSE 0 END) * b.actualrate) AS newcomm,
 				b.winlostdate
 			FROM bettrans b WITH(READPAST, INDEX = IX_Report)
 			INNER JOIN  @SportBettype s
@@ -127,30 +122,15 @@ BEGIN
 			GROUP BY b.winlostdate, b.srecommend, s.ProductID
 			)
 	INSERT INTO #winning (ProductID, Sporttype, SubProduct, Winlost, NewWinlost, Winlostdate, GroupId)
-	SELECT w.ProductID, w.Sporttype, w.SubProduct, SUM (ExtraPTwinlost) as ExtraPTwinlost, SUM (NewExtraPTwinlost) AS NewExtraPTwinlost, w.Winlostdate, w.GroupId
-	FROM ( 
-		SELECT w.ProductID, w.Sporttype, w.SubProduct, SUM(w.Winlost * s.ExtraPT) as ExtraPTwinlost, SUM(w.NewWinlost * s.ExtraPT) as NewExtraPTwinlost , w.Winlostdate, s.GroupId
-		FROM wl w
-		INNER JOIN dbo.Acc_GroupExtraPTSetting s WITH (NOLOCK)
-				ON w.srecommend = s.SuperId
-				AND w.ProductId = s.ProductId
-				AND w.SubProduct = s.SubProduct
-				AND w.Sporttype = s.Sporttype 
-				AND w.winlostdate BETWEEN s.FromDate AND s.ToDate	
-		GROUP BY w.ProductID, w.Sporttype, w.SubProduct, w.Winlostdate, s.GroupId
-		UNION ALL 
-		SELECT	 w.ProductID, w.Sporttype, w.SubProduct,0,  SUM(w.newcomm * s.ExtraCommRate),  w.Winlostdate, s.GroupId
-		FROM	wl w
-		INNER JOIN dbo.Acc_GroupExtraCommRateSetting s WITH(NOLOCK)
-				ON w.srecommend = s.SuperId
-				AND w.ProductId = s.ProductId
-				AND w.SubProduct = s.SubProduct
-				AND w.Sporttype = s.Sporttype 
-				AND w.winlostdate BETWEEN s.FromDate AND s.ToDate	
-		GROUP BY w.winlostdate, w.Sporttype, w.ProductId, w.SubProduct,  w.Winlostdate, s.GroupId
-		) w 
-		GROUP BY w.ProductID, w.Sporttype, w.SubProduct,w.GroupId, w.Winlostdate
- 
+	SELECT w.ProductID, w.Sporttype, w.SubProduct, SUM(w.Winlost * s.ExtraPT) as ExtraPTwinlost, SUM(w.NewWinlost * s.ExtraPT) as NewExtraPTwinlost , w.Winlostdate, s.GroupId
+	FROM wl w
+	INNER JOIN dbo.Acc_GroupExtraPTSetting s WITH (NOLOCK)
+			ON w.srecommend = s.SuperId
+			AND w.ProductId = s.ProductId
+			AND w.SubProduct = s.SubProduct
+			AND w.Sporttype = s.Sporttype 
+			AND w.winlostdate BETWEEN s.FromDate AND s.ToDate	
+	GROUP BY w.ProductID, w.Sporttype, w.SubProduct, w.Winlostdate, s.GroupId
 
 	-- SportBook  	
 	;WITH wl AS (
