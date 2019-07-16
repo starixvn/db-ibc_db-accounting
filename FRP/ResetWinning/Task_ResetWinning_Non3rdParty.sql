@@ -58,7 +58,7 @@ AS
 		- 20190516@Percy: Bet Builder - Change Due to Partner's formula [RedmineID: #113550]
 		- 20190522@Sophia: Rename Keno to RNG Keno [RedmineID: #113490]
 		- 20190701@Percy: Remove WL due to partner [RedmineID: #115802]
-		- 20190701@Percy: Apply Card Club [RedmineID: #107706]
+		- 20190701@Percy: Apply Card Club [RedmineID: #117005]
 
 	Param Explanation:
 	    @mode:  0 _ view report
