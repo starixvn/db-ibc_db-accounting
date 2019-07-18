@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBTXN-BODB02" executers="bodbAdminNet,bodbExtAccNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet,bodbExtAccNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_BettransDelTransaction]
 	@refno bigint = 0,
 	@custid int, --CustId of selected account
