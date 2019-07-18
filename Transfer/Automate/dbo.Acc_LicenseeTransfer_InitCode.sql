@@ -3,6 +3,14 @@ ALTER PROCEDURE [dbo].[Acc_LicenseeTransfer_InitCode]
 	@ErrCode			INT = 0 OUTPUT,
 	@ErrMsg				NVARCHAR(200) = '' OUTPUT
 AS
+/*
+	Create: 20190712@Bobby
+	Task: 112454 - NAP - Automate the Finance Transfer process for Licensee 
+	DB: DBTXN/bodb02
+
+	Revisions:
+		- 20190712@Bobby: Initialize [redmine: #112454]
+*/
 BEGIN
 	SET NOCOUNT ON;
 	
@@ -75,3 +83,4 @@ BEGIN
 		RETURN
 	END CATCH
 END
+GO
