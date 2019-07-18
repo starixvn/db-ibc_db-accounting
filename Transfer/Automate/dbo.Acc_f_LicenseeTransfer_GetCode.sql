@@ -24,7 +24,7 @@ from (
 		('PHL-LSEE-F88 EUR','Asiabet88','EUR', 1),
 		('PHL-LSEE-DAFA EUR','Alog','EUR', 1),
 		('PHL-LSEE-12BET EUR','12Bet','EUR', 1),
-		('PHL-LSEE-BBIN EUR','HAIFA','EUR', 1),
+		('PHL-LSEE-BBIN EUR','HAIFA','EUR', 0),
 		('PHL-LSEE-BDOG EUR','Bodog','EUR', 1),
 		('PHL-LSEE-TYCOON EUR','TYCOON','EUR', 1),
 		('PHL-LSEE-MACAOBET EUR','Macaubet','EUR', 1),

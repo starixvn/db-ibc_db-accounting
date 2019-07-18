@@ -57,7 +57,7 @@ BEGIN
 		USING cte_finalsetting AS src
 			ON (
 					tar.licenseename = src.licenseename
-					AND tar.CustID = tar.CustID
+					AND tar.CustID = src.CustID
 					)
 		WHEN NOT MATCHED BY target
 			THEN
@@ -74,13 +74,23 @@ BEGIN
 		WHEN MATCHED
 			THEN
 				UPDATE
-				SET CustID = src.CustID
-					,StatusId = src.StatusId;
+				SET StatusId = src.StatusId;
+				
+		--CROSS check on setting values
+		IF EXISTS(SELECT licenseename, COUNT(1)
+			FROM dbo.LicenseeTransferCode
+			WHERE StatusID = 1
+			GROUP BY licenseename
+			HAVING COUNT(1) > 1
+		)
+		BEGIN
+			SELECT @ErrCode	= 100
+			, @ErrMsg		= 'Licensee(s) has duplicated setting code.'
+		END
 	END TRY
 	BEGIN CATCH
-		SELECT @ErrCode		= 100
+		SELECT @ErrCode		= 999
 			, @ErrMsg		= ERROR_MESSAGE()
-		RETURN
 	END CATCH
 END
 GO
