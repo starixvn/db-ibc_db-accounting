@@ -27,7 +27,7 @@ CREATE TABLE [dbo].[LicenseeTransferPool](
 	[Status] [varchar](10) NULL,
 	[MonthDate] [smalldatetime] NULL,
 	[TransferDate] [datetime] NULL,
-	[Error] [varchar](200) NULL
+	[Error] [varchar](4000) NULL
 ) ON [PRIMARY]
 
 GO
