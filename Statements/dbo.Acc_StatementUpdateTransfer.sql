@@ -1,10 +1,11 @@
+/*<info serverAlias="DBRPT-bodb_report" executers="bodbAdminNet" isFunction="0" isNested="1"></info>*/
 USE [bodb_report]
 GO
 
 ALTER PROCEDURE [dbo].[Acc_StatementUpdateTransfer]
 	@custid			INT
 	,@Amount		MONEY
-	,@winlostdate	DATE
+	,@winlostdate	SMALLDATETIME
 	,@ErrCode		INT = 0 OUTPUT
 	,@ErrMsg		NVARCHAR(4000) = '' OUTPUT
 AS
@@ -15,6 +16,7 @@ AS
 	DB: DBRPT.bodb_report
 	
 	Revisions:
+		- 20190718@Percy: Update total opening/closing balance [RedmineID: #109293]
     
 	Param's Explanation:
 */
@@ -22,129 +24,212 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	DECLARE @WinlostDateMAX DATE
+	SELECT  @ErrCode = 0, @ErrMsg = ''
 
-	IF NOT EXISTS(SELECT TOP 1 1 FROM dbo.rptStatement WITH (NOLOCK) WHERE winlostdate = @winlostdate AND custid = @custid)
+	/* ===== Customer Info ===== */
 	BEGIN
-		SELECT @WinlostDateMAX = MAX(winlostdate) FROM dbo.rptStatement WITH (NOLOCK) WHERE winlostdate < @winlostdate AND custid = @custid
+		DECLARE @roleId TINYINT, @recommend INT, @mrecommend INT, @srecommend INT
+		SELECT  @roleId = roleid, @recommend = recommend, @mrecommend = mrecommend, @srecommend = srecommend
+		FROM bodb02.dbo.Customer WITH (NOLOCK)
+		WHERE custid = @custid
 
-		IF @WinlostDateMAX IS NOT NULL
-			BEGIN
-				INSERT INTO dbo.rptStatement (
-					[WinlostDate]
-					,[Custid]
-					,[OpeningBalance]
-					,[VoidAmt]
-					,[Turnover]
-					,[NetTurnover]
-					,[TransferAmt]
-					,[Winlost]
-					,[Comm]
-					,[ClosingBalance]
-				)
-				SELECT @winlostdate [WinlostDate]
-					,@custid [Custid]
-					,[ClosingBalance] [OpeningBalance]
-					,NULL [VoidAmt]
-					,NULL [Turnover]
-					,NULL [NetTurnover]
-					,0 [TransferAmt]
-					,NULL [Winlost]
-					,NULL [Comm]
-					,[ClosingBalance]
-				FROM dbo.rptStatement WITH (NOLOCK) 
-				WHERE winlostdate = @WinlostDateMAX AND custid = @custid
-			END
-		ELSE
+		IF @recommend IS NULL
+			RETURN
+	END
+	/* ===== End Customer Info ===== */
+	
+	/* ===== Initialize data in rptStatement ===== */
+	BEGIN
+		CREATE TABLE #rptStatement
+		(
+			custid					INT
+			,roleid					TINYINT
+			,recommend				INT
+			,mrecommend				INT
+			,srecommend				INT
+			,winlostdate			SMALLDATETIME
+			,ClosingBalance			MONEY
+			,ClosingTotalBalance	MONEY
+		)
+
+		IF EXISTS (
+			SELECT 1
+			FROM (VALUES (@custid, @roleId),(@recommend, 2),(@mrecommend, 3),(@srecommend, 4)) AS c(custid, roleid)
+				OUTER APPLY (
+					SELECT r.custid
+					FROM dbo.rptStatement r WITH (NOLOCK)
+					WHERE r.winlostdate = @winlostdate
+						AND r.custid = c.custid
+				) AS r
+			WHERE c.custid <> 0 AND r.custid IS NULL
+		)
 		BEGIN
-			SELECT @WinlostDateMAX = MAX(winlostdate) FROM dbo.rptStatement_old WITH (NOLOCK) WHERE winlostdate < @winlostdate AND custid = @custid
-			IF @WinlostDateMAX IS NOT NULL
-			BEGIN
-				INSERT INTO dbo.rptStatement (
-					[WinlostDate]
-					,[Custid]
-					,[OpeningBalance]
-					,[VoidAmt]
-					,[Turnover]
-					,[NetTurnover]
-					,[TransferAmt]
-					,[Winlost]
-					,[Comm]
-					,[ClosingBalance]
-				)
-				SELECT @winlostdate [WinlostDate]
-					,@custid [Custid]
-					,[ClosingBalance] [OpeningBalance]
-					,NULL [VoidAmt]
-					,NULL [Turnover]
-					,NULL [NetTurnover]
-					,0 [TransferAmt]
-					,NULL [Winlost]
-					,NULL [Comm]
-					,[ClosingBalance]
-				FROM dbo.rptStatement_old WITH (NOLOCK) 
-				WHERE winlostdate = @WinlostDateMAX AND custid = @custid
-			END
-			ELSE
-			BEGIN
-				INSERT INTO dbo.rptStatement (
-					[WinlostDate]
-					,[Custid]
-					,[OpeningBalance]
-					,[VoidAmt]
-					,[Turnover]
-					,[NetTurnover]
-					,[TransferAmt]
-					,[Winlost]
-					,[Comm]
-					,[ClosingBalance]
-				)
-				SELECT @winlostdate [WinlostDate]
-					,@custid [Custid]
-					,0 [OpeningBalance]
-					,NULL [VoidAmt]
-					,NULL [Turnover]
-					,NULL [NetTurnover]
-					,0 [TransferAmt]
-					,NULL [Winlost]
-					,NULL [Comm]
-					,0 [ClosingBalance]				
-			END
+			INSERT INTO #rptStatement (custid, roleid, recommend, mrecommend, srecommend)
+			SELECT custid, roleid, recommend, mrecommend, srecommend
+			FROM bodb02.dbo.Customer c WITH (NOLOCK)
+			WHERE srecommend = @srecommend
 
+			UPDATE tmp
+			SET tmp.winlostdate = r.winlostdate
+			FROM #rptStatement tmp
+				CROSS APPLY (
+					SELECT TOP 1 r.winlostdate
+					FROM dbo.rptStatement r WITH (NOLOCK)
+					WHERE r.winlostdate < @winlostdate
+						AND r.custid = tmp.custid
+					ORDER BY r.winlostdate DESC
+				) AS r
+
+			IF EXISTS (SELECT 1 FROM #rptStatement WHERE winlostdate IS NULL)
+			BEGIN
+				UPDATE tmp
+				SET tmp.winlostdate = r.winlostdate
+				FROM #rptStatement tmp
+					CROSS APPLY (
+						SELECT TOP 1 r.winlostdate
+						FROM dbo.rptStatement_Old r WITH (NOLOCK)
+						WHERE r.winlostdate < @winlostdate
+							AND r.custid = tmp.custid
+						ORDER BY r.winlostdate DESC
+					) AS r
+				WHERE tmp.winlostdate IS NULL
+			END
 		END
+
+		UPDATE tmp
+		SET tmp.ClosingBalance = r.ClosingBalance
+		FROM #rptStatement tmp
+			CROSS APPLY (
+				SELECT r.ClosingBalance
+				FROM dbo.rptStatement r WITH (NOLOCK) 
+				WHERE tmp.winlostdate = r.winlostdate
+					AND tmp.custid = r.custid
+
+				UNION ALL
+				SELECT r.ClosingBalance
+				FROM dbo.rptStatement_Old r WITH (NOLOCK) 
+				WHERE tmp.winlostdate = r.winlostdate
+					AND tmp.custid = r.custid
+
+				UNION ALL
+				SELECT 0 AS ClosingBalance
+				WHERE tmp.winlostdate IS NULL
+			) AS r
+
+		INSERT INTO dbo.rptStatement
+		(
+			winlostdate
+			,custid
+			,openingbalance
+			,voidamt
+			,turnover
+			,netturnover
+			,transferamt
+			,winlost
+			,comm
+			,closingbalance
+			,OpeningTotalBalance
+		)
+		SELECT
+			@winlostdate
+			,custid
+			,ClosingBalance AS OpeningBalance
+			,NULL AS VoidAmt
+			,NULL AS Turnover
+			,NULL AS NetTurnover
+			,0	  AS TransferAmt
+			,NULL AS Winlost
+			,NULL AS Comm
+			,ClosingBalance AS ClosingBalance
+			,ClosingTotalBalance AS OpeningTotalBalance
+		FROM
+			(
+				-- Super
+				SELECT
+					@srecommend AS custid
+					,SUM(CASE WHEN custid = srecommend THEN ClosingBalance ELSE 0 END) AS ClosingBalance
+					,SUM(ClosingBalance) AS ClosingTotalBalance
+				FROM #rptStatement
+				WHERE srecommend = @srecommend
+			
+				-- Master
+				UNION ALL
+				SELECT
+					@mrecommend AS custid
+					,SUM(CASE WHEN custid = mrecommend THEN ClosingBalance ELSE 0 END) AS ClosingBalance
+					,SUM(ClosingBalance) AS ClosingTotalBalance
+				FROM #rptStatement
+				WHERE mrecommend = @mrecommend
+
+				-- Agent
+				UNION ALL
+				SELECT
+					@recommend AS custid
+					,SUM(CASE WHEN custid = recommend THEN ClosingBalance ELSE 0 END) AS ClosingBalance
+					,SUM(ClosingBalance) AS ClosingTotalBalance
+				FROM #rptStatement
+				WHERE recommend = @recommend
+
+				-- Member
+				UNION ALL
+				SELECT
+					@custid AS custid
+					,SUM(ClosingBalance) AS ClosingBalance
+					,SUM(ClosingBalance) AS ClosingTotalBalance
+				FROM #rptStatement
+				WHERE custid = @custid AND @roleid = 1
+			) AS tmp
+		WHERE NOT EXISTS (SELECT 1 FROM dbo.rptStatement r WITH (NOLOCK) WHERE tmp.custid = r.custid AND r.winlostdate = @winlostdate)
 	END
+	/* ===== End Initialize data in rptStatement ===== */
 
-	UPDATE dbo.rptStatement WITH (ROWLOCK, UPDLOCK)
-	SET [openingbalance] = CASE 
-			WHEN winlostdate <= @winlostdate THEN [openingbalance]
-			ELSE [openingbalance] + @Amount
-			END
-		,[transferamt] = CASE 
-			WHEN winlostdate <> @winlostdate THEN [transferamt]
-			ELSE ISNULL([transferamt], 0) + @Amount
-			END
-		,[closingbalance] = CASE 
-			WHEN winlostdate < @winlostdate THEN [closingbalance]
-			ELSE [closingbalance] + @Amount
-			END
-	WHERE winlostdate >= @winlostdate  AND custid = @custid
+	DROP TABLE #rptStatement
 
-	IF @@ERROR > 0
+	/* ===== Update Transfer Amount ===== */
 	BEGIN
-		SELECT @ErrCode = 100
-			,@ErrMsg = 'Update process unsucessful'
+		DECLARE @tblCustId TABLE (custid INT, roleid TINYINT, winlostdate SMALLDATETIME)
 
-		RETURN
-	END
-	ELSE
-	BEGIN
-		SELECT @ErrCode = 0
-			,@ErrMsg = ''
-	END
+		;WITH CTE_winlostdate AS
+		(
+			SELECT @winlostdate AS winlostdate
+			UNION ALL
+			SELECT DATEADD(DAY, 1, winlostdate)
+			FROM CTE_winlostdate
+			WHERE winlostdate < CONVERT(DATE, GETDATE())
+		)
+		INSERT INTO @tblCustId (custid, winlostdate)
+		SELECT DISTINCT c.custid, wld.winlostdate
+		FROM (VALUES (@custid),(@recommend),(@mrecommend),(@srecommend)) AS c(custid)
+			CROSS APPLY CTE_winlostdate wld
+		WHERE c.custid <> 0
 
+		BEGIN TRY
+			UPDATE r WITH (ROWLOCK)
+			SET	r.openingbalance = r.openingbalance + CASE WHEN r.custid = @custid AND r.winlostdate > @winlostdate THEN @Amount ELSE 0 END
+				,r.transferamt = r.transferamt + CASE WHEN r.custid = @custid AND r.winlostdate = @winlostdate THEN @Amount ELSE 0 END
+				,r.closingbalance = r.closingbalance + CASE WHEN r.custid = @custid THEN @Amount ELSE 0 END
+				,r.OpeningTotalBalance = r.OpeningTotalBalance + CASE WHEN r.winlostdate > @winlostdate THEN @Amount ELSE 0 END
+			FROM @tblCustId c
+				CROSS APPLY (
+					SELECT r.custid, r.winlostdate, r.openingbalance, r.transferamt, r.closingbalance, r.OpeningTotalBalance
+					FROM dbo.rptStatement r
+					WHERE r.winlostdate = c.winlostdate AND r.custid = c.custid
+				) AS r
+
+			UPDATE r WITH (ROWLOCK)
+			SET r.openingbalance = r.openingbalance + CASE WHEN r.custid = @custid AND r.winlostdate > @winlostdate THEN @Amount ELSE 0 END
+				,r.OpeningTotalBalance = r.OpeningTotalBalance + CASE WHEN r.winlostdate > @winlostdate THEN @Amount ELSE 0 END
+			FROM @tblCustId c
+				CROSS APPLY (
+					SELECT r.custid, r.winlostdate, r.openingbalance, r.OpeningTotalBalance
+					FROM dbo.RptTotalBalance_Active r
+					WHERE r.winlostdate = c.winlostdate AND r.custid = c.custid
+				) AS r
+		END TRY
+		BEGIN CATCH
+			SELECT @ErrCode = 100, @ErrMsg = 'Update process unsucessful'
+			RETURN
+		END CATCH
+	END
 END
-GO
-GRANT EXECUTE ON [dbo].[Acc_StatementUpdateTransfer] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_StatementUpdateTransfer] TO [vnteam] AS [dbo]
 GO
