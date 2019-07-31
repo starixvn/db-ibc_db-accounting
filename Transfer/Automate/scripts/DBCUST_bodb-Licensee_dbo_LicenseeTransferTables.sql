@@ -2,14 +2,10 @@
 USE [bodb_Licensee]
 GO
 
-/****** Object:  Table [dbo].[LicenseeTransferCode]    Script Date: 07/18/2019 14:39:24 ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
-
-SET ANSI_PADDING ON
+IF(OBJECT_ID(N'LicenseeTransferCode') IS NOT NULL)
+BEGIN
+	DROP TABLE [dbo].[LicenseeTransferCode]
+END
 GO
 
 CREATE TABLE [dbo].[LicenseeTransferCode](
@@ -27,10 +23,20 @@ CREATE TABLE [dbo].[LicenseeTransferCode](
 
 GO
 
-SET ANSI_PADDING OFF
+ALTER TABLE [dbo].[LicenseeTransferCode] ADD  DEFAULT ((1)) FOR [StatusID]
 GO
 
-ALTER TABLE [dbo].[LicenseeTransferCode] ADD  DEFAULT ((1)) FOR [StatusID]
+IF(OBJECT_ID(N'LicenseeTransferMapping') IS NOT NULL)
+BEGIN
+	DROP TABLE [dbo].[LicenseeTransferMapping]
+END
+GO
+
+CREATE TABLE [dbo].[LicenseeTransferMapping](
+	[Username] [varchar](50) NOT NULL,
+	[LicenseeName] [varchar](50) NOT NULL,
+	[StatusID] [tinyint] NOT NULL
+) ON [DATA]
 GO
 
 

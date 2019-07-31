@@ -6,7 +6,7 @@ AS
 /*
 	Create: 20190712@Bobby
 	Task: 112454 - NAP - Automate the Finance Transfer process for Licensee 
-	DB: DBTXN/bodb02
+	DB: DBCUST/bodb_Licensee
 
 	Revisions:
 		- 20190712@Bobby: Initialize [redmine: #112454]
@@ -23,14 +23,13 @@ BEGIN
 		AS (
 			SELECT s.licenseename
 				,s.username
-				,s.currencycode
 				,s.statusId
 				,cs.from_custid
 				,cs.from_currency
 				,l.LicenseeID
 				,c.custid AS to_custid
 				,c.currency AS to_currency
-			FROM dbo.Acc_f_LicenseeTransfer_GetCode() s
+			FROM dbo.LicenseeTransferMapping s
 			LEFT JOIN CustDB.dbo.custInfo c WITH(NOLOCK) ON s.username = c.username
 			LEFT JOIN bodb_Licensee.dbo.Licensees l WITH(NOLOCK) ON s.licenseename = l.licenseename
 			OUTER APPLY (
@@ -85,7 +84,7 @@ BEGIN
 		)
 		BEGIN
 			SELECT @ErrCode	= 100
-			, @ErrMsg		= 'Licensee(s) has duplicated setting code.'
+			, @ErrMsg		= 'Licensee(s) setting code duplicated.'
 		END
 	END TRY
 	BEGIN CATCH
