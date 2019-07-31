@@ -139,7 +139,8 @@ BEGIN
 	   AND b.winlostdate = @winlostdate
 	   AND b.statusid NOT IN (101, 102, 103, 121)
 	   AND b.bettype > 19000 
-	   AND (CASE WHEN b.CustId IN (SELECT CustId FROM @dummyExtraPT) AND Bettype IN (21001,21002) THEN 0 ELSE 1 END = 1)	    
+	   AND (CASE WHEN b.CustId IN (SELECT CustId FROM @dummyExtraPT) AND Bettype IN (21001,21002) THEN 0 ELSE 1 END = 1)
+	   AND (CASE WHEN EXISTS (SELECT 1 FROM CS_CustSuper cs WITH (NOLOCK) WHERE cs.CustID = b.srecommend) THEN 0 ELSE 1 END = 1)
 	GROUP BY CASE
              WHEN b.bettype IN (21001, 21002) AND ISNULL(d.custid, -1) <> - 1 then d.custid
              ELSE -1
