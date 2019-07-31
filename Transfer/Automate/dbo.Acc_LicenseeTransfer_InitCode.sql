@@ -29,7 +29,7 @@ BEGIN
 				,l.LicenseeID
 				,c.custid AS to_custid
 				,c.currency AS to_currency
-			FROM dbo.LicenseeTransferMapping s
+			FROM dbo.LicenseeTransferMapping s WITH(NOLOCK)
 			LEFT JOIN CustDB.dbo.custInfo c WITH(NOLOCK) ON s.username = c.username
 			LEFT JOIN bodb_Licensee.dbo.Licensees l WITH(NOLOCK) ON s.licenseename = l.licenseename
 			OUTER APPLY (
@@ -77,7 +77,7 @@ BEGIN
 				
 		--CROSS check on setting values
 		IF EXISTS(SELECT licenseename, COUNT(1)
-			FROM dbo.LicenseeTransferCode
+			FROM dbo.LicenseeTransferCode WITH(NOLOCK)
 			WHERE StatusID = 1
 			GROUP BY licenseename
 			HAVING COUNT(1) > 1

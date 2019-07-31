@@ -2,16 +2,6 @@
 USE [bodb02]
 GO
 
-/****** Object:  Table [dbo].[LicenseeTransferPool]    Script Date: 07/18/2019 14:36:30 ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
-
-SET ANSI_PADDING ON
-GO
-
 CREATE TABLE [dbo].[LicenseeTransferPool](
 	[TransferID] [int] IDENTITY(1,1) NOT NULL,
 	[LicenseeName] [varchar](50) NULL,
@@ -28,11 +18,8 @@ CREATE TABLE [dbo].[LicenseeTransferPool](
 	[MonthDate] [smalldatetime] NULL,
 	[TransferDate] [datetime] NULL,
 	[Error] [varchar](4000) NULL
-) ON [PRIMARY]
+) ON [Others_table]
 
-GO
-
-SET ANSI_PADDING OFF
 GO
 
 
