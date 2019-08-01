@@ -33,6 +33,7 @@ Revisions:
 	- 20151021@Elodie: Set @IsForce = 1 for updating balance debit [Redmine:#40125]
 	- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 	- 20181112@Sophia: Add Transfer Collection [redmine: #98621]
+	- 20190801@Sophia: fix wrong statusID [redmine: #117995]
 	
 
 Param's Explanation:
@@ -241,7 +242,7 @@ BEGIN
 			OUTPUT INSERTED.TransID INTO @TransIDs
 			VALUES (@UserID, @ToCustID, @ToUsername, @refno, @Transdate, 0, 21003, 'From Customer: ' + @FromUserName + '('+ @Remark +')' + @RemarkFromCurr, 0, @amount * @ExchangeRate, 
 				 'Completed', 1, @winlostdate, @ToCurr, @ToActualrate, @ToCurrName, @ToRecommend, @ToMrecommend, @ToSrecommend, 
-				 0, 0,@ip,13,@IsCollection)
+				 0, 0,@ip,131,@IsCollection)
 			
 		
 			if @@Error <> 0
