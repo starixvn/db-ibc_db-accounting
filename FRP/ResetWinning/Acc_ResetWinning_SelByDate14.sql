@@ -52,6 +52,7 @@ AS
 		- 20190522@Sophia: Rename Keno to RNG Keno [RedmineID: #113490]
 		- 20190701@Percy: Remove WL due to partner [RedmineID: #115802]
 		- 20190701@Percy: Apply Card Club [RedmineID: #117005]
+		- 20190729@Sophia: Exclude CN88 data [Redmine: #117169]
 		
 	Explanation's Param:
 
@@ -139,6 +140,7 @@ BEGIN
 	   AND b.statusid NOT IN (101, 102, 103, 121)
 	   AND b.bettype > 19000 
 	   AND (CASE WHEN b.CustId IN (SELECT CustId FROM @dummyExtraPT) AND Bettype IN (21001,21002) THEN 0 ELSE 1 END = 1)
+	   AND (CASE WHEN EXISTS (SELECT 1 FROM CS_CustSuper cs WITH (NOLOCK) WHERE cs.CustID = b.srecommend) THEN 0 ELSE 1 END = 1)
 	GROUP BY CASE
              WHEN b.bettype IN (21001, 21002) AND ISNULL(d.custid, -1) <> - 1 then d.custid
              ELSE -1
@@ -195,6 +197,7 @@ BEGIN
        AND b.winlostdate = @winlostdate
 	   AND b.ruben = 1
 	   AND b.statusid NOT IN (101, 102, 103, 121)  
+	   AND (CASE WHEN EXISTS (SELECT 1 FROM CS_CustSuper cs WITH (NOLOCK) WHERE cs.CustID = b.srecommend) AND b.bettype < 19001 THEN 0 ELSE 1 END = 1)
     GROUP BY b.custid, b.bettype, b.liveindicator, 
 			 CASE WHEN ISNULL(m.Sporttype, 0) <> 0 THEN m.Sporttype ELSE 0 END
 	HAVING
@@ -395,6 +398,7 @@ BEGIN
 		   --AND b.ruben = 1
 		   AND b.statusid NOT IN (101, 102, 103, 121)
 		   AND s.ProductID <> 1
+		   AND (CASE WHEN EXISTS (SELECT 1 FROM CS_CustSuper cs WITH (NOLOCK) WHERE cs.CustID = b.srecommend) AND b.bettype < 19001 THEN 0 ELSE 1 END = 1)
 		GROUP BY b.srecommend,	      
 			   s.ProductId 
 			   )
@@ -454,7 +458,8 @@ BEGIN
 		WHERE   b.winlostdate = @winlostdate
 			---AND b.ruben = 1
 			AND b.statusid NOT IN (101, 102, 103, 121)
-			AND s.ProductID = 1 		
+			AND s.ProductID = 1 
+			AND (CASE WHEN EXISTS (SELECT 1 FROM CS_CustSuper cs WITH (NOLOCK) WHERE cs.CustID = b.srecommend) AND b.bettype < 19001 THEN 0 ELSE 1 END = 1)			
 		GROUP BY b.srecommend,
 			   CASE WHEN ISNULL(m.Sporttype, 0) <> 0 THEN m.Sporttype ELSE 0 END,
 			   CASE WHEN s.SubProduct = 'MG-SuperLive' THEN 'Metric Gaming - Super Live'

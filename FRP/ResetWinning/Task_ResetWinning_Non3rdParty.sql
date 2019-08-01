@@ -59,6 +59,7 @@ AS
 		- 20190522@Sophia: Rename Keno to RNG Keno [RedmineID: #113490]
 		- 20190701@Percy: Remove WL due to partner [RedmineID: #115802]
 		- 20190701@Percy: Apply Card Club [RedmineID: #117005]
+		- 20190729@Sophia: Exclude CN88 data [Redmine: #117169]
 
 	Param Explanation:
 	    @mode:  0 _ view report
@@ -70,12 +71,6 @@ AS
 */
 BEGIN	
 	SET NOCOUNT ON
-
-	DECLARE @EffectedDate DATETIME -- 20170112@Percy: Applying date of changing extra PT formula [RedmineID: #70060]
-	SELECT  @EffectedDate = '2017-01-19'
-
-	DECLARE @PPEffectedDate DATETIME -- 20190412@Percy: Applying date of new Pragmatic's formula [RedmineID: 106981]
-	SELECT  @PPEffectedDate = '2019-05-01'
 
 	------Get Sport Bettype Matrix------
 	-- Check SP Version
@@ -203,6 +198,7 @@ BEGIN
 	   AND b.ruben = 1
 	   AND b.statusid NOT IN (101, 102, 103, 121)
 	   AND (CASE WHEN b.CustId IN (SELECT CustId FROM @dummyExtraPT) AND Bettype IN (21001,21002) THEN 0 ELSE 1 END = 1)
+	   AND (CASE WHEN EXISTS (SELECT 1 FROM CS_CustSuper cs WITH (NOLOCK) WHERE cs.CustID = b.srecommend) AND b.bettype < 19001 THEN 0 ELSE 1 END = 1)
     GROUP BY b.winlostdate, CASE WHEN b.bettype IN (21001, 21002) AND ISNULL(d.custid, -1) <> - 1 then d.custid ELSE -1 END,
 			 b.bettype, b.liveindicator, 
 			 CASE WHEN ISNULL(m.matchid, 0) <> 0 THEN m.Sporttype ELSE 0 END
@@ -422,6 +418,7 @@ BEGIN
 		   AND b.statusid NOT IN (101, 102, 103, 121)
 		   AND b.bettype < 19001	  
 		   AND s.ProductID IN (SELECT DISTINCT ProductID FROM dbo.Acc_GroupExtraPTSetting WITH(NOLOCK) WHERE ProductID <> 1)
+		   AND (CASE WHEN EXISTS (SELECT 1 FROM CS_CustSuper cs WITH (NOLOCK) WHERE cs.CustID = b.srecommend) AND b.bettype < 19001 THEN 0 ELSE 1 END = 1)
 		GROUP BY b.winlostdate,
 			   b.srecommend,	      
 			   s.ProductId 
@@ -471,7 +468,8 @@ BEGIN
 			AND b.ruben = 1
 			AND b.statusid NOT IN (101, 102, 103, 121)
 			AND b.bettype < 19001 
-			AND s.ProductID = 1 		
+			AND s.ProductID = 1 	
+			AND (CASE WHEN EXISTS (SELECT 1 FROM CS_CustSuper cs WITH (NOLOCK) WHERE cs.CustID = b.srecommend) AND b.bettype < 19001 THEN 0 ELSE 1 END = 1)		
 		GROUP BY b.winlostdate,
 			   b.srecommend,
 			   CASE WHEN ISNULL(m.Sporttype, 0) <> 0 THEN m.Sporttype ELSE 0 END,
@@ -522,7 +520,7 @@ BEGIN
 	           dm.product,
 	           ROUND(ISNULL(w.winlost, 0), 2) AS winlost,
 			   CASE dm.product
-	             WHEN 'Total Balance' then 0 ELSE ROUND(ISNULL(w.winlost, 0), 2) - ROUND(ISNULL(CASE WHEN dm.winlostdate < @EffectedDate THEN e.ExtraPTwinlost ELSE e.NewExtraPTwinlost END, 0), 2) END AS WinlostAfterExtraPT,
+	             WHEN 'Total Balance' then 0 ELSE ROUND(ISNULL(w.winlost, 0), 2) - ROUND(ISNULL(e.NewExtraPTwinlost, 0), 2) END AS WinlostAfterExtraPT,
 	           CASE dm.product
 	             WHEN 'Total Balance' then 0
 	             ELSE ROUND(ISNULL(rs.reset, 0), 2)
@@ -551,11 +549,11 @@ BEGIN
 	    SELECT dm.winlostdate,
 	           dm.product,
 			   ROUND(ISNULL(w.winlost, 0), 2) AS winlost,
-			   ROUND(ISNULL(w.winlost, 0), 2) - ROUND(ISNULL(CASE WHEN dm.winlostdate < @EffectedDate THEN e.ExtraPTwinlost ELSE e.NewExtraPTwinlost END, 0), 2) AS WinlostAfterExtraPT,
+			   ROUND(ISNULL(w.winlost, 0), 2) - ROUND(ISNULL(e.NewExtraPTwinlost, 0), 2) AS WinlostAfterExtraPT,
 	           ROUND(ISNULL(rs.reset, 0), 2) AS reset,
 	           CASE
 	             WHEN  dm.Product IN ('Total Balance') THEN 0 
-	             ELSE  -(ROUND(ISNULL(w.winlost, 0), 2) - ROUND(ISNULL(CASE WHEN dm.winlostdate < @EffectedDate THEN e.ExtraPTwinlost ELSE e.NewExtraPTwinlost END, 0), 2)) - ROUND(ISNULL(rs.reset, 0), 2)
+	             ELSE  -(ROUND(ISNULL(w.winlost, 0), 2) - ROUND(ISNULL(e.NewExtraPTwinlost, 0), 2)) - ROUND(ISNULL(rs.reset, 0), 2)
 	           END AS latestreset,
 			   dm.seq
 	     FROM @winning w	
