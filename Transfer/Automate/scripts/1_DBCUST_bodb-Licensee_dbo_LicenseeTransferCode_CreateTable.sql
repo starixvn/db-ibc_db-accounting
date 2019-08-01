@@ -1,12 +1,6 @@
 --DBCUST/bodb_Licensee
 USE [bodb_Licensee]
 GO
-CREATE TABLE [dbo].[LicenseeTransferMapping](
-	[Username] [varchar](50) NOT NULL,
-	[LicenseeName] [varchar](50) NOT NULL,
-	[StatusID] [tinyint] NOT NULL DEFAULT(1)
-) ON [Licensee_table]
-GO
 
 CREATE TABLE [dbo].[LicenseeTransferCode](
 	[LicenseeName] [varchar](50) NOT NULL,
