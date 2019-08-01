@@ -247,7 +247,6 @@ IF(OBJECT_ID(N'LicenseeTransferCode') IS NULL) RETURN
 		('PHL-LSEE-XTU168 EUR','XTU168',1),
 		('PHL-LSEE-WIN88 EUR','WIN88',1),
 		('PHL-LSEE-WKCUR EUR','WKCUR',1),
-		('PHL-LSEE-XTU168 EUR','XTU168',1),
 		('PHL-LSEE-WKPHIL EUR','WPHIL',1),
 		('PHL-LSEE-DF88 EUR','DF88',1),
 		('PHL-LSEE-JUMBO88 EUR','JUMBO88',1),
@@ -269,7 +268,7 @@ IF(OBJECT_ID(N'LicenseeTransferCode') IS NULL) RETURN
 	INNER JOIN CustDB.dbo.custInfo CI (NOLOCK) ON T.username = CI.username
 )
 INSERT INTO bodb_Licensee.dbo.LicenseeTransferCode(LicenseeName,CustID,StatusId)
-SELECT C.LicenseeName, C.CustID, C.StatusId
+SELECT DISTINCT C.LicenseeName, C.CustID, C.StatusId
 FROM CTE_LicenseeCode C
 	LEFT JOIN bodb_Licensee.dbo.LicenseeTransferCode M (NOLOCK)
 	ON C.licenseename = M.licenseename
