@@ -20,6 +20,7 @@ AS
 	Revisions:
 		- 20170926@Percy: Move this SP from DBACC.bodb_ACC to DBCUST.CustDB [RedmineID: #83600]
 		- 20180808@Helen: DB05.DBPOLICY migration - [Redmine:99462]
+		- 20190416@Percy: Separate Bet Builder to Sportsbook [RedmineID: #108791]
 
 	Param's Explanation:
 */
@@ -172,6 +173,7 @@ BEGIN
 					SELECT  0 AS Sporttype, 'BT-Sold'		AS SubProduct,		0	AS ExtraPT UNION ALL
 					SELECT  0 AS Sporttype, 'BT-Winloss'	AS SubProduct,		0	AS ExtraPT UNION ALL
 					SELECT  0 AS Sporttype, 'MG-SuperLive'	AS SubProduct, @ExtraPT AS ExtraPT UNION ALL
+					SELECT  0 AS Sporttype, 'Bet Builder'	AS SubProduct, @ExtraPT AS ExtraPT UNION ALL
 					SELECT 44 AS Sporttype, ''				AS SubProduct, @ExtraPT AS ExtraPT
 				) AS A
 			END
@@ -266,6 +268,7 @@ BEGIN
 					SELECT  0 AS Sporttype, 'BT-Sold'		AS SubProduct,		0	AS ExtraPT UNION ALL
 					SELECT  0 AS Sporttype, 'BT-Winloss'	AS SubProduct,		0	AS ExtraPT UNION ALL
 					SELECT  0 AS Sporttype, 'MG-SuperLive'	AS SubProduct, @ExtraPT AS ExtraPT UNION ALL
+					SELECT  0 AS Sporttype, 'Bet Builder'	AS SubProduct, @ExtraPT AS ExtraPT UNION ALL
 					SELECT 44 AS Sporttype, ''				AS SubProduct, @ExtraPT AS ExtraPT
 				) AS A
 				WHERE @ProductId = 1
