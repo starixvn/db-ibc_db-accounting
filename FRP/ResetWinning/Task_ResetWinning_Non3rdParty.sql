@@ -176,8 +176,7 @@ BEGIN
 	   AND (CASE WHEN b.CustId IN (SELECT CustId FROM @dummyExtraPT) AND Bettype IN (21001,21002) THEN 0 ELSE 1 END = 1)   --- Not Get ticket transfer of reset winning extraPT
     GROUP BY b.winlostdate,
 			SUBSTRING (b.transdesc, 5, CASE WHEN CHARINDEX ('#', b.Transdesc, 4) <>  0 THEN CHARINDEX ('#', b.Transdesc, 4) -5 ELSE 0 END ),
-			b.custid
-	--HAVING SUM((ISNULL(winlost, 0) - ISNULL(actual_stake, 0)) * b.actualrate) <> 0
+			b.custid 
 
 	UPDATE t 
 	SET t.Product = d.Product
@@ -196,7 +195,7 @@ BEGIN
 		SubProduct			VARCHAR(50),
 		IsCN88				BIT,
 		winlost				MONEY, 		
-		NewExtraPTwinlost	MONEY
+		ExtraPTWinlost	MONEY
 	) 
 	 
 	----- SPL, SPNL, MuayThai, Metric gaming, Bettrade, Palay, outright
@@ -219,7 +218,7 @@ BEGIN
 					ELSE ''
 					END	AS ProductName,
 				CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss','Bet Builder') THEN s.SubProduct ELSE '' END AS SubProduct,
-				--SUM((ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(awinlost, 0) + ISNULL(mwinlost, 0) + ISNULL(swinlost, 0) + ISNULL(scomm, 0)) * b.actualrate) AS winlost,	
+				
 				SUM(
 				CASE WHEN b.bettype IN (2199, 2399, 2999) THEN 0
 					ELSE
@@ -234,21 +233,21 @@ BEGIN
 					(CASE
 							-- Jackpot
 							WHEN b.bettype IN (2198, 2398, 2998) THEN -ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0)
-							WHEN b.bettype IN (2199, 2399, 2999) THEN ISNULL(b.winlost, 0) - ISNULL(b.actual_stake, 0)
+							WHEN b.bettype IN (2199, 2399, 2999) THEN ISNULL(b.Winlost, 0) - ISNULL(b.actual_stake, 0)
 						ELSE 0 END
 					) * b.actualrate
-				) AS winlostDueTo,
-					   
-				SUM((CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END) * b.actualrate) AS newwinlost
+				) AS WinlostDueTo,
+				0 AS CommForExtraPT,
+				SUM((CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.Winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END) * b.actualrate) AS WinlostForExtraPT
 		FROM dbo.bettrans b WITH(READPAST, INDEX = IX_Report)			
 		INNER JOIN @SportBettype s ON s.BetType = b.bettype
 		LEFT JOIN dbo.Match m WITH (NOLOCK) ON m.MatchId = b.MatchId AND m.eventdate = b.Winlostdate AND m.Sporttype = 44
 		LEFT JOIN dbo.CS_CustSuper cs WITH (NOLOCK) ON cs.CustId = b.srecommend
-		WHERE   b.winlostdate between @fromdate and @todate
+		WHERE   b.Winlostdate between @fromdate and @todate
 			AND b.ruben = 1
 			AND b.statusid NOT IN (101, 102, 103, 121)
 			AND b.bettype < 19001  		
-		GROUP BY b.winlostdate,
+		GROUP BY b.Winlostdate,
 				CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
 					ELSE 0  ---MBC 
 				END ,
@@ -268,36 +267,46 @@ BEGIN
 				CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss','Bet Builder') THEN s.SubProduct ELSE '' END
 				)
 
-	INSERT INTO #WLByProduct (winlostdate, ProductId, ProductName, IsCN88, winlost, NewExtraPTwinlost) 
-	SELECT winlostdate, ProductId, ProductName, w.IsCN88, SUM(winlost), SUM(NewExtraPTwinlost)
+	INSERT INTO #WLByProduct (Winlostdate, ProductId, ProductName, IsCN88, Winlost, ExtraPTWinlost) 
+	SELECT Winlostdate, ProductId, ProductName, w.IsCN88, SUM(Winlost), SUM(ExtraPTWinlost)
 	FROM (
-			SELECT  w.winlostdate, w.ProductId, w.ProductName, w.IsCN88, 0 as winlost , SUM(w.newwinlost * ISNULL(s.ExtraPT,0)) as NewExtraPTwinlost
+			SELECT  w.Winlostdate, w.ProductId, w.ProductName, w.IsCN88, 0 as Winlost, SUM(w.WinlostForExtraPT * ISNULL(s.ExtraPT,0)) as ExtraPTWinlost
 			FROM	wl w
 			INNER JOIN dbo.Acc_GroupExtraPTSetting s WITH(NOLOCK)
 					ON w.srecommend = s.SuperId
 					AND w.ProductId = s.ProductId
 					AND w.SubProduct = s.SubProduct
 					AND w.Sporttype = s.Sporttype 
-					AND w.winlostdate BETWEEN s.FromDate AND s.ToDate	
-			GROUP BY w.winlostdate, w.ProductId, w.ProductName, w.IsCN88 
+					AND w.Winlostdate BETWEEN s.FromDate AND s.ToDate	
+			GROUP BY w.Winlostdate, w.ProductId, w.ProductName, w.IsCN88 
+			UNION ALL 
+			SELECT	w.Winlostdate, w.ProductId, w.ProductName, w.IsCN88, 0 as Winlost, SUM(w.CommForExtraPT * ISNULL(s.ExtraCommRate,0)) as ExtraPTComm
+			FROM	wl w
+			INNER JOIN dbo.Acc_GroupExtraCommRateSetting s WITH(NOLOCK)
+					ON w.srecommend = s.SuperId
+					AND w.ProductId = s.ProductId
+					AND w.SubProduct = s.SubProduct
+					AND w.Sporttype = s.Sporttype 
+					AND w.Winlostdate BETWEEN s.FromDate AND s.ToDate
+			GROUP BY w.Winlostdate, w.ProductId, w.ProductName, w.IsCN88
 	
 			UNION ALL
-			SELECT  w.winlostdate, w.ProductId, w.ProductName, w.IsCN88, SUM(isnull( w.winlost,0)) as winlost  , 0 as NewExtraPTwinlost 
+			SELECT  w.Winlostdate, w.ProductId, w.ProductName, w.IsCN88, SUM(isnull( w.Winlost,0)) as Winlost , 0 as ExtraPTWinlost 
 			FROM	wl w
-			GROUP BY w.winlostdate, w.ProductId, w.ProductName, w.IsCN88 
+			GROUP BY w.Winlostdate, w.ProductId, w.ProductName, w.IsCN88 
 		) w
-	GROUP BY w.winlostdate, w.ProductId, w.ProductName, w.IsCN88
+	GROUP BY w.Winlostdate, w.ProductId, w.ProductName, w.IsCN88
 
 	UNION ALL
-	SELECT w.winlostdate, '','Casino (Amount due to Jackpot Pool)', 0, ISNULL(SUM(w.winlostDueTo), 0) winlost, 0	
+	SELECT w.Winlostdate, '','Casino (Amount due to Jackpot Pool)', 0, ISNULL(SUM(w.WinlostDueTo), 0) Winlost, 0	
     FROM wl w
-	GROUP BY winlostdate
+	GROUP BY Winlostdate
 
 	UNION ALL
-	SELECT winlostdate, '', 'Total Balance' ,  -1, SUM(ISNULL(winlost, 0)+ ISNULL(winlostDueTo, 0)) winlost, 0
+	SELECT Winlostdate, '', 'Total Balance' ,  -1, SUM(ISNULL(Winlost, 0)+ ISNULL(WinlostDueTo, 0)) Winlost, 0
     FROM wl w
     WHERE IsCN88 IN (1,0)
-	GROUP BY winlostdate
+	GROUP BY Winlostdate
 	
 	UPDATE e 
 	SET ProductName = CASE WHEN e.IsCN88 = 1 THEN 'CN88 ' ELSE '' END + CASE WHEN e.ProductId = 6 THEN 'Casino' ELSE CASE WHEN e.ProductID <> 1 THEN p.ProductName ELSE e.ProductName END END 
@@ -315,25 +324,25 @@ BEGIN
 	    ----- calculate reset
 	    ;WITH reset AS
 	    (
-		     SELECT b.winlostdate,
+		     SELECT b.Winlostdate,
 		           b.Product,
-		           ISNULL(SUM(b.winlost), 0) AS reset
+		           ISNULL(SUM(b.Winlost), 0) AS reset
 		     FROM #Transfer b	     
-			 GROUP BY b.winlostdate, b.product
+			 GROUP BY b.Winlostdate, b.product
 	    )
-	    SELECT dm.winlostdate,
+	    SELECT dm.Winlostdate,
 	           dm.product,
-	           ROUND(ISNULL(e.winlost, 0), 2) AS winlost, 
+	           ROUND(ISNULL(e.Winlost, 0), 2) AS Winlost, 
 			   CASE dm.product
-	             WHEN 'Total Balance' then 0 ELSE ROUND(ISNULL(e.winlost, 0), 2) - ROUND(ISNULL(e.NewExtraPTwinlost, 0), 2) END AS WinlostAfterExtraPT,
+	             WHEN 'Total Balance' then 0 ELSE ROUND(ISNULL(e.Winlost, 0), 2) - ROUND(ISNULL(e.ExtraPTWinlost, 0), 2) END AS WinlostAfterExtraPT,
 	           CASE dm.product
 	             WHEN 'Total Balance' then 0
 	             ELSE ROUND(ISNULL(rs.reset, 0), 2)
 	           END AS reset
 	    FROM @dummyBalance dm
-			LEFT JOIN #WLByProduct e ON dm.product = e.productName and dm.winlostdate = e.winlostdate 
-			LEFT JOIN reset rs ON dm.product = rs.product and dm.winlostdate = rs.winlostdate
-		ORDER BY dm.winlostdate DESC, dm.seq ASC
+			LEFT JOIN #WLByProduct e ON dm.product = e.productName and dm.Winlostdate = e.Winlostdate 
+			LEFT JOIN reset rs ON dm.product = rs.product and dm.Winlostdate = rs.Winlostdate
+		ORDER BY dm.Winlostdate DESC, dm.seq ASC
 
 	END
 	--reset balance
@@ -341,34 +350,34 @@ BEGIN
 	BEGIN
 		 ;WITH reset AS
 	    (
-		     SELECT b.winlostdate,
+		     SELECT b.Winlostdate,
 		           b.Product,
-		           ISNULL(SUM(b.winlost), 0) AS reset
+		           ISNULL(SUM(b.Winlost), 0) AS reset
 		     FROM #Transfer b	     
-			 GROUP BY b.winlostdate, b.product
+			 GROUP BY b.Winlostdate, b.product
 	    )
-         INSERT INTO @reset(winlostdate, product, winlost, WinlostAfterExtraPT, reset, latestreset, seq)
-	     SELECT dm.winlostdate,
+         INSERT INTO @reset(Winlostdate, product, Winlost, WinlostAfterExtraPT, reset, latestreset, seq)
+	     SELECT dm.Winlostdate,
 	           dm.product,
-	           ROUND(ISNULL(e.winlost, 0), 2) AS winlost,
+	           ROUND(ISNULL(e.Winlost, 0), 2) AS Winlost,
 			   CASE dm.product
-	             WHEN 'Total Balance' then 0 ELSE ROUND(ISNULL(e.winlost, 0), 2) - ROUND(ISNULL(e.NewExtraPTwinlost, 0), 2) END AS WinlostAfterExtraPT,
+	             WHEN 'Total Balance' then 0 ELSE ROUND(ISNULL(e.Winlost, 0), 2) - ROUND(ISNULL(e.ExtraPTWinlost, 0), 2) END AS WinlostAfterExtraPT,
 	           CASE dm.product
 	             WHEN 'Total Balance' then 0
 	             ELSE ROUND(ISNULL(rs.reset, 0), 2)
 	           END AS reset,
 			   CASE
 	             WHEN  dm.Product IN ('Total Balance') THEN 0 
-	             ELSE  -(ROUND(ISNULL(e.winlost, 0), 2) - ROUND(ISNULL(e.NewExtraPTwinlost, 0), 2)) - ROUND(ISNULL(rs.reset, 0), 2)
+	             ELSE  -(ROUND(ISNULL(e.Winlost, 0), 2) - ROUND(ISNULL(e.ExtraPTWinlost, 0), 2)) - ROUND(ISNULL(rs.reset, 0), 2)
 	           END AS latestreset,
 			   dm.seq
 	    FROM @dummyBalance dm
-			LEFT JOIN #WLByProduct e ON dm.product = e.productName and dm.winlostdate = e.winlostdate 
-			LEFT JOIN reset rs ON dm.product = rs.product and dm.winlostdate = rs.winlostdate
-		ORDER BY dm.winlostdate DESC, dm.seq ASC
+			LEFT JOIN #WLByProduct e ON dm.product = e.productName and dm.Winlostdate = e.Winlostdate 
+			LEFT JOIN reset rs ON dm.product = rs.product and dm.Winlostdate = rs.Winlostdate
+		ORDER BY dm.Winlostdate DESC, dm.seq ASC
 
         declare @variance     money = 0,
-                @winlostdate  smalldatetime,
+                @Winlostdate  smalldatetime,
                 @custid       int,
 				@Product	  varchar(100),
                 @resetCount   tinyint = 0,
@@ -415,7 +424,7 @@ BEGIN
                                            + CAST(@variance as varchar(100))
 
                 EXEC DBTXN.bodb02.dbo.Task_ResetWinning_Non3rdParty_Add
-                    @winlostdate = @winlostdate,
+                    @Winlostdate = @Winlostdate,
 	                @custid = @custid,
 	                @amount = @variance,
 	                @transdesc = @transDesc,
@@ -440,9 +449,9 @@ BEGIN
             SELECT @ErrMsg = 'The process has been successful!'
         END
       
-        SELECT winlostdate,
+        SELECT Winlostdate,
                product,
-			   winlost,
+			   Winlost,
                WinlostAfterExtraPT, 
                reset + latestreset AS totalreset,
                latestreset
