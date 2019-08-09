@@ -10,7 +10,7 @@ ALTER PROCEDURE [dbo].[Task_ResetWinning_Non3rdParty]
 	@ip       VARCHAR(20) = '',
 	@ErrCode  INT = 0 output,
     @ErrMsg   VARCHAR(100) = '' output
-AS
+AS  
 /*	
 	Created: 20140619@Logan
 	Task: Reset Winning - Reset Company Balance for a period
@@ -60,7 +60,7 @@ AS
 		- 20190701@Percy: Remove WL due to partner [RedmineID: #115802]
 		- 20190701@Percy: Apply Card Club [RedmineID: #117005]
 		- 20190729@Sophia: Exclude CN88 data [Redmine: #117169]
-		- 20190801@Sophia: Integrate CN88 [Redmine: #117809]
+		- 20190801@Sophia: Integrate CN88 & refactor code[Redmine: #117809]
 
 	Param Explanation:
 	    @mode:  0 _ view report
@@ -100,13 +100,13 @@ BEGIN
 		
     declare @reset table
     (
-        winlostdate smalldatetime,
-        product     varchar(50),
-		winlost		money,
-        WinlostAfterExtraPT     money,
-        reset       money,
-        latestreset money,
-        seq         SMALLINT
+        winlostdate 		smalldatetime,
+        product     		varchar(50),
+		winlost				money,
+        WinlostAfterExtraPT money,
+        reset       		money,
+        latestreset 		money,
+        seq         		SMALLINT
     )
 
     declare @wldate DATE = @todate,
@@ -123,7 +123,7 @@ BEGIN
 		SELECT @wldate = DATEADD( DAY, -1, @wldate)
 	END
 
-	DECLARE @SQL NVARCHAR(100) = OBJECT_NAME(@@PROCID)
+	DECLARE @SQL NVARCHAR(100) = ISNULL(OBJECT_NAME(@@PROCID),'')
 	
 	IF (@SQL not like '%_xtest%')	
 	BEGIN 
@@ -132,6 +132,19 @@ BEGIN
 		FROM bodb_ACC.dbo.Acc_DWLList l WITH (NOLOCK)
 		CROSS JOIN @Date d
 		WHERE l.IsDeleted = 0
+		 
+		/*INSERT INTO @dummyBalance (WinlostDate, seq, CustId, Product)
+		VALUES (@FromDate , 101, 37639217, 'CN88 SPL'),
+			(@FromDate , 102, 37639217, 'CN88 SPNL'),
+			(@FromDate , 103, 37639217, 'CN88 Parlay'),
+			(@FromDate , 104, 37639217, 'CN88 Outright'),
+			(@FromDate , 105, 37639217, 'CN88 Muay Thai'),
+			(@FromDate , 110, 37639217, 'CN88 Number Game'),
+			(@FromDate , 113, 37639217, 'CN88 Virtual Sports'),
+			(@FromDate , 114, 37639217, 'CN88 Virtual Sports 2'),
+			(@FromDate , 115, 37639217, 'CN88 RNG Keno'),
+			(@FromDate , 116, 37639217, 'CN88 Lottery')*/
+
 			
 		INSERT INTO @dummyExtraPT (CustID)
 		SELECT CustID
@@ -150,7 +163,7 @@ BEGIN
 		SELECT CustID
 		FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT_xtest l WITH (NOLOCK)
 	END
-	
+	 
 	------------------------------------------------  
 	
 	CREATE TABLE #Transfer
@@ -163,27 +176,36 @@ BEGIN
 
 	INSERT INTO #Transfer
 	SELECT	b.winlostdate,
-			b.custid,
-			SUBSTRING (b.transdesc, 5, CASE WHEN CHARINDEX ('#', b.Transdesc, 4) <>  0 THEN CHARINDEX ('#', b.Transdesc, 4) -5 ELSE 0 END ) AS Product,
+			CASE
+	         WHEN b.bettype IN (21001, 21002) AND ISNULL(d.custid, -1) <> - 1 then d.custid
+	         ELSE -1
+	       END AS custid,	 
+			ISNULL(SUBSTRING (b.transdesc, 5, CASE WHEN CHARINDEX ('#', b.Transdesc, 4) <>  0 THEN CHARINDEX ('#', b.Transdesc, 4) -5 ELSE 0 END ),'') AS Product,
 			SUM((ISNULL(winlost, 0) - ISNULL(actual_stake, 0)) * b.actualrate) AS winlost 
 	FROM dbo.bettrans b WITH(READPAST, INDEX = IX_Report)
-	INNER JOIN (SELECT DISTINCT CustId, WinlostDate FROM @dummyBalance) d 
+	LEFT JOIN (SELECT DISTINCT CustId, WinlostDate FROM @dummyBalance) d 
 		ON b.custid = d.custid AND d.WinlostDate= b.WinlostDate 
 	WHERE b.winlostdate between @fromdate and @todate
 	   AND b.ruben = 1
-	   AND b.bettype IN (21001, 21002)
+	   AND b.bettype > 19000 ----IN (21001, 21002)
 	   AND b.statusid NOT IN (101, 102, 103, 121)
 	   AND (CASE WHEN b.CustId IN (SELECT CustId FROM @dummyExtraPT) AND Bettype IN (21001,21002) THEN 0 ELSE 1 END = 1)   --- Not Get ticket transfer of reset winning extraPT
     GROUP BY b.winlostdate,
-			SUBSTRING (b.transdesc, 5, CASE WHEN CHARINDEX ('#', b.Transdesc, 4) <>  0 THEN CHARINDEX ('#', b.Transdesc, 4) -5 ELSE 0 END ),
-			b.custid 
+			ISNULL(SUBSTRING (b.transdesc, 5, CASE WHEN CHARINDEX ('#', b.Transdesc, 4) <>  0 THEN CHARINDEX ('#', b.Transdesc, 4) -5 ELSE 0 END ),''),
+			CASE
+	         WHEN b.bettype IN (21001, 21002) AND ISNULL(d.custid, -1) <> - 1 then d.custid
+	         ELSE -1
+	       END  
 
+		    
 	UPDATE t 
 	SET t.Product = d.Product
 	FROM #Transfer t
-		LEFT JOIN @dummyBalance d ON t.custid = d.custid AND d.WinlostDate= t.WinlostDate 
-	WHERE t.Product = ''
-   
+		INNER JOIN @dummyBalance d ON t.custid = d.custid AND d.WinlostDate= t.WinlostDate 
+	WHERE ISNULL(t.Product,'') = ''
+
+
+    
 	---------------------------------------------------------------------------------------------------------
 	--------------------------------------------Extra PT ---------------------------------------------------
 
@@ -245,8 +267,7 @@ BEGIN
 		LEFT JOIN dbo.CS_CustSuper cs WITH (NOLOCK) ON cs.CustId = b.srecommend
 		WHERE   b.Winlostdate between @fromdate and @todate
 			AND b.ruben = 1
-			AND b.statusid NOT IN (101, 102, 103, 121)
-			AND b.bettype < 19001  		
+			AND b.statusid NOT IN (101, 102, 103, 121)		
 		GROUP BY b.Winlostdate,
 				CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
 					ELSE 0  ---MBC 
@@ -302,11 +323,7 @@ BEGIN
     FROM wl w
 	GROUP BY Winlostdate
 
-	UNION ALL
-	SELECT Winlostdate, '', 'Total Balance' ,  -1, SUM(ISNULL(Winlost, 0)+ ISNULL(WinlostDueTo, 0)) Winlost, 0
-    FROM wl w
-    WHERE IsCN88 IN (1,0)
-	GROUP BY Winlostdate
+
 	
 	UPDATE e 
 	SET ProductName = CASE WHEN e.IsCN88 = 1 THEN 'CN88 ' ELSE '' END + CASE WHEN e.ProductId = 6 THEN 'Casino' ELSE CASE WHEN e.ProductID <> 1 THEN p.ProductName ELSE e.ProductName END END 
@@ -328,43 +345,90 @@ BEGIN
 		           b.Product,
 		           ISNULL(SUM(b.Winlost), 0) AS reset
 		     FROM #Transfer b	     
+			 WHERE CustID <> -1
 			 GROUP BY b.Winlostdate, b.product
+	    )
+		,TotalBalance AS
+	    (
+			SELECT Winlostdate, product,  SUM (Balance) As Balance
+			FROM (
+		     SELECT b.Winlostdate,
+		           'Total Balance' as Product,
+		           ISNULL(SUM(b.Winlost), 0) AS balance
+		     FROM #Transfer b	     
+			 WHERE CustID = -1
+			 GROUP BY b.Winlostdate 
+			 UNION ALL
+			 SELECT  b.Winlostdate,
+		           'Total Balance' as Product,
+				   ISNULL(SUM(b.Winlost), 0) AS balance
+			 FROM #WLByProduct b
+			  GROUP BY b.Winlostdate 
+			 ) b
+			 GROUP BY winlostdate, product
 	    )
 	    SELECT dm.Winlostdate,
 	           dm.product,
-	           ROUND(ISNULL(e.Winlost, 0), 2) AS Winlost, 
+	           CASE dm.product
+	             WHEN 'Total Balance' then SUM(ROUND( ISNULL(bl.balance, 0), 2)) ELSE SUM (ROUND(ISNULL(e.Winlost, 0), 2)) END AS Winlost,
 			   CASE dm.product
-	             WHEN 'Total Balance' then 0 ELSE ROUND(ISNULL(e.Winlost, 0), 2) - ROUND(ISNULL(e.ExtraPTWinlost, 0), 2) END AS WinlostAfterExtraPT,
+	             WHEN 'Total Balance' then 0 ELSE SUM(ROUND(ISNULL(e.Winlost, 0), 2)) - SUM(ROUND(ISNULL(e.ExtraPTWinlost, 0), 2)) END AS WinlostAfterExtraPT,
 	           CASE dm.product
 	             WHEN 'Total Balance' then 0
-	             ELSE ROUND(ISNULL(rs.reset, 0), 2)
+	             ELSE SUM(ROUND(ISNULL(rs.reset, 0), 2))
 	           END AS reset
 	    FROM @dummyBalance dm
 			LEFT JOIN #WLByProduct e ON dm.product = e.productName and dm.Winlostdate = e.Winlostdate 
 			LEFT JOIN reset rs ON dm.product = rs.product and dm.Winlostdate = rs.Winlostdate
+			LEFT JOIN TotalBalance bl ON bl.Product = dm.Product AND bl.winlostdate = dm.WinlostDate
+		GROUP BY dm.Winlostdate,
+	           dm.product,  dm.seq
 		ORDER BY dm.Winlostdate DESC, dm.seq ASC
+  
 
 	END
 	--reset balance
 	ELSE IF (@mode = 1)
 	BEGIN
-		 ;WITH reset AS
+		  ----- calculate reset
+	    ;WITH reset AS
 	    (
 		     SELECT b.Winlostdate,
 		           b.Product,
 		           ISNULL(SUM(b.Winlost), 0) AS reset
 		     FROM #Transfer b	     
+			 WHERE CustID <> -1
 			 GROUP BY b.Winlostdate, b.product
 	    )
-         INSERT INTO @reset(Winlostdate, product, Winlost, WinlostAfterExtraPT, reset, latestreset, seq)
-	     SELECT dm.Winlostdate,
+		,TotalBalance AS
+	    (
+			SELECT Winlostdate, product,  SUM (Balance) As Balance
+			FROM (
+		     SELECT b.Winlostdate,
+		           'Total Balance' as Product,
+		           ISNULL(SUM(b.Winlost), 0) AS balance
+		     FROM #Transfer b	     
+			 WHERE CustID = -1
+			 GROUP BY b.Winlostdate 
+			 UNION ALL
+			 SELECT  b.Winlostdate,
+		           'Total Balance' as Product,
+				   ISNULL(SUM(b.Winlost), 0) AS balance
+			 FROM #WLByProduct b
+			  GROUP BY b.Winlostdate 
+			 ) b
+			 GROUP BY winlostdate, product
+	    )
+		INSERT INTO @reset(Winlostdate, product, Winlost, WinlostAfterExtraPT, reset, latestreset, seq)
+	    SELECT dm.Winlostdate,
 	           dm.product,
-	           ROUND(ISNULL(e.Winlost, 0), 2) AS Winlost,
+	           CASE dm.product
+	             WHEN 'Total Balance' then SUM(ROUND( ISNULL(bl.balance, 0), 2)) ELSE SUM (ROUND(ISNULL(e.Winlost, 0), 2)) END AS Winlost,
 			   CASE dm.product
-	             WHEN 'Total Balance' then 0 ELSE ROUND(ISNULL(e.Winlost, 0), 2) - ROUND(ISNULL(e.ExtraPTWinlost, 0), 2) END AS WinlostAfterExtraPT,
+	             WHEN 'Total Balance' then 0 ELSE SUM(ROUND(ISNULL(e.Winlost, 0), 2)) - SUM(ROUND(ISNULL(e.ExtraPTWinlost, 0), 2)) END AS WinlostAfterExtraPT,
 	           CASE dm.product
 	             WHEN 'Total Balance' then 0
-	             ELSE ROUND(ISNULL(rs.reset, 0), 2)
+	             ELSE SUM(ROUND(ISNULL(rs.reset, 0), 2))
 	           END AS reset,
 			   CASE
 	             WHEN  dm.Product IN ('Total Balance') THEN 0 
@@ -374,15 +438,18 @@ BEGIN
 	    FROM @dummyBalance dm
 			LEFT JOIN #WLByProduct e ON dm.product = e.productName and dm.Winlostdate = e.Winlostdate 
 			LEFT JOIN reset rs ON dm.product = rs.product and dm.Winlostdate = rs.Winlostdate
+			LEFT JOIN TotalBalance bl ON bl.Product = dm.Product AND bl.winlostdate = dm.WinlostDate
+		GROUP BY dm.Winlostdate,
+	           dm.product,  dm.seq
 		ORDER BY dm.Winlostdate DESC, dm.seq ASC
+		 
 
         declare @variance     money = 0,
                 @Winlostdate  smalldatetime,
                 @custid       int,
 				@Product	  varchar(100),
                 @resetCount   tinyint = 0,
-                @transDesc    nvarchar(1000)= ''
-                --@creator      int = 5838421,--dbaAdmin
+                @transDesc    nvarchar(1000)= '' 
                 
         SELECT @seq = 1, @WinlostDate = @FromDate
 
@@ -459,5 +526,6 @@ BEGIN
 		ORDER BY seq
 	END 
     DROP TABLE #WLByProduct
+	DROP TABLE #Transfer 
 END
 GO
