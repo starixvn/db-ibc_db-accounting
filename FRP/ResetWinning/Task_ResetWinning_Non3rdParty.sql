@@ -61,6 +61,7 @@ AS
 		- 20190701@Percy: Apply Card Club [RedmineID: #117005]
 		- 20190729@Sophia: Exclude CN88 data [Redmine: #117169]
 		- 20190801@Sophia: Integrate CN88 & refactor code[Redmine: #117809]
+		- 20190812@Sophia: insert manual dummy data for UAT testing [Redmine: #117809] 
 
 	Param Explanation:
 	    @mode:  0 _ view report
@@ -133,7 +134,7 @@ BEGIN
 		CROSS JOIN @Date d
 		WHERE l.IsDeleted = 0
 		 
-		/*INSERT INTO @dummyBalance (WinlostDate, seq, CustId, Product)
+		INSERT INTO @dummyBalance (WinlostDate, seq, CustId, Product)
 		VALUES (@FromDate , 101, 37639217, 'CN88 SPL'),
 			(@FromDate , 102, 37639217, 'CN88 SPNL'),
 			(@FromDate , 103, 37639217, 'CN88 Parlay'),
@@ -143,7 +144,7 @@ BEGIN
 			(@FromDate , 113, 37639217, 'CN88 Virtual Sports'),
 			(@FromDate , 114, 37639217, 'CN88 Virtual Sports 2'),
 			(@FromDate , 115, 37639217, 'CN88 RNG Keno'),
-			(@FromDate , 116, 37639217, 'CN88 Lottery')*/
+			(@FromDate , 116, 37639217, 'CN88 Lottery')
 
 			
 		INSERT INTO @dummyExtraPT (CustID)
