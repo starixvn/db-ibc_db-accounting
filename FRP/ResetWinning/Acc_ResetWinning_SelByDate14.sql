@@ -90,31 +90,126 @@ BEGIN
   
 	DECLARE @SQL NVARCHAR(100) = ISNULL(OBJECT_NAME(@@PROCID),'')
 	
+	DECLARE @Acc_DWLList TABLE ( seq INT, CustId INT, Product  varchar(50))
+	INSERT INTO @Acc_DWLList
+	VALUES
+(0,0,'Total Balance'),
+(1,6911909,'SPL'),
+(2,6911911,'SPNL'),
+(3,6911913,'Parlay'),
+(4,6911914,'Outright'),
+(8,6911916,'Casino'),
+(10,6911918,'Number Game'),
+(13,8158305,'Virtual Sports'),
+(15,14054918,'RNG Keno'),
+(20,18123442,'Metric Gaming - Super Live'),
+(19,18123445,'Gold Deluxe'),
+(17,18188766,'AG Casino'),
+(18,18188815,'Macau'),
+(21,18256397,'Microgaming - Live Casino'),
+(23,18371760,'Bettrade'),
+(24,19236210,'Colossus Bets'),
+(22,19692521,'Microgaming - RNG Casino'),
+(25,20174356,'Muay Thai'),
+(27,20664406,'Allbet'),
+(28,21535688,'Macau Games'),
+(29,23765766,'NG2'),
+(30,24569216,'Fishing World'),
+(31,25477229,'Cash Out'),
+(16,26513853,'Lottery'),
+(14,26513859,'Virtual Sports 2'),
+(33,28435541,'Exchange'),
+(9,28601563,'Casino (Amount due to Jackpot Pool)'),
+(35,29712506,'PP'),
+(5,35739415,'Bet Builder'),
+(39,37499112,'Card Club'),
+(101,37639217,'CN88 SPL'),
+(102,37639217,'CN88 SPNL'),
+(103,37639217,'CN88 Parlay'),
+(104,37639217,'CN88 Outright'),
+(105,37639217,'CN88 Muay Thai'),
+(110,37639217,'CN88 Number Game'),
+(113,37639217,'CN88 Virtual Sports'),
+(114,37639217,'CN88 Virtual Sports 2'),
+(115,37639217,'CN88 RNG Keno'),
+(116,37639217,'CN88 Lottery'),		
+( 101, 37639217, 'CN88 SPL'),
+(102, 37639217, 'CN88 SPNL'),
+(103, 37639217, 'CN88 Parlay'),
+(104, 37639217, 'CN88 Outright'),
+(105, 37639217, 'CN88 Muay Thai'),
+(110, 37639217, 'CN88 Number Game'),
+(113, 37639217, 'CN88 Virtual Sports'),
+(114, 37639217, 'CN88 Virtual Sports 2'),
+(115, 37639217, 'CN88 RNG Keno'),
+(116, 37639217, 'CN88 Lottery')
+ 
+ 
+ DECLARE @Acc_DWLList_ExtraPT TABLE ( CUSTID INT)
+
+INSERT INTO @Acc_DWLList_ExtraPT 
+VALUES
+(14424987),
+(21080505),
+(21080771),
+(21080784),
+(21080808),
+(21080812),
+(21080836),
+(21080850),
+(21080870),
+(21080883),
+(21080896),
+(21080917),
+(21080930),
+(21080939),
+(21080958),
+(21080986),
+(21080997),
+(21081014),
+(21081023),
+(21289307),
+(23385736),
+(35476102),
+(35854105),
+(35854106),
+(35854107),
+(37049556),
+(37049557),
+(37049559),
+(37049560),
+(37049561),
+(37049564),
+(37049566),
+(37049568),
+(37049572),
+(37049574),
+(37049576),
+(37049577)
+	
+	
 	IF (@SQL not like '%_xtest%')
 	BEGIN 
-		INSERT INTO @DummyBalance (CustID, Product, seq)
-		SELECT CustID, Product, seq
-		FROM bodb_ACC.dbo.Acc_DWLList WITH(NOLOCK)
-		WHERE Product NOT IN ('Total Balance')
-			AND IsDeleted = 0
-		
-		INSERT INTO @DummyExtraPT (CustID)
-		SELECT CustID
-		FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT l WITH (NOLOCK)
+		/*INSERT INTO @dummyBalance ( seq, CustId, Product)
+		SELECT  CASE WHEN L.seq = 0 THEN 999 ELSE l.seq END  AS seq, l.Custid, l.product
+		FROM bodb_ACC.dbo.Acc_DWLList l WITH (NOLOCK)
+		CROSS JOIN @Date d
+		WHERE l.IsDeleted = 0*/
 		
 		INSERT INTO @dummyBalance ( seq, CustId, Product)
-		VALUES ( 101, 37639217, 'CN88 SPL'),
-			(102, 37639217, 'CN88 SPNL'),
-			(103, 37639217, 'CN88 Parlay'),
-			(104, 37639217, 'CN88 Outright'),
-			(105, 37639217, 'CN88 Muay Thai'),
-			(110, 37639217, 'CN88 Number Game'),
-			(113, 37639217, 'CN88 Virtual Sports'),
-			(114, 37639217, 'CN88 Virtual Sports 2'),
-			(115, 37639217, 'CN88 RNG Keno'),
-			(116, 37639217, 'CN88 Lottery')
+		SELECT CASE WHEN L.seq = 0 THEN 999 ELSE l.seq END  AS seq, l.Custid, l.product
+		FROM @Acc_DWLList l  
+		 
+
 			
-				
+		/*INSERT INTO @dummyExtraPT (CustID)
+		SELECT CustID
+		FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT l WITH (NOLOCK)*/
+
+		INSERT INTO @dummyExtraPT (CustID)
+		SELECT CustID
+		FROM @Acc_DWLList_ExtraPT  
+						
 	END 
 	ELSE
 	BEGIN 
@@ -141,7 +236,7 @@ BEGIN
 		Bettype			INT
 	)
 
-	INSERT INTO #Transfer
+	INSERT INTO #Transfer (winlostdate, custid, Product, winlost, Bettype)
 	SELECT	b.winlostdate,
 			CASE
 	         WHEN b.bettype IN (21001, 21002) AND ISNULL(d.custid, -1) <> - 1 then d.custid
@@ -155,8 +250,8 @@ BEGIN
 		ON b.custid = d.custid 
 	WHERE b.winlostdate = @winlostdate
 	   AND b.ruben = 1
-	   AND b.bettype > 19000
-	   AND b.statusid NOT IN (101, 102, 103, 121)
+	   AND b.bettype > 19000 
+	   AND b.matchID = 0
 	   AND (CASE WHEN b.CustId IN (SELECT CustId FROM @dummyExtraPT) AND Bettype IN (21001,21002) THEN 0 ELSE 1 END = 1)   --- Not Get ticket transfer of reset winning extraPT
     GROUP BY b.winlostdate,
 			SUBSTRING (b.transdesc, 5, CASE WHEN CHARINDEX ('#', b.Transdesc, 4) <>  0 THEN CHARINDEX ('#', b.Transdesc, 4) -5 ELSE 0 END ),
@@ -187,11 +282,8 @@ BEGIN
 	) 
 	 
 	----- SPL, SPNL, MuayThai, Metric gaming, Bettrade, Palay, outright
-	;WITH wl AS(
+	 
 		SELECT  b.winlostdate,
-				CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
-					ELSE 0  ---MBC 
-				END AS IsCN88,
 				b.srecommend,	      
 				CASE WHEN ISNULL(m.Sporttype, 0) <> 0 THEN m.Sporttype ELSE 0 END AS Sporttype,
 				s.ProductId,
@@ -227,16 +319,14 @@ BEGIN
 				) AS WinlostDueTo,
 				0 AS CommForExtraPT,
 				SUM((CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.Winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END) * b.actualrate) AS WinlostForExtraPT
+		INTO #wl 
 		FROM dbo.bettrans14 b WITH(NOLOCK)			
 		INNER JOIN @SportBettype s ON s.BetType = b.bettype
 		LEFT JOIN dbo.Match14 m WITH (NOLOCK) ON m.MatchId = b.MatchId AND m.eventdate = b.Winlostdate AND m.Sporttype = 44
 		LEFT JOIN dbo.CS_CustSuper cs WITH (NOLOCK) ON cs.CustId = b.srecommend
 		WHERE   b.Winlostdate = @winlostdate 
 			AND b.statusid NOT IN (101, 102, 103, 121)			
-		GROUP BY b.Winlostdate,
-				CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
-					ELSE 0  ---MBC 
-				END ,
+		GROUP BY b.Winlostdate,				
 				b.srecommend,	      
 				CASE WHEN ISNULL(m.Sporttype, 0) <> 0 THEN m.Sporttype ELSE 0 END,
 				s.ProductId,
@@ -251,55 +341,76 @@ BEGIN
 					ELSE ''
 					END	,
 				CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss','Bet Builder') THEN s.SubProduct ELSE '' END
-				)
+				
 
 	INSERT INTO #WLByProduct (Winlostdate, ProductId, ProductName, IsCN88, Winlost, ExtraPTWinlost) 
-	SELECT Winlostdate, ProductId, ProductName, w.IsCN88, SUM(Winlost) as Winlost, SUM(ExtraPTWinlost) as ExtraPTWinlost
+	SELECT Winlostdate, ProductId, ProductName, w.IsCN88, SUM(Winlost), SUM(ExtraPTWinlost)
 	FROM (
-			SELECT  w.Winlostdate, w.ProductId, w.ProductName, w.IsCN88, 0 as Winlost, SUM(w.WinlostForExtraPT * ISNULL(s.ExtraPT,0)) as ExtraPTWinlost
-			FROM	wl w
+			SELECT  w.Winlostdate, w.ProductId, w.ProductName, 
+					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
+						ELSE 0  ---MBC 
+					END AS IsCN88, 
+				   0 as Winlost, SUM(w.WinlostForExtraPT * ISNULL(s.ExtraPT,0)) as ExtraPTWinlost
+			FROM	#wl w
 			INNER JOIN dbo.Acc_GroupExtraPTSetting s WITH(NOLOCK)
 					ON w.srecommend = s.SuperId
 					AND w.ProductId = s.ProductId
 					AND w.SubProduct = s.SubProduct
 					AND w.Sporttype = s.Sporttype 
 					AND w.Winlostdate BETWEEN s.FromDate AND s.ToDate	
-			GROUP BY w.Winlostdate, w.ProductId, w.ProductName, w.IsCN88 
+			LEFT JOIN CS_CustSuper cs WITH (NOLOCK) 
+					ON cs.CustId = w.srecommend
+			GROUP BY w.Winlostdate, w.ProductId, w.ProductName, 
+					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
+						ELSE 0  ---MBC 
+					END
 			UNION ALL 
-			SELECT	w.Winlostdate, w.ProductId, w.ProductName, w.IsCN88, 0 as Winlost, SUM(w.CommForExtraPT * ISNULL(s.ExtraCommRate,0)) as ExtraPTComm
-			FROM	wl w
-			INNER JOIN dbo.Acc_GroupExtraCommRateSetting s WITH(NOLOCK)
+			SELECT	w.Winlostdate, w.ProductId, w.ProductName, 
+					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
+						ELSE 0  ---MBC 
+					END AS IsCN88,
+					0 as Winlost, SUM(w.CommForExtraPT * ISNULL(s.ExtraCommRate,0)) as ExtraPTComm
+			FROM	#wl w
+			INNER JOIN dbo.Acc_GroupExtraCommRateSetting s WITH (NOLOCK)
 					ON w.srecommend = s.SuperId
 					AND w.ProductId = s.ProductId
 					AND w.SubProduct = s.SubProduct
 					AND w.Sporttype = s.Sporttype 
 					AND w.Winlostdate BETWEEN s.FromDate AND s.ToDate
-			GROUP BY w.Winlostdate, w.ProductId, w.ProductName, w.IsCN88
-	
-			UNION ALL
-			SELECT  w.Winlostdate, w.ProductId, w.ProductName, w.IsCN88, SUM(isnull( w.Winlost,0)) as Winlost , 0 as ExtraPTWinlost 
-			FROM	wl w
-			GROUP BY w.Winlostdate, w.ProductId, w.ProductName, w.IsCN88 
+			LEFT JOIN CS_CustSuper cs WITH (NOLOCK) 
+					ON cs.CustId = w.srecommend
+			GROUP BY w.Winlostdate, w.ProductId, w.ProductName,
+					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
+						ELSE 0  ---MBC 
+					END		
 		) w
 	GROUP BY w.Winlostdate, w.ProductId, w.ProductName, w.IsCN88
 
 	UNION ALL
-	SELECT w.Winlostdate, '' as ProductId,'Casino (Amount due to Jackpot Pool)' as ProductName, 0 as IsCN88, ISNULL(SUM(w.WinlostDueTo), 0) as Winlost, 0	as ExtraPTWinlost
-    FROM wl w
+	SELECT w.Winlostdate, '','Casino (Amount due to Jackpot Pool)', 0, SUM(ISNULL(w.WinlostDueTo, 0)) AS Winlost, 0	
+    FROM #wl w
+	WHERE w.WinlostDueTo <> 0 
 	GROUP BY Winlostdate
 
 	UNION ALL
-	SELECT Winlostdate, '' as ProductId, 'Total Balance' as ProductName ,  -1 as IsCN88, SUM(ISNULL(Winlost, 0)+ ISNULL(WinlostDueTo, 0)) as Winlost, 0 as ExtraPTWinlost
-    FROM wl w
-    WHERE IsCN88 IN (1,0)
-	GROUP BY Winlostdate
+	SELECT  w.Winlostdate, w.ProductId, w.ProductName, 
+			CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
+				ELSE 0  ---MBC 
+			END IsCN88, 
+			SUM(ISNULL( w.Winlost,0)) as Winlost , 0 as ExtraPTWinlost 
+	FROM	#wl w
+	LEFT JOIN CS_CustSuper cs WITH (NOLOCK) 
+		ON cs.CustId = w.srecommend
+	GROUP BY w.Winlostdate, w.ProductId, w.ProductName,
+			CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
+				ELSE 0  ---MBC 
+			END 
 	
 	UPDATE e 
 	SET ProductName = CASE WHEN e.IsCN88 = 1 THEN 'CN88 ' ELSE '' END + CASE WHEN e.ProductId = 6 THEN 'Casino' ELSE CASE WHEN e.ProductID <> 1 THEN p.ProductName ELSE e.ProductName END END 
 	FROM #WLByProduct e
 	INNER JOIN dbo.Products p WITH (NOLOCK)
 		ON e.ProductId = p.ProductId
- 
 	 
 	---------------------------------------------------------------------------------------------------------
 	SELECT @totalBalance = SUM (Winlost)
