@@ -266,7 +266,7 @@ VALUES
 	(
 	    winlostdate     SMALLDATETIME, 
 	    custid          INT,
-		Product			VARCHAR (50),
+		Product			NVARCHAR (250),
 	    winlost         MONEY
 	)
 
