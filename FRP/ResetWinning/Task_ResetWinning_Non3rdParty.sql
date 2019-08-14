@@ -89,10 +89,10 @@ BEGIN
 ------------------------------------------
 	DECLARE @dummyBalance TABLE
 	(   
-	    WinlostDate smalldatetime,
+	    WinlostDate SMALLDATETIME,
 	    seq         INT,
-	    CustId      int,
-	    Product     varchar(50)
+	    CustId      INT,
+	    Product     VARCHAR(250)
     )
     
 	DECLARE @dummyExtraPT TABLE
@@ -100,18 +100,18 @@ BEGIN
 	    CustId      int
     )
 		
-    declare @reset table
+    DECLARE @reset TABLE
     (
-        winlostdate 		smalldatetime,
-        product     		varchar(50),
-		winlost				money,
-        WinlostAfterExtraPT money,
-        reset       		money,
-        latestreset 		money,
+        winlostdate 		SMALLDATETIME,
+        product     		VARCHAR(250),
+		winlost				MONEY,
+        WinlostAfterExtraPT MONEY,
+        reset       		MONEY,
+        latestreset 		MONEY,
         seq         		SMALLINT
     )
 
-    declare @wldate DATE = @todate,
+    DECLARE @wldate DATE = @todate,
             @seq    smallint = 0,
             @maxseq smallint = 0 
 	
@@ -127,6 +127,7 @@ BEGIN
 
 
 	DECLARE @SQL NVARCHAR(100) = ISNULL(OBJECT_NAME(@@PROCID),'')
+
 	
 DECLARE @Acc_DWLList TABLE ( seq INT, CustId INT, Product  varchar(50))
 INSERT INTO @Acc_DWLList
@@ -170,17 +171,7 @@ VALUES
 (113,37639217,'CN88 Virtual Sports'),
 (114,37639217,'CN88 Virtual Sports 2'),
 (115,37639217,'CN88 RNG Keno'),
-(116,37639217,'CN88 Lottery'),		
-( 101, 37639217, 'CN88 SPL'),
-(102, 37639217, 'CN88 SPNL'),
-(103, 37639217, 'CN88 Parlay'),
-(104, 37639217, 'CN88 Outright'),
-(105, 37639217, 'CN88 Muay Thai'),
-(110, 37639217, 'CN88 Number Game'),
-(113, 37639217, 'CN88 Virtual Sports'),
-(114, 37639217, 'CN88 Virtual Sports 2'),
-(115, 37639217, 'CN88 RNG Keno'),
-(116, 37639217, 'CN88 Lottery')
+(116,37639217,'CN88 Lottery') 
  
 
  DECLARE @Acc_DWLList_ExtraPT TABLE ( CUSTID INT)
@@ -266,7 +257,7 @@ VALUES
 	(
 	    winlostdate     SMALLDATETIME, 
 	    custid          INT,
-		Product			NVARCHAR (250),
+		Product			VARCHAR(250),
 	    winlost         MONEY
 	)
 
@@ -280,7 +271,7 @@ VALUES
 			SUM((ISNULL(winlost, 0) - ISNULL(actual_stake, 0)) * b.actualrate) AS winlost 
 	FROM dbo.bettrans b WITH (NOLOCK)
 	LEFT JOIN (SELECT DISTINCT CustId, WinlostDate FROM @dummyBalance) d 
-		ON b.custid = d.custid --AND d.WinlostDate= b.WinlostDate 
+		ON b.custid = d.custid AND d.WinlostDate= b.WinlostDate 
 	WHERE b.winlostdate between @fromdate and @todate
 	   AND b.ruben = 1
 	   AND b.bettype > 19000 
@@ -305,18 +296,30 @@ VALUES
 
 	CREATE TABLE #WLByProduct
 	(
-	    winlostdate			smalldatetime, 
+	    winlostdate			SMALLDATETIME, 
 		ProductId			INT,
-		ProductName			VARCHAR(50),
-		SubProduct			VARCHAR(50),
+		ProductName			VARCHAR(250),
+		SubProduct			VARCHAR(250),
 		IsCN88				BIT,
 		winlost				MONEY, 		
-		ExtraPTWinlost	MONEY
+		ExtraPTWinlost		MONEY
 	) 
 
+	CREATE TABLE #wl 
+	(	winlostdate 	SMALLDATETIME, 
+		srecommend 		INT, 
+		Sporttype  		SMALLINT, 
+		ProductId		INT, 
+		ProductName		VARCHAR(250), 
+		SubProduct		VARCHAR(250), 
+		winlost			MONEY, 
+		WinlostDueTo	MONEY, 
+		CommForExtraPT	MONEY,
+		WinlostForExtraPT MONEY
+	)
+
 	 
-	----- SPL, SPNL, MuayThai, Metric gaming, Bettrade, Palay, outright
- 
+		INSERT INTO #wl (winlostdate, srecommend, Sporttype, ProductId, ProductName, SubProduct, winlost, WinlostDueTo, CommForExtraPT, WinlostForExtraPT)
 		SELECT  b.winlostdate,
 				b.srecommend,	      
 				CASE WHEN ISNULL(m.Sporttype, 0) <> 0 THEN m.Sporttype ELSE 0 END AS Sporttype,
@@ -353,7 +356,6 @@ VALUES
 				) AS WinlostDueTo,
 				0 AS CommForExtraPT,
 				SUM((CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.Winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END) * b.actualrate) AS WinlostForExtraPT
-		INTO #wl 
 		FROM dbo.bettrans b WITH (NOLOCK)			
 		INNER JOIN @SportBettype s ON s.BetType = b.bettype
 		LEFT JOIN dbo.Match m WITH (NOLOCK) ON m.MatchId = b.MatchId AND m.eventdate = b.Winlostdate AND m.Sporttype = 44		
@@ -380,6 +382,22 @@ VALUES
 	INSERT INTO #WLByProduct (Winlostdate, ProductId, ProductName, IsCN88, Winlost, ExtraPTWinlost) 
 	SELECT Winlostdate, ProductId, ProductName, w.IsCN88, SUM(Winlost), SUM(ExtraPTWinlost)
 	FROM (
+			--- WL by product			
+			SELECT  w.Winlostdate, w.ProductId, w.ProductName, 
+					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
+						ELSE 0  ---MBC 
+					END IsCN88, 
+					SUM(ISNULL( w.Winlost,0)) as Winlost, 0 as ExtraPTWinlost 
+			FROM	#wl w
+			LEFT JOIN CS_CustSuper cs WITH (NOLOCK) 
+				ON cs.CustId = w.srecommend
+			GROUP BY w.Winlostdate, w.ProductId, w.ProductName,
+					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
+						ELSE 0  ---MBC 
+					END 
+					
+			--- extraPT
+			UNION ALL
 			SELECT  w.Winlostdate, w.ProductId, w.ProductName, 
 					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
 						ELSE 0  ---MBC 
@@ -398,6 +416,8 @@ VALUES
 					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
 						ELSE 0  ---MBC 
 					END
+			
+			--- extraComm	
 			UNION ALL 
 			SELECT	w.Winlostdate, w.ProductId, w.ProductName, 
 					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
@@ -417,6 +437,7 @@ VALUES
 					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
 						ELSE 0  ---MBC 
 					END		
+	
 		) w
 	GROUP BY w.Winlostdate, w.ProductId, w.ProductName, w.IsCN88
 
@@ -426,20 +447,7 @@ VALUES
 	WHERE w.WinlostDueTo <> 0 
 	GROUP BY Winlostdate
 
-	UNION ALL
-	SELECT  w.Winlostdate, w.ProductId, w.ProductName, 
-			CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
-				ELSE 0  ---MBC 
-			END IsCN88, 
-			SUM(ISNULL( w.Winlost,0)) as Winlost , 0 as ExtraPTWinlost 
-	FROM	#wl w
-	LEFT JOIN CS_CustSuper cs WITH (NOLOCK) 
-		ON cs.CustId = w.srecommend
-	GROUP BY w.Winlostdate, w.ProductId, w.ProductName,
-			CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
-				ELSE 0  ---MBC 
-			END 
-	
+	----- Update ProductName
 	UPDATE e 
 	SET ProductName = CASE WHEN e.IsCN88 = 1 THEN 'CN88 ' ELSE '' END + CASE WHEN e.ProductId = 6 THEN 'Casino' ELSE CASE WHEN e.ProductID <> 1 THEN p.ProductName ELSE e.ProductName END END 
 	FROM #WLByProduct e
@@ -495,8 +503,7 @@ VALUES
 			LEFT JOIN #WLByProduct e ON dm.product = e.productName and dm.Winlostdate = e.Winlostdate 
 			LEFT JOIN reset rs ON dm.product = rs.product and dm.Winlostdate = rs.Winlostdate
 			LEFT JOIN TotalBalance bl ON bl.Product = dm.Product AND bl.winlostdate = dm.WinlostDate
-		GROUP BY dm.Winlostdate,
-	           dm.product,  dm.seq
+		GROUP BY dm.Winlostdate, dm.product, dm.seq
 		ORDER BY dm.Winlostdate DESC, dm.seq ASC 
   
 
@@ -553,8 +560,7 @@ VALUES
 			LEFT JOIN #WLByProduct e ON dm.product = e.productName and dm.Winlostdate = e.Winlostdate 
 			LEFT JOIN reset rs ON dm.product = rs.product and dm.Winlostdate = rs.Winlostdate
 			LEFT JOIN TotalBalance bl ON bl.Product = dm.Product AND bl.winlostdate = dm.WinlostDate
-		GROUP BY dm.Winlostdate,
-	           dm.product,  dm.seq 
+		GROUP BY dm.Winlostdate, dm.product, dm.seq
 		ORDER BY dm.Winlostdate DESC, dm.seq ASC
 		 
 

@@ -132,17 +132,7 @@ BEGIN
 (113,37639217,'CN88 Virtual Sports'),
 (114,37639217,'CN88 Virtual Sports 2'),
 (115,37639217,'CN88 RNG Keno'),
-(116,37639217,'CN88 Lottery'),		
-( 101, 37639217, 'CN88 SPL'),
-(102, 37639217, 'CN88 SPNL'),
-(103, 37639217, 'CN88 Parlay'),
-(104, 37639217, 'CN88 Outright'),
-(105, 37639217, 'CN88 Muay Thai'),
-(110, 37639217, 'CN88 Number Game'),
-(113, 37639217, 'CN88 Virtual Sports'),
-(114, 37639217, 'CN88 Virtual Sports 2'),
-(115, 37639217, 'CN88 RNG Keno'),
-(116, 37639217, 'CN88 Lottery')
+(116,37639217,'CN88 Lottery') 
  
  
  DECLARE @Acc_DWLList_ExtraPT TABLE ( CUSTID INT)
@@ -236,6 +226,7 @@ VALUES
 		Bettype			INT
 	)
 
+	
 	INSERT INTO #Transfer (winlostdate, custid, Product, winlost, Bettype)
 	SELECT	b.winlostdate,
 			CASE
@@ -280,9 +271,22 @@ VALUES
 		winlost				MONEY, 		
 		ExtraPTWinlost	MONEY
 	) 
-	 
-	----- SPL, SPNL, MuayThai, Metric gaming, Bettrade, Palay, outright
-	 
+	
+		
+	CREATE TABLE #wl 
+	(	winlostdate 	SMALLDATETIME, 
+		srecommend 		INT, 
+		Sporttype  		SMALLINT, 
+		ProductId		INT, 
+		ProductName		VARCHAR(250), 
+		SubProduct		VARCHAR(250), 
+		winlost			MONEY, 
+		WinlostDueTo	MONEY, 
+		CommForExtraPT	MONEY,
+		WinlostForExtraPT MONEY
+	)
+		 
+		INSERT INTO #wl (winlostdate, srecommend, Sporttype, ProductId, ProductName, SubProduct, winlost, WinlostDueTo, CommForExtraPT, WinlostForExtraPT)
 		SELECT  b.winlostdate,
 				b.srecommend,	      
 				CASE WHEN ISNULL(m.Sporttype, 0) <> 0 THEN m.Sporttype ELSE 0 END AS Sporttype,
@@ -318,12 +322,10 @@ VALUES
 					) * b.actualrate
 				) AS WinlostDueTo,
 				0 AS CommForExtraPT,
-				SUM((CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.Winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END) * b.actualrate) AS WinlostForExtraPT
-		INTO #wl 
+				SUM((CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.Winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END) * b.actualrate) AS WinlostForExtraPT 
 		FROM dbo.bettrans14 b WITH(NOLOCK)			
 		INNER JOIN @SportBettype s ON s.BetType = b.bettype
-		LEFT JOIN dbo.Match14 m WITH (NOLOCK) ON m.MatchId = b.MatchId AND m.eventdate = b.Winlostdate AND m.Sporttype = 44
-		LEFT JOIN dbo.CS_CustSuper cs WITH (NOLOCK) ON cs.CustId = b.srecommend
+		LEFT JOIN dbo.Match14 m WITH (NOLOCK) ON m.MatchId = b.MatchId AND m.eventdate = b.Winlostdate AND m.Sporttype = 44	
 		WHERE   b.Winlostdate = @winlostdate 
 			AND b.statusid NOT IN (101, 102, 103, 121)			
 		GROUP BY b.Winlostdate,				
@@ -346,6 +348,22 @@ VALUES
 	INSERT INTO #WLByProduct (Winlostdate, ProductId, ProductName, IsCN88, Winlost, ExtraPTWinlost) 
 	SELECT Winlostdate, ProductId, ProductName, w.IsCN88, SUM(Winlost), SUM(ExtraPTWinlost)
 	FROM (
+			--- WL by product		
+			SELECT  w.Winlostdate, w.ProductId, w.ProductName, 
+					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
+						ELSE 0  ---MBC 
+					END IsCN88, 
+					SUM(ISNULL( w.Winlost,0)) as Winlost , 0 as ExtraPTWinlost 
+			FROM	#wl w
+			LEFT JOIN CS_CustSuper cs WITH (NOLOCK) 
+				ON cs.CustId = w.srecommend
+			GROUP BY w.Winlostdate, w.ProductId, w.ProductName,
+					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
+						ELSE 0  ---MBC 
+					END 
+					
+			---ExtraPT
+			UNION ALL
 			SELECT  w.Winlostdate, w.ProductId, w.ProductName, 
 					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
 						ELSE 0  ---MBC 
@@ -364,6 +382,8 @@ VALUES
 					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
 						ELSE 0  ---MBC 
 					END
+					
+			---Extra Comm
 			UNION ALL 
 			SELECT	w.Winlostdate, w.ProductId, w.ProductName, 
 					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
@@ -392,20 +412,8 @@ VALUES
 	WHERE w.WinlostDueTo <> 0 
 	GROUP BY Winlostdate
 
-	UNION ALL
-	SELECT  w.Winlostdate, w.ProductId, w.ProductName, 
-			CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
-				ELSE 0  ---MBC 
-			END IsCN88, 
-			SUM(ISNULL( w.Winlost,0)) as Winlost , 0 as ExtraPTWinlost 
-	FROM	#wl w
-	LEFT JOIN CS_CustSuper cs WITH (NOLOCK) 
-		ON cs.CustId = w.srecommend
-	GROUP BY w.Winlostdate, w.ProductId, w.ProductName,
-			CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
-				ELSE 0  ---MBC 
-			END 
 	
+	----- Update ProductName
 	UPDATE e 
 	SET ProductName = CASE WHEN e.IsCN88 = 1 THEN 'CN88 ' ELSE '' END + CASE WHEN e.ProductId = 6 THEN 'Casino' ELSE CASE WHEN e.ProductID <> 1 THEN p.ProductName ELSE e.ProductName END END 
 	FROM #WLByProduct e
@@ -449,5 +457,6 @@ VALUES
 		  
 		DROP TABLE #Transfer
 		DROP TABLE #WLByProduct   
+		DROP TABLE #WL
 END
 GO
