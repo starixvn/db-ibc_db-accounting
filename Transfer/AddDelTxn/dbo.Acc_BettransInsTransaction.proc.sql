@@ -69,47 +69,34 @@ BEGIN
 
 	--------------------------vvvvv-------------------------------------
 	--Check to not allow to transfer before balance up date
-	DECLARE @BalanceUpDay SMALLDATETIME
-		, @archivedDate SMALLDATETIME
-		, @transferDate SMALLDATETIME
+	DECLARE @BalanceUpDay	SMALLDATETIME
+		, @archivedDay		SMALLDATETIME
+		, @constraintDay	SMALLDATETIME
 
-	SELECT TOP 1 @BalanceUpDay = winlostdate
+	SELECT TOP 1 @balanceUpDay = winlostdate
 	FROM dbo.Bettrans WITH (NOLOCK)
 	WHERE bettype = 20000
 		AND matchid = 0
 		AND custid = 3
 
-	SELECT @archivedDate = MAX(winlostdate)
-		, @transferDate = GETDATE()
+	SELECT @archivedDay	= MAX(winlostdate)
 	FROM dbo.Task_ArchiveDate WITH (NOLOCK)
 
-	-- at this time, server is processing adding tickets into transfer_fi table. So not allow to transfer.
-	IF DATENAME(WEEKDAY, @transferDate) IN ('Thursday')
-		AND @BalanceUpDay + 7 < @transferDate --this week day BU not processed yet
-	BEGIN
-		IF @winlostdate <= @archivedDate -- Before the new BU date
-		BEGIN
-			SELECT @ErrMsg = CASE @Language
-					WHEN 'E'
-						THEN 'Not allow to add transaction before balance up date - ' + convert(NVARCHAR(10), @BalanceUpDay + 7, 120) + '.'
-					END
-				, @ErrCode = 105
+	SELECT @constraintDay =  CASE 
+									WHEN @archivedDay > @BalanceUpDay THEN @BalanceUpDay+7 -- new BU
+									ELSE @BalanceUpDay -- old BU
+								END
 
-			RETURN
-		END
-	END
-	ELSE IF @winlostdate < @BalanceUpDay --Before the last BU date
+	IF @winlostdate < @constraintDay --Before BU date
 	BEGIN
 		SELECT @ErrMsg = CASE @Language
 				WHEN 'E'
-					THEN 'Not allow to add transaction before balance up date - ' + convert(NVARCHAR(10), @BalanceUpDay, 120) + '.'
+					THEN 'Not allow to add transaction before balance up date - ' + convert(NVARCHAR(10), @constraintDay, 120) + '.'
 				END
-			, @ErrCode = 105
+			, @ErrCode = 101
 
 		RETURN
 	END
-
-
 	----------------------^^^^^^----------------------------------
 	if @amount = 0 
 	BEGIN
