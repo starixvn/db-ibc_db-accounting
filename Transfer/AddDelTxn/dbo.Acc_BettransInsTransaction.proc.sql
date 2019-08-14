@@ -42,6 +42,8 @@ Revisions:
 	- 20150808@Elodie: Balance Improvement [Redmine:#40125]
 	- 20151021@Elodie: Set @IsForce = 1 for updating balance debit [Redmine:#40125]
 	- 20180808@Helen: GET CODE FROM PRODUCTION + DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
+	- 20190812@Bobby: AddDelTXN - Update checking constraint [Redmine:118530]
+	
 	
 Param's Explanation:
 */
@@ -67,30 +69,47 @@ BEGIN
 
 	--------------------------vvvvv-------------------------------------
 	--Check to not allow to transfer before balance up date
-	DECLARE @BalanceUpDay smalldatetime
+	DECLARE @BalanceUpDay SMALLDATETIME
+		, @archivedDate SMALLDATETIME
+		, @transferDate SMALLDATETIME
+
 	SELECT TOP 1 @BalanceUpDay = winlostdate
-	FROM dbo.Bettrans WITH(NOLOCK)
-	WHERE bettype = 20000 and matchid = 0 and custid = 3
+	FROM dbo.Bettrans WITH (NOLOCK)
+	WHERE bettype = 20000
+		AND matchid = 0
+		AND custid = 3
+
+	SELECT @archivedDate = MAX(winlostdate)
+		, @transferDate = GETDATE()
+	FROM dbo.Task_ArchiveDate WITH (NOLOCK)
 
 	-- at this time, server is processing adding tickets into transfer_fi table. So not allow to transfer.
-	if datename(weekday, getdate()) in ('Thursday') AND datepart(hour, getdate())>= 12
-		AND @BalanceUpDay + 7 < getdate() --this week BU not processed yet
+	IF DATENAME(WEEKDAY, @transferDate) IN ('Thursday')
+		AND @BalanceUpDay + 7 < @transferDate --this week day BU not processed yet
 	BEGIN
-		if @winlostdate < @BalanceUpDay +7 --Last Saturday
+		IF @winlostdate <= @archivedDate -- Before the new BU date
 		BEGIN
-			SELECT @ErrMsg =  case @Language
-							when 'E' then 'Not allow to add transaction before balance up date - '+ convert(nvarchar(10), @BalanceUpDay +7 ,120)  +'.'
-						end, @ErrCode = 105
-			return
+			SELECT @ErrMsg = CASE @Language
+					WHEN 'E'
+						THEN 'Not allow to add transaction before balance up date - ' + convert(NVARCHAR(10), @BalanceUpDay + 7, 120) + '.'
+					END
+				, @ErrCode = 105
+
+			RETURN
 		END
 	END
-	ELSE IF @winlostdate < @BalanceUpDay --Before last BU date
+	ELSE IF @winlostdate < @BalanceUpDay --Before the last BU date
 	BEGIN
-		SELECT @ErrMsg =  case @Language
-							when 'E' then 'Not allow to add transaction before balance up date - '+ convert(nvarchar(10), @BalanceUpDay ,120)  +'.'
-						end, @ErrCode = 105
-		return
+		SELECT @ErrMsg = CASE @Language
+				WHEN 'E'
+					THEN 'Not allow to add transaction before balance up date - ' + convert(NVARCHAR(10), @BalanceUpDay, 120) + '.'
+				END
+			, @ErrCode = 105
+
+		RETURN
 	END
+
+
 	----------------------^^^^^^----------------------------------
 	if @amount = 0 
 	BEGIN
