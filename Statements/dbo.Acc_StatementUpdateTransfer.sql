@@ -17,6 +17,7 @@ AS
 	
 	Revisions:
 		- 20190718@Percy: Update total opening/closing balance [RedmineID: #109293]
+		- 20190819@Sophia: Fix bug when add TXN on BU day [Redmine: #118530]
     
 	Param's Explanation:
 */
@@ -146,38 +147,42 @@ BEGIN
 			(
 				-- Super
 				SELECT
-					@srecommend AS custid
+					srecommend AS custid
 					,SUM(CASE WHEN custid = srecommend THEN ClosingBalance ELSE 0 END) AS ClosingBalance
 					,SUM(ClosingBalance) AS ClosingTotalBalance
 				FROM #rptStatement
 				WHERE srecommend = @srecommend
+				GROUP BY srecommend
 			
 				-- Master
 				UNION ALL
 				SELECT
-					@mrecommend AS custid
+					mrecommend AS custid
 					,SUM(CASE WHEN custid = mrecommend THEN ClosingBalance ELSE 0 END) AS ClosingBalance
 					,SUM(ClosingBalance) AS ClosingTotalBalance
 				FROM #rptStatement
 				WHERE mrecommend = @mrecommend
+				GROUP BY mrecommend
 
 				-- Agent
 				UNION ALL
 				SELECT
-					@recommend AS custid
+					recommend AS custid
 					,SUM(CASE WHEN custid = recommend THEN ClosingBalance ELSE 0 END) AS ClosingBalance
 					,SUM(ClosingBalance) AS ClosingTotalBalance
 				FROM #rptStatement
 				WHERE recommend = @recommend
+				GROUP BY recommend
 
 				-- Member
 				UNION ALL
 				SELECT
-					@custid AS custid
+					custid AS custid
 					,SUM(ClosingBalance) AS ClosingBalance
 					,SUM(ClosingBalance) AS ClosingTotalBalance
 				FROM #rptStatement
 				WHERE custid = @custid AND @roleid = 1
+				GROUP BY custid
 			) AS tmp
 		WHERE NOT EXISTS (SELECT 1 FROM dbo.rptStatement r WITH (NOLOCK) WHERE tmp.custid = r.custid AND r.winlostdate = @winlostdate)
 	END
