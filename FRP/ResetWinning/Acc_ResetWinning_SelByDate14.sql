@@ -53,8 +53,7 @@ AS
 		- 20190701@Percy: Remove WL due to partner [RedmineID: #115802]
 		- 20190701@Percy: Apply Card Club [RedmineID: #117005]
 		- 20190729@Sophia: Exclude CN88 data [Redmine: #117169]
-		- 20190801@Sophia: Integrate CN88 & refactor code[Redmine: #117809]
-		- 20190812@Sophia: insert manual dummy data for UAT testing [Redmine: #117809] 
+		- 20190801@Sophia: Integrate CN88 & refactor code[Redmine: #117809] 
 		
 	Explanation's Param:
 
@@ -74,13 +73,13 @@ BEGIN
 	----- End get sport bettype 
 	
 ------------------------------------------
-	DECLARE @DummyBalance TABLE (CustId INT, Product VARCHAR(50), seq SMALLINT )
+	DECLARE @DummyBalance TABLE (CustId INT, Product VARCHAR(250), seq SMALLINT, Currency INT )
 	DECLARE @DummyExtraPT TABLE(CustId INT )
 		
     DECLARE @reset TABLE
     (
         winlostdate smalldatetime,
-        product     varchar(50),
+        product     VARCHAR(250),
 		winlost		money,
         WinlostAfterExtraPT     money,
         reset       money,
@@ -90,124 +89,141 @@ BEGIN
   
 	DECLARE @SQL NVARCHAR(100) = ISNULL(OBJECT_NAME(@@PROCID),'')
 	
-	DECLARE @Acc_DWLList TABLE ( seq INT, CustId INT, Product  varchar(50))
-	INSERT INTO @Acc_DWLList
-	VALUES
-(0,0,'Total Balance'),
-(1,6911909,'SPL'),
-(2,6911911,'SPNL'),
-(3,6911913,'Parlay'),
-(4,6911914,'Outright'),
-(8,6911916,'Casino'),
-(10,6911918,'Number Game'),
-(13,8158305,'Virtual Sports'),
-(15,14054918,'RNG Keno'),
-(20,18123442,'Metric Gaming - Super Live'),
-(19,18123445,'Gold Deluxe'),
-(17,18188766,'AG Casino'),
-(18,18188815,'Macau'),
-(21,18256397,'Microgaming - Live Casino'),
-(23,18371760,'Bettrade'),
-(24,19236210,'Colossus Bets'),
-(22,19692521,'Microgaming - RNG Casino'),
-(25,20174356,'Muay Thai'),
-(27,20664406,'Allbet'),
-(28,21535688,'Macau Games'),
-(29,23765766,'NG2'),
-(30,24569216,'Fishing World'),
-(31,25477229,'Cash Out'),
-(16,26513853,'Lottery'),
-(14,26513859,'Virtual Sports 2'),
-(33,28435541,'Exchange'),
-(9,28601563,'Casino (Amount due to Jackpot Pool)'),
-(35,29712506,'PP'),
-(5,35739415,'Bet Builder'),
-(39,37499112,'Card Club'),
-(101,37639217,'CN88 SPL'),
-(102,37639217,'CN88 SPNL'),
-(103,37639217,'CN88 Parlay'),
-(104,37639217,'CN88 Outright'),
-(105,37639217,'CN88 Muay Thai'),
-(110,37639217,'CN88 Number Game'),
-(113,37639217,'CN88 Virtual Sports'),
-(114,37639217,'CN88 Virtual Sports 2'),
-(115,37639217,'CN88 RNG Keno'),
-(116,37639217,'CN88 Lottery') 
+--	DECLARE @Acc_DWLList TABLE ( seq INT, CustId INT, Product  VARCHAR(250))
+	
+--	INSERT INTO @Acc_DWLList
+--	VALUES
+--(0,0,'Total Balance'),
+--(1,6911909,'SPL'),
+--(2,6911911,'SPNL'),
+--(3,6911913,'Parlay'),
+--(4,6911914,'Outright'),
+--(8,6911916,'Casino'),
+--(10,6911918,'Number Game'),
+--(13,8158305,'Virtual Sports'),
+--(15,14054918,'RNG Keno'),
+--(20,18123442,'Metric Gaming - Super Live'),
+--(19,18123445,'Gold Deluxe'),
+--(17,18188766,'AG Casino'),
+--(18,18188815,'Macau'),
+--(21,18256397,'Microgaming - Live Casino'),
+--(23,18371760,'Bettrade'),
+--(24,19236210,'Colossus Bets'),
+--(22,19692521,'Microgaming - RNG Casino'),
+--(25,20174356,'Muay Thai'),
+--(27,20664406,'Allbet'),
+--(28,21535688,'Macau Games'),
+--(29,23765766,'NG2'),
+--(30,24569216,'Fishing World'),
+--(31,25477229,'Cash Out'),
+--(16,26513853,'Lottery'),
+--(14,26513859,'Virtual Sports 2'),
+--(33,28435541,'Exchange'),
+--(9,28601563,'Casino (Amount due to Jackpot Pool)'),
+--(35,29712506,'PP'),
+--(5,35739415,'Bet Builder'),
+--(39,37499112,'Card Club'),
+--(101,37639217,'CN88 SPL'),
+--(102,37639217,'CN88 SPNL'),
+--(103,37639217,'CN88 Parlay'),
+--(104,37639217,'CN88 Outright'),
+--(105,37639217,'CN88 Muay Thai'),
+--(110,37639217,'CN88 Number Game'),
+--(113,37639217,'CN88 Virtual Sports'),
+--(114,37639217,'CN88 Virtual Sports 2'),
+--(115,37639217,'CN88 RNG Keno'),
+--(116,37639217,'CN88 Lottery') 
  
- 
- DECLARE @Acc_DWLList_ExtraPT TABLE ( CUSTID INT)
+-- /*
+-- ,(101,37222811,'CN88 SPL'),
+--(102,37222811,'CN88 SPNL'),
+--(103,37222811,'CN88 Parlay'),
+--(104,37222811,'CN88 Outright'),
+--(105,37222811,'CN88 Muay Thai'),
+--(110,37222811,'CN88 Number Game'),
+--(113,37222811,'CN88 Virtual Sports'),
+--(114,37222811,'CN88 Virtual Sports 2'),
+--(115,37222811,'CN88 RNG Keno'),
+--(116,37222811,'CN88 Lottery') 
+--*/
 
-INSERT INTO @Acc_DWLList_ExtraPT 
-VALUES
-(14424987),
-(21080505),
-(21080771),
-(21080784),
-(21080808),
-(21080812),
-(21080836),
-(21080850),
-(21080870),
-(21080883),
-(21080896),
-(21080917),
-(21080930),
-(21080939),
-(21080958),
-(21080986),
-(21080997),
-(21081014),
-(21081023),
-(21289307),
-(23385736),
-(35476102),
-(35854105),
-(35854106),
-(35854107),
-(37049556),
-(37049557),
-(37049559),
-(37049560),
-(37049561),
-(37049564),
-(37049566),
-(37049568),
-(37049572),
-(37049574),
-(37049576),
-(37049577)
+ 
+-- DECLARE @Acc_DWLList_ExtraPT TABLE ( CUSTID INT)
+
+--INSERT INTO @Acc_DWLList_ExtraPT 
+--VALUES
+--(14424987),
+--(21080505),
+--(21080771),
+--(21080784),
+--(21080808),
+--(21080812),
+--(21080836),
+--(21080850),
+--(21080870),
+--(21080883),
+--(21080896),
+--(21080917),
+--(21080930),
+--(21080939),
+--(21080958),
+--(21080986),
+--(21080997),
+--(21081014),
+--(21081023),
+--(21289307),
+--(23385736),
+--(35476102),
+--(35854105),
+--(35854106),
+--(35854107),
+--(37049556),
+--(37049557),
+--(37049559),
+--(37049560),
+--(37049561),
+--(37049564),
+--(37049566),
+--(37049568),
+--(37049572),
+--(37049574),
+--(37049576),
+--(37049577)
 	
 	
 	IF (@SQL not like '%_xtest%')
 	BEGIN 
-		/*INSERT INTO @dummyBalance ( seq, CustId, Product)
-		SELECT  CASE WHEN L.seq = 0 THEN 999 ELSE l.seq END  AS seq, l.Custid, l.product
+		INSERT INTO @dummyBalance ( seq, CustId, Product, currency)
+		SELECT  CASE WHEN L.seq = 0 THEN 999 ELSE l.seq END  AS seq, l.Custid, l.product,
+				CASE WHEN l.Product LIKE 'CN88%' THEN ISNULL(c.Currency,0) ELSE 0 END AS Currency
 		FROM bodb_ACC.dbo.Acc_DWLList l WITH (NOLOCK)
-		CROSS JOIN @Date d
-		WHERE l.IsDeleted = 0*/
+		LEFT JOIN dbo.CustInfo c WITH (NOLOCK) ON c.CustID = l.CustID		
+		WHERE l.IsDeleted = 0
 		
-		INSERT INTO @dummyBalance ( seq, CustId, Product)
-		SELECT CASE WHEN L.seq = 0 THEN 999 ELSE l.seq END  AS seq, l.Custid, l.product
-		FROM @Acc_DWLList l  
-		 
+		--INSERT INTO @dummyBalance ( seq, CustId, Product, currency)
+		--SELECT  CASE WHEN L.seq = 0 THEN 999 ELSE l.seq END  AS seq, l.Custid, l.product,
+		--		CASE WHEN l.Product LIKE 'CN88%' THEN ISNULL(c.Currency,0) ELSE 0 END AS Currency
+		--FROM @Acc_DWLList l  
+		-- LEFT JOIN dbo.CustInfo c WITH (NOLOCK) ON c.CustID = l.CustID
 
 			
-		/*INSERT INTO @dummyExtraPT (CustID)
-		SELECT CustID
-		FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT l WITH (NOLOCK)*/
-
 		INSERT INTO @dummyExtraPT (CustID)
 		SELECT CustID
-		FROM @Acc_DWLList_ExtraPT  
+		FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT l WITH (NOLOCK)
+
+		--INSERT INTO @dummyExtraPT (CustID)
+		--SELECT CustID
+		--FROM @Acc_DWLList_ExtraPT  
 						
 	END 
 	ELSE
 	BEGIN 
-		INSERT INTO @DummyBalance (CustID, Product, seq)
-		SELECT CustID, Product, seq
-		FROM bodb_ACC.dbo.Acc_DWLList_xtest WITH(NOLOCK)
-		WHERE Product NOT IN ('Total Balance')
-			AND IsDeleted = 0
+		INSERT INTO @dummyBalance ( seq, CustId, Product, currency)
+		SELECT  CASE WHEN L.seq = 0 THEN 999 ELSE l.seq END  AS seq, l.Custid, l.product,
+				CASE WHEN l.Product LIKE 'CN88%' THEN ISNULL(c.Currency,0) ELSE 0 END AS Currency
+		FROM bodb_ACC.dbo.Acc_DWLList_xtest l WITH (NOLOCK)
+		LEFT JOIN dbo.CustInfo c WITH (NOLOCK) ON c.CustID = l.CustID		
+		WHERE l.IsDeleted = 0
 		
 		INSERT INTO @DummyExtraPT (CustID)
 		SELECT CustID
@@ -221,42 +237,77 @@ VALUES
 	(
 	    winlostdate     SMALLDATETIME, 
 	    custid          INT,
+		Currency		INT,
+		bettype			INT,
 		Product			NVARCHAR (250),
 	    winlost         MONEY,
-		Bettype			INT
+		Realwinlost		MONEY
+		
 	)
 
 	
-	INSERT INTO #Transfer (winlostdate, custid, Product, winlost, Bettype)
+	INSERT INTO #Transfer (winlostdate, custid, Currency, bettype, Product, winlost, Realwinlost)
 	SELECT	b.winlostdate,
 			CASE
 	         WHEN b.bettype IN (21001, 21002) AND ISNULL(d.custid, -1) <> - 1 then d.custid
 	         ELSE -1
-	        END AS custid,
-			SUBSTRING (b.transdesc, 5, CASE WHEN CHARINDEX ('#', b.Transdesc, 4) <>  0 THEN CHARINDEX ('#', b.Transdesc, 4) -5 ELSE 0 END ) AS Product,
-			SUM((ISNULL(winlost, 0) - ISNULL(actual_stake, 0)) * b.actualrate) AS winlost ,
-			CASE WHEN b.Bettype = 20000 THEN b.Bettype ELSE 0 END
-	FROM dbo.bettrans b WITH(NOLOCK)
-	LEFT JOIN (SELECT DISTINCT CustId FROM @dummyBalance) d 
-		ON b.custid = d.custid 
+			END AS custid,
+			CASE
+	         WHEN (b.bettype IN (21001, 21002) AND ISNULL(d.custid, -1) <> - 1 AND ISNULL(d.Currency,0) <> 0 ) then b.Currency
+	         ELSE 0
+			END AS Currency,	
+			CASE
+	         WHEN b.bettype = 20000 then b.Currency
+	         ELSE 0
+			END AS bettype, 			
+			CASE WHEN ISNULL(d.Currency,0) <> 0   --- CN88
+				THEN 
+					ISNULL(SUBSTRING (	b.transdesc, 
+										CHARINDEX ('CN88', b.Transdesc ), 
+										CASE WHEN CHARINDEX ('#', b.Transdesc ) <>  0 AND CHARINDEX ('CN88', b.Transdesc ) <> 0
+											 THEN CHARINDEX ('#', b.Transdesc ) - CHARINDEX ('CN88', b.Transdesc ) 
+											 ELSE 0 END 
+									),'') 						 
+				ELSE '' END AS Product,
+			SUM((ISNULL(winlost, 0) - ISNULL(actual_stake, 0)) * b.actualrate) AS Winlost,
+			SUM((ISNULL(winlost, 0) - ISNULL(actual_stake, 0))) AS RealWinlost 
+	FROM dbo.bettrans b WITH (NOLOCK)
+	LEFT JOIN (SELECT DISTINCT CustId, currency FROM @dummyBalance) d 
+		ON b.custid = d.custid  
 	WHERE b.winlostdate = @winlostdate
 	   AND b.ruben = 1
 	   AND b.bettype > 19000 
-	   AND b.matchID = 0
-	   AND (CASE WHEN b.CustId IN (SELECT CustId FROM @dummyExtraPT) AND Bettype IN (21001,21002) THEN 0 ELSE 1 END = 1)   --- Not Get ticket transfer of reset winning extraPT
+	   and b.matchID = 0 
+	   AND NOT EXISTS (SELECT 1 FROM @dummyExtraPT de WHERE de.CustID = b.Custid AND b.Bettype IN (21001,21002))   --- Not Get ticket transfer of reset winning extraPT
     GROUP BY b.winlostdate,
-			SUBSTRING (b.transdesc, 5, CASE WHEN CHARINDEX ('#', b.Transdesc, 4) <>  0 THEN CHARINDEX ('#', b.Transdesc, 4) -5 ELSE 0 END ),
 			CASE
 	         WHEN b.bettype IN (21001, 21002) AND ISNULL(d.custid, -1) <> - 1 then d.custid
 	         ELSE -1
-	        END ,
-			CASE WHEN b.Bettype = 20000 THEN  b.Bettype ELSE 0 END 
+			END ,
+			CASE
+	         WHEN (b.bettype IN (21001, 21002) AND ISNULL(d.custid, -1) <> - 1 AND ISNULL(d.Currency,0) <> 0 ) then b.Currency
+	         ELSE 0
+			END,	
+			CASE
+	         WHEN b.bettype = 20000 then b.Currency
+	         ELSE 0
+			END,			
+			CASE WHEN ISNULL(d.Currency,0) <> 0   --- CN88
+				THEN 
+					ISNULL(SUBSTRING (  b.transdesc, 
+										CHARINDEX ('CN88', b.Transdesc ), 
+										CASE WHEN CHARINDEX ('#', b.Transdesc ) <>  0 AND CHARINDEX ('CN88', b.Transdesc ) <> 0
+											 THEN CHARINDEX ('#', b.Transdesc ) - CHARINDEX ('CN88', b.Transdesc ) 
+											 ELSE 0 END 
+										),'') 
+			 ELSE '' END
 
 	UPDATE t 
 	SET t.Product = d.Product
 	FROM #Transfer t
-		LEFT JOIN @dummyBalance d ON t.custid = d.custid 
-	WHERE t.Product = ''
+		LEFT JOIN @dummyBalance d 
+			ON t.custid = d.custid AND t.Currency = d.Currency
+	WHERE ISNULL(t.Product,'') = ''
    
 	---------------------------------------------------------------------------------------------------------
 	--------------------------------------------Extra PT ---------------------------------------------------
@@ -265,8 +316,8 @@ VALUES
 	(
 	    winlostdate			smalldatetime, 
 		ProductId			INT,
-		ProductName			VARCHAR(50),
-		SubProduct			VARCHAR(50),
+		ProductName			VARCHAR(250),
+		SubProduct			VARCHAR(250),
 		IsCN88				BIT,
 		winlost				MONEY, 		
 		ExtraPTWinlost	MONEY
