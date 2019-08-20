@@ -257,7 +257,7 @@ BEGIN
 	         ELSE 0
 			END AS Currency,	
 			CASE
-	         WHEN b.bettype = 20000 then b.Currency
+	         WHEN b.bettype = 20000 then b.bettype
 	         ELSE 0
 			END AS bettype, 			
 			CASE WHEN ISNULL(d.Currency,0) <> 0   --- CN88
@@ -289,7 +289,7 @@ BEGIN
 	         ELSE 0
 			END,	
 			CASE
-	         WHEN b.bettype = 20000 then b.Currency
+	         WHEN b.bettype = 20000 then b.bettype
 	         ELSE 0
 			END,			
 			CASE WHEN ISNULL(d.Currency,0) <> 0   --- CN88
