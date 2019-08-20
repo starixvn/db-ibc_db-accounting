@@ -49,7 +49,7 @@ BEGIN
 
 
 	SELECT @Curr = c.Currency
-		,@actualrate = e.actualrate
+		,@actualrate = eo.actualrate
 		,@currName = e.currency
 		,@username = c.username
 		,@Recommend = c.Recommend
@@ -57,8 +57,10 @@ BEGIN
 		,@SRecommend = c.SRecommend
 		,@roleID = roleid
 	FROM CustDB.dbo.custInfo c WITH (NOLOCK)
-		INNER JOIN CustDB.dbo.ExchangeDailyOanda e WITH (NOLOCK)
-		ON c.currency = e.exchangeid and e.exchangeDate = @winlostdate
+		INNER JOIN CustDB.dbo.ExchangeDailyOanda eo WITH (NOLOCK)
+			ON c.currency = eo.exchangeid and eo.exchangeDate = @winlostdate
+		INNER JOIN CustDB.dbo.Exchange e WITH (NOLOCK)
+			ON c.currency = e.exchangeid
 	WHERE c.CustID = @custid
 
 
