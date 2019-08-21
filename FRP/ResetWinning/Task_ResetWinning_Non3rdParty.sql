@@ -116,6 +116,7 @@ BEGIN
 
 
 	DECLARE @SQL NVARCHAR(100) = ISNULL(OBJECT_NAME(@@PROCID),'')
+	SELECT @Istest = CASE WHEN @SQL like '%_xtest%' THEN 1 ELSE 0 END
 
 	
 --DECLARE @Acc_DWLList TABLE ( seq INT, CustId INT, Product  varchar(250))
@@ -219,7 +220,7 @@ BEGIN
 --(37049576),
 --(37049577)
 	
-	IF (@SQL not like '%_xtest%')	
+	IF @Istest = 0
 	BEGIN 
 		INSERT INTO @dummyBalance (WinlostDate, seq, CustId, Product, Currency)
 		SELECT  d.WLDate, CASE WHEN L.seq = 0 THEN 999 ELSE l.seq END  AS seq, 
