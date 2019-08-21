@@ -481,14 +481,16 @@ BEGIN
 	    ;WITH reset AS
 	    (
 		     SELECT b.Product,
-		           ISNULL(SUM(b.Winlost), 0) AS reset
+		           ISNULL(SUM(b.Winlost), 0) AS reset,
+				   ISNULL(SUM(b.RealWinlost), 0) AS RealRreset
 		     FROM #Transfer b
 			 WHERE b.bettype <> 20000	     
 			 GROUP BY b.product
 	    )
 		,OpenningBalance AS
 		(
-			SELECT 'Openning Balance' as product, SUM(ISNULL(winlost, 0)) AS winlost
+			SELECT 'Openning Balance' as product, 
+					SUM(ISNULL(winlost, 0)) AS winlost
 			FROM #Transfer b
 			WHERE b.bettype = 20000
 			HAVING SUM(ISNULL(winlost, 0)) <> 0
@@ -499,7 +501,7 @@ BEGIN
 	    SELECT dm.product,
 	           ROUND(ISNULL(e.Winlost, 0), 2) AS Winlost, 
 			   ROUND(ISNULL(e.Winlost, 0), 2) - ROUND(ISNULL(e.ExtraPTWinlost, 0), 2) AS WinlostAfterExtraPT,
-	           ROUND(ISNULL(rs.reset, 0), 2) AS reset, 
+	           CASE WHEN @Istest = 1 THEN ROUND(ISNULL(rs.Realreset, 0), 2) ELSE ROUND(ISNULL(rs.reset, 0), 2) END AS reset, 
 			   dm.seq
 	    FROM @dummyBalance dm
 			LEFT JOIN #WLByProduct e ON dm.product = e.productName 

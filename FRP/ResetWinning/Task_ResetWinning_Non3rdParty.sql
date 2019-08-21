@@ -641,7 +641,7 @@ BEGIN
 					WHEN 'Total Balance' THEN 0 ELSE ROUND(SUM(ISNULL(e.Winlost, 0)), 2) - ROUND(SUM(ISNULL(e.ExtraPTWinlost, 0)), 2) END AS WinlostAfterExtraPT,
 				CASE dm.product
 					WHEN 'Total Balance' THEN 0
-					ELSE ROUND(SUM(ISNULL(rs.reset, 0)), 2)
+					ELSE CASE WHEN @istest = 1 THEN ROUND(SUM(ISNULL(rs.RealReset, 0)), 2) ELSE ROUND(SUM(ISNULL(rs.reset, 0)), 2) END
 				END AS reset,				
 				dm.seq
 		FROM @dummyBalance dm
@@ -826,8 +826,8 @@ BEGIN
                r.product,
 			   SUM (r.Winlost) AS Winlost ,
                SUM (r.WinlostAfterExtraPT) AS WinlostAfterExtraPT, 
-               SUM (r.reset + r.latestreset) AS totalreset,
-               SUM (r.latestreset) latestreset 
+               SUM (CASE WHEN @istest = 1 THEN r.Realreset + r.RealLatestReset ELSE r.reset + r.latestreset END) AS totalreset,
+               SUM (CASE WHEN @istest = 1 THEN r.RealLatestReset ELSE r.LatestReset END ) latestreset 
         FROM #reset r
 		INNER JOIN @dummyBalance d 
 			ON d.CustID = d.custID and r.product = d.Product
