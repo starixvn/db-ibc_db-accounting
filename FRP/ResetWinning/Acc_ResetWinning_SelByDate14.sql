@@ -474,7 +474,8 @@ BEGIN
 	---------------------------------------------------------------------------------------------------------
 		SELECT @totalBalance = SUM(ISNULL(b.Winlost, 0))
 		FROM #Transfer b	     
-		WHERE CustID = -1		 
+		WHERE CustID = -1	
+			  AND b.bettype <> 20000
 
 	    ----- calculate reset
 	    ;WITH reset AS
