@@ -36,6 +36,7 @@ AS
 		- 20151021@Elodie: Set @IsForce = 1 for updating balance debit [Redmine:#40125]
 		- 20180808@Helen: Get Code from Production  + DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 		- 20181112@Sophia: Add Transfer Collection [redmine: #98621]
+		- 20190812@Bobby: AddDelTXN - Update checking constraint [Redmine:118530]
 */
 BEGIN
 
@@ -94,42 +95,39 @@ BEGIN
 		SELECT	top 1 @winlostdate = winlostdate, @liveindicator = liveindicator, @transdesc = transdesc, @IsCollection = OddsID
 		FROM	@Reversal
 
-	--------------------------vvvvv-------------------------------------
-	--Check to not allow to transfer before balance up date
-	Declare @BalanceUpDay smalldatetime
+		--------------------------vvvvv-------------------------------------
+		--Check to not allow to transfer before balance up date
+		DECLARE @BalanceUpDay	SMALLDATETIME
+			, @archivedDay		SMALLDATETIME
+			, @constraintDay	SMALLDATETIME
 
-	SELECT TOP 1 @BalanceUpDay = winlostdate
-	FROM Bettrans WITH(NOLOCK)
-	WHERE bettype = 20000 and matchid = 0 and custid = 3
+		SELECT TOP 1 @balanceUpDay = winlostdate
+		FROM dbo.Bettrans WITH (NOLOCK)
+		WHERE bettype = 20000
+			AND matchid = 0
+			AND custid = 3
 
-	-- at this time, server is processing adding tickets into transfer_fi table. So not allow to transfer.
-	if datename(weekday, getdate()) in ('Thursday') AND datepart(hour, getdate())>= 12
-		AND @BalanceUpDay + 7 < getdate() --this week BU not processed yet
-	BEGIN
-		if @winlostdate < @BalanceUpDay +7 --Last Saturday
+		SELECT @archivedDay	= MAX(winlostdate)
+		FROM dbo.Task_ArchiveDate WITH (NOLOCK)
+
+		SELECT @constraintDay =  CASE 
+										WHEN @archivedDay > @BalanceUpDay THEN @BalanceUpDay+7 -- new BU
+										ELSE @BalanceUpDay -- old BU
+									END
+
+		IF @winlostdate < @constraintDay --Before BU date
 		BEGIN
-			SELECT @ErrMsg =  case @Language
-							when 'E' then 'Not allow to add transaction before balance up date - '+ convert(nvarchar(10), @BalanceUpDay +7 ,120)  +'.'
-						end, @ErrCode = 100
-			return
+			SELECT @ErrMsg = CASE @Language
+					WHEN 'E'
+						THEN 'Not allow to add transaction before balance up date - ' + convert(NVARCHAR(10), @constraintDay, 120) + '.'
+					END
+				, @ErrCode = 101
+
+			RETURN
 		END
-	END
-	ELSE IF @winlostdate < @BalanceUpDay --Before last BU date
-	BEGIN
-		SELECT @ErrMsg =  case @Language
-							when 'E' then 'Not allow to add transaction before balance up date - '+ convert(nvarchar(10), @BalanceUpDay ,120)  +'.'
-						end, @ErrCode = 101
-		return
-	END
-	----------------------^^^^^^----------------------------------
+		----------------------^^^^^^----------------------------------
 
-	-----Check settled Date
-		EXEC dbo.Acc_CheckSettledDate @winlostdate = @winlostdate,@UserID = @UserID,@ErrCode = @ErrCode OUTPUT,	@ErrMsg = @ErrMsg OUTPUT
-		
-		IF @ErrCode <> 0 RETURN
-
-
-	------ Check transaction had been deleted or not
+		------ Check transaction had been deleted or not
 		IF @liveindicator = 1
 		BEGIN 
 			SELECT	@ErrMsg ='Unable to delete this transaction due to it is marked as "Deleted"!',
