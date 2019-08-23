@@ -379,7 +379,8 @@ BEGIN
 		INNER JOIN @SportBettype s ON s.BetType = b.bettype
 		LEFT JOIN dbo.Match14 m WITH (NOLOCK) ON m.MatchId = b.MatchId AND m.eventdate = b.Winlostdate AND m.Sporttype = 44	
 		WHERE   b.Winlostdate = @winlostdate 
-			AND b.statusid NOT IN (101, 102, 103, 121)			
+			AND b.statusid NOT IN (101, 102, 103, 121)	
+			AND b.currency <> 20
 		GROUP BY b.Winlostdate,				
 				b.srecommend,	      
 				CASE WHEN ISNULL(m.Sporttype, 0) <> 0 THEN m.Sporttype ELSE 0 END,
@@ -482,7 +483,8 @@ BEGIN
 	    ;WITH reset AS
 	    (
 		     SELECT b.Product,
-		           ISNULL(SUM(b.Winlost), 0) AS reset,
+		           ----ISNULL(SUM(b.Winlost), 0) AS reset,
+				   SUM(CASE WHEN @Istest = 1 THEN ISNULL(b.RealWinlost, 0) ELSE ISNULL(b.Winlost, 0) END ) AS reset,
 				   ISNULL(SUM(b.RealWinlost), 0) AS RealRreset
 		     FROM #Transfer b
 			 WHERE b.bettype <> 20000	     
@@ -502,10 +504,10 @@ BEGIN
 	    SELECT dm.product,
 	           ROUND(ISNULL(e.Winlost, 0), 2) AS Winlost, 
 			   ROUND(ISNULL(e.Winlost, 0), 2) - ROUND(ISNULL(e.ExtraPTWinlost, 0), 2) AS WinlostAfterExtraPT,
-	           CASE WHEN @Istest = 1 THEN ROUND(ISNULL(rs.Realreset, 0), 2) ELSE ROUND(ISNULL(rs.reset, 0), 2) END AS reset, 
+	           ROUND(ISNULL(rs.reset, 0), 2) AS reset, 
 			   dm.seq
 	    FROM @dummyBalance dm
-			LEFT JOIN #WLByProduct e ON dm.product = e.productName 
+			LEFT JOIN #WLByProduct e ON dm.product = e.productName  
 			LEFT JOIN reset rs ON dm.product = rs.product  
 		WHERE dm.Product <> 'Total Balance'
 		ORDER BY seq ASC

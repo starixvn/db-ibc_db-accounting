@@ -455,6 +455,7 @@ BEGIN
 		WHERE   b.Winlostdate between @fromdate and @todate
 			AND b.ruben = 1
 			AND b.statusid NOT IN (101, 102, 103, 121)		
+			AND b.Currency <> 20 
 		GROUP BY b.Winlostdate,				
 				b.srecommend,	
 				b.Currency,
@@ -646,7 +647,7 @@ BEGIN
 				END AS reset,				
 				dm.seq
 		FROM @dummyBalance dm
-			LEFT JOIN #WLByProduct e ON dm.product = e.productName and dm.Winlostdate = e.Winlostdate AND dm.currency = e.currency
+			LEFT JOIN #WLByProduct e ON dm.product = e.productName and dm.Winlostdate = e.Winlostdate AND (dm.currency = e.currency OR @Istest = 1)
 			LEFT JOIN reset rs ON dm.product = rs.product and dm.Winlostdate = rs.Winlostdate AND dm.currency = rs.currency
 			LEFT JOIN TotalBalance bl ON bl.Product = dm.Product AND bl.winlostdate = dm.WinlostDate
 		GROUP BY dm.Winlostdate, dm.product, dm.seq
@@ -680,7 +681,7 @@ BEGIN
 		     SELECT b.Winlostdate,
 		            b.Product,
 					b.Currency,				   
-		           SUM(ISNULL(b.Winlost, 0)) AS reset,
+		           SUM(CASE WHEN @Istest = 1 THEN ISNULL(b.RealWinlost, 0) ELSE ISNULL(b.Winlost, 0) END ) AS reset,
 				   SUM(ISNULL(b.RealWinlost, 0)) AS RealReset
 		     FROM #Transfer b	     
 			 WHERE CustID <> -1
@@ -735,12 +736,12 @@ BEGIN
 	             ELSE - (ROUND(SUM(ISNULL(e.RealWinlost, 0)), 2) - ROUND(SUM(ISNULL(e.RealExtraPTWinlost, 0)), 2)) - ROUND(SUM(ISNULL(rs.RealReset, 0)), 2) 
 	           END AS RealLatestReset
 	    FROM @dummyBalance dm
-			LEFT JOIN #WLByProduct e ON dm.product = e.productName and dm.Winlostdate = e.Winlostdate AND dm.currency = e.currency
-			LEFT JOIN reset rs ON dm.product = rs.product and dm.Winlostdate = rs.Winlostdate AND dm.currency = rs.currency
+			LEFT JOIN #WLByProduct e ON dm.product = e.productName and dm.Winlostdate = e.Winlostdate AND (dm.currency = e.currency OR @Istest = 1)
+			LEFT JOIN reset rs ON dm.product = rs.product and dm.Winlostdate = rs.Winlostdate AND dm.currency = rs.currency 
 			LEFT JOIN TotalBalance bl ON bl.Product = dm.Product AND bl.winlostdate = dm.WinlostDate
 		GROUP BY dm.Winlostdate, dm.product, dm.currency, dm.seq
 		ORDER BY dm.Winlostdate DESC, dm.seq ASC
-		 
+	 
 
         DECLARE @variance     money = 0,
                 @Winlostdate  smalldatetime,
@@ -767,6 +768,7 @@ BEGIN
         WHERE  r.WinlostDate = @WinlostDate
 				AND r.Product NOT IN ('Total Balance') 
 
+
         IF (@resetCount = 0)
         BEGIN
             SELECT @ErrMsg = 'No products need to reset winning!',
@@ -779,16 +781,16 @@ BEGIN
         BEGIN
             SET @variance = 0
 
-            SELECT @variance = CASE WHEN d.currency <> 0  ---CN88
+            SELECT @variance = CASE WHEN d.currency <> 0   ---CN88
 								THEN ROUND(r.RealLatestReset, 2)  
 								ELSE ROUND(r.LatestReset, 2) 
 								END ,
                    @custid = d.custid,
 				   @Product = d.Product
             FROM #reset r
-				INNER JOIN @dummyBalance d on r.product = d.product AND r.WinlostDate = d.WinlostDate AND r.currency = d.currency				
+				INNER JOIN @dummyBalance d on r.product = d.product AND r.WinlostDate = d.WinlostDate AND (r.currency = d.currency OR @isTest = 1)
             WHERE r.seq = @seq
-				AND r.WinlostDate = @WinlostDate
+
 
             IF (@variance <> 0) 
             BEGIN
@@ -827,8 +829,10 @@ BEGIN
                r.product,
 			   SUM (r.Winlost) AS Winlost ,
                SUM (r.WinlostAfterExtraPT) AS WinlostAfterExtraPT, 
-               SUM (CASE WHEN @istest = 1 THEN r.Realreset + r.RealLatestReset ELSE r.reset + r.latestreset END) AS totalreset,
-               SUM (CASE WHEN @istest = 1 THEN r.RealLatestReset ELSE r.LatestReset END ) latestreset 
+              -- SUM (CASE WHEN d.Currency <> 0  THEN r.Realreset + r.RealLatestReset ELSE r.reset + r.latestreset END) AS totalreset,
+               --SUM (CASE WHEN d.Currency <> 0  THEN r.RealLatestReset ELSE r.LatestReset END ) latestreset 
+			   SUM ( r.reset + r.latestreset ) AS totalreset,
+               SUM ( r.LatestReset  ) latestreset 
         FROM #reset r
 		INNER JOIN @dummyBalance d 
 			ON d.CustID = d.custID and r.product = d.Product
