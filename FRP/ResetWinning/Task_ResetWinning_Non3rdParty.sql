@@ -119,107 +119,6 @@ BEGIN
 	SELECT @Istest = CASE WHEN @SQL like '%_xtest%' THEN 1 ELSE 0 END
 
 	
---DECLARE @Acc_DWLList TABLE ( seq INT, CustId INT, Product  varchar(250))
---INSERT INTO @Acc_DWLList
---VALUES
---(0,0,'Total Balance'),
---(1,6911909,'SPL'),
---(2,6911911,'SPNL'),
---(3,6911913,'Parlay'),
---(4,6911914,'Outright'),
---(8,6911916,'Casino'),
---(10,6911918,'Number Game'),
---(13,8158305,'Virtual Sports'),
---(15,14054918,'RNG Keno'),
---(20,18123442,'Metric Gaming - Super Live'),
---(19,18123445,'Gold Deluxe'),
---(17,18188766,'AG Casino'),
---(18,18188815,'Macau'),
---(21,18256397,'Microgaming - Live Casino'),
---(23,18371760,'Bettrade'),
---(24,19236210,'Colossus Bets'),
---(22,19692521,'Microgaming - RNG Casino'),
---(25,20174356,'Muay Thai'),
---(27,20664406,'Allbet'),
---(28,21535688,'Macau Games'),
---(29,23765766,'NG2'),
---(30,24569216,'Fishing World'),
---(31,25477229,'Cash Out'),
---(16,26513853,'Lottery'),
---(14,26513859,'Virtual Sports 2'),
---(33,28435541,'Exchange'),
---(9,28601563,'Casino (Amount due to Jackpot Pool)'),
---(35,29712506,'PP'),
---(5,35739415,'Bet Builder'),
---(39,37499112,'Card Club'),
-
---(101,37639217,'CN88 SPL'),
---(102,37639217,'CN88 SPNL'),
---(103,37639217,'CN88 Parlay'),
---(104,37639217,'CN88 Outright'),
---(105,37639217,'CN88 Muay Thai'),
---(110,37639217,'CN88 Number Game'),
---(113,37639217,'CN88 Virtual Sports'),
---(114,37639217,'CN88 Virtual Sports 2'),
---(115,37639217,'CN88 RNG Keno'),
---(116,37639217,'CN88 Lottery')  
-
---/*
---,(101,37222811,'CN88 SPL'),
---(102,37222811,'CN88 SPNL'),
---(103,37222811,'CN88 Parlay'),
---(104,37222811,'CN88 Outright'),
---(105,37222811,'CN88 Muay Thai'),
---(110,37222811,'CN88 Number Game'),
---(113,37222811,'CN88 Virtual Sports'),
---(114,37222811,'CN88 Virtual Sports 2'),
---(115,37222811,'CN88 RNG Keno'),
---(116,37222811,'CN88 Lottery') 
---*/
- 
-
--- DECLARE @Acc_DWLList_ExtraPT TABLE ( CUSTID INT)
-
---INSERT INTO @Acc_DWLList_ExtraPT 
---VALUES
---(14424987),
---(21080505),
---(21080771),
---(21080784),
---(21080808),
---(21080812),
---(21080836),
---(21080850),
---(21080870),
---(21080883),
---(21080896),
---(21080917),
---(21080930),
---(21080939),
---(21080958),
---(21080986),
---(21080997),
---(21081014),
---(21081023),
---(21289307),
---(23385736),
---(35476102),
---(35854105),
---(35854106),
---(35854107),
---(37049556),
---(37049557),
---(37049559),
---(37049560),
---(37049561),
---(37049564),
---(37049566),
---(37049568),
---(37049572),
---(37049574),
---(37049576),
---(37049577)
-	
 	IF @Istest = 0
 	BEGIN 
 		INSERT INTO @dummyBalance (WinlostDate, seq, CustId, Product, Currency)
@@ -230,22 +129,12 @@ BEGIN
 		LEFT JOIN dbo.CustInfo c WITH (NOLOCK) ON c.CustID = l.CustID
 		CROSS JOIN @Date d
 		WHERE l.IsDeleted = 0
-		
-		--INSERT INTO @dummyBalance (WinlostDate, seq, CustId, Product, Currency)
-		--SELECT 	d.WLDate, CASE WHEN L.seq = 0 THEN 999 ELSE l.seq END AS seq, 
-		--		l.Custid, l.product, 
-		--		CASE WHEN l.Product LIKE 'CN88%' THEN ISNULL(c.Currency,0) ELSE 0 END AS Currency
-		--FROM @Acc_DWLList l  
-		--LEFT JOIN dbo.CustInfo c WITH (NOLOCK) ON c.CustID = l.CustID
-		--CROSS JOIN @Date d	 	 
+				
 			
 		INSERT INTO @dummyExtraPT (CustID)
 		SELECT CustID
 		FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT l WITH (NOLOCK)
 
-		--INSERT INTO @dummyExtraPT (CustID)
-		--SELECT CustID
-		--FROM @Acc_DWLList_ExtraPT  
 		
 	END
 	ELSE
