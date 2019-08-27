@@ -1,3 +1,4 @@
+/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet"  isFunction="0" isNested="1"></info>*/
 ALTER PROCEDURE [dbo].[Task_ResetWinning_Non3rdParty_Add]
 (
 	@winlostdate SMALLDATETIME,
@@ -23,7 +24,7 @@ AS
 						   . Apply AG Casino and Vegas Game [#37683]
 		- 20160315@Percy: Add params @isExtra for new function ExtraPT [Redmine: 51721]
 		- 20180412@Percy: Increase Transdesc length to 1000 [RedmineID: #92841]
-		
+		- 20190801@Sophia: Integrate CN88, use ExchangeDailyOanda instead of exchange table [Redmine: #117809]		
 
 */
 BEGIN
@@ -48,7 +49,7 @@ BEGIN
 
 
 	SELECT @Curr = c.Currency
-		,@actualrate = e.actualrate
+		,@actualrate = eo.actualrate
 		,@currName = e.currency
 		,@username = c.username
 		,@Recommend = c.Recommend
@@ -56,8 +57,10 @@ BEGIN
 		,@SRecommend = c.SRecommend
 		,@roleID = roleid
 	FROM CustDB.dbo.custInfo c WITH (NOLOCK)
-		INNER JOIN CustDB.dbo.exchange e WITH (NOLOCK)
-		ON c.currency = e.exchangeid
+		INNER JOIN CustDB.dbo.ExchangeDailyOanda eo WITH (NOLOCK)
+			ON c.currency = eo.exchangeid and eo.exchangeDate = @winlostdate
+		INNER JOIN CustDB.dbo.Exchange e WITH (NOLOCK)
+			ON c.currency = e.exchangeid
 	WHERE c.CustID = @custid
 
 
@@ -152,11 +155,4 @@ BEGIN
     END CATCH
 
 END
-
-GO
-
-GRANT  EXECUTE  ON [dbo].[Task_ResetWinning_Non3rdParty_Add] TO [bodbAdminNet] AS [dbo]
-GO
-
-GRANT VIEW DEFINITION ON [dbo].[Task_ResetWinning_Non3rdParty_Add] TO [vnteam] AS [dbo]
-GO
+ GO
