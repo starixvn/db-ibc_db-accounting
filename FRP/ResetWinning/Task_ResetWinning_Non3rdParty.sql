@@ -186,7 +186,7 @@ BEGIN
 				ELSE '' END AS Product,
 			SUM((ISNULL(winlost, 0) - ISNULL(actual_stake, 0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)) * b.actualrate) AS Winlost,
 			SUM(ISNULL(winlost, 0) - ISNULL(actual_stake, 0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)) AS RealWinlost 
-	FROM dbo.bettrans b WITH (NOLOCK)
+	FROM dbo.bettrans b WITH (NOLOCK, INDEX = IX_Report)
 	LEFT JOIN (SELECT DISTINCT CustId, WinlostDate, currency FROM @dummyBalance) d 
 		ON b.custid = d.custid AND d.WinlostDate= b.WinlostDate 
 	WHERE b.winlostdate between @fromdate and @todate
