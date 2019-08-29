@@ -162,7 +162,8 @@ BEGIN
 			@DBON			= 22004,
 			@DTRA			= 22005,
 			@DTRAARC		= 23203,
-			@DBONRTRA		= 22202, @DBONRADJ = 22203,
+			@DBONRTRA		= 22202,
+			@DBONRADJ		= 22203,
 			@WalletType = CASE	WHEN @bettype IN (@DBONRTRA, @DBONRADJ) THEN 1 -- Rebate bonus
 									WHEN @BonusID > 0 THEN 2
 									ELSE NULL END,
@@ -255,8 +256,8 @@ BEGIN
 							WHEN @DADJ THEN 'Adjustment'
 							WHEN @DTRA THEN 'Transfer'
 							WHEN @DTRAARC THEN 'Transfer'
-							when @DBONRTRA then 'Bonus'
-							when @DBONRADJ then 'Bonus'
+							when @DBONRTRA THEN 'Bonus'
+							when @DBONRADJ THEN 'Bonus'
 							WHEN @DTRATP THEN
 									CASE 
 										WHEN (@amount >0) THEN 'Transfer from third party' 

@@ -137,8 +137,9 @@ BEGIN
 		@IsForced BIT,
 		@balance_bettransRNG	MONEY,
 		@balance_bettransLC		MONEY,
-	@WalletType TINYINT,
-	@BonusWalletFlag BIT, 
+		@WalletType TINYINT,
+		@BonusWalletFlag BIT, 
+		-- Rebate bonus
 		@DBONRTRA smallint,
 		@DBONRADJ smallint
 
@@ -152,7 +153,8 @@ BEGIN
 			@DWIT = 22002,
 			@DBON = 22004,
 			@DTRA = 22005,
-			@DBONRTRA = 22202, @DBONRADJ = 22203,
+			@DBONRTRA = 22202,
+			@DBONRADJ = 22203,
 			@WalletType = CASE	WHEN @bettype IN (@DBONRTRA, @DBONRADJ) THEN 1 -- Rebate bonus
 								WHEN @BonusID > 0 THEN 2
 								ELSE NULL END,
