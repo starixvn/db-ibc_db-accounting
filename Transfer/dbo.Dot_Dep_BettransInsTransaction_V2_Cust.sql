@@ -1,8 +1,5 @@
 /*<info serverAlias="DBTXN-bodb02" executers="Dot_Member,Dot_Bonus" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
-ALTER PROCEDURE [dbo].[Dot_Dep_BettransInsTransaction_V2_Cust] 
+ALTER PROCEDURE  [dbo].[Dot_Dep_BettransInsTransaction_V2_Cust] 
 	@amount money,	
 	@custid int,
 	@bal_custid int,	
@@ -28,7 +25,7 @@ Task : record all kinds of transactions for Deposit sites
 DB: DBTXN/bodb02
 User: NON API Licensee/12Bet
 
-History:
+Revisions:
 	- V2_20080623: Add @bettype param to handle all kinds of transactions
 	- 20080906: + Transfer between dummies and Adjustment will use 111-bettype
 				+ Add @ExchangeRate to support transfer with different currency accounts
@@ -58,6 +55,7 @@ History:
 	- 20160921@Scott(DBTrans): Add @BetCheck of parameter for record Licensee DB transation ID.
 	- 20171102:Patrick: Can't make transfer/withdrawal during MB/BU time [Redmine:#82768]
 	- 20170815@Bobby: 80775 - Update bonus info when depositing cash to join into bonus program
+	- 20190710@Jamie: Check Bonus wallet if a member is joining a Bonus campaign [Redmine:#116273]
 
 Param's Explanation:
 ? @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction
@@ -135,7 +133,8 @@ declare @username varchar(50),
 	@IsForced BIT,
 	@balance_bettransRNG	MONEY,
 	@balance_bettransLC		MONEY,
-	@WalletType TINYINT
+	@WalletType TINYINT,
+	@BonusWalletFlag BIT 
 
 
 Select @ErrCode = 0,
@@ -148,7 +147,8 @@ Select @ErrCode = 0,
 		@DWIT = 22002,
 		@DBON = 22004,
 		@DTRA = 22005,
-		@WalletType = CASE WHEN @BonusID > 0 THEN 2 ELSE NULL END
+		@WalletType = CASE WHEN @BonusID > 0 THEN 2 ELSE NULL END,
+		@BonusWalletFlag = 0 
 
 select @bettype = 
 	case @bettype when 103 then 21003 
@@ -166,19 +166,35 @@ BEGIN
 	return		
 END
 
-	Select @username = username, @currency = ci.currency, @currencyName = e.currency, @actualrate = e.actualrate,
-		@mrecommend = mrecommend, @recommend = recommend, @srecommend = srecommend, @roleid = roleid
-	from CustDB.dbo.custinfo as ci with (NOLOCK) 
-	INNER JOIN CustDB.dbo.exchange as e with (NOLOCK) on ci.currency = e.exchangeid
-	where ci.custid = @custid
+	SELECT @username = username
+		,@currency = ci.currency
+		,@currencyName = e.currency
+		,@actualrate = e.actualrate
+		,@mrecommend = mrecommend
+		,@recommend = recommend
+		,@srecommend = srecommend
+		,@roleid = roleid
+		,@BonusWalletFlag = ISNULL(ci.BonusWalletFlag,0)
+	FROM CustDB.dbo.custinfo AS ci WITH (NOLOCK)
+	INNER JOIN CustDB.dbo.exchange AS e WITH (NOLOCK) ON ci.currency = e.exchangeid
+	WHERE ci.custid = @custid
+
 	
 	IF @@rowcount = 0
 	BEGIN
-		Select @username = username, @currency = ci.currency, @currencyName = e.currency, @actualrate = e.actualrate,
-			@mrecommend = mrecommend, @recommend = recommend, @srecommend = srecommend, @roleid = roleid
-		from DBCUST.CustDB.dbo.custinfo as ci with (NOLOCK) 
-		INNER JOIN DBCUST.CustDB.dbo.exchange as e with (NOLOCK) on ci.currency = e.exchangeid
-		where ci.custid = @custid
+		SELECT @username = username
+			,@currency = ci.currency
+			,@currencyName = e.currency
+			,@actualrate = e.actualrate
+			,@mrecommend = mrecommend
+			,@recommend = recommend
+			,@srecommend = srecommend
+			,@roleid = roleid
+			,@BonusWalletFlag = ISNULL(ci.BonusWalletFlag,0)
+		FROM DBCUST.CustDB.dbo.custinfo AS ci WITH (NOLOCK)
+		INNER JOIN DBCUST.CustDB.dbo.exchange AS e WITH (NOLOCK) ON ci.currency = e.exchangeid
+		WHERE ci.custid = @custid
+
 	END
 
 	select @transdesc = @username + ' - ' +
@@ -255,6 +271,10 @@ END
 			RETURN
 		END
 
+		/*
+			Check Member's Balance for Withdrawal 
+		*/
+
 		SELECT @balance_bettransRNG = ISNULL(@balance_bettransRNG,0)
 				,@balance_bettransLC = ISNULL(@balance_bettransLC,0)
 
@@ -263,28 +283,59 @@ END
 			Select @ErrMsg = 'Sorry, you do not have enough money to withdraw.', @ErrCode = 103				
 			return		
 		END
+
+		----------------------------------
+		-- Check Bonus Wallet 
+		----------------------------------
+		DECLARE @FinalBalance	MONEY
+		DECLARE @BonusAmount	MONEY
+		SELECT	@FinalBalance	= 0,
+				@BonusAmount	= 0  
+		IF @BonusWalletFlag = 1
+		BEGIN
+			EXEC dbo.Dot_BalanceMemberSel @CustID = @CustID, @Balance = @FinalBalance OUT, @BonusWalletFlag = @BonusWalletFlag, @Amount = @BonusAmount OUT 
+
+			IF (@balance + @balance_bettransRNG + @balance_bettransLC + @winlost-@actual_stake-@translogCredit-@BonusAmount) <0 
+			BEGIN
+				SELECT	@ErrMsg = 'Sorry, you do not have enough money to withdraw.', @ErrCode = 201	
+				RETURN
+			END
+		END
+		----------------------------------
+
 	END
 	----------------------------------
 
 	----------------------------------
 	--Check balance Account
 
-	select @bal_custid = c.custid, @bal_Username = c.username,
-		@bal_mrecommend = c.mrecommend, @bal_recommend = c.recommend, @bal_srecommend = c.srecommend,
-		@bal_currency = c.currency, @bal_actualrate = e.actualrate, @bal_currencyName = e.currency
-	from CustDB.dbo.customer c with (nolock)
-	inner join CustDB.dbo.exchange as e with (nolock) on c.currency = e.exchangeid
-	where c.custid = @bal_custid
-	
+	SELECT @bal_custid = c.custid
+		,@bal_Username = c.username
+		,@bal_mrecommend = c.mrecommend
+		,@bal_recommend = c.recommend
+		,@bal_srecommend = c.srecommend
+		,@bal_currency = c.currency
+		,@bal_actualrate = e.actualrate
+		,@bal_currencyName = e.currency
+	FROM CustDB.dbo.customer c WITH (NOLOCK)
+	INNER JOIN CustDB.dbo.exchange AS e WITH (NOLOCK) ON c.currency = e.exchangeid
+	WHERE c.custid = @bal_custid
+
 	IF @@rowcount = 0
 	BEGIN
-		select @bal_custid = c.custid, @bal_Username = c.username,
-			@bal_mrecommend = c.mrecommend, @bal_recommend = c.recommend, @bal_srecommend = c.srecommend,
-			@bal_currency = c.currency, @bal_actualrate = e.actualrate, @bal_currencyName = e.currency
-		from DBCUST.CustDB.dbo.customer c with (nolock)
-		inner join DBCUST.CustDB.dbo.exchange as e with (nolock) on c.currency = e.exchangeid
-		where c.custid = @bal_custid
+		SELECT @bal_custid = c.custid
+			,@bal_Username = c.username
+			,@bal_mrecommend = c.mrecommend
+			,@bal_recommend = c.recommend
+			,@bal_srecommend = c.srecommend
+			,@bal_currency = c.currency
+			,@bal_actualrate = e.actualrate
+			,@bal_currencyName = e.currency
+		FROM DBCUST.CustDB.dbo.customer c WITH (NOLOCK)
+		INNER JOIN DBCUST.CustDB.dbo.exchange AS e WITH (NOLOCK) ON c.currency = e.exchangeid
+		WHERE c.custid = @bal_custid
 	END
+
 
 	if @bal_mrecommend is NULL 
 	BEGIN
@@ -363,38 +414,6 @@ END
 				EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_balance, @type = 2
 	END 
 
----------------------------------------------------------------
-	--20151022@Elodie: Don't update balance for dummy account
-	---Update Debit Balance	
-	--SELECT @bal_balance = @actual_stake * @ExchangeRate - @winlost * @ExchangeRate
-	--IF @bal_balance < 0 
-	--BEGIN 
-	--	SELECT @bal_balance_ABS = ABS(@bal_balance)
-	--	--EXEC Dot_BalanceUpdDebit @custid = @bal_custID, @Balance = @bal_balance_ABS
-	--		EXEC Dot_BalanceDebitUpd @CustID = @bal_custID, @balance = @bal_balance_ABS, @type = 2, @IsForced = 1, @errCode = @ErrCode OUTPUT
-	--	IF @ErrCode <> 0
-	--	BEGIN
-	--		Select @ErrMsg = 'Insert transaction failed.', @ErrCode = 106
-		
-	--		--Manually rollback
-	--		DELETE FROM bettrans where refno = @RefNo and matchid = 0 and bettype = @bettype and custid in (@custid, @bal_custID)
-	--		--rollback balance @CustID
-	--		IF @Cust_balance < 0 
-	--		BEGIN 
-	--			SELECT @Cust_balance_ABS = ABS(@Cust_balance)
-	--			--EXEC Dot_BalanceUpdCredit @custid = @CustID, @Balance = @Cust_balance_ABS
-	--						EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_balance_ABS, @type = 2
-	--		END 
-	--		ELSE
-	--		IF @Cust_balance > 0 
-	--		BEGIN 
-	--			--EXEC Dot_BalanceUpdDebit @custid = @CustID, @Balance = @Cust_balance
-	--						EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_balance, @type = 2, @isForced = 1
-	--		END 				
-	--		return
-	--	END
-	--END 
-
 
 	INSERT INTO bettrans 
 		(custid, username, refno, transdate, matchid, bettype, transdesc,winlost, actual_stake, winlostdate, 
@@ -422,28 +441,11 @@ END
 			--EXEC Dot_BalanceUpdDebit @custid = @CustID, @Balance = @Cust_balance
 						EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_balance, @type = 2, @isForced = 1
 		END 	
-		----rollback balance @bal_custID
-		--IF @bal_balance < 0 
-		--BEGIN 
-		--	SELECT @bal_balance_ABS = ABS(@bal_balance)
-		--	--EXEC Dot_BalanceUpdCredit @custid = @bal_custID, @Balance = @bal_balance_ABS
-		--		EXEC Dot_BalanceCreditUpd @CustID = @bal_custID, @balance = @bal_balance_ABS, @type = 2
-		--END 	
 		return
 	END
 	Select @bal_transid = @@IDENTITY
 	SET @transdate = CONVERT(CHAR(30),@transdate, 121)
 	
-	--20151022@Elodie: Don't update balance for dummy account
-	---Update Credit Balance	
-	--IF @bal_balance > 0 
-	--BEGIN 
-	--	--EXEC Dot_BalanceUpdCredit @custid = @bal_custID, @Balance = @bal_balance
-	--		EXEC Dot_BalanceCreditUpd @CustID = @bal_custID, @balance = @bal_balance, @type = 2
-	--END 
-
-	---------------------------------------------------------------------------------------------------
-
 	declare @LogData varchar(300)
 
 	Select @LogData = 
