@@ -54,6 +54,7 @@ AS
 		- 20190701@Percy: Apply Card Club [RedmineID: #117005]
 		- 20190729@Sophia: Exclude CN88 data [Redmine: #117169]
 		- 20190801@Sophia: Integrate CN88 & refactor code[Redmine: #117809] 
+		- 20190829@Sophia: Tuning Code [redmine: #119435]
 		
 	Explanation's Param:
 
@@ -161,7 +162,7 @@ BEGIN
 				ELSE '' END AS Product,
 			SUM((ISNULL(winlost, 0) - ISNULL(actual_stake, 0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)) * b.actualrate) AS Winlost,
 			SUM(ISNULL(winlost, 0) - ISNULL(actual_stake, 0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)) AS RealWinlost 
-	FROM dbo.bettrans b WITH (NOLOCK)
+	FROM dbo.bettrans b WITH (NOLOCK, INDEX = IX_Report)
 	LEFT JOIN (SELECT DISTINCT CustId, currency FROM @dummyBalance) d 
 		ON b.custid = d.custid  
 	WHERE b.winlostdate = @winlostdate
