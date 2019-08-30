@@ -62,6 +62,7 @@ AS
 		- 20190701@Percy: Apply Card Club [RedmineID: #117005]
 		- 20190729@Sophia: Exclude CN88 data [Redmine: #117169]
 		- 20190801@Sophia: Integrate CN88 & refactor code[Redmine: #117809]		 
+		- 20190829@Sophia: Tuning Code high memory [redmine: #119435]
 
 	Param Explanation:
 	    @mode:  0 _ view report
@@ -79,10 +80,11 @@ BEGIN
 	DECLARE @isTest BIT = 0
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
 	
-	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,SubProduct VARCHAR(500))
-	INSERT INTO @SportBettype
+	CREATE TABLE  #SportBettype (ProductID INT, Bettype INT,SubProduct VARCHAR(500))
+	INSERT INTO #SportBettype
 	SELECT ProductID, Bettype, SubProduct FROM bodb02.dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
 	
+	CREATE CLUSTERED INDEX CIX_Bettype ON #SportBettype (bettype) 
 	----- End get sport bettype 
 	
 ------------------------------------------
@@ -339,12 +341,13 @@ BEGIN
 					) AS RealWinlostForExtraPT				
 				
 		FROM dbo.bettrans b WITH (NOLOCK)			
-		INNER JOIN @SportBettype s ON s.BetType = b.bettype
-		LEFT JOIN dbo.Match m WITH (NOLOCK) ON m.MatchId = b.MatchId AND m.eventdate = b.Winlostdate AND m.Sporttype = 44		
+		INNER JOIN #SportBettype s ON s.BetType = b.bettype
+		LEFT JOIN dbo.Match m WITH (NOLOCK) ON m.MatchId = b.MatchId AND m.Sporttype = 44		
 		WHERE   b.Winlostdate between @fromdate and @todate
 			AND b.ruben = 1
 			AND b.statusid NOT IN (101, 102, 103, 121)		
 			AND b.Currency <> 20 
+			AND b.bettype < 19001
 		GROUP BY b.Winlostdate,				
 				b.srecommend,	
 				b.Currency,
