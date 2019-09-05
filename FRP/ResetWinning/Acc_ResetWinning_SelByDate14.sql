@@ -55,6 +55,7 @@ AS
 		- 20190729@Sophia: Exclude CN88 data [Redmine: #117169]
 		- 20190801@Sophia: Integrate CN88 & refactor code[Redmine: #117809] 
 		- 20190829@Sophia: Tuning Code [redmine: #119435]
+		- 20190903@Sophia: fix bug [remine: #119553]
 		
 	Explanation's Param:
 
@@ -264,7 +265,16 @@ BEGIN
 					) * b.actualrate
 				) AS WinlostDueTo,
 				0 AS CommForExtraPT,
-				SUM((CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.Winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END) * b.actualrate) AS WinlostForExtraPT 
+				SUM((CASE
+						-- Jackpot
+						WHEN b.bettype IN (2198, 2398, 2998) THEN
+							CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) END
+						WHEN b.bettype IN (2199, 2399, 2999) THEN 0
+						ELSE
+							CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
+						END
+						) * b.actualrate
+					) AS WinlostForExtraPT 
 		FROM dbo.bettrans14 b WITH(NOLOCK)			
 		INNER JOIN @SportBettype s ON s.BetType = b.bettype
 		LEFT JOIN dbo.Match14 m WITH (NOLOCK) ON m.MatchId = b.MatchId AND m.eventdate = b.Winlostdate AND m.Sporttype = 44	
