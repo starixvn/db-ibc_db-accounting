@@ -33,14 +33,14 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	DECLARE @DummyExtraPT TABLE (SuperId INT, GroupID TINYINT, GroupName VARCHAR(50), Winlostdate SMALLDATETIME)
-	DECLARE @Headline TABLE (SuperID INT, UplineID INT, GroupID INT)
+	--DECLARE @DummyExtraPT TABLE (SuperId INT, GroupID TINYINT, GroupName VARCHAR(50), Winlostdate SMALLDATETIME)
+	CREATE TABLE #Headline(SuperID INT, UplineID INT, Winlostdate SMALLDATETIME)
 	
-	CREATE TABLE #winning (ProductID TINYINT, Sporttype INT, SubProduct VARCHAR(500), Winlost MONEY, NewWinlost MONEY, Winlostdate SMALLDATETIME, GroupId TINYINT)
+	--CREATE TABLE #winning (ProductID TINYINT, Sporttype INT, SubProduct VARCHAR(500), Winlost MONEY, NewWinlost MONEY, Winlostdate SMALLDATETIME, GroupId TINYINT)
 	
-	CREATE TABLE #Transfer TABLE (Headline INT, [Reset] MONEY, Winlostdate SMALLDATETIME )
+	CREATE TABLE #Transfer TABLE (UplineId INT, Reset MONEY, RealReset MONEY, Winlostdate SMALLDATETIME )
 	
-	DECLARE @reset TABLE (CustID INT, Winlost MONEY, [Reset] MONEY, Variance MONEY, Winlostdate SMALLDATETIME, GroupID TINYINT, GroupName VARCHAR(50))
+	--DECLARE @reset TABLE (CustID INT, Winlost MONEY, [Reset] MONEY, Variance MONEY, Winlostdate SMALLDATETIME, GroupID TINYINT, GroupName VARCHAR(50))
 	
 
 	DECLARE @wldate SMALLDATETIME = @todate
@@ -67,6 +67,8 @@ BEGIN
 
 	-----End: Get Sport Bettype Matrix------
 	
+	
+	/*
 	----Begin: Get DummyExtraPT ----
 	DECLARE @SQL NVARCHAR(100) = ISNULL(OBJECT_NAME(@@PROCID),'')	
 	SELECT @Istest = CASE WHEN @SQL like '%_xtest%' THEN 1 ELSE 0 END
@@ -86,35 +88,29 @@ BEGIN
 		CROSS JOIN @Date d
 	END
 	----End: Get DummyExtraPT ----
-	
+	*/
 	
 	----Begin: Get Headline List ----
 	
-	INSERT INTO @Headline (SuperId, Headline, Winlostdate, GroupID )	
-	SELECT DISTINCT c.SuperId, c.Headline, c.Winlostdate, e.GroupID
-	FROM  ( SELECT c.CustID AS SuperId, c.UplineId as Headline, d.WLDate as Winlostdate
-			FROM dbo.CustSuper c WITH (NOLOCK) 
-			CROSS JOIN @Date d
-			WHERE UplineID IS NOT NULL
-			) c
-	INNER JOIN dbo.Acc_GroupExtraPTSetting e WITH (NOLOCK) 
-		ON  e.SuperId = c.SuperId
-			AND c.WinlostDate BETWEEN e.FromDate AND e.ToDate
-	
+	INSERT INTO #Headline (SuperId, UplineId, Winlostdate) 
+	SELECT c.CustID AS SuperId, c.UplineId, d.WLDate as Winlostdate
+	FROM dbo.CustSuper c WITH (NOLOCK) 
+		CROSS JOIN @Date d
+	WHERE UplineID IS NOT NULL
+		 	
 	
 	----End: Get Headline List ----
 	
 	
 	--- Begin: Last reset	
 	
-	INSERT INTO #Transfer (Headline, [Reset], Winlostdate )
-	SELECT b.custid as Headline, ROUND(SUM(b.winlost- b.actual_stake), 2) AS [Reset], b.winlostdate 
+	INSERT INTO #Transfer (Headline, RealReset, Reset, Winlostdate)
+	SELECT b.custid as Headline, ROUND(SUM(b.winlost- b.actual_stake), 2) AS Reset, ROUND(SUM((b.winlost- b.actual_stake))* actual_stake, 2) AS Reset, b.winlostdate 
 	FROM dbo.bettrans b WITH(NOLOCK) 	
 	WHERE b.bettype = 21007
 		AND b.winlostdate BETWEEN @fromdate AND @todate
-		AND EXISTS (SELECT 1 FROM @Headline h WHERE h.Headline = b.CustID)
-	GROUP BY b.custid, b.winlostdate 
-	
+		AND EXISTS (SELECT 1 FROM #Headline h WHERE h.Headline = b.CustID)
+	GROUP BY b.custid, b.winlostdate 	
 	--- End: Last reset
 
 
@@ -124,8 +120,7 @@ BEGIN
 	--------------------------------------------Extra PT ---------------------------------------------------
 	CREATE TABLE #wl 
 	(	winlostdate 	SMALLDATETIME, 
-		srecommend 		INT, 
-		Currency		INT,
+		srecommend 		INT, 		
 		Sporttype  		SMALLINT, 
 		ProductId		INT, 
 		ProductName		VARCHAR(250), 
@@ -142,19 +137,15 @@ BEGIN
 		ProductId			INT,
 		ProductName			VARCHAR(250),
 		SubProduct			VARCHAR(250),
-		IsCN88				BIT,
-		Currency			INT,
-		Winlost				MONEY, 		
-		ExtraPTWinlost		MONEY,
-		RealWinlost			MONEY, 		
+		UplineId			INT,		
+		ExtraPTWinlost		MONEY,		
 		RealExtraPTWinlost	MONEY
 	) 
 	 
-		INSERT INTO #wl (winlostdate, srecommend, Currency, Sporttype, ProductId, ProductName, SubProduct, 
+		INSERT INTO #wl (winlostdate, srecommend, Sporttype, ProductId, ProductName, SubProduct, 
 						CommForExtraPT, WinlostForExtraPT, RealCommForExtraPT, RealWinlostForExtraPT)
 		SELECT  b.winlostdate,
-				b.srecommend,
-				b.Currency,				
+				b.srecommend,					
 				CASE WHEN ISNULL(m.Sporttype, 0) <> 0 THEN m.Sporttype ELSE 0 END AS Sporttype,
 				s.ProductId,
 				CASE WHEN s.SubProduct = 'MG-SuperLive' THEN 'Metric Gaming - Super Live'
@@ -168,8 +159,7 @@ BEGIN
 					ELSE ''
 					END	AS ProductName,
 				CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss','Bet Builder') THEN s.SubProduct ELSE '' END AS SubProduct,
-				---Base currency
-			
+				---Base currency			
 				0 AS CommForExtraPT,
 				
 				SUM((
@@ -181,12 +171,9 @@ BEGIN
 						ELSE
 							CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
 						END) * b.actualrate
-					) AS WinlostForExtraPT,
-				
-				---Real currency
-				
+					) AS WinlostForExtraPT,				
+				---Real currency				
 				0 AS RealCommForExtraPT,
-				
 				SUM(
 					CASE
 						-- Jackpot
@@ -224,70 +211,13 @@ BEGIN
 				CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss','Bet Builder') THEN s.SubProduct ELSE '' END
 				 
 
-	INSERT INTO #WLByProduct (Winlostdate, ProductId, ProductName, Currency, ExtraPTWinlost, RealExtraPTWinlost) 
-	SELECT Winlostdate, ProductId, ProductName, Currency, SUM(ExtraPTWinlost), SUM(RealExtraPTWinlost)
-	FROM (
-			--- WL by product			
-			SELECT  w.Winlostdate, w.ProductId, w.ProductName, 
-					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
-						ELSE 0  ---MBC 
-					END AS IsCN88, 
-					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN w.Currency --- CN88
-						ELSE 0  ---MBC 
-					END AS Currency,
-					SUM(ISNULL( w.Winlost,0)) as Winlost, 
-					0 as ExtraPTWinlost,
-					SUM(ISNULL( w.RealWinlost,0)) as RealWinlost, 
-					0 as RealExtraPTWinlost 					
-			FROM	#wl w
-			LEFT JOIN CS_CustSuper cs WITH (NOLOCK) 
-				ON cs.CustId = w.srecommend
-			GROUP BY w.Winlostdate, w.ProductId, w.ProductName,
-					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
-						ELSE 0  ---MBC 
-					END,
-					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN w.Currency --- CN88
-						ELSE 0  ---MBC 
-					END
-					
-			-----Casino (Amount due to Jackpot Pool)
-			UNION ALL
-			SELECT  w.Winlostdate, '' AS ProductId, 'Casino (Amount due to Jackpot Pool)' as ProductName, 
-					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
-						ELSE 0  ---MBC 
-					END AS IsCN88,
-					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN w.Currency --- CN88
-						ELSE 0  ---MBC 
-					END AS Currency,
-					SUM(ISNULL(w.WinlostDueTo, 0)) AS Winlost, 
-					0 AS ExtraPTWinlost, 
-					SUM(ISNULL(w.RealWinlostDueTo, 0)) AS RealWinlost, 
-					0 AS RealExtraPTWinlost
-			FROM #wl w
-			LEFT JOIN CS_CustSuper cs WITH (NOLOCK) 
-				ON cs.CustId = w.srecommend
-			WHERE w.WinlostDueTo <> 0 
-			GROUP BY Winlostdate, 
-					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
-						ELSE 0  ---MBC 
-					END,
-					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN w.Currency --- CN88
-						ELSE 0  ---MBC 
-					END
-
-			
+	INSERT INTO #WLByProduct (Winlostdate, ProductId, ProductName, UplineID, ExtraPTWinlost, RealExtraPTWinlost) 
+	SELECT Winlostdate, ProductId, ProductName, UplineID, SUM(ExtraPTWinlost), SUM(RealExtraPTWinlost)
+	FROM (		
 			--- extraPT
-			UNION ALL
-			SELECT  w.Winlostdate, w.ProductId, w.ProductName, 
-					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
-						ELSE 0  ---MBC 
-					END AS IsCN88, 
-+					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN w.Currency --- CN88
-						ELSE 0  ---MBC 
-					END AS Currency,
-				   0 as Winlost, 
-				   SUM(w.WinlostForExtraPT * ISNULL(s.ExtraPT,0)) as ExtraPTWinlost,
-				   0 as RealWinlost, 
+			SELECT  w.Winlostdate, w.ProductId, w.ProductName, 				
+					cs.UplineID,
+				   SUM(w.WinlostForExtraPT * ISNULL(s.ExtraPT,0)) as ExtraPTWinlost,				
 				   SUM(w.RealWinlostForExtraPT * ISNULL(s.ExtraPT,0)) as RealExtraPTWinlost  
 			FROM	#wl w
 			INNER JOIN dbo.Acc_GroupExtraPTSetting s WITH(NOLOCK)
@@ -296,28 +226,16 @@ BEGIN
 					AND w.SubProduct = s.SubProduct
 					AND w.Sporttype = s.Sporttype 
 					AND w.Winlostdate BETWEEN s.FromDate AND s.ToDate	
-			LEFT JOIN CS_CustSuper cs WITH (NOLOCK) 
-					ON cs.CustId = w.srecommend
-			GROUP BY w.Winlostdate, w.ProductId, w.ProductName, 
-					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
-						ELSE 0  ---MBC 
-					END,
-					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN w.Currency --- CN88
-						ELSE 0  ---MBC 
-					END
+			INNER JOIN dbo.CustSuper cs WITH (NOLOCK) 
+					ON cs.CustId = w.srecommend AND cs.UplineID IS NOT NULL
+			GROUP BY w.Winlostdate, w.ProductId, w.ProductName, cs.UplineID
 			
+		 
 			--- extraComm	
 			UNION ALL 
 			SELECT	w.Winlostdate, w.ProductId, w.ProductName, 
-					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
-						ELSE 0  ---MBC 
-					END AS IsCN88,
-					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN w.Currency --- CN88
-						ELSE 0  ---MBC 
-					END AS Currency,
-					0 as Winlost, 
+					cs.UplineID,
 					SUM(w.CommForExtraPT * ISNULL(s.ExtraCommRate,0)) as ExtraPTWinlost,
-					0 as RealWinlost, 
 					SUM(w.RealCommForExtraPT * ISNULL(s.ExtraCommRate,0)) as RealExtraPTWinlost   --- ExtraComm if any
 			FROM	#wl w
 			INNER JOIN dbo.Acc_GroupExtraCommRateSetting s WITH (NOLOCK)
@@ -326,105 +244,49 @@ BEGIN
 					AND w.SubProduct = s.SubProduct
 					AND w.Sporttype = s.Sporttype 
 					AND w.Winlostdate BETWEEN s.FromDate AND s.ToDate
-			LEFT JOIN CS_CustSuper cs WITH (NOLOCK) 
-					ON cs.CustId = w.srecommend
+			INNER JOIN dbo.CustSuper cs WITH (NOLOCK) 
+					ON cs.CustId = w.srecommend AND cs.UplineID IS NOT NULL
 			GROUP BY w.Winlostdate, w.ProductId, w.ProductName,
-					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
-						ELSE 0  ---MBC 
-					END,
-					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN w.Currency --- CN88
-						ELSE 0  ---MBC 
-					END					
+					 cs.UplineID		
 	
 		) w
-	GROUP BY w.Winlostdate, w.ProductId, w.ProductName, w.IsCN88, w.Currency
+	GROUP BY w.Winlostdate, w.ProductId, w.ProductName, cs.UplineID	
 	
-
-	----- Update ProductName
-	UPDATE e 
-	SET ProductName = CASE WHEN e.IsCN88 = 1 THEN 'CN88 ' ELSE '' END 
-					+ CASE WHEN e.ProductId = 6 THEN 'Casino' ELSE CASE WHEN e.ProductID <> 1 THEN p.ProductName ELSE e.ProductName END END 
-	FROM #WLByProduct e
-	INNER JOIN dbo.Products p WITH (NOLOCK)
-		ON e.ProductId = p.ProductId 
-	 
-	 
-	 
-	 
-	 ---------Close 
-	 
-	----Non sportsbook
-	;WITH wl AS (
-			SELECT b.srecommend , s.ProductID, 0 AS Sporttype, '' AS SubProduct,
-				SUM((winlost - actual_stake) * actualrate) AS Winlost,
-				SUM((
-					CASE
-						-- Jackpot
-						WHEN b.bettype IN (2198, 2398, 2998) THEN
-							CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) END
-						WHEN b.bettype IN (2199, 2399, 2999) THEN 0
-						ELSE
-							CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
-						END) * b.actualrate) AS NewWinlost,
-				b.winlostdate
-			FROM bettrans b WITH(NOLOCK, INDEX = IX_Report)
-			INNER JOIN  @SportBettype s
-				ON s.BetType = b.bettype
-			WHERE b.winlostdate BETWEEN @fromdate AND @todate
-				AND s.ProductID <> 1 
-				AND b.ruben = 1
-				AND b.statusid NOT IN (101, 102, 103, 121)
-				AND b.bettype < 19001
-				AND EXISTS (SELECT 1 FROM CS_CustSuper cs WITH (NOLOCK) WHERE cs.CustID = b.srecommend)
-			GROUP BY b.winlostdate, b.srecommend, s.ProductID
-			)
-	INSERT INTO #winning (ProductID, Sporttype, SubProduct, Winlost, NewWinlost, Winlostdate, GroupId)
-	SELECT w.ProductID, w.Sporttype, w.SubProduct, SUM(w.Winlost * s.ExtraPT) as ExtraPTwinlost, SUM(w.NewWinlost * s.ExtraPT) as NewExtraPTwinlost , w.Winlostdate, s.GroupId
-	FROM wl w
-	INNER JOIN dbo.Acc_GroupExtraPTSetting s WITH (NOLOCK)
-			ON w.srecommend = s.SuperId
-			AND w.ProductId = s.ProductId
-			AND w.SubProduct = s.SubProduct
-			AND w.Sporttype = s.Sporttype 
-			AND w.winlostdate BETWEEN s.FromDate AND s.ToDate	
-	WHERE EXISTS (SELECT 1 FROM CS_CustSuper cs WITH (NOLOCK) WHERE cs.CustID = s.SuperId)
-	GROUP BY w.ProductID, w.Sporttype, w.SubProduct, w.Winlostdate, s.GroupId
-
-	-- SportBook  	
-	;WITH wl AS (
-			SELECT	b.srecommend, 1 AS ProductID, 
-					CASE WHEN ISNULL(m.matchid, 0) <> 0 THEN m.Sporttype ELSE 0 END AS Sporttype, 
-					CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss','Bet Builder') THEN s.SubProduct ELSE '' END AS SubProduct,
-					SUM((winlost - actual_stake) * actualrate) AS Winlost,
-					SUM((CASE WHEN tpositiontaking = 1 THEN winlost - actual_stake ELSE winlost - actual_stake + scomm / (1 - tpositiontaking) END) * actualrate) AS NewWinlost,
-					b.winlostdate
-			FROM bettrans b WITH(READPAST, INDEX = IX_Report)
-			INNER JOIN  @SportBettype s
-				ON s.BetType = b.bettype
-			LEFT JOIN bodb02.dbo.match m WITH(NOLOCK)
-				ON m.matchid = b.matchid AND m.eventdate = b.winlostdate AND m.sporttype = 44 -- MuayThai
-			WHERE  b.winlostdate BETWEEN @fromdate AND @todate
-				AND b.ruben = 1
-				AND b.statusid NOT IN (101, 102, 103, 121)
-				AND b.bettype < 19001
-				AND s.productID = 1 
-			GROUP BY b.winlostdate, b.srecommend,
-					CASE WHEN ISNULL(m.matchid, 0) <> 0	THEN m.Sporttype ELSE 0 END, 
-					CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss','Bet Builder') THEN s.SubProduct ELSE '' END
-			)
-	INSERT INTO #winning (ProductID, Sporttype, SubProduct, Winlost, NewWinlost, Winlostdate, GroupID)
-	SELECT w.ProductID, w.Sporttype, w.SubProduct, SUM(w.Winlost * s.ExtraPT), SUM(w.NewWinlost * s.ExtraPT), w.Winlostdate, s.GroupId
-	FROM wl w
-	INNER JOIN dbo.Acc_GroupExtraPTSetting s WITH (NOLOCK)
-			ON w.srecommend = s.SuperId
-			AND w.ProductId = s.ProductId
-			AND w.SubProduct = s.SubProduct
-			AND w.Sporttype = s.Sporttype 
-			AND w.winlostdate BETWEEN s.FromDate AND s.ToDate	
-	GROUP BY w.ProductID, w.Sporttype, w.SubProduct, w.Winlostdate, s.GroupId
-
 	
-	IF @mode = 0 -- view
+	----view report
+    IF (@mode = 0)
+    BEGIN 
+	    ----- calculate reset 
+		SELECT  h.Winlostdate, h.UplineID,
+				ROUND(SUM(ISNULL(e.ExtraPTWinlost, 0)), 2) AS ExtraPTWinlost,
+				ROUND(SUM(ISNULL(e.RealExtraPTWinlost, 0)), 2) AS RealExtraPTWinlost,
+				ROUND(SUM(ISNULL(rs.Reset, 0)), 2) AS Reset,
+				ROUND(SUM(ISNULL(rs.RealReset, 0)), 2) AS RealReset
+		FROM #Headline h
+			LEFT JOIN #WLByProduct e ON h.Winlostdate = e.Winlostdate AND h.UplineID = e.UplineID
+			LEFT JOIN #Transfer rs ON h.Winlostdate = rs.Winlostdate AND h.UplineID = rs.UplineID
+		GROUP BY h.Winlostdate, h.UplineID  
+  
+	END
+	
+	ELSE ----- reset
+    BEGIN 
+	    ----- calculate reset 
+		SELECT  h.Winlostdate, h.UplineID,
+				ROUND(SUM(ISNULL(e.ExtraPTWinlost, 0)), 2) AS ExtraPTWinlost,
+				ROUND(SUM(ISNULL(e.RealExtraPTWinlost, 0)), 2) AS RealExtraPTWinlost,
+				ROUND(SUM(ISNULL(rs.Reset, 0)), 2) AS Reset,
+				ROUND(SUM(ISNULL(rs.RealReset, 0)), 2) AS RealReset
+		FROM #Headline h
+			LEFT JOIN #WLByProduct e ON h.Winlostdate = e.Winlostdate AND h.UplineID = e.UplineID
+			LEFT JOIN #Transfer rs ON h.Winlostdate = rs.Winlostdate AND h.UplineID = rs.UplineID
+		GROUP BY h.Winlostdate, h.UplineID  
+  
+	END
+	
+	-----------------------------------------------
+	
+	ELSE  -- reset
 	BEGIN
 		
 		;WITH WL AS ( 	

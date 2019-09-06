@@ -459,6 +459,7 @@ BEGIN
 						ELSE 0  ---MBC 
 					END
 			
+			
 			--- extraComm	
 			UNION ALL 
 			SELECT	w.Winlostdate, w.ProductId, w.ProductName, 
@@ -487,7 +488,8 @@ BEGIN
 					END,
 					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN w.Currency --- CN88
 						ELSE 0  ---MBC 
-					END					
+					END
+								
 	
 		) w
 	GROUP BY w.Winlostdate, w.ProductId, w.ProductName, w.IsCN88, w.Currency
