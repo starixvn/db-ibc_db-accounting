@@ -25,7 +25,13 @@ AS
 		- 20160315@Percy: Add params @isExtra for new function ExtraPT [Redmine: 51721]
 		- 20180412@Percy: Increase Transdesc length to 1000 [RedmineID: #92841]
 		- 20190801@Sophia: Integrate CN88, use ExchangeDailyOanda instead of exchange table [Redmine: #117809]		
-
+		- 20190826@Sophia : Daily Auto add transfer ticket for CN88 Headline balance, @isExtraPT = 2[Redmine: #117863]
+		
+		
+	Param's explain:
+		 @isExtraPT = 0 : reset winning
+					= 1 : reset winning ExtraPT
+					= 2 : auto add Headline Balance (ExtraPT for CN88)
 */
 BEGIN
 	SET NOCOUNT ON 
@@ -34,6 +40,7 @@ BEGIN
             @actualrate float, @Recommend int, @MRecommend int, @SRecommend int,
             @username nvarchar(50), @creditamt money, @debitamt money, @roleID tinyint
 
+	
 	IF @amount > 0 --Deposit
 	BEGIN
 		SELECT @creditamt = abs(@amount)
@@ -46,6 +53,11 @@ BEGIN
 			,@debitamt = abs(@amount)
 			,@bettype = 21002
 	END
+	
+	IF @isExtraPT = 2 
+	BEGIN 
+		SELECT @bettype = 21007
+	END 
 
 
 	SELECT @Curr = c.Currency
@@ -72,7 +84,7 @@ BEGIN
 
 
 	DECLARE @DummyCust AS TABLE (CustId INT)
-	DECLARE @isTest BIT,@SQL NVARCHAR(100) = OBJECT_NAME(@@PROCID)
+	DECLARE @isTest BIT,@SQL NVARCHAR(100) = ISNULL(OBJECT_NAME(@@PROCID),'')
 
 	IF  (@SQL like '%_xtest%')
 	BEGIN
@@ -93,7 +105,7 @@ BEGIN
 			FROM DBACC.bodb_ACC.dbo.Acc_DWLList WITH(NOLOCK)
 			WHERE Product NOT IN ('Racing (Due to Partners)', 'Total Balance','Poker', 'Poker (Due to Partners)') 
 		END
-		ELSE
+		ELSE IF @isExtraPT = 1
 		BEGIN
 			INSERT INTO @DummyCust (CustID)
 			SELECT custid
@@ -109,7 +121,7 @@ BEGIN
 			FROM DBACC.bodb_ACC.dbo.Acc_DWLList_xtest WITH(NOLOCK)
 			WHERE Product NOT IN ('Racing (Due to Partners)', 'Total Balance','Poker', 'Poker (Due to Partners)') 
 		END
-		ELSE
+		ELSE IF @isExtraPT = 1
 		BEGIN
 			INSERT INTO @DummyCust (CustID)
 			SELECT custid
@@ -117,7 +129,6 @@ BEGIN
 		END
 	END 
 	
-
 
 
     BEGIN TRY
@@ -142,11 +153,21 @@ BEGIN
 	    BEGIN
 	        SELECT @ErrCode = 1,
 	               @ErrMsg = 'Can not insert transaction! Please try again later.'
-
-			DELETE bettrans
-            WHERE bettype IN (21001, 21002)
-               AND winlostdate = @winlostdate
-               AND custid IN (SELECT custid FROM @DummyCust )
+			
+			IF IF @isExtraPT = 2
+			BEGIN 
+				DELETE bettrans
+				WHERE bettype = 21007
+				   AND winlostdate = @winlostdate
+				   AND custid = @CustId
+			END
+			ELSE
+			BEGIN 				
+				DELETE bettrans
+				WHERE bettype IN (21001, 21002)
+				   AND winlostdate = @winlostdate
+				   AND custid IN (SELECT custid FROM @DummyCust)
+			END 
 
             RETURN
         END
