@@ -1,4 +1,4 @@
-/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView,bodbExtAccNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView,bodbExtAccNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_StatementSel]
 	@fromdate	SMALLDATETIME,
 	@todate		SMALLDATETIME,
@@ -109,10 +109,33 @@ BEGIN
 		INSERT INTO @recommend (recommend)
 		SELECT custid FROM dbo.Customer WITH(NOLOCK) WHERE srecommend = @CID AND roleid = 2
 
-		INSERT INTO @mrecommend (mrecommend)
-		SELECT custid FROM dbo.Customer WITH(NOLOCK) WHERE srecommend = @CID AND roleid = 3
-		UNION ALL
-		SELECT @CID 
+	ELSE IF @roleid = 0 --headline
+		INSERT INTO @recommend (recommend)
+		SELECT c.custid 
+		FROM 
+			dbo.Customer c WITH(NOLOCK) 
+		INNER JOIN dbo.CustSuper cs WITH (NOLOCK) ON c.srecommend = cs.custid
+		WHERE 
+			c.roleid = 2
+			AND cs.UplineId = @CID 
+
+	-- to using index on custID level super
+	INSERT INTO @mrecommend (mrecommend)
+	SELECT custid 
+	FROM dbo.Customer c WITH(NOLOCK) 
+	WHERE srecommend = @CID AND roleid = 3
+
+	UNION ALL
+	SELECT c.custid 
+	FROM 
+		dbo.Customer c WITH(NOLOCK) 
+		INNER JOIN dbo.CustSuper cs WITH (NOLOCK) ON c.srecommend = cs.custid
+	WHERE 
+		c.roleid = 3
+		AND cs.UplineId = @CID 
+
+	UNION ALL
+	SELECT @CID 
 
 
 	DECLARE @i BIGINT = 10000000  -- use optimize for
@@ -385,8 +408,8 @@ BEGIN
 	END
 	-- End Master --
 		
-	-- Super --
-	IF @roleid = 4
+	-- Super & Headline --
+	IF @roleid IN (4,0)
 	BEGIN		
 		-- I.4.1 bettrans (Downline):  Exclude ticket running, waiting, Void, reject
 		INSERT INTO #Data (winlostdate, bettype, StatusID, IsOwner, Turnover, OwnerWinloss, Winlost, Comm, BetCount)
@@ -421,7 +444,7 @@ BEGIN
 			,SUM(scomm - acomm) AS comm
 			,COUNT(1) AS betcount
 		FROM @mrecommend m 
-		CROSS APPLY (	SELECT TOP (@i) Winlostdate, bettype, CASE WHEN srecommend = CustID THEN 1 ELSE 0 END as IsOwner,
+		CROSS APPLY (	SELECT TOP (@i) Winlostdate, bettype, CASE WHEN custid = @CID THEN 1 ELSE 0 END as IsOwner,
 								stake, winlost, actual_stake, swinlost, scomm, acomm
 						FROM dbo.bettrans bt WITH (NOLOCK) --- Use index CustID						
 						WHERE m.mrecommend = bt.custid 
@@ -658,7 +681,6 @@ BEGIN
 		AND bettype NOT IN (23001,23002,23101,23102,23201,23202)
 		AND winlostdate BETWEEN @fromdate AND @todate
 		AND IsOwner = 1
-		AND Bettype <> -1  
 	GROUP BY winlostdate
 			
 			 
@@ -667,14 +689,14 @@ BEGIN
 		winlostdate
 		,@CID AS CustID
 		,SUM(ISNULL(OpeningBalance, 0)) AS [OpeningBalance]
-		,SUM(Voidamt) AS [VoidAmt]
-		,SUM(Outstanding) AS [Outstanding]
-		,SUM(CASE WHEN BetCount > 0 THEN Turnover ELSE NULL END) AS [Turnover]
+		,SUM(CASE WHEN @roleid = 0 THEN 0 ELSE Voidamt END) AS [VoidAmt]
+		,SUM(CASE WHEN @roleid = 0 THEN 0 ELSE Outstanding END) AS [Outstanding]
+		,SUM(CASE WHEN BetCount > 0 AND @roleid > 0 THEN Turnover ELSE 0 END) AS [Turnover]
 		,SUM(TransferAmt) AS [TransferAmt]
-		,SUM(CASE WHEN BetCount > 0 THEN Winlost ELSE NULL END) AS [Winlost]
-		,SUM(CASE WHEN BetCount > 0 THEN Comm ELSE NULL END) AS [Comm]
+		,SUM(CASE WHEN BetCount > 0 AND @roleid > 0 THEN Winlost ELSE 0 END) AS [Winlost]
+		,SUM(CASE WHEN BetCount > 0 AND @roleid > 0 THEN Comm ELSE 0 END) AS [Comm]
 		,SUM(ISNULL(OpeningBalance, 0) + ISNULL([Winlost], 0) + ISNULL([Comm], 0) + ISNULL([TransferAmt], 0)) AS ClosingBalance
-		,SUM(GrandPrize) AS GrandPrize
+		,SUM(CASE WHEN @roleid = 0 THEN 0 ELSE GrandPrize END) AS GrandPrize
 	FROM #rptStatementTable
 	GROUP BY winlostdate
 	HAVING
