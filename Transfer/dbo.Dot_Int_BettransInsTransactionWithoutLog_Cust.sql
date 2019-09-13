@@ -59,6 +59,7 @@ Revision:
 	- 20170815@Bobby: 80775 - Update bonus info when depositing cash to join into bonus program
 	- 20180514@Patrick: Remove check deposit case during MBU process
 	- 20180913@Dominic: Add a new bettype (23203) to transfer money for dormant members in deposit archive process [Redmine:#99882]
+	- 20190705@Bobby: Add Rebate Bonus [RedmineID: #116358]
 	- 20190710@Jamie: Check Bonus wallet if a member is joining a Bonus campaign [Redmine:#116273]
 
 Param's Explanation:
@@ -85,6 +86,8 @@ Param's Explanation:
 	22005: TRANSFER
 	22006: TRANSFER BETWEEN IBC AND THIRD PARTY SYSTEM (For Playtech and AsiaBet88)
 	23203: TRANSFER MONEY FOR DORMANT MEMBERS IN DEPOSIT ARCHIVE PROCESS
+	22202: DBONRTRA - Rebate Bonus Transfer 
+	22203: DBONRADJ - Rebate Bonus Adjustment
 	
 @ErrCode:
 	= 0: Transaction recorded successfully.
@@ -143,7 +146,10 @@ BEGIN
 		@balance_bettransRNG	MONEY,
 		@balance_bettransLC		MONEY,
 		@WalletType				TINYINT,
-		@BonusWalletFlag		BIT 
+		@BonusWalletFlag		BIT,
+		-- Rebate bonus
+		@DBONRTRA				SMALLINT,
+		@DBONRADJ				SMALLINT
 
 	SELECT	@ErrCode		= 0,
 			@ErrMsg			= '',
@@ -156,8 +162,11 @@ BEGIN
 			@DBON			= 22004,
 			@DTRA			= 22005,
 			@DTRAARC		= 23203,
-
-			@WalletType = CASE WHEN @BonusID > 0 THEN 2 ELSE NULL END,
+			@DBONRTRA		= 22202,
+			@DBONRADJ		= 22203,
+			@WalletType = CASE	WHEN @bettype IN (@DBONRTRA, @DBONRADJ) THEN 1 -- Rebate bonus
+									WHEN @BonusID > 0 THEN 2
+									ELSE NULL END,
 			@BonusWalletFlag = 0 
 
 	/*
@@ -247,6 +256,8 @@ BEGIN
 							WHEN @DADJ THEN 'Adjustment'
 							WHEN @DTRA THEN 'Transfer'
 							WHEN @DTRAARC THEN 'Transfer'
+							when @DBONRTRA THEN 'Bonus'
+							when @DBONRADJ THEN 'Bonus'
 							WHEN @DTRATP THEN
 									CASE 
 										WHEN (@amount >0) THEN 'Transfer from third party' 
@@ -257,7 +268,9 @@ BEGIN
 					+ CASE WHEN @transdesc <> '' THEN ' - ' + @transdesc END
 
 	SELECT 
-		@winlost = CASE WHEN @bettype = @DDEP OR @bettype = @DBON OR @bettype = @DTRA OR @bettype = @DTRAARC OR @bettype = @DADJ OR @bettype = @DTRATP THEN @amount ELSE 0 END,
+		@winlost = CASE 
+			WHEN @bettype  IN (@DDEP, @DBON, @DTRA, @DTRAARC, @DADJ, @DTRATP, @DBONRTRA, @DBONRADJ) THEN @amount 
+			ELSE 0 END,
 		@actual_stake = CASE @bettype WHEN @DWIT THEN ABS(@amount) ELSE 0 END
 
 	IF @winlost < 0 --then swap the winlost and actual_stake
@@ -431,7 +444,7 @@ BEGIN
 		IF @Cust_Balance < 0 
 		BEGIN
 			--EXEC dbo.Dot_BalanceUpdDebit @custid = @CustID, @Balance = @Cust_Balance_ABS
-						EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_balance_ABS, @type = @BalanceType, @IsForced = @IsForced, @errCode = @ErrCode OUTPUT
+			EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_balance_ABS, @type = @BalanceType, @IsForced = @IsForced, @errCode = @ErrCode OUTPUT
 			IF @ErrCode <> 0
 			BEGIN
 				SELECT	@ErrCode = 105	
@@ -466,7 +479,7 @@ BEGIN
 		IF @Cust_balance < 0 
 		BEGIN 
 			--EXEC dbo.Dot_BalanceUpdCredit @custid = @CustID, @Balance = @Cust_Balance_ABS
-						EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_Balance_ABS, @type = @BalanceType
+			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_Balance_ABS, @type = @BalanceType
 		END 
 		RETURN
 	END CATCH
@@ -476,7 +489,7 @@ BEGIN
 	IF @Cust_Balance > 0  --Update BalanceCredit 
 	BEGIN
 		--EXEC dbo.Dot_BalanceUpdCredit @custid = @CustID, @Balance = @Cust_Balance
-				EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_Balance, @type = @BalanceType
+		EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_Balance, @type = @BalanceType
 	END 
 
 	----ADD DUMMY TRANSACTION
@@ -502,12 +515,12 @@ BEGIN
 		IF @Cust_balance < 0  --Rollback BalanceDebit 
 		BEGIN 
 			--EXEC dbo.Dot_BalanceUpdCredit @custid = @CustID, @Balance = @Cust_Balance_ABS
-						EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_Balance_ABS, @type = @BalanceType
+			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_Balance_ABS, @type = @BalanceType
 		END 
 		ELSE  --Rollback BalanceCredit 
 		BEGIN
 			--EXEC dbo.Dot_BalanceUpdDebit @custid = @CustID, @Balance = @Cust_Balance
-						EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_Balance, @type = @BalanceType, @IsForced = 1
+			EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_Balance, @type = @BalanceType, @IsForced = 1
 		END	
 		RETURN
 	END
