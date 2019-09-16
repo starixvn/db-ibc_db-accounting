@@ -64,6 +64,7 @@ AS
 		- 20190801@Sophia: Integrate CN88 & refactor code[Redmine: #117809]		 
 		- 20190829@Sophia: Tuning Code high memory [redmine: #119435]
 		- 20190903@Sophia: fix bug [remine: #119553]
+		- 20190826@Sophia: exclude CN88 Headline balance out of total balance [Redmine: #117863]
 
 	Param Explanation:
 	    @mode:  0 _ view report
@@ -195,6 +196,7 @@ BEGIN
 	WHERE b.winlostdate between @fromdate and @todate
 	   AND b.ruben = 1
 	   AND b.bettype > 19000 
+	   AND b.bettype <> 21007 ---- exclude CN88 headline balance
 	   and b.matchID = 0 
 	   AND NOT EXISTS (SELECT 1 FROM @dummyExtraPT de WHERE de.CustID = b.Custid AND b.Bettype IN (21001,21002))   --- Not Get ticket transfer of reset winning extraPT
     GROUP BY b.winlostdate,

@@ -264,7 +264,8 @@ BEGIN
                 @custid       INT,               
                 @transDesc    NVARCHAR(1000)= 'ExtraPT',		
 				@Creator  INT = 5838421,
-				@IP       VARCHAR(20) = ''       	       
+				@IP       VARCHAR(20) = '',
+				@LogData  NVARCHAR(200) = ''				
 
 		SELECT @maxseq = MAX(r.seq)
         FROM   #reset r

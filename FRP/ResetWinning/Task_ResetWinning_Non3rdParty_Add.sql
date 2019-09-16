@@ -154,7 +154,7 @@ BEGIN
 	        SELECT @ErrCode = 1,
 	               @ErrMsg = 'Can not insert transaction! Please try again later.'
 			
-			IF IF @isExtraPT = 2
+			IF @isExtraPT = 2
 			BEGIN 
 				DELETE bettrans
 				WHERE bettype = 21007
