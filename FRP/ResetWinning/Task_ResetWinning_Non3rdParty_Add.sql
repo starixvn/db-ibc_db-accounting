@@ -7,7 +7,7 @@ ALTER PROCEDURE [dbo].[Task_ResetWinning_Non3rdParty_Add]
 	@transdesc   NVARCHAR(1000),
 	@creator     INT,
 	@ip          VARCHAR(20),
-	@isExtraPT	 BIT = 0,
+	@isExtraPT	 TINYINT = 0,
 	@ErrCode     INT = 0 OUTPUT,  
     @ErrMsg      VARCHAR(100) = '' OUTPUT
 )
