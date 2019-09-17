@@ -2,7 +2,7 @@
 USE [bodb02]
 GO
 
-CREATE PROCEDURE [dbo].[Task_ResetWinning_CS_ExtraPT]
+ALTER PROCEDURE [dbo].[Task_ResetWinning_CS_ExtraPT]
 	@WinlostDate SMALLDATETIME, 
 	@Mode     TINYINT = 0,
 	@ErrCode  INT = 0 OUTPUT,
@@ -44,7 +44,7 @@ BEGIN
 	INSERT INTO @SportBettype
 	SELECT ProductID, Bettype, SubProduct FROM bodb02.dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
 
-	DELETE @SportBettype WHERE ProductId NOT IN (SELECT DISTINCT ProductID FROM dbo.Acc_GroupExtraPTSetting WITH(NOLOCK))
+	DELETE @SportBettype WHERE ProductId NOT IN (SELECT DISTINCT ProductID FROM DBCUST.CUSTDB.dbo.Acc_GroupExtraPTSetting WITH(NOLOCK))
 
 	-----End: Get Sport Bettype Matrix------
 		 
@@ -69,7 +69,7 @@ BEGIN
 	FROM dbo.bettrans b WITH(NOLOCK) 	
 	WHERE b.bettype = 21007
 		AND b.winlostdate = @Winlostdate
-		AND EXISTS (SELECT 1 FROM #Headline h WHERE h.Headline = b.CustID) 
+		AND EXISTS (SELECT 1 FROM #Headline h WHERE h.UplineId = b.CustID) 
 	
 	--- End: Last reset
 
@@ -178,13 +178,13 @@ BEGIN
 				   SUM(w.WinlostForExtraPT * ISNULL(s.ExtraPT,0)) as ExtraPTWinlost,				
 				   SUM(w.RealWinlostForExtraPT * ISNULL(s.ExtraPT,0)) as RealExtraPTWinlost  
 			FROM	#wl w
-			INNER JOIN dbo.Acc_GroupExtraPTSetting s WITH(NOLOCK)
+			INNER JOIN DBCUST.CUSTDB.dbo.Acc_GroupExtraPTSetting s WITH(NOLOCK)
 					ON w.srecommend = s.SuperId
 					AND w.ProductId = s.ProductId
 					AND w.SubProduct = s.SubProduct
 					AND w.Sporttype = s.Sporttype 
 					AND w.Winlostdate BETWEEN s.FromDate AND s.ToDate	
-			INNER JOIN dbo.CustSuper cs WITH (NOLOCK) 
+			INNER JOIN DBCUST.CUSTDB.dbo.CustSuper cs WITH (NOLOCK) 
 					ON cs.CustId = w.srecommend AND cs.UplineID IS NOT NULL
 			GROUP BY w.Winlostdate, w.ProductId, w.ProductName, cs.UplineID
 			
@@ -196,19 +196,19 @@ BEGIN
 					SUM(w.CommForExtraPT * ISNULL(s.ExtraCommRate,0)) as ExtraPTWinlost,
 					SUM(w.RealCommForExtraPT * ISNULL(s.ExtraCommRate,0)) as RealExtraPTWinlost   --- ExtraComm if any
 			FROM	#wl w
-			INNER JOIN dbo.Acc_GroupExtraCommRateSetting s WITH (NOLOCK)
+			INNER JOIN DBCUST.CUSTDB.dbo.Acc_GroupExtraCommRateSetting s WITH (NOLOCK)
 					ON w.srecommend = s.SuperId
 					AND w.ProductId = s.ProductId
 					AND w.SubProduct = s.SubProduct
 					AND w.Sporttype = s.Sporttype 
 					AND w.Winlostdate BETWEEN s.FromDate AND s.ToDate
-			INNER JOIN dbo.CustSuper cs WITH (NOLOCK) 
+			INNER JOIN DBCUST.CUSTDB.dbo.CustSuper cs WITH (NOLOCK) 
 					ON cs.CustId = w.srecommend AND cs.UplineID IS NOT NULL
 			GROUP BY w.Winlostdate, w.ProductId, w.ProductName,
 					 cs.UplineID		
 	
 		) w
-	GROUP BY w.Winlostdate, w.ProductId, w.ProductName, cs.UplineID	
+	GROUP BY w.Winlostdate, w.ProductId, w.ProductName, w.UplineID	
 	
 	
 	----view report
