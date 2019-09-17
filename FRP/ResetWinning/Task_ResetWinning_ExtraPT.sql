@@ -28,6 +28,7 @@ AS
 		- 20180830@Sophia: Apply Poker Games Phase 2 - Insurance [RedmineID: #100168]
 		- 20190412@Percy: Apply BetBuilder - Add Sub Product 'Bet Builder' [RedmineID: #106981]
 		- 20190701@Percy: Remove WL due to partner [RedmineID: #115802]
+		- 20190826@Sophia: CN88 Headline balance - Exclude reset winning for CN88 group [Redmine: #117863]
 
 	Param's explain:
 		@mode:  0 _ view report
@@ -81,8 +82,9 @@ BEGIN
 	BEGIN
 		INSERT INTO @dummy (CustID, GroupID, GroupName, Winlostdate)	
 		SELECT  DISTINCT e.CustID, e.GroupID, e.GroupName, d.WLDate
-		FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT_xtest e WITH (NOLOCK)
+		FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT_xtest e WITH (NOLOCK)		
 		CROSS JOIN @Date d
+		WHERE e.IsDisabled = 0
 	END
 	ELSE
 	BEGIN
@@ -90,6 +92,8 @@ BEGIN
 		SELECT  DISTINCT e.CustID, e.GroupID, e.GroupName, d.WLDate
 		FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT e WITH (NOLOCK)
 		CROSS JOIN @Date d
+		WHERE e.IsDisabled = 0
+		
 	END
 
 
