@@ -295,7 +295,7 @@ BEGIN
 					@transdesc = @TransDesc,
 					@creator = @creator,
 					@ip = @ip,
-					@isExtraPT = 2,    --- reset extraPT for CN88 (headline balance)
+					@isHeadline = 1,    --- reset extraPT for CN88 (headline balance)
 					@ErrCode = @ErrCode OUTPUT,
 					@ErrMsg = @ErrMsg OUTPUT
 			END

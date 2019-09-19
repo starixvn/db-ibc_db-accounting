@@ -7,7 +7,7 @@ ALTER PROCEDURE [dbo].[Task_ResetWinning_Non3rdParty_Add]
 	@transdesc   NVARCHAR(1000),
 	@creator     INT,
 	@ip          VARCHAR(20),
-	@isExtraPT	 TINYINT = 0,
+	@isHeadline	 TINYINT = 0,
 	@ErrCode     INT = 0 OUTPUT,  
     @ErrMsg      VARCHAR(100) = '' OUTPUT
 )
@@ -25,13 +25,12 @@ AS
 		- 20160315@Percy: Add params @isExtra for new function ExtraPT [Redmine: 51721]
 		- 20180412@Percy: Increase Transdesc length to 1000 [RedmineID: #92841]
 		- 20190801@Sophia: Integrate CN88, use ExchangeDailyOanda instead of exchange table [Redmine: #117809]		
-		- 20190826@Sophia : Daily Auto add transfer ticket for CN88 Headline balance, @isExtraPT = 2[Redmine: #117863]
+		- 20190826@Sophia : Daily Auto add transfer ticket for CN88 Headline balance, @isHeadline = 1 [Redmine: #117863]
 		
 		
 	Param's explain:
-		 @isExtraPT = 0 : reset winning
-					= 1 : reset winning ExtraPT
-					= 2 : auto add Headline Balance (ExtraPT for CN88)
+		 @isHeadline = 0 : reset winning and  reset winning ExtraPT
+					 = 1 : auto add Headline Balance (ExtraPT for CN88)
 */
 BEGIN
 	SET NOCOUNT ON 
@@ -54,7 +53,7 @@ BEGIN
 			,@bettype = 21002
 	END
 	
-	IF @isExtraPT = 2 
+	IF @isHeadline = 1 
 	BEGIN 
 		SELECT @bettype = 21007
 	END 
@@ -83,54 +82,6 @@ BEGIN
     SELECT @RefNum = @RefNum + 100000000000
 
 
-	DECLARE @DummyCust AS TABLE (CustId INT)
-	DECLARE @isTest BIT,@SQL NVARCHAR(100) = ISNULL(OBJECT_NAME(@@PROCID),'')
-
-	IF  (@SQL like '%_xtest%')
-	BEGIN
-		SELECT @isTest = 1
-	END
-	ELSE
-	BEGIN
-		SELECT @isTest = 0
-	END
-
-
-	IF @isTest = 0
-	BEGIN
-		IF @isExtraPT = 0
-		BEGIN
-			INSERT INTO @DummyCust (CustID)
-			SELECT custid
-			FROM DBACC.bodb_ACC.dbo.Acc_DWLList WITH(NOLOCK)
-			WHERE Product NOT IN ('Racing (Due to Partners)', 'Total Balance','Poker', 'Poker (Due to Partners)') 
-		END
-		ELSE IF @isExtraPT = 1
-		BEGIN
-			INSERT INTO @DummyCust (CustID)
-			SELECT custid
-			FROM DBACC.bodb_ACC.dbo.Acc_DWLList_ExtraPT WITH(NOLOCK)
-		END
-	END 
-	ELSE
-	BEGIN 
-		IF @isExtraPT = 0
-		BEGIN
-			INSERT INTO @DummyCust (CustID)
-			SELECT custid
-			FROM DBACC.bodb_ACC.dbo.Acc_DWLList_xtest WITH(NOLOCK)
-			WHERE Product NOT IN ('Racing (Due to Partners)', 'Total Balance','Poker', 'Poker (Due to Partners)') 
-		END
-		ELSE IF @isExtraPT = 1
-		BEGIN
-			INSERT INTO @DummyCust (CustID)
-			SELECT custid
-			FROM DBACC.bodb_ACC.dbo.Acc_DWLList_ExtraPT_xtest WITH(NOLOCK)
-		END
-	END 
-	
-
-
     BEGIN TRY
 	    INSERT INTO bettrans
         (
@@ -154,22 +105,7 @@ BEGIN
 	        SELECT @ErrCode = 1,
 	               @ErrMsg = 'Can not insert transaction! Please try again later.'
 			
-			IF @isExtraPT = 2
-			BEGIN 
-				DELETE bettrans
-				WHERE bettype = 21007
-				   AND winlostdate = @winlostdate
-				   AND custid = @CustId
-			END
-			ELSE
-			BEGIN 				
-				DELETE bettrans
-				WHERE bettype IN (21001, 21002)
-				   AND winlostdate = @winlostdate
-				   AND custid IN (SELECT custid FROM @DummyCust)
-			END 
-
-            RETURN
+			RETURN
         END
         
         
