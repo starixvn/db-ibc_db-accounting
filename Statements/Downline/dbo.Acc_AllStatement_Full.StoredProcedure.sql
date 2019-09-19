@@ -106,19 +106,9 @@ BEGIN
 	END
 	ELSE IF @roleid = 0 --headline
 	BEGIN
+		-- GET transfer only
 		INSERT INTO @tblCustid (custid)
-		SELECT c.custid 
-		FROM dbo.Customer c WITH(NOLOCK) 
-		INNER JOIN dbo.CustSuper cs WITH (NOLOCK) ON c.srecommend = cs.custid
-		WHERE c.roleid = 1
-			AND cs.UplineId = @CID 
-
-		INSERT INTO @tblRecommend (recommend)
-		SELECT c.custid 
-		FROM dbo.Customer c WITH(NOLOCK) 
-		INNER JOIN dbo.CustSuper cs WITH (NOLOCK) ON c.srecommend = cs.custid
-		WHERE c.roleid = 2
-			AND cs.UplineId = @CID 
+		SELECT @CID AS custid
 	END
 
 	DECLARE @Pos_Com TABLE (accdate DATETIME, pos_totalamt MONEY, com_totalamt MONEY) -- for position, commission
@@ -774,8 +764,8 @@ BEGIN
 		END
 		-- End Master --
 
-		-- Super & Headline --
-		IF @roleid IN (4,0)
+		-- Super 
+		IF @roleid = 4
 		BEGIN
 			--------1.Transfer
 			INSERT INTO @StatementTable
@@ -814,10 +804,8 @@ BEGIN
 				b.checkTime
 
 			--------2. POS, COM
-			IF @roleid IN (4)
-			BEGIN
-				INSERT INTO @Pos_Com
-				--- 2.1. Bettrans
+			INSERT INTO @Pos_Com
+			--- 2.1. Bettrans
 			SELECT
 				winlostdate accdate,
 				SUM(swinlost) pos_totalamt,
@@ -860,7 +848,7 @@ BEGIN
 				AND winlostdate >= @Yesterday
 			GROUP BY winlostdate
 		
-				INSERT INTO @StatementTable -- position
+			INSERT INTO @StatementTable -- position
 			SELECT
 				accdate,
 				0 refno,
@@ -893,9 +881,49 @@ BEGIN
 			FROM @Pos_Com
 			GROUP BY accdate
 			HAVING SUM(com_totalamt) <> 0
-			END
 		END
-		-- End Super & Headline--
+		-- End Super 
+
+		-- Headline --
+		IF @roleid = 0
+		BEGIN
+			--------1.Transfer only
+			INSERT INTO @StatementTable
+			SELECT 
+				transdate accdate,
+				refno,
+				SUM(winlost-actual_stake) totalamt,
+				CASE WHEN oddsId = 0 THEN typenamee ELSE 'Coll' END transtype,
+				0,
+				transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END transdesc,
+				ISNULL(c.username,'') as Creator,
+				CASE WHEN bt.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN NULL ELSE b.betid END,
+				CASE WHEN bt.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN '0' ELSE b.betcheck END,
+				CASE WHEN bt.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN NULL ELSE b.checkTime END,
+				CASE WHEN bt.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN 0 ELSE 1 END  
+			FROM
+				bettrans b WITH (NOLOCK) 
+				INNER JOIN bettype bt WITH (NOLOCK) ON bt.typeid=b.bettype  
+				LEFT JOIN customer c WITH (NOLOCK) ON b.creator = c.custid  
+			WHERE 
+				bettype >= 20000 
+				AND b.custid=@CID 
+				AND bt.typeid=b.bettype  
+				AND winlostdate BETWEEN @_FromDate AND @_ToDate
+			GROUP BY
+				transdate,
+				b.refno,
+				typenamee,
+				oddsId,
+				transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END,		
+				transid,
+				bt.typeid,
+				c.username,
+				b.betid,
+				b.betcheck,
+				b.checkTime
+		END
+		-- End Headline
 
 	END		   
 
