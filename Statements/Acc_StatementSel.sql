@@ -33,6 +33,7 @@ AS
 		- 20171020@Percy: Get both waiting and running tickets on translog [RedmineID: #84692]
 		- 20180710@Sophia: WC2018 - Workaround SP high CPU at bettransRNG block code (roleid = 3 & 4) [Redmine: #98039]
 		- 20180712@Sophia: WC2018 - Revise all the Sp [Redmine: #98039]
+		- 20190912@Bobby: Implement headline - Statement [Redmine: #119289]
 */
  
 BEGIN
@@ -123,7 +124,7 @@ BEGIN
 	INSERT INTO @mrecommend (mrecommend)
 	SELECT custid 
 	FROM dbo.Customer c WITH(NOLOCK) 
-	WHERE srecommend = @CID AND roleid = 3
+	WHERE srecommend = @CID AND roleid = 3 -- for Super level
 
 	UNION ALL
 	SELECT c.custid 
@@ -132,7 +133,7 @@ BEGIN
 		INNER JOIN dbo.CustSuper cs WITH (NOLOCK) ON c.srecommend = cs.custid
 	WHERE 
 		c.roleid = 3
-		AND cs.UplineId = @CID 
+		AND cs.UplineId = @CID -- for Headline level
 
 	UNION ALL
 	SELECT @CID 
@@ -512,7 +513,7 @@ BEGIN
 
 	-- II. Calculate data
 	-- II.1 Get Winloss  
-	-- @roleid IN (1,2,3,4)
+	IF @roleid IN (1,2,3,4)
 	BEGIN		
 		; WITH CTE_Winloss (winlostdate, Turnover, winlost, comm, betcount) AS
 		(			
@@ -626,7 +627,7 @@ BEGIN
 	  
 	
 	-- III. Get Openning Balance ----	
-	-- @roleid IN (1,2,3,4)
+	-- @roleid IN (1,2,3,4,0)
 	BEGIN
 		;WITH CTE_Balance (winlostdate, Balance) AS
 		(			

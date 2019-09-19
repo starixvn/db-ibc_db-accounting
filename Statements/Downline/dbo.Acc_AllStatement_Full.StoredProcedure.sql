@@ -1,7 +1,4 @@
 ﻿/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView,bodbExtAccNet" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
 ALTER PROCEDURE [dbo].[Acc_AllStatement_Full]
 	@custid				INT,
 	@Fromdate			DATETIME,
@@ -68,6 +65,7 @@ AS
 		- 20171020@Percy: Get both waiting and running tickets on translog [RedmineID: #84692]
 		- 20180731@Percy: Expand column transdesc [RedmineID: #92841]
 		- 20181107@Louis: Credit Collection [Redmine: #98621]
+		- 20190917@Bobby: Implement headline - Statement [Redmine: #119289]
 		
 	Param explanation : 
 		- Transtypeid = 4 - GrandPrize
@@ -105,6 +103,22 @@ BEGIN
 
 		INSERT INTO @tblRecommend (recommend)
 		SELECT custid FROM dbo.Customer WITH (NOLOCK) WHERE srecommend = @CID AND roleid = 2
+	END
+	ELSE IF @roleid = 0 --headline
+	BEGIN
+		INSERT INTO @tblCustid (custid)
+		SELECT c.custid 
+		FROM dbo.Customer c WITH(NOLOCK) 
+		INNER JOIN dbo.CustSuper cs WITH (NOLOCK) ON c.srecommend = cs.custid
+		WHERE c.roleid = 1
+			AND cs.UplineId = @CID 
+
+		INSERT INTO @tblRecommend (recommend)
+		SELECT c.custid 
+		FROM dbo.Customer c WITH(NOLOCK) 
+		INNER JOIN dbo.CustSuper cs WITH (NOLOCK) ON c.srecommend = cs.custid
+		WHERE c.roleid = 2
+			AND cs.UplineId = @CID 
 	END
 
 	DECLARE @Pos_Com TABLE (accdate DATETIME, pos_totalamt MONEY, com_totalamt MONEY) -- for position, commission
@@ -760,8 +774,8 @@ BEGIN
 		END
 		-- End Master --
 
-		-- Super --
-		IF @roleid = 4
+		-- Super & Headline --
+		IF @roleid IN (4,0)
 		BEGIN
 			--------1.Transfer
 			INSERT INTO @StatementTable
@@ -800,7 +814,9 @@ BEGIN
 				b.checkTime
 
 			--------2. POS, COM
-			INSERT INTO @Pos_Com
+			IF @roleid IN (4)
+			BEGIN
+				INSERT INTO @Pos_Com
 				--- 2.1. Bettrans
 			SELECT
 				winlostdate accdate,
@@ -809,9 +825,8 @@ BEGIN
 			FROM
 				dbo.bettrans b WITH (NOLOCK)
 				LEFT JOIN #SportBettype s ON b.bettype = s.Bettype
-			WHERE
-				b.bettype <= 19999
-				AND custid IN (SELECT custid FROM @tblCustid) -- using index on custid
+			WHERE b.bettype <= 19999
+				AND EXISTS (SELECT TOP 1 1 FROM @tblCustid c WHERE c.custid = b.custid) -- using index on custid
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate
 				AND (
 					winlostdate < @Yesterday
@@ -845,7 +860,7 @@ BEGIN
 				AND winlostdate >= @Yesterday
 			GROUP BY winlostdate
 		
-			INSERT INTO @StatementTable -- position
+				INSERT INTO @StatementTable -- position
 			SELECT
 				accdate,
 				0 refno,
@@ -878,8 +893,9 @@ BEGIN
 			FROM @Pos_Com
 			GROUP BY accdate
 			HAVING SUM(com_totalamt) <> 0
+			END
 		END
-		-- End Super --
+		-- End Super & Headline--
 
 	END		   
 
