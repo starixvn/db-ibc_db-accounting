@@ -121,7 +121,7 @@ BEGIN
 		transtype		NVARCHAR(100),
 		transtypeid		TINYINT DEFAULT 0,
 		transdesc		NVARCHAR(1000),
-		creator			VARCHAR(50),
+		creatorID		INT,
 		checkerID		INT NULL,
 		checkerName		VARCHAR(50) NULL,
 		checkTime		DATETIME NULL,
@@ -349,37 +349,25 @@ BEGIN
 			SELECT 
 				transdate accdate,
 				refno,
-				SUM(winlost-actual_stake) totalamt,
+				(winlost-actual_stake) totalamt,
 				CASE WHEN b.oddsId = 0 THEN bt.typenamee ELSE 'Coll' END transtype,
 				0,
 				transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END transdesc, 
-				ISNULL(c.username,'') Creator,
-				CASE WHEN bt.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN NULL ELSE b.betid END, --BalanceUP AND Transfer to Casino/Bingo/P2P
-				CASE WHEN bt.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN '0' ELSE b.betcheck END,
-				CASE WHEN bt.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN NULL ELSE b.checkTime END,
-				CASE WHEN bt.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN 0 ELSE 1 END   
+				b.creator AS creatorID,
+				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202) THEN NULL ELSE b.betid END, --BalanceUP AND Transfer to Casino/Bingo/P2P
+				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202) THEN '0' ELSE b.betcheck END,
+				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202) THEN NULL ELSE b.checkTime END,
+				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202) THEN 0 ELSE 1 END   
 			FROM
 				bettrans b WITH (NOLOCK)
-				INNER JOIN bettype bt WITH (NOLOCK) ON bt.typeid = b.bettype 
-				LEFT JOIN customer c WITH (NOLOCK) on b.creator = c.custid 
+				INNER JOIN bettype bt WITH (NOLOCK) ON b.bettype = b.bettype 
 			WHERE 
 				bettype >= 20000 
 				AND b.custid=@CID 
-				AND bt.typeid NOT IN (23001,23002,23101,23102,23201,23202)
+				AND b.bettype NOT IN (23001,23002,23101,23102,23201,23202)
 				AND (winlost-actual_stake) <> 0 
 				AND winlostdate BETWEEN @_FromDate and @_ToDate 
-			GROUP BY
-				transdate,
-				refno,
-				bt.typenamee,
-				oddsId,
-				transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END,
-				transid,
-				bt.typeid,
-				c.username,
-				b.betid,
-				b.betcheck,
-				b.checkTime
+			
 
 			---- 3.2 bettransLC
 			INSERT INTO @StatementTable
@@ -534,35 +522,23 @@ BEGIN
 			SELECT 
 				transdate accdate,
 				refno,
-				SUM(winlost-actual_stake) totalamt,
+				(winlost-actual_stake) totalamt,
 				CASE WHEN oddsId = 0 THEN typenamee ELSE 'Coll' END transtype,
 				0,
 				transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END transdesc, 			
-				ISNULL(c.username,'') Creator,
-				CASE WHEN bt.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN NULL ELSE b.betid END,
-				CASE WHEN bt.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN '0' ELSE b.betcheck END,
-				CASE WHEN bt.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN NULL ELSE b.checkTime END,
-				CASE WHEN bt.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN 0 ELSE 1 END   
+				b.creator AS creatorID,
+				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202) THEN NULL ELSE b.betid END,
+				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202) THEN '0' ELSE b.betcheck END,
+				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202) THEN NULL ELSE b.checkTime END,
+				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202) THEN 0 ELSE 1 END   
 			FROM
 				bettrans b WITH (NOLOCK) 
-				INNER JOIN bettype bt WITH (NOLOCK) ON bt.typeid = b.bettype 
-				LEFT JOIN customer c WITH (NOLOCK) ON b.creator = c.custid 
+				INNER JOIN bettype bt WITH (NOLOCK) ON b.bettype = b.bettype 
 			WHERE 
 				bettype >= 20000
 				AND b.custid = @CID
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate 
-				GROUP BY
-					transdate,
-					b.refno,
-					typenamee,
-					oddsId,
-					transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END,
-					transid,
-					bt.typeid,
-					c.username,
-					b.betid,
-					b.betcheck,
-					b.checkTime
+				
 			
 			---------------2. POS, COM
 			INSERT INTO @Pos_Com
@@ -652,35 +628,23 @@ BEGIN
 			SELECT 
 				transdate accdate,
 				refno,
-				SUM(winlost-actual_stake) totalamt,
-				CASE WHEN oddsId = 0 THEN typenamee ELSE 'Coll' END transtype,
+				(winlost-actual_stake) totalamt,
+				CASE WHEN oddsId = 0 THEN bt.typenamee ELSE 'Coll' END transtype,
 				0,
 				transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END transdesc, 
-				ISNULL(c.username,'') Creator,
-				CASE WHEN bt.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN NULL ELSE b.betid END,
-				CASE WHEN bt.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN '0' ELSE b.betcheck END,
-				CASE WHEN bt.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN NULL ELSE b.checkTime END,
-				CASE WHEN bt.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN 0 ELSE 1 END    
+				b.creator AS creatorID,
+				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202) THEN NULL ELSE b.betid END,
+				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202) THEN '0' ELSE b.betcheck END,
+				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202) THEN NULL ELSE b.checkTime END,
+				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202) THEN 0 ELSE 1 END    
 			FROM
 				bettrans b WITH (NOLOCK) 
-				INNER JOIN bettype bt WITH (NOLOCK) ON bt.typeid = b.bettype 
-				LEFT JOIN customer c WITH (NOLOCK) ON b.creator = c.custid 
+				INNER JOIN bettype bt WITH (NOLOCK) ON b.bettype = b.bettype 
 			WHERE 
 				bettype >= 20000 
 				AND b.custid = @CID 
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate 
-			GROUP BY
-				transdate,
-				b.refno,
-				typenamee,
-				oddsId,
-				transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END,		
-				transid,
-				bt.typeid,
-				c.username,
-				b.betid,
-				b.betcheck,
-				b.checkTime			
+				
 	
 			---------------2. POS, COM
 			INSERT INTO @Pos_Com
@@ -772,36 +736,22 @@ BEGIN
 			SELECT 
 				transdate accdate,
 				refno,
-				SUM(winlost-actual_stake) totalamt,
-				CASE WHEN oddsId = 0 THEN typenamee ELSE 'Coll' END transtype,
+				(winlost-actual_stake) totalamt,
+				CASE WHEN oddsId = 0 THEN bt.typenamee ELSE 'Coll' END transtype,
 				0,
 				transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END transdesc,
-				ISNULL(c.username,'') as Creator,
-				CASE WHEN bt.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN NULL ELSE b.betid END,
-				CASE WHEN bt.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN '0' ELSE b.betcheck END,
-				CASE WHEN bt.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN NULL ELSE b.checkTime END,
-				CASE WHEN bt.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN 0 ELSE 1 END  
+				b.creator AS creatorID,
+				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202) THEN NULL ELSE b.betid END,
+				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202) THEN '0' ELSE b.betcheck END,
+				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202) THEN NULL ELSE b.checkTime END,
+				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202) THEN 0 ELSE 1 END  
 			FROM
 				bettrans b WITH (NOLOCK) 
-				INNER JOIN bettype bt WITH (NOLOCK) ON bt.typeid=b.bettype  
-				LEFT JOIN customer c WITH (NOLOCK) ON b.creator = c.custid  
+				INNER JOIN bettype bt WITH (NOLOCK) ON b.bettype=b.bettype  
 			WHERE 
 				bettype >= 20000 
 				AND b.custid=@CID 
-				AND bt.typeid=b.bettype  
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate
-			GROUP BY
-				transdate,
-				b.refno,
-				typenamee,
-				oddsId,
-				transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END,		
-				transid,
-				bt.typeid,
-				c.username,
-				b.betid,
-				b.betcheck,
-				b.checkTime
 
 			--------2. POS, COM
 			INSERT INTO @Pos_Com
@@ -892,36 +842,22 @@ BEGIN
 			SELECT 
 				transdate accdate,
 				refno,
-				SUM(winlost-actual_stake) totalamt,
-				CASE WHEN oddsId = 0 THEN typenamee ELSE 'Coll' END transtype,
+				(winlost-actual_stake) totalamt,
+				CASE WHEN oddsId = 0 THEN bt.typenamee ELSE 'Coll' END transtype,
 				0,
 				transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END transdesc,
-				ISNULL(c.username,'') as Creator,
-				CASE WHEN bt.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN NULL ELSE b.betid END,
-				CASE WHEN bt.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN '0' ELSE b.betcheck END,
-				CASE WHEN bt.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN NULL ELSE b.checkTime END,
-				CASE WHEN bt.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN 0 ELSE 1 END  
+				b.creator AS creatorID,
+				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21007) THEN NULL ELSE b.betid END,
+				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21007) THEN '0' ELSE b.betcheck END,
+				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21007) THEN NULL ELSE b.checkTime END,
+				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21007) THEN 0 ELSE 1 END  
 			FROM
-				bettrans b WITH (NOLOCK) 
-				INNER JOIN bettype bt WITH (NOLOCK) ON bt.typeid=b.bettype  
-				LEFT JOIN customer c WITH (NOLOCK) ON b.creator = c.custid  
-			WHERE 
-				bettype >= 20000 
+				dbo.bettrans b WITH (NOLOCK) 
+				INNER JOIN bettype bt WITH (NOLOCK) ON b.bettype=b.bettype  
+			WHERE b.matchid = 0
+				AND bettype >= 20000 
 				AND b.custid=@CID 
-				AND bt.typeid=b.bettype  
-				AND winlostdate BETWEEN @_FromDate AND @_ToDate
-			GROUP BY
-				transdate,
-				b.refno,
-				typenamee,
-				oddsId,
-				transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END,		
-				transid,
-				bt.typeid,
-				c.username,
-				b.betid,
-				b.betcheck,
-				b.checkTime
+				AND b.winlostdate BETWEEN @_FromDate AND @_ToDate
 		END
 		-- End Headline
 
@@ -1026,13 +962,42 @@ BEGIN
 		END
 	END
 
-	SELECT accdate, refno, SUM(totalamt) AS totalamt, transtype, transtypeid, transdesc, creator, checkerID, checkerName, checkTime, isAllowVeify			
-	FROM @StatementTable
-	WHERE
-		accdate >= @Fromdate_bk
+	-- OUTPUT result
+	SELECT accdate
+		, refno
+		, SUM(totalamt) AS totalamt
+		, transtype
+		, transtypeid
+		, transdesc
+		, ISNULL(c.username, '') AS creator
+		, checkerID
+		, checkerName
+		, checkTime
+		, isAllowVeify
+	FROM @StatementTable st
+	LEFT JOIN dbo.customer c(NOLOCK)
+		ON st.creatorID = c.custid
+	WHERE accdate >= @Fromdate_bk
 		OR transdesc = 'ACCUMULATED BALANCE'
-	GROUP BY accdate, refno, transtype, transtypeid, transdesc, creator, checkerID, checkerName, checkTime, isAllowVeify			
-	ORDER BY accdate, CASE WHEN transdesc LIKE '%OPENING BALANCE%' THEN 1 ELSE 2 END, transtypeid, transdesc
+	GROUP BY accdate
+		, refno
+		, transtype
+		, transtypeid
+		, transdesc
+		, ISNULL(c.username, '')
+		, checkerID
+		, checkerName
+		, checkTime
+		, isAllowVeify
+	ORDER BY accdate
+		, CASE 
+			WHEN transdesc LIKE '%OPENING BALANCE%'
+				THEN 1
+			ELSE 2
+			END
+		, transtypeid
+		, transdesc
+
 
 	DROP TABLE #SportBettype
 END
