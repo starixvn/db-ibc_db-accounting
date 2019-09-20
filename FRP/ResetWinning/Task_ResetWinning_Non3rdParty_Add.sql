@@ -7,7 +7,7 @@ ALTER PROCEDURE [dbo].[Task_ResetWinning_Non3rdParty_Add]
 	@transdesc   NVARCHAR(1000),
 	@creator     INT,
 	@ip          VARCHAR(20),
-	@isHeadline	 TINYINT = 0,
+	@isExtraPT	 BIT = 0,
 	@ErrCode     INT = 0 OUTPUT,  
     @ErrMsg      VARCHAR(100) = '' OUTPUT
 )
@@ -25,12 +25,9 @@ AS
 		- 20160315@Percy: Add params @isExtra for new function ExtraPT [Redmine: 51721]
 		- 20180412@Percy: Increase Transdesc length to 1000 [RedmineID: #92841]
 		- 20190801@Sophia: Integrate CN88, use ExchangeDailyOanda instead of exchange table [Redmine: #117809]		
-		- 20190826@Sophia : Daily Auto add transfer ticket for CN88 Headline balance, @isHeadline = 1 [Redmine: #117863]
-		
-		
-	Param's explain:
-		 @isHeadline = 0 : reset winning and  reset winning ExtraPT
-					 = 1 : auto add Headline Balance (ExtraPT for CN88)
+		- 20190826@Sophia: remove Rollback code (in CATCH block) [Redmine: #117863]
+
+
 */
 BEGIN
 	SET NOCOUNT ON 
@@ -39,7 +36,6 @@ BEGIN
             @actualrate float, @Recommend int, @MRecommend int, @SRecommend int,
             @username nvarchar(50), @creditamt money, @debitamt money, @roleID tinyint
 
-	
 	IF @amount > 0 --Deposit
 	BEGIN
 		SELECT @creditamt = abs(@amount)
@@ -52,11 +48,6 @@ BEGIN
 			,@debitamt = abs(@amount)
 			,@bettype = 21002
 	END
-	
-	IF @isHeadline = 1 
-	BEGIN 
-		SELECT @bettype = 21007
-	END 
 
 
 	SELECT @Curr = c.Currency
@@ -81,7 +72,6 @@ BEGIN
 
     SELECT @RefNum = @RefNum + 100000000000
 
-
     BEGIN TRY
 	    INSERT INTO bettrans
         (
@@ -103,13 +93,13 @@ BEGIN
         IF @@ERROR <> 0
 	    BEGIN
 	        SELECT @ErrCode = 1,
-	               @ErrMsg = 'Can not insert transaction! Please try again later.'
-			
-			RETURN
+	               @ErrMsg = 'Can not insert transaction! Please try again later.'			
+
+            RETURN
         END
         
         
     END CATCH
 
 END
- GO
+
