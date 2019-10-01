@@ -360,7 +360,7 @@ BEGIN
 				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202) THEN 0 ELSE 1 END   
 			FROM
 				bettrans b WITH (NOLOCK)
-				INNER JOIN bettype bt WITH (NOLOCK) ON b.bettype = b.bettype 
+				INNER JOIN bettype bt WITH (NOLOCK) ON b.bettype = bt.typeid 
 			WHERE 
 				bettype >= 20000 
 				AND b.custid=@CID 
@@ -533,7 +533,7 @@ BEGIN
 				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202) THEN 0 ELSE 1 END   
 			FROM
 				bettrans b WITH (NOLOCK) 
-				INNER JOIN bettype bt WITH (NOLOCK) ON b.bettype = b.bettype 
+				INNER JOIN bettype bt WITH (NOLOCK) ON b.bettype = bt.typeid 
 			WHERE 
 				bettype >= 20000
 				AND b.custid = @CID
@@ -639,7 +639,7 @@ BEGIN
 				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202) THEN 0 ELSE 1 END    
 			FROM
 				bettrans b WITH (NOLOCK) 
-				INNER JOIN bettype bt WITH (NOLOCK) ON b.bettype = b.bettype 
+				INNER JOIN bettype bt WITH (NOLOCK) ON b.bettype = bt.typeid 
 			WHERE 
 				bettype >= 20000 
 				AND b.custid = @CID 
@@ -747,7 +747,7 @@ BEGIN
 				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202) THEN 0 ELSE 1 END  
 			FROM
 				bettrans b WITH (NOLOCK) 
-				INNER JOIN bettype bt WITH (NOLOCK) ON b.bettype=b.bettype  
+				INNER JOIN bettype bt WITH (NOLOCK) ON b.bettype=bt.typeid  
 			WHERE 
 				bettype >= 20000 
 				AND b.custid=@CID 
@@ -853,7 +853,7 @@ BEGIN
 				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21007) THEN 0 ELSE 1 END  
 			FROM
 				dbo.bettrans b WITH (NOLOCK) 
-				INNER JOIN bettype bt WITH (NOLOCK) ON b.bettype=b.bettype  
+				INNER JOIN bettype bt WITH (NOLOCK) ON b.bettype=bt.typeid  
 			WHERE b.matchid = 0
 				AND bettype >= 20000 
 				AND b.custid=@CID 
