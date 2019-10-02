@@ -409,8 +409,8 @@ BEGIN
 	END
 	-- End Master --
 		
-	-- Super & Headline --
-	IF @roleid IN (4,0)
+	-- Super --
+	IF @roleid = 4
 	BEGIN		
 		-- I.4.1 bettrans (Downline):  Exclude ticket running, waiting, Void, reject
 		INSERT INTO #Data (winlostdate, bettype, StatusID, IsOwner, Turnover, OwnerWinloss, Winlost, Comm, BetCount)
@@ -507,6 +507,28 @@ BEGIN
 						
 	END
 	-- End Super --
+
+	-- Headline
+	IF (@roleId = 0)
+	BEGIN
+		-- I.4.1b bettrans (headline level - always is transfer & Opening BL tickets)		
+		INSERT INTO #Data (winlostdate, bettype, StatusID, IsOwner, Turnover, OwnerWinloss, Winlost, Comm, BetCount)
+		SELECT
+			Winlostdate, bettype
+			, 131 as StatusID  ---  get a general StatusId
+			, 1 AS IsOwner    
+			,SUM(ABS(stake)) AS Turnover
+			,SUM(winlost - actual_stake) AS OwnerWinloss
+			,SUM(swinlost) AS winlost
+			,SUM(scomm - acomm) AS comm
+			,COUNT(1) AS betcount
+		FROM dbo.bettrans bt WITH (NOLOCK) --- Use index CustID						
+		WHERE bt.custid = @CID
+			AND bettype >= 19999
+			AND winlostdate <= @todate
+		GROUP BY Winlostdate, bettype
+	END
+	-- End Headline
 
 
 	CREATE CLUSTERED INDEX IX_Data ON #Data (Bettype, WinlostDate, StatusID)
@@ -690,14 +712,14 @@ BEGIN
 		winlostdate
 		,@CID AS CustID
 		,SUM(ISNULL(OpeningBalance, 0)) AS [OpeningBalance]
-		,SUM(CASE WHEN @roleid = 0 THEN 0 ELSE Voidamt END) AS [VoidAmt]
-		,SUM(CASE WHEN @roleid = 0 THEN 0 ELSE Outstanding END) AS [Outstanding]
-		,SUM(CASE WHEN BetCount > 0 AND @roleid > 0 THEN Turnover ELSE 0 END) AS [Turnover]
+		,SUM(CASE WHEN @roleid = 0 THEN NULL ELSE Voidamt END) AS [VoidAmt]
+		,SUM(CASE WHEN @roleid = 0 THEN NULL ELSE Outstanding END) AS [Outstanding]
+		,SUM(CASE WHEN BetCount > 0 AND @roleid > 0 THEN Turnover ELSE NULL END) AS [Turnover]
 		,SUM(TransferAmt) AS [TransferAmt]
-		,SUM(CASE WHEN BetCount > 0 AND @roleid > 0 THEN Winlost ELSE 0 END) AS [Winlost]
-		,SUM(CASE WHEN BetCount > 0 AND @roleid > 0 THEN Comm ELSE 0 END) AS [Comm]
+		,SUM(CASE WHEN BetCount > 0 AND @roleid > 0 THEN Winlost ELSE NULL END) AS [Winlost]
+		,SUM(CASE WHEN BetCount > 0 AND @roleid > 0 THEN Comm ELSE NULL END) AS [Comm]
 		,SUM(ISNULL(OpeningBalance, 0) + ISNULL([Winlost], 0) + ISNULL([Comm], 0) + ISNULL([TransferAmt], 0)) AS ClosingBalance
-		,SUM(CASE WHEN @roleid = 0 THEN 0 ELSE GrandPrize END) AS GrandPrize
+		,SUM(CASE WHEN @roleid = 0 THEN NULL ELSE GrandPrize END) AS GrandPrize
 	FROM #rptStatementTable
 	GROUP BY winlostdate
 	HAVING
