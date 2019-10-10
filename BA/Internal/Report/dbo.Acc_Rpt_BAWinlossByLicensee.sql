@@ -1,28 +1,25 @@
-﻿/*
-	Acc_Rpt_BAWinlossByLicensee
-	@fromdate='2012-07-01',
-	@todate='2012-07-30',
-	@movebetsday='2012-07-23'
-*/
+﻿/*<info serverAlias="DBEXT-bodb02" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_Rpt_BAWinlossByLicensee]  
- @LicenseeID	INT = 0,
- @Currency		INT = 0,
- @FromDate		SMALLDATETIME,  
- @ToDate		SMALLDATETIME,   
- @MoveBetsDay SMALLDATETIME,
- @ReportType	TINYINT=1,  
- @drawfilter SMALLINT = 1  ,
- @excludeTest BIT = 0
+	@LicenseeID		INT = 0,
+	@Currency		INT = 0,
+	@FromDate		SMALLDATETIME,
+	@ToDate			SMALLDATETIME,
+	@MoveBetsDay	SMALLDATETIME,
+	@ReportType		TINYINT=1,
+	@drawfilter		SMALLINT = 1,
+	@excludeTest	BIT = 0
 AS  
-/*  Created: Henry  
-	Date: 2011-11-04
-    Task : BA Winloss Report By Licensee 
-    DB: DB052.bodb02  
+/*
+	Created: 20111104@Henry  
+    Task: BA Winloss Report By Licensee
+    DB: DBEXT.bodb02
    
     Revisions:  
 		- 20120214@Jim: change to use  table ExchangeDaily by use function Lrf_f_GetExchangeDaily  
 		- 20120803@Jim: add playercomm value( for give commision to member) 
 		- 20161022@Jim:move table to bodb_licenseereport [RedmineID :#60449]
+		- 20191010@Percy: Replace LicenseeBATransaction to LicenseeBATransaction_active [RedmineID: #103656]
+	
 	Param's Explanation:  
 	  + @ReportType: 1-Daily; 2-Monthly;  
 	  +	@drawfilter: 'No Draw' filter is supportted (1:Normal 2:No Draw 3:No Draw for Turnover only)
@@ -85,7 +82,7 @@ BEGIN
 				ELSE 1 END
 			   BetCount		
 		FROM dbo.bettrans b WITH (NOLOCK,INDEX=PK_bettrans)   
-			INNER JOIN bodb_Licensee.dbo.LicenseeBATransaction BA WITH (NOLOCK) ON b.transid = BA.transid
+			INNER JOIN bodb_Licensee.dbo.LicenseeBATransaction_active BA WITH (NOLOCK) ON b.transid = BA.transid
 			INNER JOIN bodb_Licensee.dbo.LicenseeCust lc WITH (NOLOCK) ON b.recommend = lc.custid
 			INNER JOIN bodb_Licensee.dbo.Licensees l WITH (NOLOCK) ON l.LicenseeID = lc.LicenseeID
 		WHERE 
@@ -209,10 +206,5 @@ BEGIN
 	
 	DROP TABLE #tmp
 	DROP TABLE #TempExchange
-
-
-END   
+END  
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_BAWinlossByLicensee] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_BAWinlossByLicensee] TO [vnteam]  

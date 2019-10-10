@@ -1,22 +1,20 @@
-﻿/*
-Acc_Rpt_BALicWinloss
-@fromdate='2012-07-01',
-@todate='2012-07-30'
-*/
-ALTER PROCEDURE [dbo].[Acc_Rpt_BALicWinloss]  
+﻿/*<info serverAlias="DBEXT-bodb02" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
+ALTER PROCEDURE [dbo].[Acc_Rpt_BALicWinloss]
 	@FromDate SMALLDATETIME,
 	@ToDate SMALLDATETIME
 AS  
-/*  Created: Henry  
-	Date: 2011-10-14
-    TASk : BA Winloss Report for Licensee By date range
-    DB: DB052.bodb02  
+/* 
+	Created: 20111014@Henry  
+    Task: BA Winloss Report for Licensee By date range
+    DB: DBEXT.bodb02  
    
     Revisions:  
 		- 20111230@Henry: remove virtual concept
 		- 20120214@Jim: change to use  table ExchangeDaily by use function Lrf_f_GetExchangeDaily  
 		- 20120803@Jim: add playercomm value (for give commission to member)
 		- 20161022@Jim:move table to bodb_licenseereport [RedmineID :#60449]
+		- 20191010@Percy: Replace LicenseeBATransaction to LicenseeBATransaction_active [RedmineID: #103656]
+	
 	Param's Explanation:  
 */  
 BEGIN  
@@ -75,7 +73,7 @@ BEGIN
 		SUM( b.playercomm ) AS PlayerComm,
 		COUNT(b.transid) AS BetCount	
 	FROM dbo.bettrans b WITH (NOLOCK,INDEX=PK_bettrans)   
-		INNER JOIN bodb_Licensee.dbo.LicenseeBATransaction BA WITH (NOLOCK) ON b.transid = BA.transid
+		INNER JOIN bodb_Licensee.dbo.LicenseeBATransaction_active BA WITH (NOLOCK) ON b.transid = BA.transid
 		INNER JOIN bodb_Licensee.dbo.LicenseeCust lc WITH (NOLOCK) ON b.recommend = lc.custid
 		INNER JOIN bodb_Licensee.dbo.Licensees l WITH (NOLOCK) ON l.LicenseeID = lc.LicenseeID
 	WHERE 
@@ -153,10 +151,4 @@ DROP TABLE #tmp
 DROP TABLE #TempExchange
 
 END   
-
 GO
-GRANT EXECUTE ON [dbo].[Acc_Rpt_BALicWinloss] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_Rpt_BALicWinloss] TO [vnteam]   
-
-
