@@ -12,6 +12,10 @@ AS
 	Created: 20191014@Sophia
 	DB: DBCUST.CustDB
 	Task: Get ExtraPT(epositiontaking) by ProductID and SubProduct [Redmine: #122071]
+	
+	Revisions:
+		- 20191014@Sophia: initial SP [Redmine: #122071]
+
 */
 
 

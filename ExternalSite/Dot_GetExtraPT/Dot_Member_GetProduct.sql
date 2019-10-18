@@ -11,7 +11,10 @@ AS
 /*
 	Created: 20191014@Sophia
 	DB: DBPRO.bodb02
-	Task: Get ProductID and SubProduct by Sporttype and bettype [Redmine: #122071]
+	Task: Get ProductID and SubProduct by Sporttype and bettype  
+	
+	Revisions:
+		- 20191014@Sophia: initial SP [Redmine: #122071]
 */
 
 BEGIN 
