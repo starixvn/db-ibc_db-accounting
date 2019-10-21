@@ -18,6 +18,7 @@ AS
 	Revisions:
 		- 20190718@Percy: Update total opening/closing balance [RedmineID: #109293]
 		- 20190819@Sophia: Fix bug when add TXN on BU day [Redmine: #118530]
+		- 20190917@Bobby: Implement headline - Statement [Redmine: #119289]
     
 	Param's Explanation:
 */
@@ -30,7 +31,7 @@ BEGIN
 	/* ===== Customer Info ===== */
 	BEGIN
 		DECLARE @roleId TINYINT, @recommend INT, @mrecommend INT, @srecommend INT
-		SELECT  @roleId = roleid, @recommend = recommend, @mrecommend = mrecommend, @srecommend = srecommend
+		SELECT  @roleId = CASE WHEN roleid = 0 THEN 1 ELSE roleid END, @recommend = recommend, @mrecommend = mrecommend, @srecommend = srecommend
 		FROM bodb02.dbo.Customer WITH (NOLOCK)
 		WHERE custid = @custid
 
@@ -185,6 +186,7 @@ BEGIN
 				GROUP BY custid
 			) AS tmp
 		WHERE NOT EXISTS (SELECT 1 FROM dbo.rptStatement r WITH (NOLOCK) WHERE tmp.custid = r.custid AND r.winlostdate = @winlostdate)
+		AND tmp.custid > 0
 	END
 	/* ===== End Initialize data in rptStatement ===== */
 
