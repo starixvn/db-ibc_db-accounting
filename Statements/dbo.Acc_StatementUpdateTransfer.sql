@@ -75,7 +75,7 @@ BEGIN
 			FROM (
 				SELECT custid, roleid, recommend, mrecommend, srecommend
 				FROM bodb02.dbo.Customer c WITH (NOLOCK)
-				WHERE srecommend = @srecommend
+				WHERE srecommend = @srecommend AND roleid <= 4
 
 				UNION ALL-- healine level
 				SELECT custid, @roleId AS roleid, recommend, mrecommend, srecommend
