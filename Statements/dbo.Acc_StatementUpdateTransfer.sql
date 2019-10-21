@@ -31,7 +31,11 @@ BEGIN
 	/* ===== Customer Info ===== */
 	BEGIN
 		DECLARE @roleId TINYINT, @recommend INT, @mrecommend INT, @srecommend INT
-		SELECT  @roleId = CASE WHEN roleid = 0 THEN 1 ELSE roleid END, @recommend = recommend, @mrecommend = mrecommend, @srecommend = srecommend
+		SELECT  @roleId = CASE 
+							WHEN roleid = 0 THEN 1 --> treat HL as member level
+							ELSE roleid 
+						END
+			, @recommend = recommend, @mrecommend = mrecommend, @srecommend = srecommend
 		FROM bodb02.dbo.Customer WITH (NOLOCK)
 		WHERE custid = @custid
 
@@ -67,9 +71,18 @@ BEGIN
 		)
 		BEGIN
 			INSERT INTO #rptStatement (custid, roleid, recommend, mrecommend, srecommend)
-			SELECT custid, roleid, recommend, mrecommend, srecommend
-			FROM bodb02.dbo.Customer c WITH (NOLOCK)
-			WHERE srecommend = @srecommend
+			SELECT TOP(1) custid, roleid, recommend, mrecommend, srecommend
+			FROM (
+				SELECT custid, roleid, recommend, mrecommend, srecommend
+				FROM bodb02.dbo.Customer c WITH (NOLOCK)
+				WHERE srecommend = @srecommend
+
+				UNION ALL-- healine level
+				SELECT custid, @roleId AS roleid, recommend, mrecommend, srecommend
+				FROM bodb02.dbo.Customer c WITH (NOLOCK)
+				WHERE custid = @custid AND roleid = 0
+			) AS ci
+			ORDER BY roleid DESC
 
 			UPDATE tmp
 			SET tmp.winlostdate = r.winlostdate
@@ -182,7 +195,7 @@ BEGIN
 					,SUM(ClosingBalance) AS ClosingBalance
 					,SUM(ClosingBalance) AS ClosingTotalBalance
 				FROM #rptStatement
-				WHERE custid = @custid AND @roleid = 1
+				WHERE custid = @custid AND @roleid = 1 --> treat HL as member level
 				GROUP BY custid
 			) AS tmp
 		WHERE NOT EXISTS (SELECT 1 FROM dbo.rptStatement r WITH (NOLOCK) WHERE tmp.custid = r.custid AND r.winlostdate = @winlostdate)
