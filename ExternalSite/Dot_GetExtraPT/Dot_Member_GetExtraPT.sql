@@ -1,7 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB" executers="" isFunction="0" isNested="0"></info>*/
-USE CustDB
-GO
-
+/*<info serverAlias="DBCUST-CustDB" executers="Dot_Member,Dot_Intg" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Dot_Member_GetExtraPT]
 	@Srecommend			INT
 	,@ProductId			TINYINT

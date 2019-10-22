@@ -1,7 +1,4 @@
-/*<info serverAlias="DBPRO-bodb02" executers="" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
+/*<info serverAlias="DBPRO-bodb02" executers="Dot_Member,Dot_Intg" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Dot_Member_GetProduct]
 	@Bettype	SMALLINT
 	,@Sporttype	SMALLINT
