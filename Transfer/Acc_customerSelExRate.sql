@@ -1,6 +1,5 @@
-﻿
-
-ALTER PROCEDURE [dbo].[Acc_customerSelExRate]
+﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet" isFunction="0"></info>*/
+ALTER PROCEDURE dbo.Acc_CustomerSelExRate
 (
 	@Username NVARCHAR(50)
 )
@@ -8,23 +7,18 @@ AS
 /*
 	Create: 20110902@Lukas
 	Task: Get customer's currency info
-	DB: DB053.BODB02
+	DB: DBAGE.bodb02
 
 	Revisions:
-
+		- 20150724@Lukas: change to use customer (IX_username) instead of custinfo table
 */
 BEGIN
 	SET NOCOUNT ON	
 	
 	SELECT c.custid, c.username, e.currency, e.actualrate
-	FROM custinfo c WITH(NOLOCK)
+	FROM customer c WITH(NOLOCK)
 			INNER JOIN exchange e WITH(NOLOCK) ON c.currency = e.exchangeid
-	WHERE c.username = @Username
+	WHERE c.username = CONVERT(VARCHAR(50),@Username)
 
 END
-
-
 GO
-GRANT  EXECUTE  ON [dbo].[Acc_customerSelExRate]  TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_customerSelExRate] TO [vnteam]

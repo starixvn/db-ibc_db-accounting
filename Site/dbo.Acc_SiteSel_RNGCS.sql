@@ -1,4 +1,5 @@
-﻿ALTER PROCEDURE [dbo].[Acc_SiteSel_RNGCS]
+﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,bodbExtAccNet,bodbDownlineNetView" isFunction="0"></info>*/
+ALTER PROCEDURE [dbo].[Acc_SiteSel_RNGCS]
 	 @CustID	INT				= 0
 	,@SiteRNG	VARCHAR(10)		= ''	OUTPUT 
 	,@ErrCode	INT				= 0		OUTPUT
@@ -6,15 +7,16 @@
 AS
 
 /*
-Created by: Jamie
-Date: 2013-02-05
-Task : Get SiteName for RNG Casino API
-  + Sitename= "ibcbet" if customer belongs to CREDIT site.
-  + Sitename = deposit's sitename if customer belongs to DEPOSIT site.
+	Created by: Jamie
+	Date: 2013-02-05
+	Task : Get SiteName for RNG Casino API
+	  + Sitename= "ibcbet" if customer belongs to CREDIT site.
+	  + Sitename = deposit's sitename if customer belongs to DEPOSIT site.
 
-DB: DBAGE/BODB02
+	DB: DBAGE/BODB02
 
-Revisions:
+	Revisions:
+		- 20130205@Jamie: Initialize SP
 
 */
 BEGIN
@@ -51,11 +53,3 @@ BEGIN
 
 END
 GO
-GRANT EXECUTE ON [dbo].[Acc_SiteSel_RNGCS] TO [bodbAdminNet]
-GO
-GRANT EXECUTE ON [dbo].[Acc_SiteSel_RNGCS] TO [bodbExtAccNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_SiteSel_RNGCS] TO [vnteam]
-GO
-GRANT EXECUTE ON [dbo].[Acc_SiteSel_RNGCS] TO [bodbDownlineNetView]
-

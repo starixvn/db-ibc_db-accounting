@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,bodbExtAccNet" viewers="" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,bodbExtAccNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_CustomerSelClearBalance]
 	@custid		INT,
 	@pageIndex	INT = 1,
@@ -6,28 +6,28 @@ ALTER PROCEDURE [dbo].[Acc_CustomerSelClearBalance]
 	@TotalRows	INT = 0 OUTPUT
 AS
 /*
-Created: 
-Task : Clear Balance
-DB: DBAGE.bodb02
-Original:
+	Created: 
+	Task : Clear Balance
+	DB: DBAGE.bodb02
+	Original:
 
-Revisions:
-	- 20100709@Khoa: add more column SyncCasino
-	- 20110517@Lukas: re-arrange bettype
-	- 20110830@Jamie: COUNT phonebetting's negative stake as positive number
-	- 20140305@Dom: Update outstanding for keno
-	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
-	- 20151214@Percy: exclude Cock Fighting running ticket from bettrans [Redmine: #48601]
-	- 20160125@Percy: expand new range RNG Casino [Redmine: #50674]
-	- 20160215@Percy: support AllBet [Redmine: #50588]
-	- 20160412@Percy: support Voidbridge single wallet [Redmine: #55258]
-	- 20160608@Percy: Enhance performance - refactor code [RedmineID: #58288]
-	- 20161006@Percy: Support Super and Master levels [RedmineID: #63209]
-	- 20170622@Percy: Return ClosedReason column to apply color for closed accounts [RedmineID : #74494]
-	- 20171018@Percy: Get status waiting from translog [RedmineID: #84692]
-	- 20181003@Helen: Modify code to adapt indexes changed on DB053 [Redmine:101405]
+	Revisions:
+		- 20100709@Khoa: add more column SyncCasino
+		- 20110517@Lukas: re-arrange bettype
+		- 20110830@Jamie: COUNT phonebetting's negative stake as positive number
+		- 20140305@Dom: Update outstanding for keno
+		- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
+		- 20151214@Percy: exclude Cock Fighting running ticket from bettrans [Redmine: #48601]
+		- 20160125@Percy: expand new range RNG Casino [Redmine: #50674]
+		- 20160215@Percy: support AllBet [Redmine: #50588]
+		- 20160412@Percy: support Voidbridge single wallet [Redmine: #55258]
+		- 20160608@Percy: Enhance performance - refactor code [RedmineID: #58288]
+		- 20161006@Percy: Support Super and Master levels [RedmineID: #63209]
+		- 20170622@Percy: Return ClosedReason column to apply color for closed accounts [RedmineID : #74494]
+		- 20171018@Percy: Get status waiting from translog [RedmineID: #84692]
+		- 20181003@Helen: Modify code to adapt indexes changed on DB053 [Redmine:101405]
 	
-Param's Explanation:
+	Param's Explanation:
 	
 */
 BEGIN
