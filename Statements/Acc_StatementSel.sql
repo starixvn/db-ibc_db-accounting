@@ -34,6 +34,7 @@ AS
 		- 20180710@Sophia: WC2018 - Workaround SP high CPU at bettransRNG block code (roleid = 3 & 4) [Redmine: #98039]
 		- 20180712@Sophia: WC2018 - Revise all the Sp [Redmine: #98039]
 		- 20190912@Bobby: Implement headline - Statement [Redmine: #119289]
+		- 20190918@Percy: Remove inactive products [RedmineID: #118699]
 */
  
 BEGIN
@@ -544,7 +545,7 @@ BEGIN
 				,SUM(CASE WHEN statusID NOT IN (101,102,103) THEN Turnover ELSE 0 END) AS Turnover
 				,SUM(winlost) AS winlost
 				,SUM(comm) AS comm
-				,SUM(CASE WHEN bt.bettype = 500 THEN 0 ELSE betcount END) AS betcount
+				,SUM(betcount) AS betcount
 			FROM #Data bt			
 			WHERE   bt.winlostdate BETWEEN @fromdate AND @todate
 				AND bt.statusID NOT IN (0,1) 
@@ -583,7 +584,7 @@ BEGIN
 				,SUM(BetCount) AS VoidCount
 			FROM #Data bt  				
 			WHERE  bt.bettype <> -1      ---- bettrans table group
-				AND bt.bettype NOT IN (903, 500, 913, 914)
+				AND bt.bettype NOT IN (903, 913, 914)
 				AND bt.bettype <= 19000
 				AND bt.statusID IN (101, 102) -- 'VOID','REJECT'				
 				AND bt.winlostdate BETWEEN @fromdate AND @todate		 
@@ -599,7 +600,7 @@ BEGIN
 			SELECT 
 				winlostdate
 				,SUM(Outstanding) AS Outstanding
-				,SUM(CASE WHEN bt.bettype = 500 THEN 0 ELSE BetCount END) AS BetCount
+				,SUM(betcount) AS betcount
 			FROM #Data bt
 			WHERE bt.bettype <> -1      ---- bettrans table group
 				AND bt.bettype <= 19000
