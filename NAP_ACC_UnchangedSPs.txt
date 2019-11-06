@@ -1,1 +1,0 @@
-Transfer\AddDelTxn\dbo.Acc_BettransInsTransaction.proc.sql
