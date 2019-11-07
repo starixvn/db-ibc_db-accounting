@@ -24,12 +24,6 @@ BEGIN
 	SELECT @IsResetYesterdayBalance = 0, @ErrCode = 0
 	DECLARE @BetTypeIds TABLE(BetType SMALLINT)
 
-	--for LiveCS
-	INSERT INTO @BetTypeIds(BetType)
-	SELECT 1101 AS BetType
-	FROM CustDB.dbo.Custinfo WITH (NOLOCK)
-	WHERE CustID = @CustID 
-
 	--for GD & RnG CS
 	INSERT INTO @BetTypeIds(BetType)
 	SELECT bettype
