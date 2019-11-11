@@ -1,4 +1,4 @@
-/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView,bodbExtAccNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView,bodbExtAccNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_StatementSel]
 	@fromdate	SMALLDATETIME,
 	@todate		SMALLDATETIME,
@@ -33,6 +33,7 @@ AS
 		- 20171020@Percy: Get both waiting and running tickets on translog [RedmineID: #84692]
 		- 20180710@Sophia: WC2018 - Workaround SP high CPU at bettransRNG block code (roleid = 3 & 4) [Redmine: #98039]
 		- 20180712@Sophia: WC2018 - Revise all the Sp [Redmine: #98039]
+		- 20190912@Bobby: Implement headline - Statement [Redmine: #119289]
 */
  
 BEGIN
@@ -109,10 +110,33 @@ BEGIN
 		INSERT INTO @recommend (recommend)
 		SELECT custid FROM dbo.Customer WITH(NOLOCK) WHERE srecommend = @CID AND roleid = 2
 
-		INSERT INTO @mrecommend (mrecommend)
-		SELECT custid FROM dbo.Customer WITH(NOLOCK) WHERE srecommend = @CID AND roleid = 3
-		UNION ALL
-		SELECT @CID 
+	ELSE IF @roleid = 0 --headline
+		INSERT INTO @recommend (recommend)
+		SELECT c.custid 
+		FROM 
+			dbo.Customer c WITH(NOLOCK) 
+		INNER JOIN dbo.CustSuper cs WITH (NOLOCK) ON c.srecommend = cs.custid
+		WHERE 
+			c.roleid = 2
+			AND cs.UplineId = @CID 
+
+	-- to using index on custID level super
+	INSERT INTO @mrecommend (mrecommend)
+	SELECT custid 
+	FROM dbo.Customer c WITH(NOLOCK) 
+	WHERE srecommend = @CID AND roleid = 3 -- for Super level
+
+	UNION ALL
+	SELECT c.custid 
+	FROM 
+		dbo.Customer c WITH(NOLOCK) 
+		INNER JOIN dbo.CustSuper cs WITH (NOLOCK) ON c.srecommend = cs.custid
+	WHERE 
+		c.roleid = 3
+		AND cs.UplineId = @CID -- for Headline level
+
+	UNION ALL
+	SELECT @CID 
 
 
 	DECLARE @i BIGINT = 10000000  -- use optimize for
@@ -421,7 +445,7 @@ BEGIN
 			,SUM(scomm - acomm) AS comm
 			,COUNT(1) AS betcount
 		FROM @mrecommend m 
-		CROSS APPLY (	SELECT TOP (@i) Winlostdate, bettype, CASE WHEN srecommend = CustID THEN 1 ELSE 0 END as IsOwner,
+		CROSS APPLY (	SELECT TOP (@i) Winlostdate, bettype, CASE WHEN custid = @CID THEN 1 ELSE 0 END as IsOwner,
 								stake, winlost, actual_stake, swinlost, scomm, acomm
 						FROM dbo.bettrans bt WITH (NOLOCK) --- Use index CustID						
 						WHERE m.mrecommend = bt.custid 
@@ -484,12 +508,34 @@ BEGIN
 	END
 	-- End Super --
 
+	-- Headline
+	IF (@roleId = 0)
+	BEGIN
+		-- I.4.1b bettrans (headline level - always is transfer & Opening BL tickets)		
+		INSERT INTO #Data (winlostdate, bettype, StatusID, IsOwner, Turnover, OwnerWinloss, Winlost, Comm, BetCount)
+		SELECT
+			Winlostdate, bettype
+			, 131 as StatusID  ---  get a general StatusId
+			, 1 AS IsOwner    
+			,SUM(ABS(stake)) AS Turnover
+			,SUM(winlost - actual_stake) AS OwnerWinloss
+			,SUM(swinlost) AS winlost
+			,SUM(scomm - acomm) AS comm
+			,COUNT(1) AS betcount
+		FROM dbo.bettrans bt WITH (NOLOCK) --- Use index CustID						
+		WHERE bt.custid = @CID
+			AND bettype >= 19999
+			AND winlostdate <= @todate
+		GROUP BY Winlostdate, bettype
+	END
+	-- End Headline
+
 
 	CREATE CLUSTERED INDEX IX_Data ON #Data (Bettype, WinlostDate, StatusID)
 
 	-- II. Calculate data
 	-- II.1 Get Winloss  
-	-- @roleid IN (1,2,3,4)
+	IF @roleid IN (1,2,3,4)
 	BEGIN		
 		; WITH CTE_Winloss (winlostdate, Turnover, winlost, comm, betcount) AS
 		(			
@@ -603,7 +649,7 @@ BEGIN
 	  
 	
 	-- III. Get Openning Balance ----	
-	-- @roleid IN (1,2,3,4)
+	-- @roleid IN (1,2,3,4,0)
 	BEGIN
 		;WITH CTE_Balance (winlostdate, Balance) AS
 		(			
@@ -658,7 +704,6 @@ BEGIN
 		AND bettype NOT IN (23001,23002,23101,23102,23201,23202)
 		AND winlostdate BETWEEN @fromdate AND @todate
 		AND IsOwner = 1
-		AND Bettype <> -1  
 	GROUP BY winlostdate
 			
 			 
@@ -667,14 +712,14 @@ BEGIN
 		winlostdate
 		,@CID AS CustID
 		,SUM(ISNULL(OpeningBalance, 0)) AS [OpeningBalance]
-		,SUM(Voidamt) AS [VoidAmt]
-		,SUM(Outstanding) AS [Outstanding]
-		,SUM(CASE WHEN BetCount > 0 THEN Turnover ELSE NULL END) AS [Turnover]
+		,SUM(CASE WHEN @roleid = 0 THEN NULL ELSE Voidamt END) AS [VoidAmt]
+		,SUM(CASE WHEN @roleid = 0 THEN NULL ELSE Outstanding END) AS [Outstanding]
+		,SUM(CASE WHEN BetCount > 0 AND @roleid > 0 THEN Turnover ELSE NULL END) AS [Turnover]
 		,SUM(TransferAmt) AS [TransferAmt]
-		,SUM(CASE WHEN BetCount > 0 THEN Winlost ELSE NULL END) AS [Winlost]
-		,SUM(CASE WHEN BetCount > 0 THEN Comm ELSE NULL END) AS [Comm]
+		,SUM(CASE WHEN BetCount > 0 AND @roleid > 0 THEN Winlost ELSE NULL END) AS [Winlost]
+		,SUM(CASE WHEN BetCount > 0 AND @roleid > 0 THEN Comm ELSE NULL END) AS [Comm]
 		,SUM(ISNULL(OpeningBalance, 0) + ISNULL([Winlost], 0) + ISNULL([Comm], 0) + ISNULL([TransferAmt], 0)) AS ClosingBalance
-		,SUM(GrandPrize) AS GrandPrize
+		,SUM(CASE WHEN @roleid = 0 THEN NULL ELSE GrandPrize END) AS GrandPrize
 	FROM #rptStatementTable
 	GROUP BY winlostdate
 	HAVING
