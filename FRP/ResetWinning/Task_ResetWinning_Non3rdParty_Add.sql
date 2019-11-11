@@ -25,6 +25,8 @@ AS
 		- 20160315@Percy: Add params @isExtra for new function ExtraPT [Redmine: 51721]
 		- 20180412@Percy: Increase Transdesc length to 1000 [RedmineID: #92841]
 		- 20190801@Sophia: Integrate CN88, use ExchangeDailyOanda instead of exchange table [Redmine: #117809]		
+		- 20190826@Sophia: remove Rollback code (in CATCH block) [Redmine: #117863]
+
 
 */
 BEGIN
@@ -70,56 +72,6 @@ BEGIN
 
     SELECT @RefNum = @RefNum + 100000000000
 
-
-	DECLARE @DummyCust AS TABLE (CustId INT)
-	DECLARE @isTest BIT,@SQL NVARCHAR(100) = OBJECT_NAME(@@PROCID)
-
-	IF  (@SQL like '%_xtest%')
-	BEGIN
-		SELECT @isTest = 1
-	END
-	ELSE
-	BEGIN
-		SELECT @isTest = 0
-	END
-
-
-	IF @isTest = 0
-	BEGIN
-		IF @isExtraPT = 0
-		BEGIN
-			INSERT INTO @DummyCust (CustID)
-			SELECT custid
-			FROM DBACC.bodb_ACC.dbo.Acc_DWLList WITH(NOLOCK)
-			WHERE Product NOT IN ('Racing (Due to Partners)', 'Total Balance','Poker', 'Poker (Due to Partners)') 
-		END
-		ELSE
-		BEGIN
-			INSERT INTO @DummyCust (CustID)
-			SELECT custid
-			FROM DBACC.bodb_ACC.dbo.Acc_DWLList_ExtraPT WITH(NOLOCK)
-		END
-	END 
-	ELSE
-	BEGIN 
-		IF @isExtraPT = 0
-		BEGIN
-			INSERT INTO @DummyCust (CustID)
-			SELECT custid
-			FROM DBACC.bodb_ACC.dbo.Acc_DWLList_xtest WITH(NOLOCK)
-			WHERE Product NOT IN ('Racing (Due to Partners)', 'Total Balance','Poker', 'Poker (Due to Partners)') 
-		END
-		ELSE
-		BEGIN
-			INSERT INTO @DummyCust (CustID)
-			SELECT custid
-			FROM DBACC.bodb_ACC.dbo.Acc_DWLList_ExtraPT_xtest WITH(NOLOCK)
-		END
-	END 
-	
-
-
-
     BEGIN TRY
 	    INSERT INTO bettrans
         (
@@ -141,12 +93,7 @@ BEGIN
         IF @@ERROR <> 0
 	    BEGIN
 	        SELECT @ErrCode = 1,
-	               @ErrMsg = 'Can not insert transaction! Please try again later.'
-
-			DELETE bettrans
-            WHERE bettype IN (21001, 21002)
-               AND winlostdate = @winlostdate
-               AND custid IN (SELECT custid FROM @DummyCust )
+	               @ErrMsg = 'Can not insert transaction! Please try again later.'			
 
             RETURN
         END
@@ -155,4 +102,4 @@ BEGIN
     END CATCH
 
 END
- GO
+
