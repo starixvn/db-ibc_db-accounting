@@ -20,6 +20,7 @@ AS
 		- 20180731@Percy: Expand column transdesc [RedmineID: #92841]
 		- 20181107@Louis: Credit Collection [Redmine: #98621]
 		- 20190114@Sophia: Move table transfer_fi from DBSUM.bodb_summary to DBARC.bodb_archive [Redmine: #105415]
+		- 20191113@Louis: Hot Fix Credit Collection BK [Redmine: #123812]
 
     Param's Explanation:
     
@@ -79,7 +80,7 @@ BEGIN
         SELECT 
             tf.transid,
             tf.transdate,
-            bettype.typenamee transtype,
+			CASE WHEN EXISTS (SELECT 1 FROM bodb_archive.dbo.Transfer_Coll_BK tcbk WITH(NOLOCK) WHERE tcbk.TransID = tf.TransID) THEN 'Coll' ELSE bettype.typenamee END transtype,
             tf.transdesc + ' - Ex.Rate: ' + isnull(CAST(tf.actualrate AS VARCHAR(10)),'') transdesc,
             (tf.winlost - tf.actual_stake),
             CASE WHEN tf.custid = @CustID THEN 1 ELSE 0 END IsOwner,
@@ -98,7 +99,7 @@ BEGIN
             SELECT 
                 tf.transid,
                 tf.transdate,
-                bettype.typenamee transtype,
+				CASE WHEN EXISTS (SELECT 1 FROM bodb_archive.dbo.Transfer_Coll_BK tcbk WITH(NOLOCK) WHERE tcbk.TransID = tf.TransID) THEN 'Coll' ELSE bettype.typenamee END transtype,
                 tf.transdesc,
                 (tf.credit - tf.debit) totalamt,
                 CASE WHEN tf.custid = @CustID THEN 1 ELSE 0 END IsOwner
