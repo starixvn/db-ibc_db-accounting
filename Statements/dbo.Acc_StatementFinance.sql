@@ -28,6 +28,7 @@ AS
 		- 20181107@Louis: Credit Collection [Redmine: #98621]
 		- 20190114@Sophia: Move table transfer_fi from DBSUM.bodb_summary to DBARC.bodb_archive [Redmine: #105415]
 		- 20190502@Percy: Fix issue duplicate data when BU process (copy data) [RedmineID: #112525]
+		- 20191113@Louis: Hot Fix Credit Collection BK [Redmine: #123812]
 
     Param's Explanation:
         - @FilterBy: 1:winlostdate - 2:transdate
@@ -186,7 +187,7 @@ BEGIN
 						tf.winlostdate,
 						tf.refno,
 						(tf.winlost - tf.actual_stake) totalamt,
-						bettype.typenamee transtype,
+						CASE WHEN EXISTS (SELECT 1 FROM bodb_archive.dbo.Transfer_Coll_BK tcbk WITH(NOLOCK) WHERE tcbk.TransID = tf.TransID) THEN 'Coll' ELSE bettype.typenamee END transtype,
 						tf.transdesc + ' - Ex.Rate: ' + isnull(CAST(tf.actualrate AS VARCHAR(10)),'') transdesc, 
 						tf.creator,
 						NULL checkerID,
@@ -348,7 +349,7 @@ BEGIN
 				tf.winlostdate,
 				tf.refno,
 				(tf.winlost - tf.actual_stake) totalamt,
-				bettype.typenamee transtype,
+				CASE WHEN EXISTS (SELECT 1 FROM bodb_archive.dbo.Transfer_Coll_BK tcbk WITH(NOLOCK) WHERE tcbk.TransID = tf.TransID) THEN 'Coll' ELSE bettype.typenamee END transtype,
 				tf.transdesc + ' - Ex.Rate: ' + isnull(CAST(tf.actualrate AS VARCHAR(10)),'') transdesc, 
 				tf.creator,
 				NULL checkerID,
