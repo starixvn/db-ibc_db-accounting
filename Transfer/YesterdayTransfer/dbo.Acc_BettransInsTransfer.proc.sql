@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_BettransInsTransfer]
 	@FromCustID int,
 	@ToUserName varchar(30), 
@@ -585,8 +585,3 @@ BEGIN
 	END CATCH
 END
 GO
-GRANT EXECUTE ON [dbo].[Acc_BettransInsTransfer] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransInsTransfer] TO [ITVivi] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransInsTransfer] TO [vnteam] AS [dbo]

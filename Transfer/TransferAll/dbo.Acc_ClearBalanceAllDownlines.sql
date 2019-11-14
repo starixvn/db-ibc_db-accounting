@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet,bodbExtAccNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet,bodbExtAccNet" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_ClearBalanceAllDownlines]
 	@AgentName varchar(50),	-- S99BD
 	@UserID int = 8,
@@ -864,11 +864,3 @@ BEGIN
 END
 GO
 
-GRANT EXECUTE ON [dbo].[Acc_ClearBalanceAllDownlines] TO [bodbAdminNet] AS [dbo]
-GO
-
-GRANT EXECUTE ON [dbo].[Acc_ClearBalanceAllDownlines] TO [bodbExtAccNet] AS [dbo]
-GO
-
-GRANT VIEW DEFINITION ON [dbo].[Acc_ClearBalanceAllDownlines] TO [vnteam] AS [dbo]
-GO

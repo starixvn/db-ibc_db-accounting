@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_BettransInsTransferAllMembers]	
 	@AgentName varchar(50),  
 	@UserID int,  
@@ -399,10 +399,3 @@ BEGIN
 	END
 END	
 GO
-GRANT EXECUTE ON [dbo].[Acc_BettransInsTransferAllMembers] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[Acc_BettransInsTransferAllMembers] TO [bodbExtAccNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransInsTransferAllMembers] TO [ITVivi] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransInsTransferAllMembers] TO [vnteam] AS [dbo]
