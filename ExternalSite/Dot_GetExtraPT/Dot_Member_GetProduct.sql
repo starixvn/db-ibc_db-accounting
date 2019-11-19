@@ -17,7 +17,7 @@ AS
 BEGIN 
 	SET NOCOUNT ON
 	
-	SELECT 	DISTINCT @ProductId = ProductId, 
+	SELECT 	TOP 1 @ProductId = ProductId, 
 			@SubProduct = CASE	WHEN @Sporttype = 44 THEN 'Muay Thai'  
 								WHEN SubProduct IN ('MG-SuperLive', 'Bet Builder') THEN SubProduct 
 								ELSE ''								
