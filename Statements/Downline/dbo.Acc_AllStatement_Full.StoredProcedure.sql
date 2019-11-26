@@ -66,6 +66,7 @@ AS
 		- 20180731@Percy: Expand column transdesc [RedmineID: #92841]
 		- 20181107@Louis: Credit Collection [Redmine: #98621]
 		- 20190917@Bobby: Implement headline - Statement [Redmine: #119289]
+		- 20190918@Percy: Remove inactive products [RedmineID: #118699]
 		
 	Param explanation : 
 		- Transtypeid = 4 - GrandPrize
@@ -282,7 +283,7 @@ BEGIN
 			FROM cte_bet
 			WHERE
 				(statusID = 131 AND bettype <= 19999)
-				OR (statusID = 102 AND bettype NOT IN (500, 903, 913, 914))
+				OR (statusID = 102 AND bettype NOT IN (903, 913, 914))
 				OR (statusID = 0 AND bettype NOT IN (23001,23002,23101,23102,23201,23202))
 			GROUP BY
 				winlostdate,
@@ -481,7 +482,7 @@ BEGIN
 					LEFT JOIN #SportBettype s ON b.bettype = s.Bettype
 				WHERE
 					b.bettype <= 19999
-					AND b.bettype NOT IN (500, 903, 913, 914) -- exclude 500, 903, 913, 914 (1800 for AG Casino: no need)
+					AND b.bettype NOT IN (903, 913, 914) -- exclude 903, 913, 914 (1800 for AG Casino: no need)
 					AND eventdate BETWEEN @_Fromdate AND @MoveBetDay
 					AND (s.VoidRejectGroup IS NULL OR s.VoidRejectGroup = 3) -- zzzbettrans inner join match/match14
 					AND custid = @CID
@@ -505,7 +506,7 @@ BEGIN
 					LEFT JOIN #SportBettype s ON b.bettype = s.Bettype
 				WHERE
 					b.bettype <= 19999
-					AND b.bettype NOT IN (500, 903, 913, 914) -- exclude 500, 903, 913, 914 (1800 for AG Casino: no need)
+					AND b.bettype NOT IN (903, 913, 914) -- exclude 903, 913, 914 (1800 for AG Casino: no need)
 					AND eventdate BETWEEN @_Fromdate AND @MoveBetDay
 					AND (s.VoidRejectGroup IS NULL OR s.VoidRejectGroup = 3) -- zzzbettrans inner join match/match14
 					AND custid = @CID
