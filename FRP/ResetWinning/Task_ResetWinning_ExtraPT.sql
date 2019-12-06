@@ -1,7 +1,4 @@
-/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
+/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Task_ResetWinning_ExtraPT]
 	@fromdate SMALLDATETIME,
 	@todate   SMALLDATETIME,
