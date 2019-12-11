@@ -21,6 +21,7 @@ AS
 		- 20170926@Percy: Move this SP from DBACC.bodb_ACC to DBCUST.CustDB [RedmineID: #83600]
 		- 20180808@Helen: DB05.DBPOLICY migration - [Redmine:99462]
 		- 20190416@Percy: Separate Bet Builder to Sportsbook [RedmineID: #108791]
+		- 20191211@Percy: Remove Bettrade [RedmineID: #118962]
 
 	Param's Explanation:
 */
@@ -153,9 +154,8 @@ BEGIN
 	-- insert new group setting --
 	BEGIN TRY
 		INSERT INTO dbo.Acc_GroupExtraPT_Product (GroupId, GroupName, ProductID, Sporttype, SubProduct, FromDate, ToDate, ExtraPT)
-		SELECT DISTINCT @GroupId, @GroupName, @ProductID, Sporttype, SubProduct, @EffectiveDate, @EndDate,
-			CASE WHEN @ProductId = 1 AND SubProduct IN ('BT-Bought', 'BT-Comm', 'BT-Sold', 'BT-Winloss') THEN 0 ELSE @ExtraPT END
-		FROM Acc_GroupExtraPT_Product WITH(NOLOCK)
+		SELECT DISTINCT @GroupId, @GroupName, @ProductID, Sporttype, SubProduct, @EffectiveDate, @EndDate, @ExtraPT
+		FROM Acc_GroupExtraPT_Product WITH (NOLOCK)
 		WHERE ProductID = @ProductId
 
 		IF @@ROWCOUNT = 0 -- no data insert
@@ -166,15 +166,11 @@ BEGIN
 			IF @ProductId = 1
 			BEGIN
 				INSERT INTO dbo.Acc_GroupExtraPT_Product (GroupId, GroupName, ProductID, Sporttype, SubProduct, FromDate, ToDate, ExtraPT)
-				SELECT @GroupId, @GroupName, @ProductID, Sporttype, SubProduct, @EffectiveDate, @EndDate, ExtraPT
+				SELECT @GroupId, @GroupName, @ProductID, Sporttype, SubProduct, @EffectiveDate, @EndDate, @ExtraPT
 				FROM (
-					SELECT  0 AS Sporttype, 'BT-Bought'		AS SubProduct,		0	AS ExtraPT UNION ALL
-					SELECT  0 AS Sporttype, 'BT-Comm'		AS SubProduct,		0	AS ExtraPT UNION ALL
-					SELECT  0 AS Sporttype, 'BT-Sold'		AS SubProduct,		0	AS ExtraPT UNION ALL
-					SELECT  0 AS Sporttype, 'BT-Winloss'	AS SubProduct,		0	AS ExtraPT UNION ALL
-					SELECT  0 AS Sporttype, 'MG-SuperLive'	AS SubProduct, @ExtraPT AS ExtraPT UNION ALL
-					SELECT  0 AS Sporttype, 'Bet Builder'	AS SubProduct, @ExtraPT AS ExtraPT UNION ALL
-					SELECT 44 AS Sporttype, ''				AS SubProduct, @ExtraPT AS ExtraPT
+					SELECT  0 AS Sporttype, 'MG-SuperLive'	AS SubProduct UNION ALL
+					SELECT  0 AS Sporttype, 'Bet Builder'	AS SubProduct UNION ALL
+					SELECT 44 AS Sporttype, ''				AS SubProduct
 				) AS A
 			END
 		END
@@ -218,8 +214,7 @@ BEGIN
 	IF @isNew = 0
 	BEGIN
 		INSERT INTO dbo.Acc_GroupExtraPTSetting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, FromDate, ToDate, ExtraPT)
-		SELECT SuperId, @GroupId, @GroupName, @ProductId, Sporttype, SubProduct, FromDate, ToDate,
-				CASE WHEN @ProductId = 1 AND SubProduct IN ('BT-Bought', 'BT-Comm', 'BT-Sold', 'BT-Winloss') THEN 0 ELSE @ExtraPT END
+		SELECT SuperId, @GroupId, @GroupName, @ProductId, Sporttype, SubProduct, FromDate, ToDate, @ExtraPT
 		FROM @Super
 	END
 	ELSE
@@ -252,24 +247,20 @@ BEGIN
 			GROUP BY SuperId
 		)
 		INSERT INTO dbo.Acc_GroupExtraPTSetting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate)
-		SELECT cs.SuperId, @GroupId, @GroupName, @ProductId, B.Sporttype, B.SubProduct, B.ExtraPT,
+		SELECT cs.SuperId, @GroupId, @GroupName, @ProductId, B.Sporttype, B.SubProduct, @ExtraPT,
 				CASE WHEN @FromDate < cs.FromDate THEN cs.FromDate ELSE @FromDate END,
 				CASE WHEN fs.FromDate IS NULL OR @ToDate < fs.FromDate THEN @ToDate ELSE DATEADD(DAY, -1, ISNULL(fs.FromDate, '9999-12-31')) END
 		FROM CurrentSuper cs
 			LEFT JOIN FeatureSuper fs ON cs.SuperId = fs.SuperId
 			CROSS APPLY (
-				SELECT 0 AS Sporttype, '' AS SubProduct, @ExtraPT AS ExtraPT
+				SELECT 0 AS Sporttype, '' AS SubProduct
 				
 				UNION ALL
-				SELECT Sporttype, SubProduct, ExtraPT
+				SELECT Sporttype, SubProduct
 				FROM (
-					SELECT  0 AS Sporttype, 'BT-Bought'		AS SubProduct,		0	AS ExtraPT UNION ALL
-					SELECT  0 AS Sporttype, 'BT-Comm'		AS SubProduct,		0	AS ExtraPT UNION ALL
-					SELECT  0 AS Sporttype, 'BT-Sold'		AS SubProduct,		0	AS ExtraPT UNION ALL
-					SELECT  0 AS Sporttype, 'BT-Winloss'	AS SubProduct,		0	AS ExtraPT UNION ALL
-					SELECT  0 AS Sporttype, 'MG-SuperLive'	AS SubProduct, @ExtraPT AS ExtraPT UNION ALL
-					SELECT  0 AS Sporttype, 'Bet Builder'	AS SubProduct, @ExtraPT AS ExtraPT UNION ALL
-					SELECT 44 AS Sporttype, ''				AS SubProduct, @ExtraPT AS ExtraPT
+					SELECT  0 AS Sporttype, 'MG-SuperLive'	AS SubProduct UNION ALL
+					SELECT  0 AS Sporttype, 'Bet Builder'	AS SubProduct UNION ALL
+					SELECT 44 AS Sporttype, ''				AS SubProduct
 				) AS A
 				WHERE @ProductId = 1
 			) AS B
