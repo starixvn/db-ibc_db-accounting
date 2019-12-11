@@ -58,7 +58,8 @@ AS
 		- 20190829@Sophia: Tuning Code [redmine: #119435]
 		- 20190903@Sophia: fix bug [remine: #119553]
 		- 20190826@Sophia: exclude CN88 Headline balance out of total balance [Redmine: #117863]
-		- 20190909@Sophia: reset winning on bettrans14 - recover ticket 7 days [redmine: #115377] 
+		- 20190909@Sophia: reset winning on bettrans14 - recover ticket 7 days [redmine: #115377]
+		- 20191210@Percy: Set actualrate = 1 of UUS currency (exchangeid = 20) for testing (version xtest) [RedmineID: #124484]
 		
 	Explanation's Param:
 	    @mode:  0 _ view report
@@ -275,7 +276,7 @@ BEGIN
 							-- Jackpot
 							WHEN b.bettype IN (2198, 2398, 2998) THEN ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000),0)
 							ELSE 0 END
-					) * actualrate  END
+					) * CASE WHEN @Istest = 1 AND currency = 20 THEN 1 ELSE b.actualrate END  END
 				) AS Winlost,
 				SUM(
 					(CASE
@@ -283,7 +284,7 @@ BEGIN
 							WHEN b.bettype IN (2198, 2398, 2998) THEN -ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0)
 							WHEN b.bettype IN (2199, 2399, 2999) THEN ISNULL(b.Winlost, 0) - ISNULL(b.actual_stake, 0)
 						ELSE 0 END
-					) * b.actualrate
+					) * CASE WHEN @Istest = 1 AND currency = 20 THEN 1 ELSE b.actualrate END
 				) AS WinlostDueTo,
 				0 AS CommForExtraPT,
 				SUM((CASE
@@ -294,7 +295,7 @@ BEGIN
 						ELSE
 							CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
 						END
-						) * b.actualrate
+						) * CASE WHEN @Istest = 1 AND currency = 20 THEN 1 ELSE b.actualrate END
 					) AS WinlostForExtraPT,
 				
 				--- Real					
@@ -332,7 +333,6 @@ BEGIN
 		LEFT JOIN dbo.Match14 m WITH (NOLOCK) ON m.MatchId = b.MatchId AND m.eventdate = b.Winlostdate AND m.Sporttype = 44	
 		WHERE   b.Winlostdate = @winlostdate 
 			AND b.statusid NOT IN (101, 102, 103, 121)	
-			AND b.currency <> 20
 		GROUP BY b.Winlostdate,				
 				b.srecommend,	
 				b.currency,       
@@ -367,6 +367,7 @@ BEGIN
 			FROM	#wl w
 			LEFT JOIN CS_CustSuper cs WITH (NOLOCK) 
 				ON cs.CustId = w.srecommend
+			WHERE (cs.CustId IS NULL OR w.Currency <> 20) -- exclude currency 20 for CN88 customer
 			GROUP BY w.Winlostdate, w.ProductId, w.ProductName,
 					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
 						ELSE 0  ---MBC 
@@ -395,6 +396,7 @@ BEGIN
 					AND w.Winlostdate BETWEEN s.FromDate AND s.ToDate	
 			LEFT JOIN CS_CustSuper cs WITH (NOLOCK) 
 					ON cs.CustId = w.srecommend
+			WHERE (cs.CustId IS NULL OR w.Currency <> 20) -- exclude currency 20 for CN88 customer
 			GROUP BY w.Winlostdate, w.ProductId, w.ProductName, 
 					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
 						ELSE 0  ---MBC 
@@ -423,6 +425,7 @@ BEGIN
 					AND w.Winlostdate BETWEEN s.FromDate AND s.ToDate
 			LEFT JOIN CS_CustSuper cs WITH (NOLOCK) 
 					ON cs.CustId = w.srecommend
+			WHERE (cs.CustId IS NULL OR w.Currency <> 20) -- exclude currency 20 for CN88 customer
 			GROUP BY w.Winlostdate, w.ProductId, w.ProductName,
 					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
 						ELSE 0  ---MBC 
@@ -436,7 +439,7 @@ BEGIN
 	UNION ALL
 	SELECT w.Winlostdate, '','Casino (Amount due to Jackpot Pool)', 0, 0 AS Currency, SUM(ISNULL(w.WinlostDueTo, 0)) AS Winlost, 0, SUM(ISNULL(w.RealWinlostDueTo, 0)) AS RealWinlost, 0		
     FROM #wl w
-	WHERE w.WinlostDueTo <> 0 
+	WHERE w.WinlostDueTo <> 0
 	GROUP BY Winlostdate
 
 	
