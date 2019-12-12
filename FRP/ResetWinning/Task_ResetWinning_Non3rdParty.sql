@@ -1,7 +1,4 @@
-/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
+/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Task_ResetWinning_Non3rdParty]
 	@fromdate smalldatetime,
 	@todate   smalldatetime,
@@ -65,6 +62,7 @@ AS
 		- 20190829@Sophia: Tuning Code high memory [redmine: #119435]
 		- 20190903@Sophia: fix bug [remine: #119553]
 		- 20190826@Sophia: exclude CN88 Headline balance out of total balance [Redmine: #117863]
+		- 20191210@Percy: Set actualrate = 1 of UUS currency (exchangeid = 20) for testing (version xtest) [RedmineID: #124484]
 
 	Param Explanation:
 	    @mode:  0 _ view report
@@ -290,7 +288,7 @@ BEGIN
 										-- Jackpot
 										WHEN b.bettype IN (2198, 2398, 2998) THEN ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000),0)
 										ELSE 0 END
-								) * actualrate  
+								) * CASE WHEN @Istest = 1 AND currency = 20 THEN 1 ELSE b.actualrate END
 							END
 					) AS winlost,
 				SUM(
@@ -301,7 +299,7 @@ BEGIN
 								WHEN b.bettype IN (2199, 2399, 2999) THEN ISNULL(b.Winlost, 0) - ISNULL(b.actual_stake, 0)
 							ELSE 0 
 							END
-						) * b.actualrate
+						) * CASE WHEN @Istest = 1 AND currency = 20 THEN 1 ELSE b.actualrate END
 					) AS WinlostDueTo,
 				0 AS CommForExtraPT,
 				SUM(
@@ -314,7 +312,7 @@ BEGIN
 							ELSE
 								CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
 							END
-						)* b.actualrate
+						) * CASE WHEN @Istest = 1 AND currency = 20 THEN 1 ELSE b.actualrate END
 					) AS WinlostForExtraPT,
 				
 				---Real currency
@@ -359,7 +357,6 @@ BEGIN
 		WHERE   b.Winlostdate between @fromdate and @todate
 			AND b.ruben = 1
 			AND b.statusid NOT IN (101, 102, 103, 121)		
-			AND b.Currency <> 20 
 			AND b.bettype < 19001
 		GROUP BY b.Winlostdate,				
 				b.srecommend,	
@@ -397,6 +394,7 @@ BEGIN
 			FROM	#wl w
 			LEFT JOIN CS_CustSuper cs WITH (NOLOCK) 
 				ON cs.CustId = w.srecommend
+			WHERE (cs.CustId IS NULL OR w.Currency <> 20) -- exclude currency 20 for CN88 customer
 			GROUP BY w.Winlostdate, w.ProductId, w.ProductName,
 					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
 						ELSE 0  ---MBC 
@@ -421,7 +419,8 @@ BEGIN
 			FROM #wl w
 			LEFT JOIN CS_CustSuper cs WITH (NOLOCK) 
 				ON cs.CustId = w.srecommend
-			WHERE w.WinlostDueTo <> 0 
+			WHERE w.WinlostDueTo <> 0
+				AND (cs.CustId IS NULL OR w.Currency <> 20) -- exclude currency 20 for CN88 customer
 			GROUP BY Winlostdate, 
 					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
 						ELSE 0  ---MBC 
@@ -453,6 +452,7 @@ BEGIN
 					AND w.Winlostdate BETWEEN s.FromDate AND s.ToDate	
 			LEFT JOIN CS_CustSuper cs WITH (NOLOCK) 
 					ON cs.CustId = w.srecommend
+			WHERE (cs.CustId IS NULL OR w.Currency <> 20) -- exclude currency 20 for CN88 customer
 			GROUP BY w.Winlostdate, w.ProductId, w.ProductName, 
 					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
 						ELSE 0  ---MBC 
@@ -484,6 +484,7 @@ BEGIN
 					AND w.Winlostdate BETWEEN s.FromDate AND s.ToDate
 			LEFT JOIN CS_CustSuper cs WITH (NOLOCK) 
 					ON cs.CustId = w.srecommend
+			WHERE (cs.CustId IS NULL OR w.Currency <> 20) -- exclude currency 20 for CN88 customer
 			GROUP BY w.Winlostdate, w.ProductId, w.ProductName,
 					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
 						ELSE 0  ---MBC 
@@ -491,8 +492,6 @@ BEGIN
 					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN w.Currency --- CN88
 						ELSE 0  ---MBC 
 					END
-								
-	
 		) w
 	GROUP BY w.Winlostdate, w.ProductId, w.ProductName, w.IsCN88, w.Currency
 	
