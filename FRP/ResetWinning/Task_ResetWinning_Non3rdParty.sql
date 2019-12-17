@@ -63,6 +63,7 @@ AS
 		- 20190903@Sophia: fix bug [remine: #119553]
 		- 20190826@Sophia: exclude CN88 Headline balance out of total balance [Redmine: #117863]
 		- 20191210@Percy: Set actualrate = 1 of UUS currency (exchangeid = 20) for testing (version xtest) [RedmineID: #124484]
+		- 20191216@Percy: Using new column bettrans.epositiontaking instead of Acc_GroupExtraPTSetting.ExtraPT [RedmineID: #125418]
 
 	Param Explanation:
 	    @mode:  0 _ view report
@@ -74,7 +75,7 @@ AS
 */
 BEGIN	
 	SET NOCOUNT ON
-	 
+
 	------Get Sport Bettype Matrix------
 	-- Check SP Version
 	DECLARE @isTest BIT = 0
@@ -229,21 +230,23 @@ BEGIN
 	---------------------------------------------------------------------------------------------------------
 	--------------------------------------------Extra PT ---------------------------------------------------
 	CREATE TABLE #wl 
-	(	winlostdate 	SMALLDATETIME, 
-		srecommend 		INT, 
-		Currency		INT,
-		Sporttype  		SMALLINT, 
-		ProductId		INT, 
-		ProductName		VARCHAR(250), 
-		SubProduct		VARCHAR(250), 
-		Winlost			MONEY, 
-		WinlostDueTo	MONEY, 
-		CommForExtraPT	MONEY,
-		WinlostForExtraPT MONEY,
-		RealWinlost			MONEY, 
-		RealWinlostDueTo	MONEY, 
-		RealCommForExtraPT	MONEY,
-		RealWinlostForExtraPT MONEY
+	(	winlostdate 			SMALLDATETIME, 
+		srecommend 				INT, 
+		Currency				INT,
+		Sporttype  				SMALLINT, 
+		ProductId				INT, 
+		ProductName				VARCHAR(250), 
+		SubProduct				VARCHAR(250), 
+		Winlost					MONEY, 
+		WinlostDueTo			MONEY, 
+		CommForExtraPT			MONEY,
+		WinlostForExtraPT		MONEY,
+		RealWinlost				MONEY, 
+		RealWinlostDueTo		MONEY, 
+		RealCommForExtraPT		MONEY,
+		RealWinlostForExtraPT	MONEY,
+		eWinlost				MONEY,
+		eRealWinlost			MONEY
 	)
 	
 	CREATE TABLE #WLByProduct
@@ -257,12 +260,15 @@ BEGIN
 		Winlost				MONEY, 		
 		ExtraPTWinlost		MONEY,
 		RealWinlost			MONEY, 		
-		RealExtraPTWinlost	MONEY
+		RealExtraPTWinlost	MONEY,
+		eWinlost			MONEY,
+		eRealWinlost		MONEY
 	) 
 	 
 		INSERT INTO #wl (winlostdate, srecommend, Currency, Sporttype, ProductId, ProductName, SubProduct, 
 						 winlost, WinlostDueTo, CommForExtraPT, WinlostForExtraPT,
-						 Realwinlost, RealWinlostDueTo, RealCommForExtraPT, RealWinlostForExtraPT)
+						 Realwinlost, RealWinlostDueTo, RealCommForExtraPT, RealWinlostForExtraPT,
+						 eWinlost, eRealWinlost)
 		SELECT  b.winlostdate,
 				b.srecommend,
 				b.Currency,				
@@ -349,8 +355,31 @@ BEGIN
 									CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
 								END
 						)
-					) AS RealWinlostForExtraPT				
-				
+					) AS RealWinlostForExtraPT	,			
+				SUM(
+						(	
+							CASE
+							-- Jackpot
+							WHEN b.bettype IN (2198, 2398, 2998) THEN
+								CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) END
+							WHEN b.bettype IN (2199, 2399, 2999) THEN 0
+							ELSE
+								CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
+							END
+						) * CASE WHEN @Istest = 1 AND currency = 20 THEN 1 ELSE b.actualrate END * ISNULL(epositiontaking, 0)
+					) AS eWinlost,
+				SUM(
+						(	
+							CASE
+							-- Jackpot
+							WHEN b.bettype IN (2198, 2398, 2998) THEN
+								CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) END
+							WHEN b.bettype IN (2199, 2399, 2999) THEN 0
+							ELSE
+								CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
+							END
+						) * ISNULL(epositiontaking, 0)
+					) AS eRealWinlost
 		FROM dbo.bettrans b WITH (NOLOCK)			
 		INNER JOIN #SportBettype s ON s.BetType = b.bettype
 		LEFT JOIN dbo.Match m WITH (NOLOCK) ON m.MatchId = b.MatchId AND m.Sporttype = 44		
@@ -376,8 +405,8 @@ BEGIN
 				CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss','Bet Builder') THEN s.SubProduct ELSE '' END
 				 
 
-	INSERT INTO #WLByProduct (Winlostdate, ProductId, ProductName, IsCN88, Currency, Winlost, ExtraPTWinlost, RealWinlost, RealExtraPTWinlost) 
-	SELECT Winlostdate, ProductId, ProductName, IsCN88, Currency, SUM(Winlost), SUM(ExtraPTWinlost), SUM(RealWinlost), SUM(RealExtraPTWinlost)
+	INSERT INTO #WLByProduct (Winlostdate, ProductId, ProductName, IsCN88, Currency, Winlost, ExtraPTWinlost, RealWinlost, RealExtraPTWinlost, eWinlost, eRealWinlost) 
+	SELECT Winlostdate, ProductId, ProductName, IsCN88, Currency, SUM(Winlost), SUM(ExtraPTWinlost), SUM(RealWinlost), SUM(RealExtraPTWinlost), SUM(eWinlost), SUM(eRealWinlost)
 	FROM (
 			--- WL by product			
 			SELECT  w.Winlostdate, w.ProductId, w.ProductName, 
@@ -390,7 +419,9 @@ BEGIN
 					SUM(ISNULL( w.Winlost,0)) as Winlost, 
 					0 as ExtraPTWinlost,
 					SUM(ISNULL( w.RealWinlost,0)) as RealWinlost, 
-					0 as RealExtraPTWinlost 					
+					0 as RealExtraPTWinlost,
+					SUM(ISNULL( w.eWinlost,0)) as eWinlost,
+					SUM(ISNULL( w.eRealWinlost,0)) as eRealWinlost
 			FROM	#wl w
 			LEFT JOIN CS_CustSuper cs WITH (NOLOCK) 
 				ON cs.CustId = w.srecommend
@@ -415,7 +446,9 @@ BEGIN
 					SUM(ISNULL(w.WinlostDueTo, 0)) AS Winlost, 
 					0 AS ExtraPTWinlost, 
 					SUM(ISNULL(w.RealWinlostDueTo, 0)) AS RealWinlost, 
-					0 AS RealExtraPTWinlost
+					0 AS RealExtraPTWinlost,
+					SUM(ISNULL( w.eWinlost,0)) as eWinlost,
+					SUM(ISNULL( w.eRealWinlost,0)) as eRealWinlost
 			FROM #wl w
 			LEFT JOIN CS_CustSuper cs WITH (NOLOCK) 
 				ON cs.CustId = w.srecommend
@@ -442,7 +475,9 @@ BEGIN
 				   0 as Winlost, 
 				   SUM(w.WinlostForExtraPT * ISNULL(s.ExtraPT,0)) as ExtraPTWinlost,
 				   0 as RealWinlost, 
-				   SUM(w.RealWinlostForExtraPT * ISNULL(s.ExtraPT,0)) as RealExtraPTWinlost  
+				   SUM(w.RealWinlostForExtraPT * ISNULL(s.ExtraPT,0)) as RealExtraPTWinlost,
+				   0 as eWinlost,
+				   0 as eRealWinlost
 			FROM	#wl w
 			INNER JOIN dbo.Acc_GroupExtraPTSetting s WITH(NOLOCK)
 					ON w.srecommend = s.SuperId
@@ -474,7 +509,9 @@ BEGIN
 					0 as Winlost, 
 					SUM(w.CommForExtraPT * ISNULL(s.ExtraCommRate,0)) as ExtraPTWinlost,
 					0 as RealWinlost, 
-					SUM(w.RealCommForExtraPT * ISNULL(s.ExtraCommRate,0)) as RealExtraPTWinlost   --- ExtraComm if any
+					SUM(w.RealCommForExtraPT * ISNULL(s.ExtraCommRate,0)) as RealExtraPTWinlost,   --- ExtraComm if any
+					0 as eWinlost,
+					0 as eRealWinlost
 			FROM	#wl w
 			INNER JOIN dbo.Acc_GroupExtraCommRateSetting s WITH (NOLOCK)
 					ON w.srecommend = s.SuperId
@@ -505,6 +542,18 @@ BEGIN
 		ON e.ProductId = p.ProductId 
 	 
 	---------------------------------------------------------------------------------------------------------
+
+	---- #125418 Cut-off-Date apply new column epositiontaking on bettrans
+	DECLARE @ExtraPTCutOffDate SMALLDATETIME
+	SELECT  @ExtraPTCutOffDate = bodb02.dbo.f_Get_SystemSettings('CutOffDate_ExtraPT')
+
+	IF EXISTS (SELECT 1 FROM #WLByProduct WHERE winlostdate >= @ExtraPTCutOffDate)
+	BEGIN
+		UPDATE #WLByProduct
+		SET Winlost = eWinlost,
+			RealWinlost = eRealWinlost
+		WHERE winlostdate >= @ExtraPTCutOffDate
+	END
  
     --view report
     IF (@mode = 0)
