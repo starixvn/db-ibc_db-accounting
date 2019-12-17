@@ -25,6 +25,7 @@ AS
 		- 20180808@Helen: DB05.DBPOLICY migration - [Redmine:99462]
 		- 20190214@Percy: Fix issue setting of supers is not updated when change extra PT amount [RedmineID: #108875]
 		- 20191211@Percy: Remove Bettrade [RedmineID: #118962]
+		- 20191216@Percy: Do not allow user to select the current date in Effective Date [RedmineID: #125418]
 		
 	Param's Explanation:
 */
@@ -44,9 +45,9 @@ BEGIN
 		RETURN
 	END
 
-	IF (@OldEffectiveDate <> @NewEffectiveDate OR @OldExtraPT <> @NewExtraPT) AND @NewEffectiveDate < CONVERT(DATE, GETDATE())
+	IF (@OldEffectiveDate <> @NewEffectiveDate OR @OldExtraPT <> @NewExtraPT) AND @NewEffectiveDate <= CONVERT(DATE, GETDATE())
 	BEGIN
-		SELECT @ErrCode = 101, @ErrMsg = 'Please select Effective Date from current date.'
+		SELECT @ErrCode = 101, @ErrMsg = 'Please select Effective Date from tomorrow or later.'
 		
 		RETURN
 	END

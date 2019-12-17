@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_GroupExtraPT_GroupByProduct_Ins]
 	@UserId			INT,
 	@GroupId		TINYINT,
@@ -22,6 +22,7 @@ AS
 		- 20180808@Helen: DB05.DBPOLICY migration - [Redmine:99462]
 		- 20190416@Percy: Separate Bet Builder to Sportsbook [RedmineID: #108791]
 		- 20191211@Percy: Add UplineId (HeadlineId) [RedmineID: #118962]
+		- 20191216@Percy: Do not allow user to select the current date in Effective Date [RedmineID: #125418]
 
 	Param's Explanation:
 */
@@ -73,9 +74,9 @@ BEGIN
 	SELECT  @EffectiveDate = CONVERT(DATE, @EffectiveDate), @EndDate = CONVERT(DATE, @EndDate)
 
 	-- Check valid --
-	IF @EffectiveDate < @today
+	IF @EffectiveDate <= @today
 	BEGIN
-		SELECT @ErrCode = 101, @ErrMsg = 'Please select Effective Date from current date.'
+		SELECT @ErrCode = 101, @ErrMsg = 'Please select Effective Date from tomorrow or later.'
 		
 		RETURN
 	END
