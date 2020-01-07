@@ -13,7 +13,7 @@ AS
 	Task: Get VValue from local SystemSettings by VName
 
 	Revisions:
-		- 20191212@Percy: Initialize function [RedmineID: #]
+		- 20191212@Percy: Initialize function [RedmineID: #122071]
 */
 
 BEGIN
