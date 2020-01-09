@@ -19,6 +19,7 @@ AS
 		- 20170926@Percy: Migrate this SP from DBACC.bodb_ACC to DBCUST.CustDB [RedmineID: #83600]
 		- 20180808@Helen: DB05.DBPOLICY migration - [Redmine:99462]
 		- 20191211@Percy: Add UplineId (HeadlineId) [RedmineID: #118962]
+		- 20191216@Percy: Do not allow user to select the current date in Effective Date [RedmineID: #125418]
 		
 	Param's Explanation:
 		- @EffectiveDate
@@ -51,7 +52,23 @@ BEGIN
 	IF @EffectiveDate IS NOT NULL -- change @GroupName is Primary Extra PT Group of @CustID
 	BEGIN
 		IF @EffectiveDate < @today
+		BEGIN
+			SELECT
+				@ErrCode = 104,
+				@ErrMsg = N'This account has members already, new effective date cannot be today.'
 			RETURN
+		END
+
+		IF @EffectiveDate = @today
+		BEGIN
+			IF EXISTS (SELECT 1 FROM dbo.Customer WITH (NOLOCK) WHERE srecommend = @CustID AND roleid = 1)
+			BEGIN
+				SELECT
+					@ErrCode = 105,
+					@ErrMsg = N'This account has members already, new effective date cannot be today.'
+				RETURN
+			END
+		END
 		
 		DECLARE @FromDate DATETIME
 
