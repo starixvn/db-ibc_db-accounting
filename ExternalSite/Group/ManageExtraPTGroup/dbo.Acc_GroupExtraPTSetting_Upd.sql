@@ -51,21 +51,20 @@ BEGIN
 
 	IF @EffectiveDate IS NOT NULL -- change @GroupName is Primary Extra PT Group of @CustID
 	BEGIN
-		IF @EffectiveDate < @today
-		BEGIN
-			SELECT
-				@ErrCode = 104,
-				@ErrMsg = N'This account has members already, new effective date cannot be today.'
-			RETURN
-		END
-
-		IF @EffectiveDate = @today
+		IF @EffectiveDate <= @today
 		BEGIN
 			IF EXISTS (SELECT 1 FROM dbo.Customer WITH (NOLOCK) WHERE srecommend = @CustID AND roleid = 1)
 			BEGIN
 				SELECT
+					@ErrCode = 104,
+					@ErrMsg = N'This account has members already, new effective date must be tomorrow or later.'
+				RETURN
+			END
+			ELSE IF @EffectiveDate < @today
+			BEGIN
+				SELECT
 					@ErrCode = 105,
-					@ErrMsg = N'This account has members already, new effective date cannot be today.'
+					@ErrMsg = N'New effective date must be today or later.'
 				RETURN
 			END
 		END

@@ -49,9 +49,9 @@ BEGIN
 	SELECT  @ProductName = ProductName FROM DBTXN.bodb02.dbo.Products WITH(NOLOCK) WHERE ProductID = @ProductID
 	SELECT  @today = CONVERT(DATE, GETDATE())
 
-	IF ISNULL(@GroupName, '') = ''
+	IF ISNULL(@GroupName, '') = '' OR @GroupName IN ('ACCTHAI2', 'ACCTHAI56', 'ACCTHAI99')
 	BEGIN
-		SELECT @ErrCode = 100, @ErrMsg = 'Invalid Extra PT Group.'
+		SELECT @ErrCode = 100, @ErrMsg = 'Invalid Group.'
 		
 		RETURN
 	END
