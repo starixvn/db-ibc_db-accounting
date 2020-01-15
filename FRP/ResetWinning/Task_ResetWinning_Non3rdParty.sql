@@ -550,8 +550,8 @@ BEGIN
 	IF EXISTS (SELECT 1 FROM #WLByProduct WHERE winlostdate >= @ExtraPTCutOffDate)
 	BEGIN
 		UPDATE #WLByProduct
-		SET Winlost = eWinlost,
-			RealWinlost = eRealWinlost
+		SET ExtraPTWinlost = eWinlost,
+			RealExtraPTWinlost = eRealWinlost
 		WHERE winlostdate >= @ExtraPTCutOffDate
 	END
  

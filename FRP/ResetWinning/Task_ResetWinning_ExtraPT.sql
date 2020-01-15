@@ -196,7 +196,7 @@ BEGIN
 	IF EXISTS (SELECT 1 FROM #winning WHERE winlostdate >= @ExtraPTCutOffDate)
 	BEGIN
 		UPDATE #winning
-		SET Winlost = eWinlost
+		SET NewWinlost = eWinlost
 		WHERE winlostdate >= @ExtraPTCutOffDate
 	END
 
