@@ -239,11 +239,9 @@ BEGIN
 		SubProduct				VARCHAR(250), 
 		Winlost					MONEY, 
 		WinlostDueTo			MONEY, 
-		CommForExtraPT			MONEY,
 		WinlostForExtraPT		MONEY,
 		RealWinlost				MONEY, 
 		RealWinlostDueTo		MONEY, 
-		RealCommForExtraPT		MONEY,
 		RealWinlostForExtraPT	MONEY,
 		eWinlost				MONEY,
 		eRealWinlost			MONEY
@@ -266,8 +264,8 @@ BEGIN
 	) 
 	 
 		INSERT INTO #wl (winlostdate, srecommend, Currency, Sporttype, ProductId, ProductName, SubProduct, 
-						 winlost, WinlostDueTo, CommForExtraPT, WinlostForExtraPT,
-						 Realwinlost, RealWinlostDueTo, RealCommForExtraPT, RealWinlostForExtraPT,
+						 winlost, WinlostDueTo, WinlostForExtraPT,
+						 Realwinlost, RealWinlostDueTo, RealWinlostForExtraPT,
 						 eWinlost, eRealWinlost)
 		SELECT  b.winlostdate,
 				b.srecommend,
@@ -307,7 +305,6 @@ BEGIN
 							END
 						) * CASE WHEN @Istest = 1 AND currency = 20 THEN 1 ELSE b.actualrate END
 					) AS WinlostDueTo,
-				0 AS CommForExtraPT,
 				SUM(
 						(	
 							CASE
@@ -343,7 +340,6 @@ BEGIN
 							END
 						) 
 					) AS RealWinlostDueTo,
-				0 AS RealCommForExtraPT,
 				SUM(
 						(	
 							CASE
@@ -489,40 +485,6 @@ BEGIN
 					ON cs.CustId = w.srecommend
 			WHERE (cs.CustId IS NULL OR w.Currency <> 20) -- exclude currency 20 for CN88 customer
 			GROUP BY w.Winlostdate, w.ProductId, w.ProductName, 
-					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
-						ELSE 0  ---MBC 
-					END,
-					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN w.Currency --- CN88
-						ELSE 0  ---MBC 
-					END
-			
-			
-			--- extraComm	
-			UNION ALL 
-			SELECT	w.Winlostdate, w.ProductId, w.ProductName, 
-					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
-						ELSE 0  ---MBC 
-					END AS IsCN88,
-					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN w.Currency --- CN88
-						ELSE 0  ---MBC 
-					END AS Currency,
-					0 as Winlost, 
-					SUM(w.CommForExtraPT * ISNULL(s.ExtraCommRate,0)) as ExtraPTWinlost,
-					0 as RealWinlost, 
-					SUM(w.RealCommForExtraPT * ISNULL(s.ExtraCommRate,0)) as RealExtraPTWinlost,   --- ExtraComm if any
-					0 as eWinlost,
-					0 as eRealWinlost
-			FROM	#wl w
-			INNER JOIN dbo.Acc_GroupExtraCommRateSetting s WITH (NOLOCK)
-					ON w.srecommend = s.SuperId
-					AND w.ProductId = s.ProductId
-					AND w.SubProduct = s.SubProduct
-					AND w.Sporttype = s.Sporttype 
-					AND w.Winlostdate BETWEEN s.FromDate AND s.ToDate
-			LEFT JOIN CS_CustSuper cs WITH (NOLOCK) 
-					ON cs.CustId = w.srecommend
-			WHERE (cs.CustId IS NULL OR w.Currency <> 20) -- exclude currency 20 for CN88 customer
-			GROUP BY w.Winlostdate, w.ProductId, w.ProductName,
 					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
 						ELSE 0  ---MBC 
 					END,
