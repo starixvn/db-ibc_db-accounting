@@ -337,7 +337,7 @@ BEGIN
 						ELSE
 							CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
 						END
-						) * CASE WHEN @Istest = 1 AND currency = 20 THEN 1 ELSE b.actualrate END
+						) * CASE WHEN @Istest = 1 AND currency = 20 THEN 1 ELSE b.actualrate END * ISNULL(epositiontaking, 0)
 					) AS eWinlost,
 				SUM((CASE
 						-- Jackpot
@@ -347,7 +347,7 @@ BEGIN
 						ELSE
 							CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
 						END
-						)
+						) * ISNULL(epositiontaking, 0)
 					) AS eRealWinlost
 		FROM dbo.bettrans14 b WITH(NOLOCK)			
 		INNER JOIN @SportBettype s ON s.BetType = b.bettype
@@ -413,6 +413,7 @@ BEGIN
 					0 as Winlost,
 					SUM(w.WinlostForExtraPT * ISNULL(s.ExtraPT,0)) as ExtraPTWinlost,
 					0 as RealWinlost,
+					SUM(w.RealWinlostForExtraPT * ISNULL(s.ExtraPT,0)) as RealExtraPTWinlost,
 					0 as eWinlost,
 					0 as eRealWinlost
 			FROM	#wl w
