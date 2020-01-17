@@ -443,8 +443,8 @@ BEGIN
 					0 AS ExtraPTWinlost, 
 					SUM(ISNULL(w.RealWinlostDueTo, 0)) AS RealWinlost, 
 					0 AS RealExtraPTWinlost,
-					SUM(ISNULL( w.eWinlost,0)) as eWinlost,
-					SUM(ISNULL( w.eRealWinlost,0)) as eRealWinlost
+					0 as eWinlost,
+					0 as eRealWinlost
 			FROM #wl w
 			LEFT JOIN CS_CustSuper cs WITH (NOLOCK) 
 				ON cs.CustId = w.srecommend

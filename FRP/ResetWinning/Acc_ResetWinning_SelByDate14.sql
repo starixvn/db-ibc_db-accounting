@@ -437,7 +437,7 @@ BEGIN
 	GROUP BY w.Winlostdate, w.ProductId, w.ProductName, w.IsCN88, w.Currency
 
 	UNION ALL
-	SELECT w.Winlostdate, '','Casino (Amount due to Jackpot Pool)', 0, 0 AS Currency, SUM(ISNULL(w.WinlostDueTo, 0)) AS Winlost, 0, SUM(ISNULL(w.RealWinlostDueTo, 0)) AS RealWinlost, 0, SUM(ISNULL(w.eWinlost, 0)) AS eWinlost, SUM(ISNULL(w.eRealWinlost, 0)) AS eRealWinlost
+	SELECT w.Winlostdate, '','Casino (Amount due to Jackpot Pool)', 0, 0 AS Currency, SUM(ISNULL(w.WinlostDueTo, 0)) AS Winlost, 0, SUM(ISNULL(w.RealWinlostDueTo, 0)) AS RealWinlost, 0, 0 AS eWinlost, 0 AS eRealWinlost
     FROM #wl w
 	WHERE w.WinlostDueTo <> 0
 	GROUP BY Winlostdate
