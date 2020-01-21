@@ -1,13 +1,13 @@
-﻿/*<info serverAlias="DBWH-bodb02" executers="dwrs" isFunction="1" isNested="1"></info>*/
+﻿/*<info serverAlias="DBWH-bodb02" selecters="dwrs" isFunction="1" isNested="1"></info>*/
 
-CREATE FUNCTION [dbo].[f_GetHeadlineNoPT]()	
+ALTER FUNCTION [dbo].[f_GetHeadlineNoPT]()	
 RETURNS TABLE
 RETURN
 
 /*
 Created: 20200113@Sophia
 Task : Get HeadlineID/ SuperID which has No PT
-DB: DBACC.bodb02, DBWH.bodb02
+DB:  DBAGE.bodb02, DBACC.bodb02, DBWH.bodb02
 
 Revisions:
 	- 20200113@Sophia: Initial [redmine: #127042]
