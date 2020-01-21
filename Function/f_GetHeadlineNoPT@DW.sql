@@ -6,8 +6,8 @@ RETURN
 
 /*
 Created: 20200113@Sophia
-Task : Get HeadlineID/ SuperID which has No PT
-DB:  DBAGE.bodb02, DBACC.bodb02, DBWH.bodb02
+Task : Get HeadlineID/ SuperID which has No PT [redmine: 127089]
+DB: DBAGE.bodb02, DBACC.bodb02, DBWH.bodb02, DBTP.bodb02
 
 Revisions:
 	- 20200113@Sophia: Initial [redmine: #127042]
