@@ -1,5 +1,4 @@
 ﻿/*<info serverAlias="DBWH-bodb02" selecters="dwrs" isFunction="1" isNested="1"></info>*/
-
 ALTER FUNCTION [dbo].[f_GetHeadlineNoPT]()	
 RETURNS TABLE
 RETURN

@@ -1,5 +1,4 @@
 ﻿/*<info serverAlias="DBAGE-bodb02,DBACC-bodb02,DBTP-bodb02" selecters="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" isFunction="1" isNested="1"></info>*/
-
 ALTER FUNCTION [dbo].[f_GetHeadlineNoPT]()	
 RETURNS TABLE
 RETURN
