@@ -17,11 +17,12 @@ AS
 */
 BEGIN
     SET NOCOUNT ON 
-	SELECT  cu.custid,cu.username, cu.firstname, cu.lastname, cu.currency,
+	SELECT  cu.custid,cu.username, cu.firstname, cu.lastname, ex.currency,
 			CASE 
 			   WHEN cs.IsViewAllPeriod IS NULL THEN 0 
 			ELSE cs.IsViewAllPeriod END AS [IsViewAllPeriod]
 	FROM dbo.Customer cu WITH(NOLOCK)
+	    INNER JOIN exchange ex WITH(NOLOCK) ON cu.currency = ex.exchangeid
 		LEFT JOIN dbo.CS_ReportPermission cs WITH(NOLOCK) ON cu.custid = cs.CustID  
 	WHERE cu.roleid = 0	AND (ISNULL(@Username,'') = '' OR cu.username LIKE '%' + @Username + '%')
 	ORDER BY cu.username ASC
