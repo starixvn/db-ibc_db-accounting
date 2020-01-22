@@ -8,3 +8,4 @@ CREATE TABLE [dbo].[CS_ReportPermission](
 	CONSTRAINT PK_CS_ReportPermission PRIMARY KEY([CustID])
 ) 
 GO
+
