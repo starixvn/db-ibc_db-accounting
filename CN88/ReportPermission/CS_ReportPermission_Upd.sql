@@ -6,6 +6,8 @@ GO
 CREATE PROCEDURE [dbo].[CS_ReportPermission_Upd]
       @CustID INT
 	, @IsViewAllPeriod BIT
+	, @UserID INT=0
+	, @LoginIP VARCHAR(20)=''
 AS
 /*
 	Created: Malcolm

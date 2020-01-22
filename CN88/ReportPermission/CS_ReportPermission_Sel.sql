@@ -2,8 +2,8 @@
 USE [CustDB]  
 GO
 
-CREATE PROCEDURE [dbo].[CS_ReportPermission_SEL]
-
+CREATE PROCEDURE [dbo].[CS_ReportPermission_Sel]
+		@Username NVARCHAR(50) = ''
 AS
 /*
 	Created: Malcolm
@@ -23,7 +23,7 @@ BEGIN
 			ELSE cs.IsViewAllPeriod END AS [IsViewAllPeriod]
 	FROM dbo.Customer cu WITH(NOLOCK)
 		LEFT JOIN dbo.CS_ReportPermission cs WITH(NOLOCK) ON cu.custid = cs.CustID  
-	WHERE cu.roleid = 0	
+	WHERE cu.roleid = 0	AND (ISNULL(@Username,'') = '' OR cu.username = @Username)
 	ORDER BY cu.username ASC
 	END
 GO
