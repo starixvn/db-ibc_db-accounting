@@ -17,7 +17,7 @@ AS
 */
 BEGIN
     SET NOCOUNT ON 
-	SELECT  cu.username, cu.firstname, cu.lastname, cu.currency,
+	SELECT  cu.custid,cu.username, cu.firstname, cu.lastname, cu.currency,
 			CASE 
 			   WHEN cs.IsViewAllPeriod IS NULL THEN 0 
 			ELSE cs.IsViewAllPeriod END AS [IsViewAllPeriod]
