@@ -1,7 +1,17 @@
 /*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet"  isFunction="0" isNested="0"></info>*/
+
 USE [CustDB]
 GO
+/*
+   Created: Malcolm
+	Date: 2020-02-04
+	Task:   Configuration for CN88 Headlines to view all periods - [Redmine: #127520]
+	DB: DBLOG/bodb_CustomerLog
 
+	Revisions:
+		- 20200122@Malcolm:  Configuration for CN88 Headlines to view all periods - [Redmine: #127520]
+	Parameter's explaination:
+*/
 CREATE TABLE [dbo].[CS_ReportPermission](
 	[CustID] [int] NOT NULL,
 	[IsViewAllPeriod] [bit] NULL
