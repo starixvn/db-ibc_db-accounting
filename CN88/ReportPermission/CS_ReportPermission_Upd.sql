@@ -31,10 +31,8 @@ BEGIN
 	     BEGIN TRY
 			 UPDATE CS
 			 SET CS.IsViewAllPeriod = @IsViewAllPeriod, @Old_IsViewAllPeriod = CS.IsViewAllPeriod
-			 FROM dbo.CS_ReportPermission CS
-			 WHERE CS.CustID = @CustID AND CS.IsViewAllPeriod <> @IsViewAllPeriod
-			 IF @@ROWCOUNT = 0
-				  SELECT @Old_IsViewAllPeriod =  @IsViewAllPeriod, @IsUpdated = 0
+			 FROM dbo.CS_ReportPermission CS WITH(NOLOCK)
+			 WHERE CS.CustID = @CustID 
 		 END TRY
 		 BEGIN CATCH
 		     SELECT @ErrCode =  ERROR_NUMBER(), @ErrMsg = ERROR_MESSAGE(), @IsUpdated = 0
