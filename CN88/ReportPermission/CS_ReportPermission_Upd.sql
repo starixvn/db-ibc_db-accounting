@@ -52,10 +52,10 @@ BEGIN
 	END 
 	IF @IsUpdated = 1
 	BEGIN 
-	     SELECT @LogSPData = '<R IsViewAllPeriod="'+ COALESCE(CAST(@IsViewAllPeriod AS VARCHAR(30)), SPACE(1)) + '" ' +
+	     SELECT @LogSPData = '<R IsViewAllPeriod="'+ COALESCE(CAST(@IsViewAllPeriod AS VARCHAR(3)), SPACE(1)) + '" ' +
 							'LoginIP="'+ COALESCE(CAST(@LoginIP as VARCHAR(20)),SPACE(1)) + '" />'
 
-         SELECT @LogSPData2 = '<R IsViewAllPeriod="'+ COALESCE(CAST(@Old_IsViewAllPeriod AS VARCHAR(30)), SPACE(1)) + '" ' +
+         SELECT @LogSPData2 = '<R IsViewAllPeriod="'+ COALESCE(CAST(@Old_IsViewAllPeriod AS VARCHAR(3)), SPACE(1)) + '" ' +
 							'LoginIP="'+ COALESCE(CAST(@LoginIP as VARCHAR(20)),SPACE(1)) + '" />'
 
 	     SET @endRun = GETDATE()
