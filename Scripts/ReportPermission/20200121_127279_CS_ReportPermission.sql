@@ -1,4 +1,4 @@
-/*<info serverAlias="DBLOG-bodb_CustomerLog" ></info>*/
+/*<info serverAlias="DBCUST-CustDB" ></info>*/
 
 USE [CustDB]
 GO
@@ -6,7 +6,7 @@ GO
    Created: Malcolm
 	Date: 2020-02-04
 	Task:   Configuration for CN88 Headlines to view all periods - [Redmine: #127520]
-	DB: DBLOG/bodb_CustomerLog
+	DB: DBCUST/CustDB
 
 	Revisions:
 		- 20200122@Malcolm:  Configuration for CN88 Headlines to view all periods - [Redmine: #127520]
