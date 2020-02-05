@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB" ></info>*/
+/*<info serverAlias="DBLOG-bodb_CustomerLog" ></info>*/
 
 USE [CustDB]
 GO
