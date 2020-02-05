@@ -1,4 +1,4 @@
-/*<info serverAlias="DBLOG-bodb_CustomerLog" executers="bodbAdminNet"  isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBLOG-bodb_CustomerLog" ></info>*/
 
 USE bodb_CustomerLog
 GO
