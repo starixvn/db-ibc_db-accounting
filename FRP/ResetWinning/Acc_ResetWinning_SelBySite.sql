@@ -58,11 +58,13 @@ BEGIN
 			RealCommForExtraPT	MONEY,
 			RealWinlostForExtraPT MONEY
 		) 	 
-		INSERT INTO #wl (winlostdate, srecommend, 
-						 winlost, WinlostDueTo, CommForExtraPT, WinlostForExtraPT
-						 )
+		INSERT INTO #wl (winlostdate, srecommend, Sporttype, ProductId, SubProduct, 
+						 winlost, WinlostDueTo, CommForExtraPT, WinlostForExtraPT )
 		SELECT  b.winlostdate,
-				b.srecommend,			
+				b.srecommend,
+				CASE WHEN ISNULL(m.Sporttype, 0) <> 0 THEN m.Sporttype ELSE 0 END AS Sporttype,
+			    s.ProductId,		
+				CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss','Bet Builder') THEN s.SubProduct ELSE '' END AS SubProduct,				
 				---Base currency
 				SUM(
 						CASE WHEN b.bettype IN (2199, 2399, 2999) THEN 0
@@ -108,9 +110,12 @@ BEGIN
 			---AND b.statusid NOT IN (101, 102, 103, 121)		
 			AND b.statusid IN (111, 112, 113)		
 			AND b.bettype < 19001
-			AND b.MatchID > 0
+			AND b.MatchID >= 0
 		GROUP BY b.Winlostdate,				
-				b.srecommend		
+				b.srecommend,
+				CASE WHEN ISNULL(m.Sporttype, 0) <> 0 THEN m.Sporttype ELSE 0 END ,
+			    s.ProductId,		
+				CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss','Bet Builder') THEN s.SubProduct ELSE '' END 			
 				 
 		-----------------------------------------------------------------------------------------------
 
