@@ -58,25 +58,11 @@ BEGIN
 			RealCommForExtraPT	MONEY,
 			RealWinlostForExtraPT MONEY
 		) 	 
-		INSERT INTO #wl (winlostdate, srecommend, Currency, Sporttype, ProductId, ProductName, SubProduct, 
-						 winlost, WinlostDueTo, CommForExtraPT, WinlostForExtraPT,
-						 Realwinlost, RealWinlostDueTo, RealCommForExtraPT, RealWinlostForExtraPT)
+		INSERT INTO #wl (winlostdate, srecommend, 
+						 winlost, WinlostDueTo, CommForExtraPT, WinlostForExtraPT
+						 )
 		SELECT  b.winlostdate,
-				b.srecommend,
-				b.Currency,				
-				CASE WHEN ISNULL(m.Sporttype, 0) <> 0 THEN m.Sporttype ELSE 0 END AS Sporttype,
-				s.ProductId,
-				CASE WHEN s.SubProduct = 'MG-SuperLive' THEN 'Metric Gaming - Super Live'
-					WHEN s.SubProduct IN ('BT-Sold','BT-Bought','BT-Comm','BT-Winloss') THEN 'Bettrade'
-					WHEN s.SubProduct = 'Bet Builder' THEN 'Bet Builder'
-					WHEN ISNULL(m.Sporttype, 0) = 44 THEN 'Muay Thai'
-					WHEN b.bettype = 10 THEN 'Outright'
-					WHEN b.bettype IN (9,29) THEN'Parlay' 
-					WHEN b.liveindicator = 1 AND s.ProductID = 1 THEN 'SPL' 
-					WHEN b.liveindicator = 0 AND s.ProductID = 1 THEN 'SPNL'  	
-					ELSE ''
-					END	AS ProductName,
-				CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss','Bet Builder') THEN s.SubProduct ELSE '' END AS SubProduct,
+				b.srecommend,			
 				---Base currency
 				SUM(
 						CASE WHEN b.bettype IN (2199, 2399, 2999) THEN 0
@@ -111,45 +97,10 @@ BEGIN
 								CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
 							END
 						) * b.actualrate
-					) AS WinlostForExtraPT,
+					) AS WinlostForExtraPT
+			
 				
-				---Real currency
-				SUM(
-						CASE WHEN b.bettype IN (2199, 2399, 2999) THEN 0
-							ELSE
-								(ISNULL(winlost,0)-ISNULL(actual_stake,0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)
-									+ CASE
-										-- Jackpot
-										WHEN b.bettype IN (2198, 2398, 2998) THEN ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000),0)
-										ELSE 0 END
-								)  
-							END
-					) AS RealWinlost,
-				SUM(
-						(	
-							CASE
-								-- Jackpot
-								WHEN b.bettype IN (2198, 2398, 2998) THEN -ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0)
-								WHEN b.bettype IN (2199, 2399, 2999) THEN ISNULL(b.Winlost, 0) - ISNULL(b.actual_stake, 0)
-							ELSE 0 
-							END
-						) 
-					) AS RealWinlostDueTo,
-				0 AS RealCommForExtraPT,
-				SUM(
-						(	
-							CASE
-								-- Jackpot
-								WHEN b.bettype IN (2198, 2398, 2998) THEN
-									CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) END
-								WHEN b.bettype IN (2199, 2399, 2999) THEN 0
-								ELSE
-									CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
-								END
-						)
-					) AS RealWinlostForExtraPT		
-				
-		FROM dbo.bettrans b WITH (NOLOCK) 
+		FROM dbo.bettrans b WITH (NOLOCK)  
 		INNER JOIN #SportBettype s ON s.BetType = b.bettype
 		LEFT JOIN dbo.Match m WITH (NOLOCK) ON m.MatchId = b.MatchId AND m.Sporttype = 44		
 		WHERE   b.Winlostdate between @fromdate and @todate
@@ -159,21 +110,7 @@ BEGIN
 			AND b.bettype < 19001
 			AND b.MatchID > 0
 		GROUP BY b.Winlostdate,				
-				b.srecommend,	
-				b.Currency,
-				CASE WHEN ISNULL(m.Sporttype, 0) <> 0 THEN m.Sporttype ELSE 0 END,
-				s.ProductId,
-				CASE WHEN s.SubProduct = 'MG-SuperLive' THEN 'Metric Gaming - Super Live'
-					WHEN s.SubProduct IN ('BT-Sold','BT-Bought','BT-Comm','BT-Winloss') THEN 'Bettrade'
-					WHEN s.SubProduct = 'Bet Builder' THEN 'Bet Builder'
-					WHEN ISNULL(m.Sporttype, 0) = 44 THEN 'Muay Thai'
-					WHEN b.bettype = 10 THEN 'Outright'
-					WHEN b.bettype IN (9,29) THEN'Parlay' 
-					WHEN b.liveindicator = 1 AND s.ProductID = 1 THEN 'SPL' 
-					WHEN b.liveindicator = 0 AND s.ProductID = 1 THEN 'SPNL'  	
-					ELSE ''
-					END	,
-				CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss','Bet Builder') THEN s.SubProduct ELSE '' END
+				b.srecommend		
 				 
 		-----------------------------------------------------------------------------------------------
 
