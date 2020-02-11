@@ -21,6 +21,7 @@ AS
 		- 20170926@Percy: Move this SP from DBACC.bodb_ACC to DBCUST.CustDB [RedmineID: #83600]
 		- 20180808@Helen: DB05.DBPOLICY migration - [Redmine:99462]
 		- 20190416@Percy: Separate Bet Builder to Sportsbook [RedmineID: #108791]
+		- 20191211@Percy: Add UplineId (HeadlineId) [RedmineID: #118962]
 
 	Param's Explanation:
 */
@@ -153,9 +154,8 @@ BEGIN
 	-- insert new group setting --
 	BEGIN TRY
 		INSERT INTO dbo.Acc_GroupExtraPT_Product (GroupId, GroupName, ProductID, Sporttype, SubProduct, FromDate, ToDate, ExtraPT)
-		SELECT DISTINCT @GroupId, @GroupName, @ProductID, Sporttype, SubProduct, @EffectiveDate, @EndDate,
-			CASE WHEN @ProductId = 1 AND SubProduct IN ('BT-Bought', 'BT-Comm', 'BT-Sold', 'BT-Winloss') THEN 0 ELSE @ExtraPT END
-		FROM Acc_GroupExtraPT_Product WITH(NOLOCK)
+		SELECT DISTINCT @GroupId, @GroupName, @ProductID, Sporttype, SubProduct, @EffectiveDate, @EndDate, @ExtraPT
+		FROM Acc_GroupExtraPT_Product WITH (NOLOCK)
 		WHERE ProductID = @ProductId
 
 		IF @@ROWCOUNT = 0 -- no data insert
@@ -166,15 +166,11 @@ BEGIN
 			IF @ProductId = 1
 			BEGIN
 				INSERT INTO dbo.Acc_GroupExtraPT_Product (GroupId, GroupName, ProductID, Sporttype, SubProduct, FromDate, ToDate, ExtraPT)
-				SELECT @GroupId, @GroupName, @ProductID, Sporttype, SubProduct, @EffectiveDate, @EndDate, ExtraPT
+				SELECT @GroupId, @GroupName, @ProductID, Sporttype, SubProduct, @EffectiveDate, @EndDate, @ExtraPT
 				FROM (
-					SELECT  0 AS Sporttype, 'BT-Bought'		AS SubProduct,		0	AS ExtraPT UNION ALL
-					SELECT  0 AS Sporttype, 'BT-Comm'		AS SubProduct,		0	AS ExtraPT UNION ALL
-					SELECT  0 AS Sporttype, 'BT-Sold'		AS SubProduct,		0	AS ExtraPT UNION ALL
-					SELECT  0 AS Sporttype, 'BT-Winloss'	AS SubProduct,		0	AS ExtraPT UNION ALL
-					SELECT  0 AS Sporttype, 'MG-SuperLive'	AS SubProduct, @ExtraPT AS ExtraPT UNION ALL
-					SELECT  0 AS Sporttype, 'Bet Builder'	AS SubProduct, @ExtraPT AS ExtraPT UNION ALL
-					SELECT 44 AS Sporttype, ''				AS SubProduct, @ExtraPT AS ExtraPT
+					SELECT  0 AS Sporttype, 'MG-SuperLive'	AS SubProduct UNION ALL
+					SELECT  0 AS Sporttype, 'Bet Builder'	AS SubProduct UNION ALL
+					SELECT 44 AS Sporttype, ''				AS SubProduct
 				) AS A
 			END
 		END
@@ -187,7 +183,7 @@ BEGIN
 
 	/* Super */
 	-- affected super --
-	DECLARE @Super TABLE (SuperId INT, Sporttype INT, SubProduct VARCHAR(50), FromDate DATETIME, ToDate DATETIME)
+	DECLARE @Super TABLE (SuperId INT, Sporttype INT, SubProduct VARCHAR(50), FromDate DATETIME, ToDate DATETIME, UplineId INT)
 
 	DECLARE @FromDate DATETIME, @ToDate DATETIME
 
@@ -197,15 +193,15 @@ BEGIN
 	IF @FromDate IS NOT NULL
 	BEGIN
 		DELETE dbo.Acc_GroupExtraPTSetting WITH(ROWLOCK, UPDLOCK)
-		OUTPUT DELETED.SuperId, DELETED.Sporttype, DELETED.SubProduct, DELETED.FromDate, DELETED.ToDate
-			INTO @Super (SuperId, Sporttype, SubProduct, FromDate, ToDate)
+		OUTPUT DELETED.SuperId, DELETED.Sporttype, DELETED.SubProduct, DELETED.FromDate, DELETED.ToDate, DELETED.UplineId
+			INTO @Super (SuperId, Sporttype, SubProduct, FromDate, ToDate, UplineId)
 		WHERE GroupId = @GroupId AND ProductId = @ProductId
 			AND @ToDate < FromDate
 		
 		UPDATE dbo.Acc_GroupExtraPTSetting WITH(ROWLOCK, UPDLOCK)
 		SET ToDate = @ToDate
-		OUTPUT DELETED.SuperId, DELETED.Sporttype, DELETED.SubProduct, DATEADD(DAY, 1, @ToDate), DELETED.ToDate
-			INTO @Super (SuperId, Sporttype, SubProduct, FromDate, ToDate)
+		OUTPUT DELETED.SuperId, DELETED.Sporttype, DELETED.SubProduct, DATEADD(DAY, 1, @ToDate), DELETED.ToDate, DELETED.UplineId
+			INTO @Super (SuperId, Sporttype, SubProduct, FromDate, ToDate, UplineId)
 		WHERE GroupId = @GroupId AND ProductId = @ProductId
 			AND @ToDate BETWEEN FromDate AND ToDate
 
@@ -217,59 +213,55 @@ BEGIN
 
 	IF @isNew = 0
 	BEGIN
-		INSERT INTO dbo.Acc_GroupExtraPTSetting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, FromDate, ToDate, ExtraPT)
-		SELECT SuperId, @GroupId, @GroupName, @ProductId, Sporttype, SubProduct, FromDate, ToDate,
-				CASE WHEN @ProductId = 1 AND SubProduct IN ('BT-Bought', 'BT-Comm', 'BT-Sold', 'BT-Winloss') THEN 0 ELSE @ExtraPT END
+		INSERT INTO dbo.Acc_GroupExtraPTSetting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, FromDate, ToDate, ExtraPT, UplineId)
+		SELECT SuperId, @GroupId, @GroupName, @ProductId, Sporttype, SubProduct, FromDate, ToDate, @ExtraPT, UplineId
 		FROM @Super
 	END
 	ELSE
 	BEGIN
 		;WITH Super AS (
-			SELECT SuperId, MIN(FromDate) AS FromDate
+			SELECT SuperId, UplineId, MIN(FromDate) AS FromDate
 			FROM dbo.Acc_GroupExtraPTSetting WITH(NOLOCK)
 			WHERE GroupId = @GroupId
 				AND @FromDate <= ToDate
-			GROUP BY SuperId
+			GROUP BY SuperId, UplineId
 		)
 		, CurrentSuper AS (
-			SELECT SuperId, @FromDate AS FromDate
+			SELECT SuperId, UplineId, @FromDate AS FromDate
 			FROM dbo.Acc_GroupExtraPTSetting WITH(NOLOCK)
 			WHERE GroupId = @GroupId
 				AND ToDate BETWEEN @today AND @ToDate
 				AND SuperId NOT IN (SELECT SuperId FROM Super)
-			GROUP BY SuperId
+			GROUP BY SuperId, UplineId
 
 			UNION ALL
-			SELECT SuperId, FromDate
+			SELECT SuperId, UplineId, FromDate
 			FROM Super
 		)
 		, FeatureSuper AS (
-			SELECT SuperId, MIN(FromDate) AS FromDate
+			SELECT SuperId, UplineId, MIN(FromDate) AS FromDate
 			FROM dbo.Acc_GroupExtraPTSetting WITH(NOLOCK)
 			WHERE GroupId <> @GroupId
 				AND SuperId IN (SELECT SuperId FROM CurrentSuper)
 				AND FromDate >= @FromDate
-			GROUP BY SuperId
+			GROUP BY SuperId, UplineId
 		)
-		INSERT INTO dbo.Acc_GroupExtraPTSetting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate)
-		SELECT cs.SuperId, @GroupId, @GroupName, @ProductId, B.Sporttype, B.SubProduct, B.ExtraPT,
+		INSERT INTO dbo.Acc_GroupExtraPTSetting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate, UplineId)
+		SELECT cs.SuperId, @GroupId, @GroupName, @ProductId, B.Sporttype, B.SubProduct, @ExtraPT,
 				CASE WHEN @FromDate < cs.FromDate THEN cs.FromDate ELSE @FromDate END,
-				CASE WHEN fs.FromDate IS NULL OR @ToDate < fs.FromDate THEN @ToDate ELSE DATEADD(DAY, -1, ISNULL(fs.FromDate, '9999-12-31')) END
+				CASE WHEN fs.FromDate IS NULL OR @ToDate < fs.FromDate THEN @ToDate ELSE DATEADD(DAY, -1, ISNULL(fs.FromDate, '9999-12-31')) END,
+				cs.UplineId
 		FROM CurrentSuper cs
 			LEFT JOIN FeatureSuper fs ON cs.SuperId = fs.SuperId
 			CROSS APPLY (
-				SELECT 0 AS Sporttype, '' AS SubProduct, @ExtraPT AS ExtraPT
+				SELECT 0 AS Sporttype, '' AS SubProduct
 				
 				UNION ALL
-				SELECT Sporttype, SubProduct, ExtraPT
+				SELECT Sporttype, SubProduct
 				FROM (
-					SELECT  0 AS Sporttype, 'BT-Bought'		AS SubProduct,		0	AS ExtraPT UNION ALL
-					SELECT  0 AS Sporttype, 'BT-Comm'		AS SubProduct,		0	AS ExtraPT UNION ALL
-					SELECT  0 AS Sporttype, 'BT-Sold'		AS SubProduct,		0	AS ExtraPT UNION ALL
-					SELECT  0 AS Sporttype, 'BT-Winloss'	AS SubProduct,		0	AS ExtraPT UNION ALL
-					SELECT  0 AS Sporttype, 'MG-SuperLive'	AS SubProduct, @ExtraPT AS ExtraPT UNION ALL
-					SELECT  0 AS Sporttype, 'Bet Builder'	AS SubProduct, @ExtraPT AS ExtraPT UNION ALL
-					SELECT 44 AS Sporttype, ''				AS SubProduct, @ExtraPT AS ExtraPT
+					SELECT  0 AS Sporttype, 'MG-SuperLive'	AS SubProduct UNION ALL
+					SELECT  0 AS Sporttype, 'Bet Builder'	AS SubProduct UNION ALL
+					SELECT 44 AS Sporttype, ''				AS SubProduct
 				) AS A
 				WHERE @ProductId = 1
 			) AS B
