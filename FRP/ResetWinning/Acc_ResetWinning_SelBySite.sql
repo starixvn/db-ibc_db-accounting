@@ -11,8 +11,13 @@ AS
 	
 	Revision:
 		- 20200210@Sophia: Initial SPs
+		- 20200213@Sophia: Mondify Exchange product [redmine: #128471]
 		 
 	Param Explanation:
+		outout: IsDeposit = 0: Credit 
+						  = 1: deposit 
+						  = 3: By Product (exchange)
+						
 	   
 */
 BEGIN	
@@ -23,8 +28,15 @@ BEGIN
 	INSERT INTO #SportBettype
 	SELECT ProductID, Bettype, SubProduct FROM bodb02.dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', 0)
 	
+	--- Exclude Exchange product
+	DELETE #SportBettype 
+	WHERE  ProductID = 31 
+
+	
 	CREATE CLUSTERED INDEX CIX_Bettype ON #SportBettype (bettype) 
 	----- End get sport bettype  
+	
+	CREATE TABLE #ExchangeProduct (ProductCode VARCHAR(5), OrderID TINYINT, Figure VARCHAR(50), FullRange MONEY, Amount MONEY )
 		
     DECLARE @wldate DATE = @todate,
             @seq    smallint = 0,
@@ -99,15 +111,12 @@ BEGIN
 								CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
 							END
 						) * b.actualrate
-					) AS WinlostForExtraPT
-			
+					) AS WinlostForExtraPT		
 				
 		FROM dbo.bettrans b WITH (NOLOCK)  
 		INNER JOIN #SportBettype s ON s.BetType = b.bettype
 		LEFT JOIN dbo.Match m WITH (NOLOCK) ON m.MatchId = b.MatchId AND m.Sporttype = 44		
 		WHERE   b.Winlostdate between @fromdate and @todate
-			--AND b.ruben = 1
-			---AND b.statusid NOT IN (101, 102, 103, 121)		
 			AND b.statusid IN (111, 112, 113)		
 			AND b.bettype < 19001
 			AND b.MatchID >= 0
@@ -144,9 +153,17 @@ BEGIN
 					AND w.Winlostdate BETWEEN s.FromDate AND s.ToDate	
 			INNER JOIN bodb02.dbo.customer c WITH (NOLOCK) 
 					ON c.CustID = w.srecommend AND c.roleid = 4					
-			GROUP BY w.Winlostdate, c.Site
+			GROUP BY w.Winlostdate, c.Site				
+		
+		-----------------------------------------------------------------------------------------------
+		------ Exchange product-----
 
-			----- Get Data -----
+		INSERT INTO #ExchangeProduct (ProductCode, OrderID, Figure, FullRange, Amount)
+		EXEC Acc_Rpt_HouseNetIncome_EX_Deposit @fromdate, @fromdate    ----- cannot use FromDate - ToDate because of output will be different
+		 	
+		
+		-----------------------------------------------------------------------------------------------
+		----- Get Data -----
 			SELECT	w.Winlostdate, w.Site,  
 					ROUND((ISNULL(w.Winlost, 0)), 2) - ROUND((ISNULL(e.ExtraPTWinlost, 0)), 2) AS WinlostAfterExtraPT,
 					CASE WHEN s.SiteID > 1000 THEN 0 ELSE 1 END AS IsDeposit
@@ -156,7 +173,15 @@ BEGIN
 				AND w.Site = e.Site
 			INNER JOIN bodb_licensee.dbo.view_site_list s 
 				ON s.SiteName = w.Site
+				
+			---exchange product
+			UNION
+			SELECT @FromDate AS Winlostdate, 'Exchange Product', SUM(Amount) AS WinlostAfterExtraPT, 3 AS IsDeposit
+			FROM #ExchangeProduct
+			
 			ORDER BY IsDeposit, w.Winlostdate, w.Site
+			
+			
 
 	DROP TABLE #SportBettype
     DROP TABLE #Winlost
