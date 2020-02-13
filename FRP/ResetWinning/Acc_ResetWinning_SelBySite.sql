@@ -11,7 +11,7 @@ AS
 	
 	Revision:
 		- 20200210@Sophia: Initial SPs
-		- 20200213@Sophia: Mondify Exchange product [redmine: #128471]
+		- 20200213@Sophia: Modify Exchange product [redmine: #128471]
 		 
 	Param Explanation:
 		outout: IsDeposit = 0: Credit 
