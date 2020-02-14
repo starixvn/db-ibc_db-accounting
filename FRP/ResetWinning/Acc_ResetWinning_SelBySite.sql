@@ -171,7 +171,7 @@ BEGIN
 			  , ParentID     INT);
 
 			INSERT INTO @TmpPartyList (PartyID, PartyName, BrandName,ParentID)
-			Select PartyID, PartyName, BrandName,ParentID  from LA_f_PartyListSel ()
+			SELECT PartyID, PartyName, BrandName,ParentID FROM bodb_licensee.dbo.LA_f_PartyListSel ()
 
 			DECLARE @PartyIDs    VARCHAR(1000);
 
