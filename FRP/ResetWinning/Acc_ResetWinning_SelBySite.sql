@@ -170,8 +170,8 @@ BEGIN
 			  , BrandName    VARCHAR(200)
 			  , ParentID     INT);
 
-			INSERT INTO @TmpPartyList
-			EXECUTE bodb_licensee..LA_PartyListSel;
+			INSERT INTO @TmpPartyList (PartyID, PartyName, BrandName,ParentID)
+			Select PartyID, PartyName, BrandName,ParentID  from LA_f_PartyListSel ()
 
 			DECLARE @PartyIDs    VARCHAR(1000);
 
