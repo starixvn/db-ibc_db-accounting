@@ -154,9 +154,7 @@ BEGIN
 			GROUP BY w.Winlostdate, c.Site				
 		
 		-----------------------------------------------------------------------------------------------
-		------ Exchange product-----
-
-			--INSERT INTO #ExchangeProduct (ProductCode, OrderID, Figure, FullRange, Amount)
+		------ Exchange product-----		
 			--EXEC Acc_Rpt_HouseNetIncome_EX_Deposit @fromdate, @fromdate    ----- cannot use FromDate - ToDate because of output will be different
 								 
 
@@ -351,32 +349,6 @@ BEGIN
 					 , SUM(AmountToCompany) - SUM(AComm + PComm)
 					 , SUM(PayToSupplier) + SUM(AComm + PComm)
 				 FROM #TempDataEX
-
-			/*
-			DECLARE @tmpDate     DATE
-				, @DateList    VARCHAR(200);
-
-			SELECT @tmpDate = @FDate;
-
-			WHILE @tmpDate <= @TDate
-			   BEGIN
-				  INSERT INTO #FinalResult(RptDate
-									, LicenseeWL
-									, PayToSupplier)
-						SELECT CONVERT(VARCHAR(2), @tmpDate, 106)
-							, SUM(AmountToCompany) - SUM(AComm + PComm)
-							, SUM(PayToSupplier) + SUM(AComm + PComm)
-						FROM #TempDataEX
-						WHERE rptDate = @tmpDate;
-
-				  SELECT @tmpDate = DATEADD(DAY, 1, @tmpDate);
-			   END;
-
-			SELECT @DateList = COALESCE(@DateList+',', '')+'['+CONVERT(VARCHAR(10), RptDate)+']'
-			FROM #FinalResult;
-			*/
-	
-	
 		 	
 		
 		-----------------------------------------------------------------------------------------------
@@ -393,7 +365,7 @@ BEGIN
 				
 			---exchange product
 			UNION
-			SELECT @FromDate AS Winlostdate, 'Exchange Product', SUM(LicenseeWL-PayToSupplier) AS WinlostAfterExtraPT, 3 AS IsDeposit
+			SELECT @FromDate AS Winlostdate, 'Exchange Product', SUM(LicenseeWL+PayToSupplier) AS WinlostAfterExtraPT, 3 AS IsDeposit
 			FROM #FinalResult
 			
 			ORDER BY IsDeposit, w.Winlostdate, w.Site
