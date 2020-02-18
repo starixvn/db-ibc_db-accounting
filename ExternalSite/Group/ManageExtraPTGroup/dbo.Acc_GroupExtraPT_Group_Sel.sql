@@ -1,7 +1,4 @@
-/*<info serverAlias="DBACC-bodb_ACC" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
-USE [bodb_ACC]
-GO
-
+/*<info serverAlias="DBACC-bodb_ACC" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_GroupExtraPT_Group_Sel]
 AS
 
@@ -13,6 +10,7 @@ AS
 
 	Revisions:
 		- 20170413@Percy: Add new SP [RemineID: #74292]
+		- 20191216@Percy: Hide 3 groups: ACCTHAI2, ACCTHAI56, ACCTHAI99 [RemineID: #125418]
 
 	Param's Explanation:
 */
@@ -22,6 +20,7 @@ BEGIN
 	
 	SELECT GroupId, GroupName
 	FROM dbo.Acc_DWLList_ExtraPT WITH (NOLOCK)
+	WHERE GroupName NOT IN ('ACCTHAI2', 'ACCTHAI56', 'ACCTHAI99')
 	ORDER BY GroupId
 END
 GO

@@ -25,12 +25,16 @@ AS
 		- 20180808@Helen: DB05.DBPOLICY migration - [Redmine:99462]
 		- 20190214@Percy: Fix issue setting of supers is not updated when change extra PT amount [RedmineID: #108875]
 		- 20191211@Percy: Remove Bettrade [RedmineID: #118962]
+		- 20191216@Percy: Do not allow user to select the current date in Effective Date [RedmineID: #125418]
 		
 	Param's Explanation:
 */
 
 BEGIN
 	SET NOCOUNT ON
+
+	DECLARE @today DATETIME
+	SELECT  @today = CONVERT(DATE, GETDATE())
 
 	SELECT  @NewEndDate = ISNULL(@NewEndDate, '9999-12-31'), @OldEndDate = ISNULL(@OldEndDate, '9999-12-31')
 	SELECT  @NewEffectiveDate = CONVERT(DATE, @NewEffectiveDate), @NewEndDate = CONVERT(DATE, @NewEndDate)
@@ -44,16 +48,23 @@ BEGIN
 		RETURN
 	END
 
-	IF (@OldEffectiveDate <> @NewEffectiveDate OR @OldExtraPT <> @NewExtraPT) AND @NewEffectiveDate < CONVERT(DATE, GETDATE())
+	IF (@OldEffectiveDate <> @NewEffectiveDate OR @OldExtraPT <> @NewExtraPT) AND @NewEffectiveDate <= @today
 	BEGIN
-		SELECT @ErrCode = 101, @ErrMsg = 'Please select Effective Date from current date.'
+		SELECT @ErrCode = 101, @ErrMsg = 'Please select Effective Date from tomorrow or later.'
+		
+		RETURN
+	END
+
+	IF (@OldEffectiveDate = @NewEffectiveDate AND @OldEndDate <> @NewEndDate) AND @NewEndDate < @today
+	BEGIN
+		SELECT @ErrCode = 102, @ErrMsg = 'Please select End Date from today or later.'
 		
 		RETURN
 	END
 
 	IF @NewEndDate < @NewEffectiveDate
 	BEGIN
-		SELECT @ErrCode = 102, @ErrMsg = 'Effective Date is greater than End Date.'
+		SELECT @ErrCode = 103, @ErrMsg = 'Effective Date is greater than End Date.'
 		
 		RETURN
 	END
@@ -72,14 +83,13 @@ BEGIN
 	DECLARE @startRun DATETIME, @duration INT
 	SELECT  @startRun = GETDATE()
 
-	DECLARE @GroupName VARCHAR(30), @ProductName VARCHAR(30), @today DATETIME
+	DECLARE @GroupName VARCHAR(30), @ProductName VARCHAR(30)
 	SELECT  @GroupName = GroupName FROM DBACC.bodb_ACC.dbo.Acc_DWLList_ExtraPT WITH(NOLOCK) WHERE GroupId = @GroupId
 	SELECT  @ProductName = ProductName FROM DBTXN.bodb02.dbo.Products WITH(NOLOCK) WHERE ProductID = @ProductID
-	SELECT  @today = CONVERT(DATE, GETDATE())
 
-	IF ISNULL(@GroupName, '') = ''
+	IF ISNULL(@GroupName, '') = '' OR @GroupName IN ('ACCTHAI2', 'ACCTHAI56', 'ACCTHAI99')
 	BEGIN
-		SELECT @ErrCode = 103, @ErrMsg = 'Invalid Extra PT Group.'
+		SELECT @ErrCode = 103, @ErrMsg = 'Invalid Group.'
 		
 		RETURN
 	END
