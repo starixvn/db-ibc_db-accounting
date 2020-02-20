@@ -8,7 +8,6 @@ CREATE PROCEDURE [dbo].[CS_ReportPermission_Upd]
 	, @IsViewAllPeriod BIT
 	, @UserID INT=0
 	, @LoginIP VARCHAR(20)=''
-	, @IsUpdated BIT = 1 OUTPUT
 	, @ErrCode INT = 0 OUTPUT
 	, @ErrMsg NVARCHAR(4000) = '' OUTPUT
 AS
@@ -35,7 +34,8 @@ BEGIN
 			 WHERE CS.CustID = @CustID 
 		 END TRY
 		 BEGIN CATCH
-		     SELECT @ErrCode =  ERROR_NUMBER(), @ErrMsg = ERROR_MESSAGE(), @IsUpdated = 0
+		     SELECT @ErrCode =  ERROR_NUMBER(), @ErrMsg = ERROR_MESSAGE();
+			 RETURN;
 		 END CATCH
 	END
 	ELSE 
@@ -45,28 +45,29 @@ BEGIN
 	    	VALUES(@CustID, @IsViewAllPeriod)
 		END TRY
 		BEGIN CATCH
-		      SELECT @ErrCode =  ERROR_NUMBER(), @ErrMsg = ERROR_MESSAGE(), @IsUpdated = 0
+		      SELECT @ErrCode =  ERROR_NUMBER(), @ErrMsg = ERROR_MESSAGE();
+			  RETURN;
 		END CATCH      
 	END 
-	IF @IsUpdated = 1
-	BEGIN 
-	     SELECT @LogSPData = '<R IsViewAllPeriod="'+ COALESCE(CAST(@IsViewAllPeriod AS VARCHAR(3)), SPACE(1)) + '" ' +
+
+
+	SELECT @LogSPData = '<R IsViewAllPeriod="'+ COALESCE(CAST(@IsViewAllPeriod AS VARCHAR(3)), SPACE(1)) + '" ' +
 							'LoginIP="'+ COALESCE(CAST(@LoginIP as VARCHAR(20)),SPACE(1)) + '" />'
 
-         SELECT @LogSPData2 = '<R IsViewAllPeriod="'+ COALESCE(CAST(@Old_IsViewAllPeriod AS VARCHAR(3)), SPACE(1)) + '" ' +
+    SELECT @LogSPData2 = '<R IsViewAllPeriod="'+ COALESCE(CAST(@Old_IsViewAllPeriod AS VARCHAR(3)), SPACE(1)) + '" ' +
 							'LoginIP="'+ COALESCE(CAST(@LoginIP as VARCHAR(20)),SPACE(1)) + '" />'
 
-	     SET @endRun = GETDATE()
-	     SET @duration = DATEDIFF (MILLISECOND,@startRun,@endRun)
-		 EXEC dbo.CS_WriteLog_UserLog_RunSP_Wrapper 
+	SET @endRun = GETDATE()
+	SET @duration = DATEDIFF (MILLISECOND,@startRun,@endRun)
+    
+	EXEC dbo.CS_WriteLog_UserLog_RunSP_Wrapper 
 				 @UserID = @UserID, 
 				 @CustID = @CustId,
 				 @ActionID = 95002,
 			     @TrackingValue = @LogSPData,
 				 @TrackingValue2 = @LogSPData2,
 				 @duration = @duration
-	END 
-	
+	 	
 END
 GO
 
