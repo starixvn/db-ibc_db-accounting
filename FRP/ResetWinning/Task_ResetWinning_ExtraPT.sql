@@ -164,6 +164,7 @@ BEGIN
 			AND w.SubProduct = s.SubProduct
 			AND w.Sporttype = s.Sporttype 
 			AND w.winlostdate BETWEEN s.FromDate AND s.ToDate	
+			AND s.GroupID NOT IN (4, 5, 6) --- ACCTHAI2,ACCTHAI56,ACCTHAI99
 	GROUP BY w.ProductID, w.Sporttype, w.SubProduct, w.Winlostdate, s.GroupId
 
 	---Last reset
