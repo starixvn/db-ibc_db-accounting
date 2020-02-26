@@ -26,7 +26,6 @@ AS
 		- 20190412@Percy: Apply BetBuilder - Add Sub Product 'Bet Builder' [RedmineID: #106981]
 		- 20190701@Percy: Remove WL due to partner [RedmineID: #115802]
 		- 20190826@Sophia: CN88 Headline balance - Exclude reset winning for CN88 group [Redmine: #117863]
-		- 20191216@Percy: Using new column bettrans.epositiontaking instead of Acc_GroupExtraPTSetting.ExtraPT [RedmineID: #125418]
 
 	Param's explain:
 		@mode:  0 _ view report
@@ -46,7 +45,7 @@ BEGIN
 	SELECT  @EffectedDate = '2017-01-19'
 
 	DECLARE @dummy TABLE (CustID INT, GroupID TINYINT, GroupName VARCHAR(50), Winlostdate SMALLDATETIME)
-	CREATE TABLE #winning (ProductID TINYINT, Sporttype INT, SubProduct VARCHAR(500), Winlost MONEY, NewWinlost MONEY, eWinlost MONEY, Winlostdate SMALLDATETIME, GroupId TINYINT)
+	CREATE TABLE #winning (ProductID TINYINT, Sporttype INT, SubProduct VARCHAR(500), Winlost MONEY, NewWinlost MONEY, Winlostdate SMALLDATETIME, GroupId TINYINT)
 	DECLARE @reset TABLE (CustID INT, Winlost MONEY, [Reset] MONEY, Variance MONEY, Winlostdate SMALLDATETIME, GroupID TINYINT, GroupName VARCHAR(50))
 	DECLARE @LastReset TABLE (CustID INT, [Reset] MONEY, Winlostdate SMALLDATETIME, GroupID TINYINT)
 
@@ -96,7 +95,7 @@ BEGIN
 
 
 	/* winlost */
-
+	
 	-- General data --
 	
 	----Non sportsbook
@@ -112,15 +111,6 @@ BEGIN
 						ELSE
 							CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
 						END) * b.actualrate) AS NewWinlost,
-				SUM((
-					CASE
-						-- Jackpot
-						WHEN b.bettype IN (2198, 2398, 2998) THEN
-							CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) END
-						WHEN b.bettype IN (2199, 2399, 2999) THEN 0
-						ELSE
-							CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
-						END) * b.actualrate * ISNULL(b.epositiontaking, 0)) AS eWinlost,
 				b.winlostdate
 			FROM bettrans b WITH(READPAST, INDEX = IX_Report)
 			INNER JOIN  @SportBettype s
@@ -132,9 +122,8 @@ BEGIN
 				AND b.bettype < 19001
 			GROUP BY b.winlostdate, b.srecommend, s.ProductID
 			)
-
-	INSERT INTO #winning (ProductID, Sporttype, SubProduct, Winlost, NewWinlost, eWinlost, Winlostdate, GroupId)
-	SELECT w.ProductID, w.Sporttype, w.SubProduct, SUM(w.Winlost * s.ExtraPT) as ExtraPTwinlost, SUM(w.NewWinlost * s.ExtraPT) as NewExtraPTwinlost, SUM(w.eWinlost) as eWinlost, w.Winlostdate, s.GroupId
+	INSERT INTO #winning (ProductID, Sporttype, SubProduct, Winlost, NewWinlost, Winlostdate, GroupId)
+	SELECT w.ProductID, w.Sporttype, w.SubProduct, SUM(w.Winlost * s.ExtraPT) as ExtraPTwinlost, SUM(w.NewWinlost * s.ExtraPT) as NewExtraPTwinlost , w.Winlostdate, s.GroupId
 	FROM wl w
 	INNER JOIN dbo.Acc_GroupExtraPTSetting s WITH (NOLOCK)
 			ON w.srecommend = s.SuperId
@@ -151,7 +140,6 @@ BEGIN
 					CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss','Bet Builder') THEN s.SubProduct ELSE '' END AS SubProduct,
 					SUM((winlost - actual_stake) * actualrate) AS Winlost,
 					SUM((CASE WHEN tpositiontaking = 1 THEN winlost - actual_stake ELSE winlost - actual_stake + scomm / (1 - tpositiontaking) END) * actualrate) AS NewWinlost,
-					SUM((CASE WHEN tpositiontaking = 1 THEN winlost - actual_stake ELSE winlost - actual_stake + scomm / (1 - tpositiontaking) END) * actualrate * ISNULL(b.epositiontaking, 0)) AS eWinlost,
 					b.winlostdate
 			FROM bettrans b WITH(READPAST, INDEX = IX_Report)
 			INNER JOIN  @SportBettype s
@@ -167,8 +155,8 @@ BEGIN
 					CASE WHEN ISNULL(m.matchid, 0) <> 0	THEN m.Sporttype ELSE 0 END, 
 					CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss','Bet Builder') THEN s.SubProduct ELSE '' END
 			)
-	INSERT INTO #winning (ProductID, Sporttype, SubProduct, Winlost, NewWinlost, eWinlost, Winlostdate, GroupID)
-	SELECT w.ProductID, w.Sporttype, w.SubProduct, SUM(w.Winlost * s.ExtraPT), SUM(w.NewWinlost * s.ExtraPT), SUM(w.eWinlost), w.Winlostdate, s.GroupId
+	INSERT INTO #winning (ProductID, Sporttype, SubProduct, Winlost, NewWinlost, Winlostdate, GroupID)
+	SELECT w.ProductID, w.Sporttype, w.SubProduct, SUM(w.Winlost * s.ExtraPT), SUM(w.NewWinlost * s.ExtraPT), w.Winlostdate, s.GroupId
 	FROM wl w
 	INNER JOIN dbo.Acc_GroupExtraPTSetting s WITH (NOLOCK)
 			ON w.srecommend = s.SuperId
@@ -188,17 +176,6 @@ BEGIN
 	WHERE b.bettype IN (21001, 21002)
 		AND b.winlostdate BETWEEN @fromdate AND @todate
 	GROUP BY b.custid, b.winlostdate, d.GroupID
-
-	---- #125418 Cut-off-Date apply new column epositiontaking on bettrans
-	DECLARE @ExtraPTCutOffDate SMALLDATETIME
-	SELECT  @ExtraPTCutOffDate = bodb02.dbo.f_Get_SystemSettings('CutOffDate_ExtraPT')
-	
-	IF EXISTS (SELECT 1 FROM #winning WHERE winlostdate >= @ExtraPTCutOffDate)
-	BEGIN
-		UPDATE #winning
-		SET NewWinlost = eWinlost
-		WHERE winlostdate >= @ExtraPTCutOffDate
-	END
 
 	IF @mode = 0 -- view
 	BEGIN
