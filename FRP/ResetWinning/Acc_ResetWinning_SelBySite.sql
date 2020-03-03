@@ -121,7 +121,7 @@ BEGIN
 							ELSE
 								CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
 							END
-						) *  b.actualrate * ISNULL(epositiontaking, 0)
+						) *  b.actualrate * ISNULL(CAST(b.epositiontaking AS DECIMAL(9, 8)), 0)
 					) AS eWinlost 
 			 			
 				

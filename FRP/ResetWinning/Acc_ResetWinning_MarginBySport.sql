@@ -87,13 +87,28 @@ BEGIN
 		SELECT  CASE WHEN b.Bettype = 29 THEN -29 ELSE CASE WHEN ISNULL(m.Sporttype, 0) <> 0 THEN m.Sporttype ELSE 0 END END AS Sporttype,  	 						
 				---Base currency
 				SUM (
-						Stake * (1 - b.tpositiontaking - epositiontaking) * b.actualrate 
+						Stake * (1 - b.tpositiontaking - ISNULL(CAST(b.epositiontaking AS DECIMAL(9, 8)), 0)) * CASE
+																			  WHEN virtualrate > actualrate
+																			  THEN virtualrate
+																			  ELSE actualrate
+                                                                            END
 					)	 AS TurnOver,
 				SUM(
-						(ISNULL(winlost,0)-ISNULL(actual_stake,0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)) * b.actualrate							
+						(ISNULL(winlost,0)-ISNULL(actual_stake,0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)) 
+						* CASE
+							  WHEN virtualrate > actualrate
+							  THEN virtualrate
+							  ELSE actualrate
+							END							
 					) AS winlost,						
 				SUM(
-						( CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END) *  b.actualrate * ISNULL(epositiontaking, 0)
+						( CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END) 
+							* ISNULL(CAST(b.epositiontaking AS DECIMAL(9, 8)), 0)
+							* CASE
+								  WHEN virtualrate > actualrate
+								  THEN virtualrate
+								  ELSE actualrate
+								END
 					) AS ExtraWinlost				
 		FROM dbo.bettrans b WITH (NOLOCK)  
 		INNER JOIN #Bettype s ON s.BetType = b.bettype
