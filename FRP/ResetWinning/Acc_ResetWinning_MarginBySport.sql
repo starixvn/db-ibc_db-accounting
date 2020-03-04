@@ -91,7 +91,7 @@ BEGIN
 		SELECT  CASE WHEN m.Sporttype IN (1, 2, 5, 43, -29) THEN m.Sporttype ELSE 0 END AS Sporttype,  	 						
 				---Base currency
 				SUM (
-						Stake * (1 - b.tpositiontaking - ISNULL(CAST(b.epositiontaking AS DECIMAL(9, 8)), 0)) 
+						ABS(Stake) * (1 - b.tpositiontaking - ISNULL(CAST(b.epositiontaking AS DECIMAL(9, 8)), 0)) 
 						* CASE
 							  WHEN virtualrate > actualrate
 							  THEN virtualrate
@@ -133,6 +133,7 @@ BEGIN
 				UNION 
 				SELECT	0 AS orderId, 'All Sports' AS SportName, SUM (w.TurnOver) AS TurnOver, SUM ((w.winlost - ExtraWinlost) / w.TurnOver * 100) AS Margin , SUM (w.winlost - ExtraWinlost) AS HouseWinlost
 				FROM 	#wl w  
+				HAVING  SUM (w.TurnOver) IS NOT NULL 
 				) A
 		ORDER BY A.OrderId
 
