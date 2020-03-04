@@ -13,6 +13,7 @@ AS
 		- 20200210@Sophia: Initial SPs
 		- 20200213@Sophia: Modify Exchange product [redmine: #128471]
 		- 20200226@Sophia: Using new column bettrans.epositiontaking instead of Acc_GroupExtraPTSetting.ExtraPT [RedmineID: #125418]
+		- 20200303@Sophia: Remove CutOffDate of ExtraPT, use new column [RedmineID: #129653]
 		 
 	Param Explanation:
 		outout: IsDeposit = 0: Credit 
@@ -23,12 +24,7 @@ AS
 */
 BEGIN	
 	SET NOCOUNT ON
-	
-	---- #125418 Cut-off-Date apply new column epositiontaking on bettrans
-	DECLARE @ExtraPTCutOffDate SMALLDATETIME
-	SELECT  @ExtraPTCutOffDate = bodb02.dbo.f_Get_SystemSettings('CutOffDate_ExtraPT')
-	
-	 
+	 	 
 	------Get Sport Bettype Matrix------	
 	CREATE TABLE  #SportBettype (ProductID INT, Bettype INT,SubProduct VARCHAR(500))
 	INSERT INTO #SportBettype
