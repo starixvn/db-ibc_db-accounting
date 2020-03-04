@@ -369,8 +369,7 @@ BEGIN
 	
 
 	DROP TABLE #SportBettype
-    DROP TABLE #Winlost
-    DROP TABLE #ExtraPTWinlost
+    DROP TABLE #Winlost 
 	DROP TABLE #WL
 	
 		
