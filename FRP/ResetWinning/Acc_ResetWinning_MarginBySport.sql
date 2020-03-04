@@ -90,8 +90,9 @@ BEGIN
 		INSERT INTO #wl (Sporttype, TurnOver, winlost, ExtraWinlost)
 		SELECT  CASE WHEN m.Sporttype IN (1, 2, 5, 43, -29) THEN m.Sporttype ELSE 0 END AS Sporttype,  	 						
 				---Base currency
-				SUM (
-						ABS(Stake) * (1 - b.tpositiontaking - ISNULL(CAST(b.epositiontaking AS DECIMAL(9, 8)), 0)) 
+				SUM (   CASE WHEN b.StatusID = 111 THEN 0 ELSE 
+						CASE WHEN ABS(modds) = 0.25 AND b.Bettype <> 29 THEN ABS(Stake) / 2 ELSE  ABS(Stake) END END
+						* (1 - b.tpositiontaking - ISNULL(CAST(b.epositiontaking AS DECIMAL(9, 8)), 0)) 
 						* CASE
 							  WHEN virtualrate > actualrate
 							  THEN virtualrate
@@ -119,6 +120,8 @@ BEGIN
 			AND b.statusid IN (111, 112, 113)		
 			AND b.bettype < 19001
 			AND b.MatchID >= 0
+			AND b.Bettype NOT BETWEEN 801 and 806 
+			AND b.Bettype <> 38 
 			AND NOT EXISTS (SELECT 1 FROM CS_CustSuper c WITH (NOLOCK) WHERE c.CustID = b.Srecommend)
 		GROUP BY CASE WHEN m.Sporttype IN (1, 2, 5, 43, -29) THEN m.Sporttype ELSE 0 END 
 				 
