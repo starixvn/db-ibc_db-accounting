@@ -127,11 +127,14 @@ BEGIN
 		----- Get Data -----
 		SELECt  a.SportName, a.TurnOver, a.Margin, a.HouseWinlost
 		FROM  (
-				SELECT	s.orderId, s.SportName, w.TurnOver, (w.winlost - ExtraWinlost) / w.TurnOver * 100 AS Margin , (w.winlost - ExtraWinlost) AS HouseWinlost
+				SELECT	s.orderId, s.SportName, w.TurnOver, CASE WHEN w.TurnOver = 0 THEN 0 ELSE (w.winlost - ExtraWinlost) / w.TurnOver * 100 END AS Margin , (w.winlost - ExtraWinlost) AS HouseWinlost
 				FROM 	#wl w 
 				INNER JOIN #Sports s ON s.Sporttype = w.sporttype
 				UNION 
-				SELECT	0 AS orderId, 'All Sports' AS SportName, SUM (w.TurnOver) AS TurnOver, SUM ((w.winlost - ExtraWinlost) / w.TurnOver * 100) AS Margin , SUM (w.winlost - ExtraWinlost) AS HouseWinlost
+				SELECT	0 AS orderId, 'All Sports' AS SportName, 
+						SUM (w.TurnOver) AS TurnOver, 
+						CASE WHEN SUM (w.TurnOver) = 0 THEN 0 ELSE SUM (w.winlost - ExtraWinlost) / SUM (w.TurnOver) * 100 END AS Margin , 
+						SUM (w.winlost - ExtraWinlost) AS HouseWinlost
 				FROM 	#wl w  
 				HAVING  SUM (w.TurnOver) IS NOT NULL 
 				) A
