@@ -1,4 +1,4 @@
-/*<info serverAlias="DBEXT-bodb02" executers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBEXT-bodb02" executers="" isFunction="0" isNested="1"></info>*/
 ALTER PROCEDURE [dbo].[Acc_ResetWinning_SelBySite]
 	@fromdate smalldatetime,
 	@todate   smalldatetime 
