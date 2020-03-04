@@ -141,41 +141,22 @@ BEGIN
 		-----------------------------------------------------------------------------------------------
 
 			--- WL by product
-			CREATE TABLE #Winlost (Winlostdate SMALLDATETIME, Site VARCHAR(50), Winlost MONEY) 
-			CREATE TABLE #ExtraPTWinlost (Winlostdate SMALLDATETIME, Site VARCHAR(50), ExtraPTWinlost MONEY, EPTWinlost MONEY) 
+			CREATE TABLE #Winlost (Winlostdate SMALLDATETIME, Site VARCHAR(50), Winlost MONEY, ExtraPTWinlost MONEY)  
 					
-			INSERT INTO #Winlost (Winlostdate, Site, Winlost)						
+			INSERT INTO #Winlost (Winlostdate, Site, Winlost, ExtraPTWinlost)						
 			SELECT  w.Winlostdate, c.Site,
-					SUM(ISNULL( w.Winlost,0)) + SUM(ISNULL( w.WinlostDueTo,0))  as Winlost 								
+					SUM(ISNULL( w.Winlost,0)) + SUM(ISNULL( w.WinlostDueTo,0))  as Winlost,
+					SUM(ISNULL(w.eWinlost,0)) as ExtraPTWinlost
 			FROM	#wl w
 			INNER JOIN bodb02.dbo.customer c WITH (NOLOCK) 
 					ON c.CustID = w.srecommend AND c.roleid = 4			
-			GROUP BY w.Winlostdate, c.Site
- 
- 			--- extraPT	
-			INSERT INTO #ExtraPTWinlost (Winlostdate, Site, ExtraPTWinlost, EPTWinlost)	 
-			SELECT  w.Winlostdate, c.Site, 				 
-				   SUM(w.WinlostForExtraPT * ISNULL(s.ExtraPT,0)) as ExtraPTWinlost,				  
-				   SUM(ISNULL(w.eWinlost,0)) as EPTWinlost
-			FROM	#wl w
-			INNER JOIN dbo.Acc_GroupExtraPTSetting s WITH(NOLOCK)
-					ON w.srecommend = s.SuperId
-					AND w.ProductId = s.ProductId
-					AND w.SubProduct = s.SubProduct
-					AND w.Sporttype = s.Sporttype 
-					AND w.Winlostdate BETWEEN s.FromDate AND s.ToDate	
-					AND s.GroupID NOT IN (4,5,6) --- ACCTHAI2,ACCTHAI56,ACCTHAI99
-			INNER JOIN bodb02.dbo.customer c WITH (NOLOCK) 
-					ON c.CustID = w.srecommend AND c.roleid = 4					
-			GROUP BY w.Winlostdate, c.Site		
-
- 	
+			GROUP BY w.Winlostdate, c.Site 
+ 		  	
 		
 		-----------------------------------------------------------------------------------------------
 		------ Exchange product-----		
 			--EXEC Acc_Rpt_HouseNetIncome_EX_Deposit @fromdate, @fromdate    ----- cannot use FromDate - ToDate because of output will be different
 								 
-
 			DECLARE @FDate  DATE, @TDate    DATE
 			
 			SELECT @FDate = @FromDate
@@ -372,12 +353,9 @@ BEGIN
 		-----------------------------------------------------------------------------------------------
 		----- Get Data -----
 			SELECT	w.Winlostdate, w.Site,  
-					ROUND((ISNULL(w.Winlost, 0)), 2) - CASE WHEN w.winlostdate >= @ExtraPTCutOffDate THEN ROUND((ISNULL(e.EPTWinlost, 0)), 2) ELSE ROUND((ISNULL(e.ExtraPTWinlost, 0)), 2) END AS WinlostAfterExtraPT,
+					ROUND((ISNULL(w.Winlost, 0)), 2) -  ROUND((ISNULL(w.ExtraPTWinlost, 0)), 2) AS WinlostAfterExtraPT,
 					CASE WHEN s.SiteID > 1000 THEN 0 ELSE 1 END AS IsDeposit
 			FROM #Winlost w 
-			LEFT JOIN #ExtraPTWinlost e
-				ON w.Winlostdate = e.Winlostdate
-				AND w.Site = e.Site
 			INNER JOIN bodb_licensee.dbo.view_site_list s 
 				ON s.SiteName = w.Site
 				
