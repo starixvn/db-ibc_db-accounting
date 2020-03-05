@@ -10,6 +10,7 @@ AS
 	
 	Revision:
 		- 20200303@Sophia: Initial SPs 
+		- 20200305@Sophia: Exclude 8RM and BARM
 		 
 	Param Explanation:
 		 
@@ -24,6 +25,9 @@ BEGIN
 	INSERT INTO #Bettype
 	SELECT  Bettype FROM bodb02.dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', 0)
 	WHERE  ProductID = 1 
+			AND Bettype NOT BETWEEN 801 and 806 
+			AND bettype NOT BETWEEN 901 and 904
+			AND Bettype <> 38 
 	
 	--CREATE CLUSTERED INDEX CIX_Bettype ON #Bettype (bettype) 
 	----- End get sport bettype  
@@ -90,8 +94,9 @@ BEGIN
 		INSERT INTO #wl (Sporttype, TurnOver, winlost, ExtraWinlost)
 		SELECT  CASE WHEN m.Sporttype IN (1, 2, 5, 43, -29) THEN m.Sporttype ELSE 0 END AS Sporttype,  	 						
 				---Base currency
-				SUM (
-						ABS(Stake) * (1 - b.tpositiontaking - ISNULL(CAST(b.epositiontaking AS DECIMAL(9, 8)), 0)) 
+				SUM (   CASE WHEN b.StatusID = 111 THEN 0 ELSE 
+						CASE WHEN ABS(modds) = 0.25 AND b.Bettype <> 29 THEN ABS(Stake) / 2 ELSE  ABS(Stake) END END
+						* (1 - b.tpositiontaking - ISNULL(CAST(b.epositiontaking AS DECIMAL(9, 8)), 0)) 
 						* CASE
 							  WHEN virtualrate > actualrate
 							  THEN virtualrate
@@ -119,6 +124,7 @@ BEGIN
 			AND b.statusid IN (111, 112, 113)		
 			AND b.bettype < 19001
 			AND b.MatchID >= 0
+			AND b.Recommend NOT IN (52466,5707545)  --- Exclude 8RM, BARM
 			AND NOT EXISTS (SELECT 1 FROM CS_CustSuper c WITH (NOLOCK) WHERE c.CustID = b.Srecommend)
 		GROUP BY CASE WHEN m.Sporttype IN (1, 2, 5, 43, -29) THEN m.Sporttype ELSE 0 END 
 				 
@@ -127,11 +133,14 @@ BEGIN
 		----- Get Data -----
 		SELECt  a.SportName, a.TurnOver, a.Margin, a.HouseWinlost
 		FROM  (
-				SELECT	s.orderId, s.SportName, w.TurnOver, (w.winlost - ExtraWinlost) / w.TurnOver * 100 AS Margin , (w.winlost - ExtraWinlost) AS HouseWinlost
+				SELECT	s.orderId, s.SportName, w.TurnOver, CASE WHEN w.TurnOver = 0 THEN 0 ELSE (w.winlost - ExtraWinlost) / w.TurnOver * 100 END AS Margin , (w.winlost - ExtraWinlost) AS HouseWinlost
 				FROM 	#wl w 
 				INNER JOIN #Sports s ON s.Sporttype = w.sporttype
 				UNION 
-				SELECT	0 AS orderId, 'All Sports' AS SportName, SUM (w.TurnOver) AS TurnOver, SUM ((w.winlost - ExtraWinlost) / w.TurnOver * 100) AS Margin , SUM (w.winlost - ExtraWinlost) AS HouseWinlost
+				SELECT	0 AS orderId, 'All Sports' AS SportName, 
+						SUM (w.TurnOver) AS TurnOver, 
+						CASE WHEN SUM (w.TurnOver) = 0 THEN 0 ELSE SUM (w.winlost - ExtraWinlost) / SUM (w.TurnOver) * 100 END AS Margin , 
+						SUM (w.winlost - ExtraWinlost) AS HouseWinlost
 				FROM 	#wl w  
 				HAVING  SUM (w.TurnOver) IS NOT NULL 
 				) A
