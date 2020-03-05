@@ -57,8 +57,8 @@ BEGIN
 		IsExpand BIT DEFAULT 0
 	)
 
-	DECLARE @CustId INT, @srecommend INT
-	SELECT @CustId = custid, @srecommend = srecommend FROM dbo.custInfo WITH (NOLOCK) WHERE username = @Username
+	DECLARE @CustomerId INT, @srecommend INT
+	SELECT @CustomerId = custid, @srecommend = srecommend FROM dbo.Customer WITH (NOLOCK) WHERE username = @Username
 
 	SET @UserId = ISNULL(@UserId,0)
 	--- check permission for some admins
@@ -69,7 +69,7 @@ BEGIN
 						41916921,	--N88.calvinckm
 						15185422	--WENG
 						)
-				AND (@CustId NOT IN (41534504,41534596,41534543,41534488,41534580,41534539,41534479,41534574,41534535,41048221)
+				AND (@CustomerId NOT IN (41534504,41534596,41534543,41534488,41534580,41534539,41534479,41534574,41534535,41048221)
 						OR @srecommend NOT IN (39744331,39744349,39744361,39744373,39744386,39744399,39744411,39744423,39744435,39744447,39744460,41799106,41799118,41799200,41799212)
 					)
 			)
