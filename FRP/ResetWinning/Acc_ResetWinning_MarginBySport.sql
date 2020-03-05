@@ -10,6 +10,7 @@ AS
 	
 	Revision:
 		- 20200303@Sophia: Initial SPs 
+		- 20200305@Sophia: Exclude 8RM and BARM
 		 
 	Param Explanation:
 		 
@@ -24,6 +25,9 @@ BEGIN
 	INSERT INTO #Bettype
 	SELECT  Bettype FROM bodb02.dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', 0)
 	WHERE  ProductID = 1 
+			AND Bettype NOT BETWEEN 801 and 806 
+			AND bettype NOT BETWEEN 901 and 904
+			AND Bettype <> 38 
 	
 	--CREATE CLUSTERED INDEX CIX_Bettype ON #Bettype (bettype) 
 	----- End get sport bettype  
@@ -120,8 +124,7 @@ BEGIN
 			AND b.statusid IN (111, 112, 113)		
 			AND b.bettype < 19001
 			AND b.MatchID >= 0
-			AND b.Bettype NOT BETWEEN 801 and 806 
-			AND b.Bettype <> 38 
+			AND b.Recommend NOT IN (52466,5707545)  --- Exclude 8RM, BARM
 			AND NOT EXISTS (SELECT 1 FROM CS_CustSuper c WITH (NOLOCK) WHERE c.CustID = b.Srecommend)
 		GROUP BY CASE WHEN m.Sporttype IN (1, 2, 5, 43, -29) THEN m.Sporttype ELSE 0 END 
 				 
