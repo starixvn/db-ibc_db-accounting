@@ -9,7 +9,7 @@ AS
 
 /*
 	Created: 20191212@Percy
-	DB: DBACC.bodb02, DBAGE.bodb02, DBWH.bodb02, DB042.bodb02
+	DB: DBACC.bodb02, DBAGE.bodb02, DBWH.bodb02, DBBOF.bodb02
 	Task: Get VValue from local SystemSettings by VName
 
 	Revisions:
