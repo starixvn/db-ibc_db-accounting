@@ -27,7 +27,8 @@ AS
 		- 20170622@Percy: Return ClosedReason column to apply color for closed accounts [RedmineID : #74494]
 		- 20171018@Percy: Get status waiting from translog [RedmineID: #84692]
 		- 20181003@Helen: Modify code to adapt indexes changed on DB053 [Redmine:101405]
-	
+		- 20200305@Elodie: Hardcode list finance permission [Redmine: #129890]
+
 	Param's Explanation:
 	
 */
