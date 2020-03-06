@@ -1,7 +1,7 @@
 /*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView,bodbRMSNet" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION [dbo].[f_Get_SystemSettings]
 (
-	@VName VARCHAR(20)
+	@VName VARCHAR(50)
 )
 
 RETURNS VARCHAR(200)
