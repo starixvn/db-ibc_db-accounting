@@ -1,6 +1,7 @@
 ﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,bodbExtAccNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_CustomerSelClearBalance]
 	@custid		INT,
+	@UserId		INT = 0,
 	@pageIndex	INT = 1,
 	@pageSize	INT = 50,
 	@TotalRows	INT = 0 OUTPUT
@@ -26,7 +27,8 @@ AS
 		- 20170622@Percy: Return ClosedReason column to apply color for closed accounts [RedmineID : #74494]
 		- 20171018@Percy: Get status waiting from translog [RedmineID: #84692]
 		- 20181003@Helen: Modify code to adapt indexes changed on DB053 [Redmine:101405]
-	
+		- 20200305@Elodie: Hardcode list finance permission [Redmine: #129890]
+
 	Param's Explanation:
 	
 */
@@ -51,6 +53,17 @@ BEGIN
 
 	DECLARE @srecommend INT
 	SELECT  @srecommend = srecommend FROM dbo.custInfo WITH(NOLOCK) WHERE custid = @custid
+
+	IF (@UserId IN (2049420,	--CMTDXU
+					772240,		--CNSDBENG
+					41916921,	--N88.calvinckm
+					15185422,	--WENG
+					15513549    --starix23
+					)
+			AND @custid NOT IN (41534504,41534596,41534543,41534488,41534580,41534539,41534479,41534574,41534535,41048221)
+			AND @srecommend NOT IN (39744331,39744349,39744361,39744373,39744386,39744399,39744411,39744423,39744435,39744447,39744460,41799106,41799118,41799200,41799212)					
+		)
+		RETURN
 
 	IF @roleID = 4 -- Super
 	BEGIN
