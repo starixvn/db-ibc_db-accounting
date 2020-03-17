@@ -29,6 +29,7 @@ AS
 		- 20191113@Louis: Hot Fix Credit Collection BK [Redmine: #123812]
 		- 20200305@Elodie: Hardcode list finance permission [Redmine: #129890]
 		- 20200316@Elodie: Remove from Hardcode list finance permission for Nova [Redmine: #130499]
+		- 20200317@Malcolm: Grant permission for finance account [Redmine : #128128]
 
     Param's Explanation:
         - @FilterBy: 1:winlostdate - 2:transdate
@@ -117,6 +118,8 @@ BEGIN
 	SELECT @CustID = custid FROM dbo.Customer (NOLOCK) WHERE username LIKE @_Username
 	SET @CustID = ISNULL(@CustID,0)
 
+	DECLARE @GroupId SMALLINT 
+	SELECT @GroupId = GroupId FROM DBUST.CustDB.dbo.f_GetFinanceUser() WHERE CustId = @UserId
 
 	IF @_RefNo > 0
 	BEGIN
@@ -162,11 +165,18 @@ BEGIN
 				END isAllowVerify,
 				CASE b.bettype WHEN 20000 THEN 1 ELSE b.liveindicator END isReversal
 			FROM bodb02.dbo.bettrans b WITH(NOLOCK) 
-				LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = b.bettype 
+                 LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = b.bettype 
+			     CROSS APPLY (
+						SELECT TOP 1 ISNULL(f.IsView,0) AS IsView
+						FROM dbo.Acc_FinancePermission f WITH(NOLOCK)
+						WHERE f.GroupId = @GroupId AND f.FinanceCode IN (b.custid, b.recommend, b.mrecommend, b.srecommend) 
+						ORDER BY f.RoleId ASC
+				 ) cr			 
 			WHERE 
 				b.matchid = 0
 				AND b.refno = @_RefNo
 				AND b.bettype >= 20000 
+				AND cr.IsView = 1
             
             
 			IF NOT EXISTS( SELECT 1 FROM #StatementTable )
@@ -202,7 +212,13 @@ BEGIN
 						ISNULL(isReversal,0) isReversal
 					FROM bodb_archive.dbo.transfer_fi tf WITH(NOLOCK)
 						LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = tf.bettype 
-					WHERE tf.refno = @_RefNo
+						CROSS APPLY (
+								SELECT TOP 1 ISNULL(f.IsView,0) AS IsView
+								FROM dbo.Acc_FinancePermission f WITH(NOLOCK)
+								WHERE f.GroupId = @GroupId AND f.FinanceCode IN (tf.custid, tf.recommend, tf.mrecommend, tf.srecommend) 
+								ORDER BY f.RoleId ASC
+						) cr
+					WHERE tf.refno = @_RefNo AND cr.IsView = 1
 
 			END
     
