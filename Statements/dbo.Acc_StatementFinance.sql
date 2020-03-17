@@ -63,33 +63,6 @@ BEGIN
 	SELECT @CustomerId = custid, @srecommend = srecommend FROM dbo.Customer WITH (NOLOCK) WHERE username = @Username
 
 	SET @UserId = ISNULL(@UserId,0)
-	--- check permission for some admins
-	IF (EXISTS (SELECT 1 FROM dbo.custinfo WITH(NOLOCK) WHERE username = @Username AND custid IN (7214059,7213826,7213962))
-			AND @UserId NOT IN (4240930,4241056,14883115,26020,32648,2114533,2809,2937,347009,3720967,2218288,630505,1089853,276397,5014141,610439,2450,15312122,268028,8,22113608,53157,1274,13345,12576511,2462))
-		OR (@UserId = 41916921	--N88.calvinckm
-				AND @CustomerId NOT IN (41534504,41534596,41534543,41534488,41534580,41534539,41534479,41534574,41534535,41048221)
-				AND @srecommend NOT IN (39744331,39744349,39744361,39744373,39744386,39744399,39744411,39744423,39744435,39744447,39744460,41799106,41799118,41799200,41799212)					
-			)
-	BEGIN
-		SELECT TransID,
-				TransDate,
-				WinlostDate,
-				RefNo,
-				TotalAmt,
-				TransType,
-				TransDesc as [TransDescription],
-				Creator,
-				CheckerID,
-				CheckerName,
-				CheckTime,
-				IsAllowVerify,
-				IsReversal,
-				IsExpand
-		FROM #StatementTable
-
-		DROP TABLE #StatementTable
-		RETURN
-	END
 
 
 	DECLARE @_RefNo AS BIGINT
