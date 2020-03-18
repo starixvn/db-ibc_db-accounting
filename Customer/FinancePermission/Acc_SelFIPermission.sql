@@ -17,7 +17,7 @@ Original:
 */
 
 BEGIN
-DECLARE @IsView BIT = NULL,@srecomend INT, @mrecomend INT, @recomend INT, @player INT, 
+DECLARE @IsView BIT = 0,@srecomend INT, @mrecomend INT, @recomend INT, @player INT, 
 		@GroupId SMALLINT = 0, @CustId INT, @Roleid SMALLINT
 		
 SELECT @GroupId = GroupId FROM dbo.f_GetFinanceUser() WHERE CustID = @UserID
@@ -35,7 +35,7 @@ BEGIN
 		   @player    = custid, 
 		   @Roleid    = roleid
 	FROM dbo.Customer WITH(NOLOCK)
-	WHERE username = @CustId
+	WHERE custid = @CustId
 
 	SELECT TOP(1) @IsView = ISNULL(IsView,0)
 	FROM dbo.Acc_FinancePermission f WITH(NOLOCK)
