@@ -58,13 +58,17 @@ BEGIN
 
 	DECLARE @GroupId SMALLINT = 0
 	DECLARE @Query NVARCHAR(MAX) = ''
+	DECLARE @T TABLE (GroupId SMALLINT)
 	
     SELECT @Query = 'SELECT TOP(1) GroupId
 						 FROM OPENQUERY(DBCUST, ''SELECT f.GroupId 
 												 FROM CustDB.dbo.f_GetFinanceUser() f
 												 WHERE CustId = ' + CONVERT(NVARCHAR(15),@UserId )+ ''')'
-	EXEC SP_EXECUTESQL @Query, N'@GroupId SMALLINT OUT', @GroupId OUT
 	
+	INSERT INTO @T
+    EXEC (@Query)
+	
+	SELECT TOP(1) @GroupId = GroupId FROM @T
 
 	IF @roleID = 4 -- Super
 	BEGIN
@@ -365,9 +369,10 @@ BEGIN
 		r.SyncCasino
 	FROM @result r
 	CROSS APPLY (
-				  SELECT TOP 1 ISNULL(f.IsView, 0) AS IsView
+				  SELECT TOP 1  CASE WHEN @GroupId = 1       THEN 1 
+						             ELSE ISNULL(f.IsView,0) END AS IsView
 				  FROM DBCUST.CustDB.dbo.Acc_FinancePermission f WITH(NOLOCK)
-				  WHERE f.GroupId = @GroupId  AND f.CustId IN (r.custid, r.recommend, r.mrecommend, r.srecommend) 				 
+				  WHERE (f.GroupId = @GroupId  AND f.CustId IN (r.custid, r.recommend, r.mrecommend, r.srecommend)) OR @GroupId = 1			 
 				  ORDER BY f.RoleId ASC
 				) cf
 	CROSS APPLY (

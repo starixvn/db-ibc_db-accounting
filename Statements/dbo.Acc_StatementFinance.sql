@@ -97,12 +97,17 @@ BEGIN
 	IF @_RefNo > 0
 	BEGIN
 	    DECLARE @Query NVARCHAR(MAX) = ''
+		
+		DECLARE @T TABLE (GroupId SMALLINT)
 	
 		SELECT @Query = 'SELECT TOP(1) GroupId
 						 FROM OPENQUERY(DBCUST, ''SELECT f.GroupId 
 												 FROM CustDB.dbo.f_GetFinanceUser() f
 												 WHERE CustId = ' + CONVERT(NVARCHAR(15),@UserId )+ ''')'
-		EXEC SP_EXECUTESQL @Query, N'@GroupId SMALLINT OUT', @GroupId OUT
+		INSERT INTO @T
+		EXEC (@Query)
+		
+		SELECT TOP(1) @GroupId = GroupId FROM @T
 
  		INSERT INTO #StatementTable(
 				TransID,
@@ -147,9 +152,10 @@ BEGIN
 			FROM bodb02.dbo.bettrans b WITH(NOLOCK) 
                  LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = b.bettype 
 			     CROSS APPLY (
-						SELECT TOP 1 ISNULL(f.IsView,0) AS IsView
+						SELECT TOP 1  CASE WHEN @GroupId = 1       THEN 1 
+						                   ELSE ISNULL(f.IsView,0) END AS IsView
 						FROM dbo.Acc_FinancePermission f WITH(NOLOCK)
-						WHERE f.GroupId = @GroupId AND f.CustId IN (b.custid, b.recommend, b.mrecommend, b.srecommend) 
+						WHERE (f.GroupId = @GroupId AND f.CustId IN (b.custid, b.recommend, b.mrecommend, b.srecommend)) OR @GroupId = 1						      
 						ORDER BY f.RoleId ASC
 				 ) cr			 
 			WHERE 
@@ -193,9 +199,10 @@ BEGIN
 					FROM bodb_archive.dbo.transfer_fi tf WITH(NOLOCK)
 						LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = tf.bettype 
 						CROSS APPLY (
-								SELECT TOP 1 ISNULL(f.IsView,0) AS IsView
+								SELECT TOP 1  CASE WHEN @GroupId = 1       THEN 1 
+						                           ELSE ISNULL(f.IsView,0) END AS IsView
 								FROM dbo.Acc_FinancePermission f WITH(NOLOCK)
-								WHERE f.GroupId = @GroupId AND f.CustId IN (tf.custid, tf.recommend, tf.mrecommend, tf.srecommend) 
+								WHERE (f.GroupId = @GroupId AND f.CustId IN (tf.custid, tf.recommend, tf.mrecommend, tf.srecommend)) OR @GroupId = 1
 								ORDER BY f.RoleId ASC
 						) cr
 					WHERE tf.refno = @_RefNo AND cr.IsView = 1
