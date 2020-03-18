@@ -367,7 +367,7 @@ BEGIN
 	CROSS APPLY (
 				  SELECT TOP 1 ISNULL(f.IsView, 0) AS IsView
 				  FROM DBCUST.CustDB.dbo.Acc_FinancePermission f WITH(NOLOCK)
-				  WHERE f.GroupId = @GroupId  AND f.FinanceCode IN (r.custid, r.recommend, r.mrecommend, r.srecommend) 				 
+				  WHERE f.GroupId = @GroupId  AND f.CustId IN (r.custid, r.recommend, r.mrecommend, r.srecommend) 				 
 				  ORDER BY f.RoleId ASC
 				) cf
 	CROSS APPLY (
