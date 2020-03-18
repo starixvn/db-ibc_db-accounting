@@ -44,8 +44,10 @@ BEGIN
 		  AND f.RoleId >= @Roleid
 	ORDER BY RoleId ASC
 
-	SELECT @IsView
+	
 
 END
+
+SELECT @IsView
 
 END
