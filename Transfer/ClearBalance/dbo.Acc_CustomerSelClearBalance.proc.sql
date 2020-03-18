@@ -56,8 +56,14 @@ BEGIN
 	DECLARE @srecommend INT
 	SELECT  @srecommend = srecommend FROM dbo.custInfo WITH(NOLOCK) WHERE custid = @custid
 
-	DECLARE @GroupId SMALLINT 
-	SELECT  @GroupId = GroupId FROM DBUST.CUSTDB.dbo.f_GetFinanceUser() WHERE CustId = @UserId
+	DECLARE @GroupId SMALLINT = 0
+	DECLARE @Query NVARCHAR(MAX) = ''
+	
+    SELECT @Query = 'SELECT TOP(1) GroupId
+						 FROM OPENQUERY(DBCUST, ''SELECT f.GroupId 
+												 FROM CustDB.dbo.f_GetFinanceUser() f
+												 WHERE CustId = ' + CONVERT(NVARCHAR(15),@UserId )+ ''')'
+	EXEC SP_EXECUTESQL @Query, N'@GroupId SMALLINT OUT', @GroupId OUT
 	
 
 	IF @roleID = 4 -- Super

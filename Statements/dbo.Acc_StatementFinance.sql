@@ -91,13 +91,20 @@ BEGIN
 	SELECT @CustID = custid FROM dbo.Customer (NOLOCK) WHERE username LIKE @_Username
 	SET @CustID = ISNULL(@CustID,0)
 
-	DECLARE @GroupId SMALLINT 
-	SELECT @GroupId = GroupId FROM DBUST.CustDB.dbo.f_GetFinanceUser() WHERE CustId = @UserId
+	DECLARE @GroupId SMALLINT = 0
+	
 
 	IF @_RefNo > 0
 	BEGIN
-    
-		INSERT INTO #StatementTable(
+	    DECLARE @Query NVARCHAR(MAX) = ''
+	
+		SELECT @Query = 'SELECT TOP(1) GroupId
+						 FROM OPENQUERY(DBCUST, ''SELECT f.GroupId 
+												 FROM CustDB.dbo.f_GetFinanceUser() f
+												 WHERE CustId = ' + CONVERT(NVARCHAR(15),@UserId )+ ''')'
+		EXEC SP_EXECUTESQL @Query, N'@GroupId SMALLINT OUT', @GroupId OUT
+
+ 		INSERT INTO #StatementTable(
 				TransID,
 				TransDate,
 				WinlostDate,
