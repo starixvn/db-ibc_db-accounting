@@ -48,6 +48,6 @@ BEGIN
 
 END
 
-SELECT @IsView
+SELECT @IsView AS IsView
 
 END
