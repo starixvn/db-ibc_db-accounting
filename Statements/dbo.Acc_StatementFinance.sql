@@ -149,7 +149,7 @@ BEGIN
 			     CROSS APPLY (
 						SELECT TOP 1 ISNULL(f.IsView,0) AS IsView
 						FROM dbo.Acc_FinancePermission f WITH(NOLOCK)
-						WHERE f.GroupId = @GroupId AND f.FinanceCode IN (b.custid, b.recommend, b.mrecommend, b.srecommend) 
+						WHERE f.GroupId = @GroupId AND f.CustId IN (b.custid, b.recommend, b.mrecommend, b.srecommend) 
 						ORDER BY f.RoleId ASC
 				 ) cr			 
 			WHERE 
@@ -195,7 +195,7 @@ BEGIN
 						CROSS APPLY (
 								SELECT TOP 1 ISNULL(f.IsView,0) AS IsView
 								FROM dbo.Acc_FinancePermission f WITH(NOLOCK)
-								WHERE f.GroupId = @GroupId AND f.FinanceCode IN (tf.custid, tf.recommend, tf.mrecommend, tf.srecommend) 
+								WHERE f.GroupId = @GroupId AND f.CustId IN (tf.custid, tf.recommend, tf.mrecommend, tf.srecommend) 
 								ORDER BY f.RoleId ASC
 						) cr
 					WHERE tf.refno = @_RefNo AND cr.IsView = 1
