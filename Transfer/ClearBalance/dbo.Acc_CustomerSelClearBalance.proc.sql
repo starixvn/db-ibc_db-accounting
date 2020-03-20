@@ -361,16 +361,19 @@ BEGIN
 		r.mrecommend AS Mrecommend,
 		r.SyncCasino
 	FROM @result r
+		LEFT JOIN dbo.Customer p WITH(NOLOCK) ON r.custid = p.custid
+		LEFT JOIN dbo.Customer a WITH(NOLOCK) ON r.recommend = a.custid
+		LEFT JOIN dbo.Customer m WITH(NOLOCK) ON r.mrecommend = m.custid
+		LEFT JOIN dbo.Customer s WITH(NOLOCK) ON r.srecommend = s.custid
 	CROSS APPLY (
 				  SELECT TOP 1  CASE WHEN @GroupId = 1       THEN 1 
 						             ELSE ISNULL(f.IsView,0) END AS IsView
-				  FROM DBCUST.CustDB.dbo.Acc_FinancePermission f WITH(NOLOCK)
-						LEFT JOIN Customer s WITH(NOLOCK) ON p.srecommend = s.custid
-						LEFT JOIN Customer m WITH(NOLOCK) ON p.mrecommend = m.custid
-	          			LEFT JOIN Customer a WITH(NOLOCK) ON p.recommend  = a.custid  
-						LEFT JOIN Customer p WITH(NOLOCK) ON p.recommend  = a.custid 
-				  WHERE (f.GroupId = @GroupId AND f.FinanceCode IN (s.username, m.username, a.username, p.username)) OR @GroupId = 1)
-						AND p.custid = @custid
+				  FROM  DBCUST.CustDB.dbo.Acc_FinancePermission f WITH(NOLOCK)				
+				  WHERE (
+				          f.GroupId = @GroupId 
+						  AND f.FinanceCode IN (s.username, m.username, a.username, p.username)
+						) 
+						OR @GroupId = 1)
 				  ORDER BY f.RoleId ASC
 				) f
 	CROSS APPLY (
