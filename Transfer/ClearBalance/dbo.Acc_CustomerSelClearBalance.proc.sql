@@ -369,7 +369,7 @@ BEGIN
 						LEFT JOIN Customer m WITH(NOLOCK) ON p.mrecommend = m.custid
 	          			LEFT JOIN Customer a WITH(NOLOCK) ON p.recommend  = a.custid  
 						LEFT JOIN Customer p WITH(NOLOCK) ON p.recommend  = a.custid 
-				  WHERE (f.GroupId = @GroupId AND f.FinanceCode IN (@Username_S, @Username_M, @Username_P, @Username_A)) OR @GroupId = 1)
+				  WHERE (f.GroupId = @GroupId AND f.FinanceCode IN (s.username, m.username, a.username, p.username)) OR @GroupId = 1)
 						AND p.custid = @custid
 				  ORDER BY f.RoleId ASC
 				) f
