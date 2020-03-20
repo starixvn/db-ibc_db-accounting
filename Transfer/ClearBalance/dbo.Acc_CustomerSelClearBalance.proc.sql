@@ -57,18 +57,20 @@ BEGIN
 	SELECT  @srecommend = srecommend FROM dbo.custInfo WITH(NOLOCK) WHERE custid = @custid
 
 	DECLARE @GroupId SMALLINT = 0
-	DECLARE @Query NVARCHAR(MAX) = ''
-	DECLARE @T TABLE (GroupId SMALLINT)
 	
-    SELECT @Query = 'SELECT TOP(1) GroupId
-						 FROM OPENQUERY(DBCUST, ''SELECT f.GroupId 
-												 FROM CustDB.dbo.f_GetFinanceUser() f
-												 WHERE CustId = ' + CONVERT(NVARCHAR(15),@UserId )+ ''')'
-	
-	INSERT INTO @T
-    EXEC (@Query)
-	
-	SELECT TOP(1) @GroupId = GroupId FROM @T
+	SELECT @GroupId = ISNULL(GroupId,0)
+	FROM dbo.Acc_FinancePermission f WITH(NOLOCK) 
+		 INNER JOIN Customer c WITH(NOLOCK) ON f.FinanceCode = c.username
+    WHERE c.custid = @UserId AND c.roleid > 4
+
+	DECLARE @Username_S NVARCHAR(50), @Username_M NVARCHAR(50), @Username_A NVARCHAR(50), @Username_P NVARCHAR(50)
+
+	SELECT @Username_S = s.username, @Username_M = m.username, @Username_A = a.username, @Username_P = p.username
+	FROM Customer p WITH(NOLOCK)
+	     LEFT JOIN Customer s WITH(NOLOCK) ON p.srecommend = s.custid
+		 LEFT JOIN Customer m WITH(NOLOCK) ON p.mrecommend = m.custid
+		 LEFT JOIN Customer a WITH(NOLOCK) ON p.recommend  = a.custid
+	WHERE p.custid = @custid
 
 	IF @roleID = 4 -- Super
 	BEGIN
@@ -372,9 +374,13 @@ BEGIN
 				  SELECT TOP 1  CASE WHEN @GroupId = 1       THEN 1 
 						             ELSE ISNULL(f.IsView,0) END AS IsView
 				  FROM DBCUST.CustDB.dbo.Acc_FinancePermission f WITH(NOLOCK)
-				  WHERE (f.GroupId = @GroupId  AND f.CustId IN (r.custid, r.recommend, r.mrecommend, r.srecommend)) OR @GroupId = 1			 
+				  WHERE (
+				           f.GroupId = @GroupId  
+						   AND f.FinanceCode IN (@Username_S, @Username_M, @Username_P, @Username_A)
+						)
+						OR @GroupId = 1			 
 				  ORDER BY f.RoleId ASC
-				) cf
+				) f
 	CROSS APPLY (
 		SELECT SUM(credit) AS used_credit
 		FROM dbo.custInfo WITH(NOLOCK)
@@ -397,7 +403,7 @@ BEGIN
 			GROUP BY custid
 		) b ON r.custid = b.custid
 		LEFT JOIN #ClosedReason cr ON r.custid = cr.custid
-	WHERE cf.IsView = 1 
+	WHERE f.IsView = 1 
 	ORDER BY rownum
 	
 	DROP TABLE #data

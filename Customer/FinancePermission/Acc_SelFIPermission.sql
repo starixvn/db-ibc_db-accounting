@@ -17,10 +17,14 @@ Original:
 */
 
 BEGIN
-DECLARE @IsView BIT = NULL,@srecomend INT, @mrecomend INT, @recomend INT, @player INT, 
-		@GroupId SMALLINT = 0, @CustId INT, @Roleid SMALLINT
-		
-SELECT @GroupId = GroupId FROM dbo.f_GetFinanceUser() WHERE CustID = @UserID
+DECLARE @IsView BIT = NULL,@Username_s  NVARCHAR(50), @Username_m NVARCHAR(50), @Username_r NVARCHAR(50) , @Username_p NVARCHAR(50), 
+		@GroupId SMALLINT = NULL, @CustId INT, @Roleid SMALLINT, @Username_Login NVARCHAR(50)
+
+SELECT @Username_Login =  username FROM Customer WITH (NOLOCK) WHERE custid = @UserID
+
+SELECT @GroupId = ISNULL(GroupId,0) 
+FROM dbo.Acc_FinancePermission WITH(NOLOCK) 
+WHERE FinanceCode = @Username_Login AND RoleId > 4
 
 IF @GroupId = 0 OR @GroupId = 1
    SELECT @IsView = @GroupId
@@ -29,22 +33,24 @@ IF @IsView IS  NULL
 BEGIN
     EXEC @CustId = DBACC.bodb02.dbo.f_GetCustIDFromUsernameOrCustId @username, @CheckCustId
 
-	SELECT @srecomend = srecommend, 
-           @mrecomend = mrecommend, 
-		   @recomend  = recommend, 
-		   @player    = custid, 
-		   @Roleid    = roleid
-	FROM dbo.Customer WITH(NOLOCK)
-	WHERE custid = @CustId
+
+	SELECT @Username_s = Su.username, 
+           @Username_m = Ma.username, 
+		   @Username_r = Ag.username, 
+		   @Username_p = p.username, 
+		   @Roleid     = p.roleid
+	FROM dbo.Customer p WITH(NOLOCK)
+	     LEFT JOIN dbo.Customer Ag WITH (NOLOCK) ON p.recommend  = Ag.custid
+		 LEFT JOIN dbo.Customer Ma WITH (NOLOCK) ON p.mrecommend = Ma.custid
+		 LEFT JOIN dbo.Customer Su WITH (NOLOCK) ON p.srecommend = Su.custid	      
+	 WHERE p.custid = @CustId
 
 	SELECT TOP(1) @IsView = IsView
 	FROM dbo.Acc_FinancePermission f WITH(NOLOCK)
-	WHERE CustId IN (@srecomend, @mrecomend, @recomend, @player) 
+	WHERE FinanceCode IN (@Username_s, @Username_m, @Username_r, @Username_p) 
 		  AND GroupId = @GroupId 
-		  AND f.RoleId >= @Roleid
+		  AND f.RoleId BETWEEN 1 AND 4
 	ORDER BY RoleId ASC
-
-	
 
 END
 
