@@ -59,7 +59,7 @@ BEGIN
 	DECLARE @GroupId SMALLINT = 0
 	
 	SELECT @GroupId = ISNULL(GroupId,0)
-	FROM dbo.Acc_FinancePermission f WITH(NOLOCK) 
+	FROM DBCUST.CustDB.dbo.Acc_FinancePermission f WITH(NOLOCK) 
 		 INNER JOIN Customer c WITH(NOLOCK) ON f.FinanceCode = c.username
     WHERE c.custid = @UserId AND c.roleid > 4
 	
@@ -373,7 +373,7 @@ BEGIN
 				          f.GroupId = @GroupId 
 						  AND f.FinanceCode IN (s.username, m.username, a.username, p.username)
 						) 
-						OR @GroupId = 1)
+						OR @GroupId = 1
 				  ORDER BY f.RoleId ASC
 				) f
 	CROSS APPLY (
