@@ -62,16 +62,7 @@ BEGIN
 	FROM dbo.Acc_FinancePermission f WITH(NOLOCK) 
 		 INNER JOIN Customer c WITH(NOLOCK) ON f.FinanceCode = c.username
     WHERE c.custid = @UserId AND c.roleid > 4
-
-	DECLARE @Username_S NVARCHAR(50), @Username_M NVARCHAR(50), @Username_A NVARCHAR(50), @Username_P NVARCHAR(50)
-
-	SELECT @Username_S = s.username, @Username_M = m.username, @Username_A = a.username, @Username_P = p.username
-	FROM Customer p WITH(NOLOCK)
-	     LEFT JOIN Customer s WITH(NOLOCK) ON p.srecommend = s.custid
-		 LEFT JOIN Customer m WITH(NOLOCK) ON p.mrecommend = m.custid
-		 LEFT JOIN Customer a WITH(NOLOCK) ON p.recommend  = a.custid
-	WHERE p.custid = @custid
-
+	
 	IF @roleID = 4 -- Super
 	BEGIN
 		-- bettrans
@@ -374,11 +365,12 @@ BEGIN
 				  SELECT TOP 1  CASE WHEN @GroupId = 1       THEN 1 
 						             ELSE ISNULL(f.IsView,0) END AS IsView
 				  FROM DBCUST.CustDB.dbo.Acc_FinancePermission f WITH(NOLOCK)
-				  WHERE (
-				           f.GroupId = @GroupId  
-						   AND f.FinanceCode IN (@Username_S, @Username_M, @Username_P, @Username_A)
-						)
-						OR @GroupId = 1			 
+						LEFT JOIN Customer s WITH(NOLOCK) ON p.srecommend = s.custid
+						LEFT JOIN Customer m WITH(NOLOCK) ON p.mrecommend = m.custid
+	          			LEFT JOIN Customer a WITH(NOLOCK) ON p.recommend  = a.custid  
+						LEFT JOIN Customer p WITH(NOLOCK) ON p.recommend  = a.custid 
+				  WHERE (f.GroupId = @GroupId AND f.FinanceCode IN (@Username_S, @Username_M, @Username_P, @Username_A)) OR @GroupId = 1)
+						AND p.custid = @custid
 				  ORDER BY f.RoleId ASC
 				) f
 	CROSS APPLY (

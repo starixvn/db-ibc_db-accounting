@@ -99,16 +99,7 @@ BEGIN
 	    SELECT @GroupId = ISNULL(GroupId,0)
 		FROM Acc_FinancePermission f WITH(NOLOCK)
 			INNER JOIN Customer c WITH(NOLOCK) ON f.FinanceCode = c.username
-		WHERE c.custid = @UserId AND c.roleid > 4
-
-
-		SELECT @Username_S = s.username, @Username_M = m.username, @Username_A = a.username, @Username_P = p.username
-		FROM Customer p WITH(NOLOCK)
-			LEFT JOIN Customer s WITH(NOLOCK) ON  p.srecommend = s.custid
-			LEFT JOIN Customer m WITH(NOLOCK) ON  p.mrecommend = m.custid
-			LEFT JOIN Customer a WITH(NOLOCK) ON  p.recommend  = a.custid
-		WHERE p.custid = @CustID
-
+		WHERE c.custid = @UserId AND c.roleid > 4	
 
  		INSERT INTO #StatementTable(
 				TransID,
@@ -151,14 +142,18 @@ BEGIN
 				END isAllowVerify,
 				CASE b.bettype WHEN 20000 THEN 1 ELSE b.liveindicator END isReversal
 			FROM bodb02.dbo.bettrans b WITH(NOLOCK) 
-                 LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = b.bettype 
+                 LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = b.bettype
+				 LEFT JOIN dbo.Customer s WITH(NOLOCK) ON b.srecommend = s.custid
+				 LEFT JOIN dbo.Customer m WITH(NOLOCK) ON b.mrecommend = m.custid
+				 LEFT JOIN dbo.Customer a WITH(NOLOCK) ON b.recommend  = a.custid
+				 LEFT JOIN dbo.Customer p WITH(NOLOCK) ON b.custid     = p.custid
 			     CROSS APPLY (
 						SELECT TOP 1  CASE WHEN @GroupId = 1       THEN 1 
 						                   ELSE ISNULL(f.IsView,0) END AS IsView
 						FROM dbo.Acc_FinancePermission f WITH(NOLOCK)
 						WHERE (
 								f.GroupId = @GroupId 
-								AND f.FinanceCode IN (@Username_S, @Username_M, @Username_A, @Username_P)
+								AND f.FinanceCode IN (s.username, m.username, a.username, p.username)
 							  ) 
 							  OR @GroupId = 1						      
 						ORDER BY f.RoleId ASC
@@ -203,11 +198,15 @@ BEGIN
 						ISNULL(isReversal,0) isReversal
 					FROM bodb_archive.dbo.transfer_fi tf WITH(NOLOCK)
 						LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = tf.bettype 
+						LEFT JOIN dbo.Customer s WITH(NOLOCK) ON tf.srecommend = s.custid
+				        LEFT JOIN dbo.Customer m WITH(NOLOCK) ON tf.mrecommend = m.custid
+				        LEFT JOIN dbo.Customer a WITH(NOLOCK) ON tf.recommend  = a.custid
+				        LEFT JOIN dbo.Customer p WITH(NOLOCK) ON tf.custid     = p.custid
 						CROSS APPLY (
 								SELECT TOP 1  CASE WHEN @GroupId = 1       THEN 1 
 						                           ELSE ISNULL(f.IsView,0) END AS IsView
 								FROM dbo.Acc_FinancePermission f WITH(NOLOCK)
-								WHERE (f.GroupId = @GroupId AND f.CustId IN (tf.custid, tf.recommend, tf.mrecommend, tf.srecommend)) OR @GroupId = 1
+								WHERE (f.GroupId = @GroupId AND f.FinanceCode IN (s.username, m.username, a.username, p.username)) OR @GroupId = 1
 								ORDER BY f.RoleId ASC
 						) cr
 					WHERE tf.refno = @_RefNo AND cr.IsView = 1
