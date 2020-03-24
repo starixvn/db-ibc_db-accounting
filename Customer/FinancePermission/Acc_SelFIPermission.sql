@@ -49,7 +49,7 @@ BEGIN
 								 ELSE IsView END
 	FROM dbo.Acc_FinancePermission f WITH(NOLOCK)
 	WHERE FinanceCode IN (@Username_s, @Username_m, @Username_r, @Username_p) 
-		  AND GroupId = @GroupId  OR (@GroupId = 0)
+		  AND (GroupId = @GroupId  OR @GroupId = 0)
 		  AND f.RoleId BETWEEN 1 AND 4
 	ORDER BY RoleId ASC
 
