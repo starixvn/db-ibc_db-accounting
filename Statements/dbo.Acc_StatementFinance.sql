@@ -147,12 +147,12 @@ BEGIN
 				 LEFT JOIN dbo.Customer m WITH(NOLOCK) ON b.mrecommend = m.custid
 				 LEFT JOIN dbo.Customer a WITH(NOLOCK) ON b.recommend  = a.custid
 				 LEFT JOIN dbo.Customer p WITH(NOLOCK) ON b.custid     = p.custid
-			     CROSS APPLY (
-						SELECT TOP 1  CASE WHEN @GroupId = 1       THEN 1 
-						                   ELSE ISNULL(f.IsView,0) END AS IsView
+			     OUTER APPLY (
+						SELECT TOP 1  CASE WHEN @GroupId IN (0, 1) THEN @GroupId
+						                   ELSE f.IsView END AS IsView
 						FROM dbo.Acc_FinancePermission f WITH(NOLOCK)
 						WHERE (
-								f.GroupId = @GroupId 
+								f.GroupId = @GroupId OR @GroupId = 0
 								AND f.FinanceCode IN (s.username, m.username, a.username, p.username)
 							  ) 
 							  OR @GroupId = 1						      
@@ -162,7 +162,7 @@ BEGIN
 				b.matchid = 0
 				AND b.refno = @_RefNo
 				AND b.bettype >= 20000 
-				AND cr.IsView = 1
+				AND (cr.IsView = 1 OR cr.IsView IS NULL)
             
             
 			IF NOT EXISTS( SELECT 1 FROM #StatementTable )
@@ -203,13 +203,13 @@ BEGIN
 				        LEFT JOIN dbo.Customer a WITH(NOLOCK) ON tf.recommend  = a.custid
 				        LEFT JOIN dbo.Customer p WITH(NOLOCK) ON tf.custid     = p.custid
 						CROSS APPLY (
-								SELECT TOP 1  CASE WHEN @GroupId = 1       THEN 1 
-						                           ELSE ISNULL(f.IsView,0) END AS IsView
+								SELECT TOP 1  CASE WHEN @GroupId IN (0, 1) THEN @GroupId 
+						                           ELSE f.IsView END AS IsView
 								FROM dbo.Acc_FinancePermission f WITH(NOLOCK)
 								WHERE (f.GroupId = @GroupId AND f.FinanceCode IN (s.username, m.username, a.username, p.username)) OR @GroupId = 1
 								ORDER BY f.RoleId ASC
 						) cr
-					WHERE tf.refno = @_RefNo AND cr.IsView = 1
+					WHERE tf.refno = @_RefNo AND (cr.IsView = 1 OR cr.IsView IS NULL)
 
 			END
     

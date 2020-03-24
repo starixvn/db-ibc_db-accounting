@@ -26,8 +26,8 @@ SELECT @GroupId = ISNULL(GroupId,0)
 FROM dbo.Acc_FinancePermission WITH(NOLOCK) 
 WHERE FinanceCode = @Username_Login AND RoleId > 4
 
-IF @GroupId = 0 OR @GroupId = 1
-   SELECT @IsView = @GroupId
+IF @GroupId = 1
+   SELECT @IsView = 1
 		
 IF @IsView IS  NULL
 BEGIN
@@ -45,15 +45,16 @@ BEGIN
 		 LEFT JOIN dbo.Customer Su WITH (NOLOCK) ON p.srecommend = Su.custid	      
 	 WHERE p.custid = @CustId
 
-	SELECT TOP(1) @IsView = IsView
+	SELECT TOP(1) @IsView = CASE WHEN @GroupId = 0 THEN 0 
+								 ELSE IsView END
 	FROM dbo.Acc_FinancePermission f WITH(NOLOCK)
 	WHERE FinanceCode IN (@Username_s, @Username_m, @Username_r, @Username_p) 
-		  AND GroupId = @GroupId 
+		  AND GroupId = @GroupId  OR (@GroupId = 0)
 		  AND f.RoleId BETWEEN 1 AND 4
 	ORDER BY RoleId ASC
 
 END
 
-SELECT ISNULL(@IsView,0) AS IsView
+SELECT ISNULL(@IsView,1) AS IsView
 
 END

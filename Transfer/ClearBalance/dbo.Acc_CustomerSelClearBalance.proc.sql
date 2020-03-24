@@ -365,12 +365,12 @@ BEGIN
 		LEFT JOIN dbo.Customer a WITH(NOLOCK) ON r.recommend = a.custid
 		LEFT JOIN dbo.Customer m WITH(NOLOCK) ON r.mrecommend = m.custid
 		LEFT JOIN dbo.Customer s WITH(NOLOCK) ON r.srecommend = s.custid
-	CROSS APPLY (
-				  SELECT TOP 1  CASE WHEN @GroupId = 1       THEN 1 
-						             ELSE ISNULL(f.IsView,0) END AS IsView
+	OUTER APPLY (
+				  SELECT TOP 1  CASE WHEN @GroupId IN (0, 1) THEN @GroupId
+						             ELSE f.IsView END AS IsView
 				  FROM  DBCUST.CustDB.dbo.Acc_FinancePermission f WITH(NOLOCK)				
 				  WHERE (
-				          f.GroupId = @GroupId 
+				          f.GroupId = @GroupId OR @GroupId = 0
 						  AND f.FinanceCode IN (s.username, m.username, a.username, p.username)
 						) 
 						OR @GroupId = 1
@@ -398,7 +398,8 @@ BEGIN
 			GROUP BY custid
 		) b ON r.custid = b.custid
 		LEFT JOIN #ClosedReason cr ON r.custid = cr.custid
-	WHERE f.IsView = 1 
+	WHERE f.IsView IS NULL OR f.IsView = 1 
+	     
 	ORDER BY rownum
 	
 	DROP TABLE #data
