@@ -152,8 +152,8 @@ BEGIN
 						                   ELSE f.IsView END AS IsView
 						FROM dbo.Acc_FinancePermission f WITH(NOLOCK)
 						WHERE (
-								f.GroupId = @GroupId OR @GroupId = 0
-								AND f.FinanceCode IN (s.username, m.username, a.username, p.username)
+							    f.FinanceCode IN (s.username, m.username, a.username, p.username)
+								AND (f.GroupId = @GroupId OR @GroupId = 0)
 							  ) 
 							  OR @GroupId = 1						      
 						ORDER BY f.RoleId ASC
@@ -202,11 +202,15 @@ BEGIN
 				        LEFT JOIN dbo.Customer m WITH(NOLOCK) ON tf.mrecommend = m.custid
 				        LEFT JOIN dbo.Customer a WITH(NOLOCK) ON tf.recommend  = a.custid
 				        LEFT JOIN dbo.Customer p WITH(NOLOCK) ON tf.custid     = p.custid
-						CROSS APPLY (
+						OUTER APPLY (
 								SELECT TOP 1  CASE WHEN @GroupId IN (0, 1) THEN @GroupId 
 						                           ELSE f.IsView END AS IsView
 								FROM dbo.Acc_FinancePermission f WITH(NOLOCK)
-								WHERE (f.GroupId = @GroupId AND f.FinanceCode IN (s.username, m.username, a.username, p.username)) OR @GroupId = 1
+								WHERE (
+								        f.FinanceCode IN (s.username, m.username, a.username, p.username)
+										AND (f.GroupId = @GroupId OR @GroupId = 0)
+									  ) 
+									  OR @GroupId = 1
 								ORDER BY f.RoleId ASC
 						) cr
 					WHERE tf.refno = @_RefNo AND (cr.IsView = 1 OR cr.IsView IS NULL)

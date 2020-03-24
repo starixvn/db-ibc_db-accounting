@@ -370,8 +370,9 @@ BEGIN
 						             ELSE f.IsView END AS IsView
 				  FROM  DBCUST.CustDB.dbo.Acc_FinancePermission f WITH(NOLOCK)				
 				  WHERE (
-				          f.GroupId = @GroupId OR @GroupId = 0
-						  AND f.FinanceCode IN (s.username, m.username, a.username, p.username)
+				          
+						  f.FinanceCode IN (s.username, m.username, a.username, p.username)
+						  AND (f.GroupId = @GroupId OR @GroupId = 0)
 						) 
 						OR @GroupId = 1
 				  ORDER BY f.RoleId ASC
