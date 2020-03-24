@@ -772,9 +772,9 @@ VALUES (2,'008PM',1,1),
 (3,'Wendy',6,0),
 (4,'ACCMIMI',6,0),
 (4,'AccLinh',6,0),
-(5,'N88.calvinckm',6,0)
-(6,'WENG',5,0)
-(6,'CNSDBENG',5,0)
+(5,'N88.calvinckm',6,0),
+(6,'WENG',5,0),
+(6,'CNSDBENG',5,0),
 (6,'CMTDXU',5,0)
 
 
