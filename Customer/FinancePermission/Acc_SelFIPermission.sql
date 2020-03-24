@@ -18,7 +18,7 @@ Original:
 
 BEGIN
 DECLARE @IsView BIT = NULL,@Username_s  NVARCHAR(50), @Username_m NVARCHAR(50), @Username_r NVARCHAR(50) , @Username_p NVARCHAR(50), 
-		@GroupId SMALLINT = NULL, @CustId INT, @Roleid SMALLINT, @Username_Login NVARCHAR(50)
+		@GroupId SMALLINT = 0, @CustId INT, @Roleid SMALLINT, @Username_Login NVARCHAR(50)
 
 SELECT @Username_Login =  username FROM Customer WITH (NOLOCK) WHERE custid = @UserID
 
