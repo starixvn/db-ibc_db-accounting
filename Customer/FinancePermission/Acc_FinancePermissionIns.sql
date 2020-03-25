@@ -18,8 +18,9 @@ AS
 	Revisions:
 		- 20200325@Malcolm: Insert Finance User/ Finance Code into FinancePermission table [Redmine : #128128]
 	Param's Explanation:
-		- @Type = 0 : Finance code
-		        = 1 : Finance User	
+		- @Type   = 0 : Finance code
+		          = 1 : Finance User	
+	    - @IsView = 0 for Finance User
 */
 BEGIN
     BEGIN TRY
