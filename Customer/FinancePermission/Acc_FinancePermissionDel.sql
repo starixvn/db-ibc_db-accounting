@@ -3,9 +3,7 @@ CREATE PROC Acc_FinancePermissionDel
 	 @UserId INT,
 	 @GroupId SMALLINT,
 	 @Username NVARCHAR(50),
-	 @RoleId INT,
 	 @Type SMALLINT = 0,
-	 @IsView BIT = 0,
 	 @LoginIP VARCHAR(20)='',
 	 @ErrCode INT = 0 OUTPUT,
 	 @ErrMsg NVARCHAR(4000) = '' OUTPUT
