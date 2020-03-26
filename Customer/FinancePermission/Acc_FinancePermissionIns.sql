@@ -5,7 +5,7 @@ CREATE PROC dbo.Acc_FinancePermissionIns
 	 @Username NVARCHAR(50),
 	 @RoleId INT,
 	 @IsView BIT = 0,
-	 @Type SMALLINT = 0,
+	 @Type SMALLINT = 0
 AS
 /*
     Created by: 20200325@Malcolm
