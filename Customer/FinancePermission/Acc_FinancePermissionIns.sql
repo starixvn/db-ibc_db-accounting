@@ -6,9 +6,6 @@ CREATE PROC dbo.Acc_FinancePermissionIns
 	 @RoleId INT,
 	 @IsView BIT = 0,
 	 @Type SMALLINT = 0,
-	 @LoginIP VARCHAR(20)='',
-	 @ErrCode INT = 0 OUTPUT,
-	 @ErrMsg NVARCHAR(4000) = '' OUTPUT
 AS
 /*
     Created by: 20200325@Malcolm
@@ -23,12 +20,8 @@ AS
 	    - @IsView = 0 for Finance User
 */
 BEGIN
-    BEGIN TRY
-		INSERT INTO dbo.Acc_FinancePermission(GroupId, FinanceCode, RoleId, IsView)
-	    VALUES (@GroupId, @Username, @RoleId, @IsView)
-	END TRY
-	BEGIN CATCH
-	    SELECT @ErrCode = ERROR_NUMBER(), @ErrMsg = ERROR_MESSAGE();
-	END CATCH
+
+	INSERT INTO dbo.Acc_FinancePermission(GroupId, FinanceCode, RoleId, IsView)
+	VALUES (@GroupId, @Username, @RoleId, @IsView)	
 	
 END
