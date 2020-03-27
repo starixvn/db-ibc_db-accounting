@@ -775,17 +775,17 @@ VALUES (2,'008PM',1,1),
 (5,'N88.calvinckm',6,0),
 (6,'WENG',5,0),
 (6,'CNSDBENG',5,0),
-(6,'CMTDXU',5,0)
+(6,'CMTDXU',5,0),
 
 
+--for test
 
-
-
-
-
-
-
-
+(1,'starix16',6,0),
+(3,'starix23',6,0),
+(6,'starix27',6,0),
+(2,'starix47',6,0),
+(5,'starix59',6,0),
+(4,'starix77',6,0)
 
 
 
