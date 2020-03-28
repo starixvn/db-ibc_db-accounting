@@ -147,22 +147,31 @@ BEGIN
 				 LEFT JOIN dbo.Customer m WITH(NOLOCK) ON b.mrecommend = m.custid
 				 LEFT JOIN dbo.Customer a WITH(NOLOCK) ON b.recommend  = a.custid
 				 LEFT JOIN dbo.Customer p WITH(NOLOCK) ON b.custid     = p.custid
+				 OUTER APPLY 
+					(
+						SELECT TOP 1 ISNULL(IsInternal,0) IsInternal FROM CustSuper  WITH (NOLOCK) WHERE p.custid    = custid AND p.roleid = 4
+						UNION ALL 
+						SELECT TOP 1 ISNULL(IsInternal,0) IsInternal FROM CustMaster WITH (NOLOCK) WHERE p.custid    = custid AND p.roleid = 3
+						UNION ALL 
+						SELECT TOP 1 ISNULL(IsInternal,0) IsInternal FROM CustAgent  WITH (NOLOCK) WHERE p.custid    = custid AND  p.roleid = 2
+						UNION ALL 
+						SELECT TOP 1 ISNULL(IsInternal,0) IsInternal FROM CustAgent  WITH (NOLOCK) WHERE p.recommend = custid AND  p.roleid = 1
+					) l
 			     OUTER APPLY (
-						SELECT TOP 1  CASE WHEN @GroupId IN (0, 1) THEN @GroupId
-						                   ELSE f.IsView END AS IsView
+						SELECT TOP 1  f.IsView
 						FROM dbo.Acc_FinancePermission f WITH(NOLOCK)
-						WHERE (
-							    f.FinanceCode IN (s.username, m.username, a.username, p.username)
-								AND (f.GroupId = @GroupId OR @GroupId = 0)
-							  ) 
-							  OR @GroupId = 1						      
+						WHERE  f.FinanceCode IN (s.username, m.username, a.username, p.username)
+							   AND f.GroupId = @GroupId
+							   AND l.IsInternal = 1
+							   AND @GroupId NOT IN (0, 1)
 						ORDER BY f.RoleId ASC
 				 ) cr			 
 			WHERE 
 				b.matchid = 0
 				AND b.refno = @_RefNo
 				AND b.bettype >= 20000 
-				AND (cr.IsView = 1 OR cr.IsView IS NULL)
+				AND (@GroupId = 1 OR ISNULL(cr.IsView, l.IsInternal - 1) = 1)
+
             
             
 			IF NOT EXISTS( SELECT 1 FROM #StatementTable )
@@ -202,18 +211,25 @@ BEGIN
 				        LEFT JOIN dbo.Customer m WITH(NOLOCK) ON tf.mrecommend = m.custid
 				        LEFT JOIN dbo.Customer a WITH(NOLOCK) ON tf.recommend  = a.custid
 				        LEFT JOIN dbo.Customer p WITH(NOLOCK) ON tf.custid     = p.custid
+					    OUTER APPLY (
+								SELECT TOP 1  IsInternal FROM CustSuper  WITH (NOLOCK) WHERE p.custid    = custid AND p.roleid  = 4
+								UNION ALL 
+								SELECT TOP 1  IsInternal FROM CustMaster WITH (NOLOCK) WHERE p.custid    = custid AND p.roleid  = 3
+								UNION ALL 
+								SELECT TOP 1  IsInternal FROM CustAgent  WITH (NOLOCK) WHERE p.custid    = custid AND  p.roleid = 2
+								UNION ALL 
+								SELECT TOP 1  IsInternal FROM CustAgent  WITH (NOLOCK) WHERE p.recommend = custid AND  p.roleid = 1
+							) l
 						OUTER APPLY (
-								SELECT TOP 1  CASE WHEN @GroupId IN (0, 1) THEN @GroupId 
-						                           ELSE f.IsView END AS IsView
+								SELECT TOP 1  f.IsView
 								FROM dbo.Acc_FinancePermission f WITH(NOLOCK)
-								WHERE (
-								        f.FinanceCode IN (s.username, m.username, a.username, p.username)
-										AND (f.GroupId = @GroupId OR @GroupId = 0)
-									  ) 
-									  OR @GroupId = 1
+								WHERE f.FinanceCode IN (s.username, m.username, a.username, p.username)
+								      AND l.IsInternal = 1
+									  AND f.GroupId = @GroupId 
+									  AND @GroupId NOT IN (0 , 1)	
 								ORDER BY f.RoleId ASC
 						) cr
-					WHERE tf.refno = @_RefNo AND (cr.IsView = 1 OR cr.IsView IS NULL)
+					WHERE tf.refno = @_RefNo AND (@GroupId = 1 OR ISNULL(cr.IsView, ~l.IsInternal) = 1 OR l.IsInternal IS NULL)
 
 			END
     

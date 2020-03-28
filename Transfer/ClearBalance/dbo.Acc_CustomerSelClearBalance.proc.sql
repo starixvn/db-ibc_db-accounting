@@ -365,16 +365,22 @@ BEGIN
 		LEFT JOIN dbo.Customer a WITH(NOLOCK) ON r.recommend = a.custid
 		LEFT JOIN dbo.Customer m WITH(NOLOCK) ON r.mrecommend = m.custid
 		LEFT JOIN dbo.Customer s WITH(NOLOCK) ON r.srecommend = s.custid
-	OUTER APPLY (
-				  SELECT TOP 1  CASE WHEN @GroupId IN (0, 1) THEN @GroupId
-						             ELSE f.IsView END AS IsView
+		OUTER APPLY (
+				SELECT TOP 1  IsInternal FROM CustSuper  WITH (NOLOCK) WHERE p.custid    = custid AND p.roleid  = 4
+				UNION ALL 
+				SELECT TOP 1  IsInternal FROM CustMaster WITH (NOLOCK) WHERE p.custid    = custid AND p.roleid  = 3
+				UNION ALL 
+				SELECT TOP 1  IsInternal FROM CustAgent  WITH (NOLOCK) WHERE p.custid    = custid AND  p.roleid = 2
+				UNION ALL 
+				SELECT TOP 1  IsInternal FROM CustAgent  WITH (NOLOCK) WHERE p.recommend = custid AND  p.roleid = 1
+				) l
+		OUTER APPLY (
+				  SELECT TOP 1  f.IsView
 				  FROM  DBCUST.CustDB.dbo.Acc_FinancePermission f WITH(NOLOCK)				
-				  WHERE (
-				          
-						  f.FinanceCode IN (s.username, m.username, a.username, p.username)
-						  AND (f.GroupId = @GroupId OR @GroupId = 0)
-						) 
-						OR @GroupId = 1
+				  WHERE  f.FinanceCode IN (s.username, m.username, a.username, p.username)
+						 AND f.GroupId = @GroupId 
+						 AND l.IsInternal = 1
+						 AND @GroupId NOT IN (0, 1)
 				  ORDER BY f.RoleId ASC
 				) f
 	CROSS APPLY (
@@ -399,7 +405,7 @@ BEGIN
 			GROUP BY custid
 		) b ON r.custid = b.custid
 		LEFT JOIN #ClosedReason cr ON r.custid = cr.custid
-	WHERE f.IsView IS NULL OR f.IsView = 1 
+	WHERE @GroupId = 1 OR (ISNULL(f.IsView, ~l.IsInternal) = 1) OR l.IsInternal IS NULL
 	     
 	ORDER BY rownum
 	
