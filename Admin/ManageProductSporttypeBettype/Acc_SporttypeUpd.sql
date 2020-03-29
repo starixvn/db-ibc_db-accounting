@@ -1,5 +1,5 @@
 /*<info serverAlias="DBPRO-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
-CREATE PROCEDURE  dbo.SporttypeUpd
+CREATE PROCEDURE  dbo.Acc_SporttypeUpd
 	@File			VARCHAR(MAX),
 	@LoginIP VARCHAR(20)='',
 	@ErrCode INT = 0 OUTPUT,

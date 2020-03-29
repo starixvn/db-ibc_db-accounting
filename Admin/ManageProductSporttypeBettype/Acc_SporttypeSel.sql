@@ -1,5 +1,5 @@
 /*<info serverAlias="DBPRO-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
-CREATE PROCEDURE  dbo.SporttypeSel
+CREATE PROCEDURE  dbo.Acc_SporttypeSel
 	@Sporttype tinyint = NULL,
 	@SportName nvarchar(100) = NULL,
 	@PageSize		INT = 20,
