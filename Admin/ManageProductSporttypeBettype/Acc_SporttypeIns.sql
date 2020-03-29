@@ -96,6 +96,8 @@ BEGIN
 														SportNameMMR nvarchar(50) ,
 														SportNamePL nvarchar(50) ,
 														SportNameHI nvarchar(50))
+														
+			EXEC sp_xml_removedocument @iDoc
 	END TRY
 
 	BEGIN CATCH

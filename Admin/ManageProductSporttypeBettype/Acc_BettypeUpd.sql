@@ -95,6 +95,8 @@ BEGIN
 														typenameMMR nvarchar(128),
 														typenameHI nvarchar(128) ,
 														DisplayedTypeID int)
+		    
+			EXEC sp_xml_removedocument @iDoc
 	END TRY
 
 	BEGIN CATCH
