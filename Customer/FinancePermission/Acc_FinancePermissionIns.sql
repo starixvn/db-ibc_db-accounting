@@ -45,10 +45,11 @@ BEGIN
 						   'ErrMsg="'+ COALESCE(CAST(@ErrMsg as VARCHAR(4000)),SPACE(1)) + '" />'
 	SET @endRun = GETDATE()
 	SET @duration = DATEDIFF (MILLISECOND,@startRun,@endRun)
-	EXEC dbo.CS_WriteLog_UserLog_RunSP_Wrapper 
-				 @UserID = @UserID, 
-				 @CustID = @CustId,
-				 @ActionID = 95003,
-			     @TrackingValue = @LogSPData,
-				 @duration = @duration
+	EXEC  DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
+			        @UserID = @UserID,
+				    @CustID = 0,
+					@ActionID = 95005,
+					@TrackingValue = @LogSPData	,
+					@duration = @duration
+				
 END
