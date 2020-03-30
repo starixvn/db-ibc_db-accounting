@@ -38,7 +38,7 @@ BEGIN
 	                       'Username="'+ COALESCE(CAST(@Username AS VARCHAR(50)), SPACE(1)) + '" ' +
 						   'Type="'+ COALESCE(CAST(@Type AS VARCHAR(2)), SPACE(1)) + '" ' +
 						   'ErrCode="'+ COALESCE(CAST(@ErrCode AS VARCHAR(10)), SPACE(1)) + '" ' +
-						   'ErrMsg="'+ COALESCE(CAST(@LoginIP as VARCHAR(4000)),SPACE(1)) + '" />'
+						   'ErrMsg="'+ COALESCE(CAST(@ErrMsg as VARCHAR(4000)),SPACE(1)) + '" />'
 	SET @endRun = GETDATE()
 	SET @duration = DATEDIFF (MILLISECOND,@startRun,@endRun)
 	EXEC dbo.CS_WriteLog_UserLog_RunSP_Wrapper 
