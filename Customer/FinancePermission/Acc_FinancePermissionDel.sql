@@ -1,5 +1,5 @@
 /*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
-CREATE PROC Acc_FinancePermissionDelForFinanceCode
+CREATE PROC Acc_FinancePermissionDel
 	 @UserId INT,
 	 @GroupId SMALLINT,
 	 @Username NVARCHAR(50),
