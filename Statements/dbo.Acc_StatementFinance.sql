@@ -170,7 +170,7 @@ BEGIN
 				b.matchid = 0
 				AND b.refno = @_RefNo
 				AND b.bettype >= 20000 
-				AND (@GroupId = 1 OR ISNULL(cr.IsView, l.IsInternal - 1) = 1)
+				AND (@GroupId = 1 OR ISNULL(cr.IsView, ~l.IsInternal) = 1)
 
             
             
