@@ -42,7 +42,8 @@ Revisions:
 20190916@Rong(DB06.bodb02): Add Sapphire Report Data 
 20191218@Benson: Add select promotion column
 20200107@Benson: new FG replace old FG, PartnerId 13->18
-20200317@Rong(DB06.bodb02): Add KYGaming Report Data 
+20200317@Rong(DB06.bodb02): Add KYGaming Report Data
+20200331@James(DB06.bodb02): Add Virtual Games(245), Virtual Soccer Champions Cup(196), Virtual Soccer Asian Cup(194)  Report Data
 */
 BEGIN
 	CREATE TABLE #SumWinlost(
@@ -76,6 +77,7 @@ BEGIN
 		KLDraw money null,
 		VS2Draw money null,
 		H5Draw money null,
+		VGDraw money null,
 		SBTOver money null,
 		CATOver money null,
 		NOTOver money null,
@@ -93,6 +95,7 @@ BEGIN
 		KLTOver money null,
 		VS2TOver money null,
 		H5TOver money null,
+		VGTOver money null,
 		SBWL money null,
 		CAWL money null,
 		NOWL money null,
@@ -110,6 +113,7 @@ BEGIN
 		KLWL money null,
 		VS2WL money null,
 		H5WL money null,
+		VGWL money null,
 		Transfer3rd money,
 		Promotion money
 	)
@@ -144,6 +148,7 @@ BEGIN
 		KLDraw money null,
 		VS2Draw money null,
 		H5Draw money null,
+		VGDraw money null,
 		SBTOver money null,
 		CATOver money null,
 		NOTOver money null,
@@ -161,6 +166,7 @@ BEGIN
 		KLTOver money null,
 		VS2TOver money null,
 		H5TOver money null,
+		VGTOver money null,
 		SBWL money null,
 		CAWL money null,
 		NOWL money null,
@@ -178,6 +184,7 @@ BEGIN
 		KLWL money null,
 		VS2WL money null,
 		H5WL money null,
+		VGWL money null,
 		Transfer3rd money,
 		Promotion money	
 	)
@@ -212,6 +219,7 @@ BEGIN
 		KLDraw money null,
 		VS2Draw money null,
 		H5Draw money null,
+		VGDraw money null,
 		SBTOver money null,
 		CATOver money null,
 		NOTOver money null,
@@ -229,6 +237,7 @@ BEGIN
 		KLTOver money null,
 		VS2TOver money null,
 		H5TOver money null,
+		VGTOver money null,
 		SBWL money null,
 		CAWL money null,
 		NOWL money null,
@@ -246,6 +255,7 @@ BEGIN
 		KLWL money null,
 		VS2WL money null,
 		H5WL money null,
+		VGWL money null,
 		Transfer3rd money,
 		Promotion money	
 	)
@@ -303,24 +313,24 @@ BEGIN
 			Winloss ,  Bonus ,  Adjustment , Outstanding , OpeningBalance ,
 			ClosingBalance , DrawGame , Transfer3rd,
 			SBDraw, CADraw, NODraw, HRDraw, VSDraw, KEDraw, RNDraw, MRNDraw,
-			VBDraw, MGDraw, CBDraw, GGDraw, ALLBETDraw, CODraw, KLDraw, VS2Draw, H5Draw,
+			VBDraw, MGDraw, CBDraw, GGDraw, ALLBETDraw, CODraw, KLDraw, VS2Draw, H5Draw, VGDraw, 
 			SBTOver, CATOver, NOTOver, HRTOver, VSTOver, KETOver, RNTOver, MRNTOver,
-			VBTOver, MGTOver, CBTOver, GGTOver, ALLBETTOver, COTOver, KLTOver, VS2TOver, H5TOver,
+			VBTOver, MGTOver, CBTOver, GGTOver, ALLBETTOver, COTOver, KLTOver, VS2TOver, H5TOver, VGTOver,
 			SBWL, CAWL, NOWL, HRWL, VSWL, KEWL, RNWL, MRNWL,
-			VBWL, MGWL, CBWL, GGWL, ALLBETWL, COWL, KLWL, VS2WL, H5WL, Promotion
+			VBWL, MGWL, CBWL, GGWL, ALLBETWL, COWL, KLWL, VS2WL, H5WL, VGWL, Promotion
 		)
 		SELECT	d.custid, d.Deposit, d.Aff2MemTransfer, d.Withdrawal, d.Turnover,
 				d.Winloss, d.Bonus, d.Adjustment, d.Outstanding, d.OpeningBalance,
 				d.ClosingBalance, d.DrawGame, d.Transfer3rd,
 				ISNULL(p1.SBDraw,0), ISNULL(p1.CADraw,0), ISNULL(p1.NODraw,0), ISNULL(p1.HRDraw,0), ISNULL(p1.VSDraw,0),
 				ISNULL(p1.KEDraw,0), ISNULL(p1.RNDraw,0), ISNULL(p1.MRNDraw,0), ISNULL(p1.VBDraw,0), ISNULL(p1.MGDraw,0),
-				ISNULL(p1.CBDraw,0), ISNULL(p1.GGDraw,0), ISNULL(p1.ALLBETDraw,0), ISNULL(p1.CODraw,0), ISNULL(p1.KLDraw,0), ISNULL(p1.VS2Draw,0), ISNULL(p1.H5Draw,0),
+				ISNULL(p1.CBDraw,0), ISNULL(p1.GGDraw,0), ISNULL(p1.ALLBETDraw,0), ISNULL(p1.CODraw,0), ISNULL(p1.KLDraw,0), ISNULL(p1.VS2Draw,0), ISNULL(p1.H5Draw,0), ISNULL(p1.VGDraw,0),
 				ISNULL(p1.SBTOver,0), ISNULL(p1.CATOver,0), ISNULL(p1.NOTOver,0), ISNULL(p1.HRTOver,0), ISNULL(p1.VSTOver,0),
 				ISNULL(p1.KETOver,0), ISNULL(p1.RNTOver,0), ISNULL(p1.MRNTOver,0), ISNULL(p1.VBTOver,0), ISNULL(p1.MGTOver,0),
-				ISNULL(p1.CBTOver,0), ISNULL(p1.GGTOver,0), ISNULL(p1.ALLBETTOver,0), ISNULL(p1.COTOver,0), ISNULL(p1.KLTOver,0), ISNULL(p1.VS2TOver,0), ISNULL(p1.H5TOver,0),
+				ISNULL(p1.CBTOver,0), ISNULL(p1.GGTOver,0), ISNULL(p1.ALLBETTOver,0), ISNULL(p1.COTOver,0), ISNULL(p1.KLTOver,0), ISNULL(p1.VS2TOver,0), ISNULL(p1.H5TOver,0), ISNULL(p1.VGTOver,0),
 				ISNULL(p1.SBWL,0), ISNULL(p1.CAWL,0), ISNULL(p1.NOWL,0), ISNULL(p1.HRWL,0), ISNULL(p1.VSWL,0),
 				ISNULL(p1.KEWL,0), ISNULL(p1.RNWL,0), ISNULL(p1.MRNWL,0), ISNULL(p1.VBWL,0), ISNULL(p1.MGWL,0),
-				ISNULL(p1.CBWL,0), ISNULL(p1.GGWL,0), ISNULL(p1.ALLBETWL,0), ISNULL(p1.COWL,0), ISNULL(p1.KLWL,0), ISNULL(p1.VS2WL,0), ISNULL(p1.H5WL,0), d.Promotion
+				ISNULL(p1.CBWL,0), ISNULL(p1.GGWL,0), ISNULL(p1.ALLBETWL,0), ISNULL(p1.COWL,0), ISNULL(p1.KLWL,0), ISNULL(p1.VS2WL,0), ISNULL(p1.H5WL,0), ISNULL(p1.VGWL,0), d.Promotion
 		FROM (
 				SELECT b.custid, SUM(Deposit) AS Deposit, 
 						SUM(Aff2MemTransfer) AS Aff2MemTransfer, 
@@ -357,9 +367,10 @@ BEGIN
 						ISNULL (SUM (CASE  WHEN p.sporttype = 219 THEN p.drawTO ELSE 0 END) , 0 ) AS GGDraw,
 						ISNULL (SUM (CASE  WHEN p.sporttype = 211 THEN p.drawTO ELSE 0 END) , 0 ) AS ALLBETDraw,
 						ISNULL (SUM (CASE  WHEN p.sporttype = 220 THEN p.drawTO ELSE 0 END) , 0 ) AS KLDraw,
-						ISNULL (SUM (CASE  WHEN p.sporttype IN (190,191,192,193) THEN p.drawTO ELSE 0 END) , 0 ) AS VS2Draw,
+						ISNULL (SUM (CASE  WHEN p.sporttype IN (190,191,192,193,194,196) THEN p.drawTO ELSE 0 END) , 0 ) AS VS2Draw,
 						ISNULL (SUM (CASE  WHEN p.sporttype = -6 THEN p.drawTO ELSE 0 END) , 0 ) AS CODraw,
 						ISNULL (SUM (CASE  WHEN p.sporttype = 164 THEN p.drawTO ELSE 0 END) , 0 ) AS H5Draw,
+						ISNULL (SUM (CASE  WHEN p.sporttype = 245 THEN p.drawTO ELSE 0 END) , 0 ) AS VGDraw,
 						ISNULL (SUM (CASE  WHEN p.sporttype = 0 THEN p.turnover ELSE 0 END) , 0 ) AS SBTOver ,
 						ISNULL (SUM (CASE  WHEN p.sporttype = 162 THEN p.turnover ELSE 0 END) , 0 ) AS CATOver ,
 						ISNULL (SUM (CASE  WHEN p.sporttype = 161 THEN p.turnover ELSE 0 END) , 0 ) AS NOTOver ,
@@ -374,9 +385,10 @@ BEGIN
 						ISNULL (SUM (CASE  WHEN p.sporttype  = 219 THEN p.turnover ELSE 0 END) , 0 ) AS GGTOver ,
 						ISNULL (SUM (CASE  WHEN p.sporttype  = 211 THEN p.turnover ELSE 0 END) , 0 ) AS ALLBETTOver ,
 						ISNULL (SUM (CASE  WHEN p.sporttype  = 220 THEN p.turnover ELSE 0 END) , 0 ) AS KLTOver ,
-						ISNULL (SUM (CASE  WHEN p.sporttype IN (190,191,192,193) THEN p.turnover ELSE 0 END) , 0 ) AS VS2TOver,
+						ISNULL (SUM (CASE  WHEN p.sporttype IN (190,191,192,193,194,196) THEN p.turnover ELSE 0 END) , 0 ) AS VS2TOver,
 						ISNULL (SUM (CASE  WHEN p.sporttype  = -6 THEN p.turnover ELSE 0 END) , 0 ) AS COTOver ,
 						ISNULL (SUM (CASE  WHEN p.sporttype  = 164 THEN p.turnover ELSE 0 END) , 0 ) AS H5TOver ,
+						ISNULL (SUM (CASE  WHEN p.sporttype  = 245 THEN p.turnover ELSE 0 END) , 0 ) AS VGTOver ,
 						ISNULL (SUM (CASE  WHEN p.sporttype = 0 THEN p.winlost ELSE 0 END) , 0 ) AS SBWL ,
 						ISNULL (SUM (CASE  WHEN p.sporttype = 162 THEN p.winlost ELSE 0 END) , 0 ) AS CAWL ,
 						ISNULL (SUM (CASE  WHEN p.sporttype = 161 THEN p.winlost ELSE 0 END) , 0 ) AS NOWL ,
@@ -391,12 +403,13 @@ BEGIN
 						ISNULL (SUM (CASE  WHEN p.sporttype = 219 THEN p.winlost ELSE 0 END) , 0 ) AS GGWL,
 						ISNULL (SUM (CASE  WHEN p.sporttype = 211 THEN p.winlost ELSE 0 END) , 0 ) AS ALLBETWL,
 						ISNULL (SUM (CASE  WHEN p.sporttype = 220 THEN p.winlost ELSE 0 END) , 0 ) AS KLWL,
-						ISNULL (SUM (CASE  WHEN p.sporttype IN (190,191,192,193) THEN p.winlost ELSE 0 END) , 0 ) AS VS2WL,
+						ISNULL (SUM (CASE  WHEN p.sporttype IN (190,191,192,193,194,196) THEN p.winlost ELSE 0 END) , 0 ) AS VS2WL,
 						ISNULL (SUM (CASE  WHEN p.sporttype = -6 THEN p.winlost ELSE 0 END) , 0 ) AS COWL,
-						ISNULL (SUM (CASE  WHEN p.sporttype = 164 THEN p.winlost ELSE 0 END) , 0 ) AS H5WL
+						ISNULL (SUM (CASE  WHEN p.sporttype = 164 THEN p.winlost ELSE 0 END) , 0 ) AS H5WL,
+						ISNULL (SUM (CASE  WHEN p.sporttype = 245 THEN p.winlost ELSE 0 END) , 0 ) AS VGWL
 				FROM bodb_Report.dbo.rptDepWinlostByProduct_BK p WITH (NOLOCK)
 				Where winlostdate >= @fromDate AND winlostdate <= @ToDate_BK 
-					AND p.sporttype in (0,151,161,162,180,190,191,192,193,202,203,204,205,210,211,212,219,220,251,208,209,-6,164) 
+					AND p.sporttype in (0,151,161,162,180,190,191,192,193,202,203,204,205,210,211,212,219,220,251,208,209,-6,164,194,196,245) 
 					AND EXISTS (SELECT 1 FROM #tblcust c WHERE c.custid = p.custid)	
 				GROUP BY  p.custid
 			) p1 ON d.custid = p1.custid
@@ -444,24 +457,24 @@ BEGIN
 			Winloss ,  Bonus ,  Adjustment , Outstanding , OpeningBalance ,
 			ClosingBalance , DrawGame , Transfer3rd,
 			SBDraw, CADraw, NODraw, HRDraw, VSDraw, KEDraw, RNDraw, MRNDraw,
-			VBDraw, MGDraw, CBDraw, GGDraw, ALLBETDraw, CODraw, KLDraw, VS2Draw, H5Draw,
+			VBDraw, MGDraw, CBDraw, GGDraw, ALLBETDraw, CODraw, KLDraw, VS2Draw, H5Draw, VGDraw,
 			SBTOver, CATOver, NOTOver, HRTOver, VSTOver, KETOver, RNTOver, MRNTOver,
-			VBTOver, MGTOver, CBTOver, GGTOver, ALLBETTOver, COTOver, KLTOver, VS2TOver, H5TOver,
+			VBTOver, MGTOver, CBTOver, GGTOver, ALLBETTOver, COTOver, KLTOver, VS2TOver, H5TOver, VGTOver,
 			SBWL, CAWL, NOWL, HRWL, VSWL, KEWL, RNWL, MRNWL,
-			VBWL, MGWL, CBWL, GGWL, ALLBETWL, COWL, KLWL, VS2WL, H5WL,Promotion
+			VBWL, MGWL, CBWL, GGWL, ALLBETWL, COWL, KLWL, VS2WL, H5WL, VGWL, Promotion
 		)	
 		SELECT	d.custid, d.Deposit, d.Aff2MemTransfer, d.Withdrawal, d.Turnover,
 				d.Winloss, d.Bonus, d.Adjustment, d.Outstanding, d.OpeningBalance,
 				d.ClosingBalance, d.DrawGame, d.Transfer3rd,
 				ISNULL(p1.SBDraw,0), ISNULL(p1.CADraw,0), ISNULL(p1.NODraw,0), ISNULL(p1.HRDraw,0), ISNULL(p1.VSDraw,0),
 				ISNULL(p1.KEDraw,0), ISNULL(p1.RNDraw,0), ISNULL(p1.MRNDraw,0), ISNULL(p1.VBDraw,0), ISNULL(p1.MGDraw,0),
-				ISNULL(p1.CBDraw,0), ISNULL(p1.GGDraw,0), ISNULL(p1.ALLBETDraw,0), ISNULL(p1.CODraw,0), ISNULL(p1.KLDraw,0), ISNULL(p1.VS2Draw,0), ISNULL(p1.H5Draw,0),
+				ISNULL(p1.CBDraw,0), ISNULL(p1.GGDraw,0), ISNULL(p1.ALLBETDraw,0), ISNULL(p1.CODraw,0), ISNULL(p1.KLDraw,0), ISNULL(p1.VS2Draw,0), ISNULL(p1.H5Draw,0), ISNULL(p1.VGDraw,0),
 				ISNULL(p1.SBTOver,0), ISNULL(p1.CATOver,0), ISNULL(p1.NOTOver,0), ISNULL(p1.HRTOver,0), ISNULL(p1.VSTOver,0),
 				ISNULL(p1.KETOver,0), ISNULL(p1.RNTOver,0), ISNULL(p1.MRNTOver,0), ISNULL(p1.VBTOver,0), ISNULL(p1.MGTOver,0),
-				ISNULL(p1.CBTOver,0), ISNULL(p1.GGTOver,0), ISNULL(p1.ALLBETTOver,0), ISNULL(p1.COTOver,0), ISNULL(p1.KLTOver,0), ISNULL(p1.VS2TOver,0), ISNULL(p1.H5TOver,0),
+				ISNULL(p1.CBTOver,0), ISNULL(p1.GGTOver,0), ISNULL(p1.ALLBETTOver,0), ISNULL(p1.COTOver,0), ISNULL(p1.KLTOver,0), ISNULL(p1.VS2TOver,0), ISNULL(p1.H5TOver,0), ISNULL(p1.VGTOver,0),
 				ISNULL(p1.SBWL,0), ISNULL(p1.CAWL,0), ISNULL(p1.NOWL,0), ISNULL(p1.HRWL,0), ISNULL(p1.VSWL,0),
 				ISNULL(p1.KEWL,0), ISNULL(p1.RNWL,0), ISNULL(p1.MRNWL,0), ISNULL(p1.VBWL,0), ISNULL(p1.MGWL,0),
-				ISNULL(p1.CBWL,0), ISNULL(p1.GGWL,0), ISNULL(p1.ALLBETWL,0), ISNULL(p1.COWL,0), ISNULL(p1.KLWL,0), ISNULL(p1.VS2WL,0), ISNULL(p1.H5WL,0), d.Promotion
+				ISNULL(p1.CBWL,0), ISNULL(p1.GGWL,0), ISNULL(p1.ALLBETWL,0), ISNULL(p1.COWL,0), ISNULL(p1.KLWL,0), ISNULL(p1.VS2WL,0), ISNULL(p1.H5WL,0), ISNULL(p1.VGWL,0), d.Promotion
 		FROM (
 				SELECT custid, SUM(Deposit) AS Deposit, 
 							SUM(Aff2MemTransfer) AS Aff2MemTransfer, 
@@ -489,7 +502,7 @@ BEGIN
 						ISNULL (SUM (CASE  WHEN p.sporttype = 161 THEN p.drawTO ELSE 0 END) , 0 ) AS NODraw , 
 						ISNULL (SUM (CASE  WHEN p.sporttype = 151 THEN p.drawTO ELSE 0 END) , 0 ) AS HRDraw ,
 						ISNULL (SUM (CASE  WHEN p.sporttype = 180 THEN p.drawTO ELSE 0 END) , 0 ) AS VSDraw , 
-						ISNULL (SUM (CASE  WHEN p.sporttype IN (190,191,192,193) THEN p.drawTO ELSE 0 END) , 0 ) AS VS2Draw,
+						ISNULL (SUM (CASE  WHEN p.sporttype IN (190,191,192,193,194,196) THEN p.drawTO ELSE 0 END) , 0 ) AS VS2Draw,
 						ISNULL (SUM (CASE  WHEN p.sporttype = 202 THEN p.drawTO ELSE 0 END) , 0 ) AS KEDraw , 
 						ISNULL (SUM (CASE  WHEN p.sporttype IN (251,208,209) THEN p.drawTO ELSE 0 END) , 0 ) AS RNDraw ,
 						ISNULL (SUM (CASE  WHEN p.sporttype = 210 THEN p.drawTO ELSE 0 END) , 0 ) AS MRNDraw,
@@ -501,12 +514,13 @@ BEGIN
 						ISNULL (SUM (CASE  WHEN p.sporttype = 220 THEN drawTO ELSE 0 END) , 0 ) AS KLDraw,
 						ISNULL (SUM (CASE  WHEN p.sporttype = -6 THEN drawTO ELSE 0 END) , 0 ) AS CODraw,
 						ISNULL (SUM (CASE  WHEN p.sporttype = 164 THEN drawTO ELSE 0 END) , 0 ) AS H5Draw,
+						ISNULL (SUM (CASE  WHEN p.sporttype = 245 THEN drawTO ELSE 0 END) , 0 ) AS VGDraw,
 						ISNULL (SUM (CASE  WHEN p.sporttype = 0 THEN p.turnover ELSE 0 END) , 0 ) AS SBTOver ,
 						ISNULL (SUM (CASE  WHEN p.sporttype = 162 THEN p.turnover ELSE 0 END) , 0 ) AS CATOver ,
 						ISNULL (SUM (CASE  WHEN p.sporttype = 161 THEN p.turnover ELSE 0 END) , 0 ) AS NOTOver ,
 						ISNULL (SUM (CASE  WHEN p.sporttype = 151 THEN p.turnover ELSE 0 END) , 0 ) AS HRTOver ,
 						ISNULL (SUM (CASE  WHEN p.sporttype = 180 THEN p.turnover ELSE 0 END) , 0 ) AS VSTOver ,
-						ISNULL (SUM (CASE  WHEN p.sporttype IN (190,191,192,193) THEN p.turnover ELSE 0 END) , 0 ) AS VS2TOver,
+						ISNULL (SUM (CASE  WHEN p.sporttype IN (190,191,192,193,194,196) THEN p.turnover ELSE 0 END) , 0 ) AS VS2TOver,
 						ISNULL (SUM (CASE  WHEN p.sporttype = 202 THEN p.turnover ELSE 0 END) , 0 ) AS KETOver ,
 						ISNULL (SUM (CASE  WHEN p.sporttype IN (251,208,209) THEN p.turnover ELSE 0 END) , 0 ) AS RNTOver ,
 						ISNULL (SUM (CASE  WHEN p.sporttype = 210 THEN p.turnover ELSE 0 END) , 0 ) AS MRNTOver ,
@@ -518,12 +532,13 @@ BEGIN
 						ISNULL (SUM (CASE  WHEN p.sporttype = 220 THEN turnover ELSE 0 END) , 0 ) AS KLTOver ,
 						ISNULL (SUM (CASE  WHEN p.sporttype = -6 THEN turnover ELSE 0 END) , 0 ) AS COTOver ,
 						ISNULL (SUM (CASE  WHEN p.sporttype = 164 THEN turnover ELSE 0 END) , 0 ) AS H5TOver ,
+						ISNULL (SUM (CASE  WHEN p.sporttype = 245 THEN turnover ELSE 0 END) , 0 ) AS VGTOver ,
 						ISNULL (SUM (CASE  WHEN p.sporttype = 0 THEN p.winlost ELSE 0 END) , 0 ) AS SBWL ,
 						ISNULL (SUM (CASE  WHEN p.sporttype = 162 THEN p.winlost ELSE 0 END) , 0 ) AS CAWL ,
 						ISNULL (SUM (CASE  WHEN p.sporttype = 161 THEN p.winlost ELSE 0 END) , 0 ) AS NOWL ,
 						ISNULL (SUM (CASE  WHEN p.sporttype = 151 THEN p.winlost ELSE 0 END) , 0 ) AS HRWL ,
 						ISNULL (SUM (CASE  WHEN p.sporttype = 180 THEN p.winlost ELSE 0 END) , 0 ) AS VSWL ,
-						ISNULL (SUM (CASE  WHEN p.sporttype IN (190,191,192,193) THEN p.winlost ELSE 0 END) , 0 ) AS VS2WL,
+						ISNULL (SUM (CASE  WHEN p.sporttype IN (190,191,192,193,194,196) THEN p.winlost ELSE 0 END) , 0 ) AS VS2WL,
 						ISNULL (SUM (CASE  WHEN p.sporttype = 202 THEN p.winlost ELSE 0 END) , 0 ) AS KEWL ,
 						ISNULL (SUM (CASE  WHEN p.sporttype IN (251,208,209) THEN p.winlost ELSE 0 END) , 0 ) AS RNWL ,
 						ISNULL (SUM (CASE  WHEN p.sporttype = 210 THEN p.winlost ELSE 0 END) , 0 ) AS MRNWL, 
@@ -534,10 +549,11 @@ BEGIN
 						ISNULL (SUM (CASE  WHEN p.sporttype = 211 THEN winlost ELSE 0 END) , 0 ) AS ALLBETWL, 
 						ISNULL (SUM (CASE  WHEN p.sporttype = 220 THEN winlost ELSE 0 END) , 0 ) AS KLWL,
 						ISNULL (SUM (CASE  WHEN sporttype = -6 THEN winlost ELSE 0 END) , 0 ) AS COWL,
-						ISNULL (SUM (CASE  WHEN sporttype = 164 THEN winlost ELSE 0 END) , 0 ) AS H5WL
+						ISNULL (SUM (CASE  WHEN sporttype = 164 THEN winlost ELSE 0 END) , 0 ) AS H5WL,
+						ISNULL (SUM (CASE  WHEN sporttype = 245 THEN winlost ELSE 0 END) , 0 ) AS VGWL
 				FROM bodb_Report.dbo.rptDepWinlostByProduct p WITH (NOLOCK)
 				WHERE winlostdate >= @FromDate_BK AND winlostdate <= @toDate 
-					AND p.sporttype IN (0,151,161,162,180,190,191,192,193,202,203,204,205,210,211,212,219,220,251,208,209,-6,164) 
+					AND p.sporttype IN (0,151,161,162,180,190,191,192,193,202,203,204,205,210,211,212,219,220,251,208,209,-6,164,194,196,245) 
 					AND EXISTS (SELECT 1 FROM #tblcust c WHERE c.custid = p.CustID)	
 				GROUP BY  p.custid
 			) p1 ON d.custid = p1.custid	
@@ -574,11 +590,11 @@ BEGIN
 		Winloss ,  Bonus ,  Adjustment , Outstanding , OpeningBalance ,
 		ClosingBalance , DrawGame , Transfer3rd,
 		SBDraw, CADraw, NODraw, HRDraw, VSDraw, KEDraw, RNDraw, MRNDraw,
-		VBDraw, MGDraw, CBDraw, GGDraw, ALLBETDraw, CODraw, KLDraw, VS2Draw, H5Draw,
+		VBDraw, MGDraw, CBDraw, GGDraw, ALLBETDraw, CODraw, KLDraw, VS2Draw, H5Draw, VGDraw,
 		SBTOver, CATOver, NOTOver, HRTOver, VSTOver, KETOver, RNTOver, MRNTOver,
-		VBTOver, MGTOver, CBTOver, GGTOver, ALLBETTOver, COTOver, KLTOver, VS2TOver, H5TOver,
+		VBTOver, MGTOver, CBTOver, GGTOver, ALLBETTOver, COTOver, KLTOver, VS2TOver, H5TOver, VGTOver,
 		SBWL, CAWL, NOWL, HRWL, VSWL, KEWL, RNWL, MRNWL,
-		VBWL, MGWL, CBWL, GGWL, ALLBETWL, COWL, KLWL, VS2WL, H5WL, Promotion
+		VBWL, MGWL, CBWL, GGWL, ALLBETWL, COWL, KLWL, VS2WL, H5WL, VGWL, Promotion
 	)
 	SELECT	custid, SUM(Deposit) AS Deposit, SUM(Aff2MemTransfer) AS Aff2MemTransfer, 
 			SUM(Withdrawal) AS Withdrawal, SUM(Turnover) AS Turnover, SUM(Winloss) AS Winloss, 
@@ -602,6 +618,7 @@ BEGIN
 			ISNULL (SUM (KLDraw),0) AS KLDraw , 
 			ISNULL (SUM (VS2Draw),0) AS VS2Draw , 
 			ISNULL (SUM (H5Draw),0) AS H5Draw , 
+			ISNULL (SUM (VGDraw),0) AS VGDraw , 
 			ISNULL (SUM (SBTOver),0) AS SBTOver ,
 			ISNULL (SUM (CATOver),0) AS CATOver ,
 			ISNULL (SUM (NOTOver),0) AS NOTOver ,
@@ -619,6 +636,7 @@ BEGIN
 			ISNULL (SUM (KLTOver),0) AS KLTOver ,
 			ISNULL (SUM (VS2TOver),0) AS VS2TOver ,
 			ISNULL (SUM (H5TOver),0) AS H5TOver ,
+			ISNULL (SUM (VGTOver),0) AS VGTOver ,
 			ISNULL (SUM (SBWL),0) AS SBWL ,
 			ISNULL (SUM (CAWL),0) AS CAWL ,
 			ISNULL (SUM (NOWL),0) AS NOWL ,
@@ -636,17 +654,18 @@ BEGIN
 			ISNULL (SUM (KLWL),0) AS KLWL ,
 			ISNULL (SUM (VS2WL),0) AS VS2WL,
 			ISNULL (SUM (H5WL),0) AS H5WL,
+			ISNULL (SUM (VGWL),0) AS VGWL,
 			SUM(Promotion) AS Promotion
 	FROM (
 			SELECT  custid , Deposit , Aff2MemTransfer , Withdrawal ,  Turnover ,
 					Winloss ,  Bonus ,  Adjustment , Outstanding , OpeningBalance ,
 					ClosingBalance , DrawGame , Transfer3rd,
 					SBDraw, CADraw, NODraw, HRDraw, VSDraw, KEDraw, RNDraw, MRNDraw,
-					VBDraw, MGDraw, CBDraw, GGDraw, ALLBETDraw, CODraw, KLDraw, VS2Draw, H5Draw,
+					VBDraw, MGDraw, CBDraw, GGDraw, ALLBETDraw, CODraw, KLDraw, VS2Draw, H5Draw, VGDraw,
 					SBTOver, CATOver, NOTOver, HRTOver, VSTOver, KETOver, RNTOver, MRNTOver,
-					VBTOver, MGTOver, CBTOver, GGTOver, ALLBETTOver, COTOver, KLTOver, VS2TOver, H5TOver,
+					VBTOver, MGTOver, CBTOver, GGTOver, ALLBETTOver, COTOver, KLTOver, VS2TOver, H5TOver, VGTOver,
 					SBWL, CAWL, NOWL, HRWL, VSWL, KEWL, RNWL, MRNWL,
-					VBWL, MGWL, CBWL, GGWL, ALLBETWL, COWL, KLWL, VS2WL, H5WL, Promotion
+					VBWL, MGWL, CBWL, GGWL, ALLBETWL, COWL, KLWL, VS2WL, H5WL, VGWL, Promotion
 			FROM #SumWinlost_BeforeCutDate
 
 			UNION ALL
@@ -655,11 +674,11 @@ BEGIN
 					Winloss ,  Bonus ,  Adjustment , Outstanding , OpeningBalance ,
 					ClosingBalance , DrawGame , Transfer3rd,
 					SBDraw, CADraw, NODraw, HRDraw, VSDraw, KEDraw, RNDraw, MRNDraw,
-					VBDraw, MGDraw, CBDraw, GGDraw, ALLBETDraw, CODraw, KLDraw, VS2Draw, H5Draw,
+					VBDraw, MGDraw, CBDraw, GGDraw, ALLBETDraw, CODraw, KLDraw, VS2Draw, H5Draw, VGDraw,
 					SBTOver, CATOver, NOTOver, HRTOver, VSTOver, KETOver, RNTOver, MRNTOver,
-					VBTOver, MGTOver, CBTOver, GGTOver, ALLBETTOver, COTOver, KLTOver, VS2TOver, H5TOver,
+					VBTOver, MGTOver, CBTOver, GGTOver, ALLBETTOver, COTOver, KLTOver, VS2TOver, H5TOver, VGTOver,
 					SBWL, CAWL, NOWL, HRWL, VSWL, KEWL, RNWL, MRNWL,
-					VBWL, MGWL, CBWL, GGWL, ALLBETWL, COWL, KLWL, VS2WL, H5WL, Promotion
+					VBWL, MGWL, CBWL, GGWL, ALLBETWL, COWL, KLWL, VS2WL, H5WL, VGWL, Promotion
 			FROM #SumWinlost_FromCutDate
 		) d
 	GROUP BY custid
