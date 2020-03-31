@@ -1,7 +1,7 @@
 /*<info serverAlias="DBPRO-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE  dbo.Acc_Sporttype_Sel
-	@Sporttype tinyint = NULL,
-	@SportName nvarchar(50) = NULL,
+	@Sporttype      SMALLINT = NULL,
+	@SportName      NVARCHAR(50) = NULL,
 	@PageSize		INT = 0,
 	@PageIndex		INT = 0,
 	@TotalRows		INT = 0 OUTPUT
@@ -30,16 +30,57 @@ BEGIN
 	FROM Sports WITH(NOLOCK)
 	WHERE (SportType = @Sporttype OR ISNULL(@Sporttype,'') = '') 
 		  AND (SportName LIKE '%' + @SportName +'%' OR ISNULL(@SportName,'') = '')
+
 	ORDER BY SportType
+
+	SELECT @TotalRows = COUNT(*) FROM #Tmp 
 
 	IF @PageIndex <= 0 OR @PageSize <= 0
 	BEGIN
-		SELECT *
+		SELECT SportType,
+		       ParlayMaxPayout,
+			   SportName,
+			   SportNameCh,
+			   SportNameCs,
+			   SportNameJp,
+			   SportNameIt,
+			   SportNameTh,		   
+			   SportNameKo,
+			   SportNameES,
+			   SportNameVN,
+			   SportNameEL,
+			   SportNameRU,
+			   SportNameID,
+			   SportNamePT,
+			   SportNameFR,
+			   SportNameMMR,
+			   SportNamePL,
+			   SportNameHI,
+			   RowNum
 		FROM #Tmp
 	END 
 	ELSE
 	BEGIN
-		SELECT *
+		SELECT SportType,
+		       ParlayMaxPayout,
+			   SportName,
+			   SportNameCh,
+			   SportNameCs,
+			   SportNameJp,
+			   SportNameIt,
+			   SportNameTh,		   
+			   SportNameKo,
+			   SportNameES,
+			   SportNameVN,
+			   SportNameEL,
+			   SportNameRU,
+			   SportNameID,
+			   SportNamePT,
+			   SportNameFR,
+			   SportNameMMR,
+			   SportNamePL,
+			   SportNameHI,
+			   RowNum
 		FROM #Tmp
 		WHERE RowNum BETWEEN @RowStart AND @RowEnd
 	END

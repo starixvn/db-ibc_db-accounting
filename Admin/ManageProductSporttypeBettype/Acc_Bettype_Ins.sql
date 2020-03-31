@@ -1,10 +1,10 @@
 /*<info serverAlias="DBPRO-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE  dbo.Acc_Bettype_Ins
-	@File			VARCHAR(MAX),
-	@LoginIP VARCHAR(20)='',
-	@ErrCode INT = 0 OUTPUT,
-	@ErrMsg NVARCHAR(4000) = '' OUTPUT,
-	@UserID INT
+	@File	    VARCHAR(MAX),
+	@LoginIP	VARCHAR(20)='',
+	@ErrCode	INT = 0 OUTPUT,
+	@ErrMsg		NVARCHAR(4000) = '' OUTPUT,
+	@UserID		INT
 AS
 /*
 Created: 20200328@Malcolm
@@ -22,7 +22,6 @@ Original:
 						typenamee= "a"
 						typenamec=""
 						typedesc= ""
-						creator=""
 						typenamec_uni=""
 						typenamej=""
 						typenamcn=""
@@ -53,76 +52,112 @@ BEGIN
 	IF ISNULL(@File, '') = ''
 			RETURN
 
-	DECLARE @iDoc	 INT,
-			@RowTotal INT = 0,
-			@CurrentRow INT = 0
+	DECLARE @iDoc INT, @RowTotal INT = 0, @CurrentRow INT = 0
 
 	DECLARE @startRun DATETIME, @endRun DATETIME, @duration INT, @LogSPData NVARCHAR(MAX), @LogSPData2 NVARCHAR(MAX)
 
 	CREATE TABLE #input 
 	(    
-		ID INT identity (1,1),
-		typeid int,
-		typenamee nvarchar(128),
-		typenamec nvarchar(128),
-		typedesc nvarchar(128),
-		creator int,
-		typenamec_uni nvarchar,
-		typenamej nvarchar(128),
-		typenamcn nvarchar(128) ,
-		typenamecn nvarchar(128),
-		typenameth nvarchar(128) ,
-		typenameit nvarchar(128) ,
-		typenameko nvarchar(128) ,
-		typenameES nvarchar(128),
-		typenameVN nvarchar(128),
-		typenameEL nvarchar(128) ,
-		typenamee_Eu nvarchar(128) ,
-		typenameRU nvarchar(128) ,
-		typenameID nvarchar(128) ,
-		typenamePT nvarchar(128) ,
-		typenameFR nvarchar(128) ,
-		ParentTypeid int,
-		typenameMMR nvarchar(128),
-		typenameHI nvarchar(128) ,
-		DisplayedTypeID int
+		ID              INT IDENTITY (1,1),
+		typeid          INT,
+		typenamee       NVARCHAR(128),
+		typenamec		NVARCHAR(128),
+		typedesc		NVARCHAR(128),
+		typenamec_uni	NVARCHAR,
+		typenamej		NVARCHAR(128),
+		typenamcn		NVARCHAR(128),
+		typenamecn		NVARCHAR(128),
+		typenameth		NVARCHAR(128),
+		typenameit		NVARCHAR(128),
+		typenameko		NVARCHAR(128),
+		typenameES		NVARCHAR(128),
+		typenameVN		NVARCHAR(128),
+		typenameEL		NVARCHAR(128),
+		typenamee_Eu	NVARCHAR(128),
+		typenameRU		NVARCHAR(128),
+		typenameID		NVARCHAR(128),
+		typenamePT		NVARCHAR(128),
+		typenameFR		NVARCHAR(128),
+		ParentTypeid	INT,
+		typenameMMR		NVARCHAR(128),
+		typenameHI		NVARCHAR(128),
+		DisplayedTypeID INT
 		)
 
 	BEGIN TRY
 			EXEC sp_xml_preparedocument @iDoc OUTPUT, @File
 		
-			INSERT #input ( typeid ,typenamee,typenamec,typedesc,creator,typenamec_uni,typenamej,typenamcn,
-							typenamecn,typenameth,typenameit,typenameko,typenameES,typenameVN,typenameEL,typenamee_Eu,
-							typenameRU,typenameID,typenamePT,typenameFR,ParentTypeid,typenameMMR,typenameHI,DisplayedTypeID)
+			INSERT #input ( typeid,
+							typenamee,
+							typenamec,
+							typedesc,
+							typenamec_uni,
+							typenamej,
+							typenamcn,
+							typenamecn,
+							typenameth,
+							typenameit,
+							typenameko,
+							typenameES,
+							typenameVN,
+							typenameEL,
+							typenamee_Eu,
+							typenameRU,
+							typenameID,
+							typenamePT,
+							typenameFR,
+							ParentTypeid,
+							typenameMMR,
+							typenameHI,
+							DisplayedTypeID)
 
-			SELECT typeid ,typenamee,typenamec,typedesc,creator,typenamec_uni,typenamej,typenamcn,
-				   typenamecn,typenameth,typenameit,typenameko,typenameES,typenameVN,typenameEL,typenamee_Eu,
-				   typenameRU,typenameID,typenamePT,typenameFR,ParentTypeid,typenameMMR,typenameHI,DisplayedTypeID
+			SELECT          typeid ,
+							typenamee,
+							typenamec,
+							typedesc,
+							typenamec_uni,
+							typenamej,
+							typenamcn,
+							typenamecn,
+							typenameth,
+							typenameit,
+							typenameko,
+							typenameES,
+							typenameVN,
+							typenameEL,
+							typenamee_Eu,
+							typenameRU,
+							typenameID,
+							typenamePT,
+							typenameFR,
+							ParentTypeid,
+							typenameMMR,
+							typenameHI,
+							DisplayedTypeID
 
-			FROM OPENXML(@iDoc, '/ROOT/File', 1) WITH  (typeid int,
-														typenamee nvarchar(128),
-														typenamec nvarchar(128),
-														typedesc nvarchar(128),
-														creator int,
-														typenamec_uni nvarchar,
-														typenamej nvarchar(128),
-														typenamcn nvarchar(128) ,
-														typenamecn nvarchar(128),
-														typenameth nvarchar(128) ,
-														typenameit nvarchar(128) ,
-														typenameko nvarchar(128) ,
-														typenameES nvarchar(128),
-														typenameVN nvarchar(128),
-														typenameEL nvarchar(128) ,
-														typenamee_Eu nvarchar(128) ,
-														typenameRU nvarchar(128) ,
-														typenameID nvarchar(128) ,
-														typenamePT nvarchar(128) ,
-														typenameFR nvarchar(128) ,
-														ParentTypeid int,
-														typenameMMR nvarchar(128),
-														typenameHI nvarchar(128) ,
-														DisplayedTypeID int)
+			FROM OPENXML(@iDoc, '/ROOT/File', 1) WITH  (typeid			INT,
+														typenamee		NVARCHAR(128),
+														typenamec		NVARCHAR(128),
+														typedesc		NVARCHAR(128),
+														typenamec_uni	NVARCHAR,
+														typenamej		NVARCHAR(128),
+														typenamcn		NVARCHAR(128),
+														typenamecn		NVARCHAR(128),
+														typenameth		NVARCHAR(128),
+														typenameit		NVARCHAR(128),
+														typenameko		NVARCHAR(128),
+														typenameES		NVARCHAR(128),
+														typenameVN		NVARCHAR(128),
+														typenameEL		NVARCHAR(128),
+														typenamee_Eu	NVARCHAR(128),
+														typenameRU		NVARCHAR(128),
+														typenameID		NVARCHAR(128),
+														typenamePT		NVARCHAR(128),
+														typenameFR		NVARCHAR(128),
+														ParentTypeid	INT,
+														typenameMMR		NVARCHAR(128),
+														typenameHI		NVARCHAR(128),
+														DisplayedTypeID INT)
 		    
 			EXEC sp_xml_removedocument @iDoc
 	END TRY
@@ -139,12 +174,55 @@ BEGIN
 		SELECT @CurrentRow= @CurrentRow + 1, @startRun = GETDATE();
 
 		BEGIN TRY
-			INSERT INTO dbo.bettype( typeid ,typenamee,typenamec,typedesc,creator,typenamec_uni,typenamej,typenamcn,
-								     typenamecn,typenameth,typenameit,typenameko,typenameES,typenameVN,typenameEL,typenamee_Eu,
-								     typenameRU,typenameID,typenamePT,typenameFR,ParentTypeid,typenameMMR,typenameHI,DisplayedTypeID)
-			SELECT  typeid ,typenamee,typenamec,typedesc,creator,typenamec_uni,typenamej,typenamcn,
-					typenamecn,typenameth,typenameit,typenameko,typenameES,typenameVN,typenameEL,typenamee_Eu,
-					typenameRU,typenameID,typenamePT,typenameFR,ParentTypeid,typenameMMR,typenameHI,DisplayedTypeID
+			INSERT INTO dbo.bettype(typeid,
+									creator,
+									typenamee,
+									typenamec,
+									typedesc,
+									typenamec_uni,
+									typenamej,
+									typenamcn,
+								    typenamecn,
+									typenameth,
+									typenameit,
+									typenameko,
+									typenameES,
+									typenameVN,
+									typenameEL,
+									typenamee_Eu,
+								    typenameRU,
+									typenameID,
+									typenamePT,
+									typenameFR,
+									ParentTypeid,
+									typenameMMR,
+									typenameHI,
+									DisplayedTypeID)
+
+			SELECT					typeid,
+									@UserID,
+									typenamee,
+									typenamec,
+									typedesc,
+									typenamec_uni,
+									typenamej,
+									typenamcn,
+									typenamecn,
+									typenameth,
+									typenameit,
+									typenameko,
+									typenameES,
+									typenameVN,
+									typenameEL,
+									typenamee_Eu,
+									typenameRU,
+									typenameID,
+									typenamePT,
+									typenameFR,
+									ParentTypeid,
+									typenameMMR,
+									typenameHI,
+									DisplayedTypeID
 			FROM #input
 			WHERE ID = @CurrentRow
 		END TRY
@@ -156,10 +234,11 @@ BEGIN
 		
 
 		SELECT @LogSPData =   '<R typeid="'+ COALESCE(CAST(typeid AS VARCHAR(40)), SPACE(1)) + '" ' +
+								'DisplayedTypeID="' + COALESCE(CAST(DisplayedTypeID  AS VARCHAR(40)), SPACE(1)) + '" ' +
+								'ParentTypeid="' + COALESCE(CAST(ParentTypeid  AS VARCHAR(40)), SPACE(1)) + '" ' +
 								'typenamee="' + COALESCE(CAST(typenamee  AS VARCHAR(128)), SPACE(1)) + '" ' +
 								'typenamec="' + COALESCE(CAST(typenamec  AS VARCHAR(128)), SPACE(1)) + '" ' +
-								'typedesc="' + COALESCE(CAST(typedesc  AS VARCHAR(128)), SPACE(1)) + '" ' +
-								'creator="' + COALESCE(CAST(creator  AS VARCHAR(40)), SPACE(1)) + '" ' +
+								'typedesc="' + COALESCE(CAST(typedesc  AS VARCHAR(128)), SPACE(1)) + '" ' +								
 								'typenamec_uni="' + COALESCE(CAST(typenamec_uni  AS VARCHAR(128)), SPACE(1)) + '" ' +
 								'typenamej="' + COALESCE(CAST(typenamej  AS VARCHAR(128)), SPACE(1)) + '" ' +
 								'typenamcn="' + COALESCE(CAST(typenamcn  AS VARCHAR(128)), SPACE(1)) + '" ' +
@@ -174,11 +253,9 @@ BEGIN
 								'typenameRU="' + COALESCE(CAST(typenameRU  AS VARCHAR(128)), SPACE(1)) + '" ' +
 								'typenameID="' + COALESCE(CAST(typenameID  AS VARCHAR(128)), SPACE(1)) + '" ' +
 								'typenamePT="' + COALESCE(CAST(typenamePT  AS VARCHAR(128)), SPACE(1)) + '" ' +
-								'typenameFR="' + COALESCE(CAST(typenameFR  AS VARCHAR(256)), SPACE(1)) + '" ' +
-								'ParentTypeid="' + COALESCE(CAST(ParentTypeid  AS VARCHAR(40)), SPACE(1)) + '" ' +
+								'typenameFR="' + COALESCE(CAST(typenameFR  AS VARCHAR(256)), SPACE(1)) + '" ' +							
 								'typenameMMR="' + COALESCE(CAST(typenameMMR  AS VARCHAR(128)), SPACE(1)) + '" ' +
-								'typenameHI="' + COALESCE(CAST(typenameHI  AS VARCHAR(128)), SPACE(1)) + '" ' +
-								'DisplayedTypeID="' + COALESCE(CAST(DisplayedTypeID  AS VARCHAR(40)), SPACE(1)) + '" ' +
+								'typenameHI="' + COALESCE(CAST(typenameHI  AS VARCHAR(128)), SPACE(1)) + '" ' +							
 								'LoginIP="'+ COALESCE(CAST(@LoginIP as VARCHAR(20)),SPACE(1)) + '" />'
 			FROM #input
 			WHERE ID = @CurrentRow
@@ -190,7 +267,7 @@ BEGIN
 					@UserID = @UserID,
 					@CustID = 0,
 					@ActionID = 95005,
-					@TrackingValue = @LogSPData	,
+					@TrackingValue = @LogSPData,
 					@duration = @duration
 	END
 	
