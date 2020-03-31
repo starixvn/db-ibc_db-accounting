@@ -35,7 +35,7 @@ BEGIN
 
 	SELECT @TotalRows = COUNT(*) FROM #Tmp 
 
-	IF @PageIndex <= 0 OR @PageSize <= 0
+	IF @PageIndex < 0 OR @PageSize <= 0
 	BEGIN
 		SELECT SportType,
 		       ParlayMaxPayout,

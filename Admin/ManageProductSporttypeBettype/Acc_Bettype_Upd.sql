@@ -214,7 +214,7 @@ BEGIN
 		END CATCH
 		
 
-		SELECT @LogSPData =   '<R typeid="'+ COALESCE(CAST(typeid AS VARCHAR(4)), SPACE(1)) + '" ' +
+		SELECT @LogSPData =   '<R typeid="'+ COALESCE(CAST(typeid AS VARCHAR(40)), SPACE(1)) + '" ' +
 								'DisplayedTypeID="' + COALESCE(CAST(DisplayedTypeID  AS VARCHAR(4)), SPACE(1)) + '" ' +
 								'ParentTypeid="' + COALESCE(CAST(ParentTypeid  AS VARCHAR(4)), SPACE(1)) + '" ' +
 								'typenamee="' + COALESCE(CAST(typenamee  AS VARCHAR(256)), SPACE(1)) + '" ' +
