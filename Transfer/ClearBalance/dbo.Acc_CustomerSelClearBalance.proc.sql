@@ -56,9 +56,9 @@ BEGIN
 	DECLARE @srecommend INT
 	SELECT  @srecommend = srecommend FROM dbo.custInfo WITH(NOLOCK) WHERE custid = @custid
 
-	DECLARE @GroupId SMALLINT = 0
+	DECLARE @GroupId SMALLINT = -1
 	
-	SELECT @GroupId = ISNULL(GroupId,0)
+	SELECT @GroupId = ISNULL(GroupId,-1)
 	FROM DBCUST.CustDB.dbo.Acc_FinancePermission f WITH(NOLOCK) 
 		 INNER JOIN Customer c WITH(NOLOCK) ON f.FinanceCode = c.username
     WHERE c.custid = @UserId AND c.roleid > 4
@@ -380,7 +380,7 @@ BEGIN
 				  WHERE  f.FinanceCode IN (s.username, m.username, a.username, p.username)
 						 AND f.GroupId = @GroupId 
 						 AND l.IsInternal = 1
-						 AND @GroupId NOT IN (0, 1)
+						 AND @GroupId NOT IN (-1, 1)
 				  ORDER BY f.RoleId ASC
 				) f
 	CROSS APPLY (
@@ -405,8 +405,10 @@ BEGIN
 			GROUP BY custid
 		) b ON r.custid = b.custid
 		LEFT JOIN #ClosedReason cr ON r.custid = cr.custid
-	WHERE @GroupId = 1 OR (ISNULL(f.IsView, ~l.IsInternal) = 1) OR l.IsInternal IS NULL
-	     
+	WHERE @GroupId = 1 
+	      OR (ISNULL(f.IsView, ~l.IsInternal) = 1)
+		  OR l.IsInternal IS NULL
+		  OR (@GroupId = 0) AND ISNULL(f.IsView, 1) = 1 
 	ORDER BY rownum
 	
 	DROP TABLE #data

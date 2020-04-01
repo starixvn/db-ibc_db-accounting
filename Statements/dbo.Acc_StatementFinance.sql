@@ -91,12 +91,12 @@ BEGIN
 	SELECT @CustID = custid FROM dbo.Customer (NOLOCK) WHERE username LIKE @_Username
 	SET @CustID = ISNULL(@CustID,0)
 
-	DECLARE @GroupId SMALLINT = 0, @Username_S NVARCHAR(50), @Username_M NVARCHAR(50), @Username_A NVARCHAR(50), @Username_P NVARCHAR(50)
+	DECLARE @GroupId SMALLINT = -1, @Username_S NVARCHAR(50), @Username_M NVARCHAR(50), @Username_A NVARCHAR(50), @Username_P NVARCHAR(50)
 	
 
 	IF @_RefNo > 0
 	BEGIN
-	    SELECT @GroupId = ISNULL(GroupId,0)
+	    SELECT @GroupId = ISNULL(GroupId,-1)
 		FROM Acc_FinancePermission f WITH(NOLOCK)
 			INNER JOIN Customer c WITH(NOLOCK) ON f.FinanceCode = c.username
 		WHERE c.custid = @UserId AND c.roleid > 4	
@@ -163,14 +163,14 @@ BEGIN
 						WHERE  f.FinanceCode IN (s.username, m.username, a.username, p.username)
 							   AND f.GroupId = @GroupId
 							   AND l.IsInternal = 1
-							   AND @GroupId NOT IN (0, 1)
+							   AND @GroupId NOT IN (-1, 1)
 						ORDER BY f.RoleId ASC
 				 ) cr			 
 			WHERE 
 				b.matchid = 0
 				AND b.refno = @_RefNo
 				AND b.bettype >= 20000 
-				AND (@GroupId = 1 OR ISNULL(cr.IsView, ~l.IsInternal) = 1)
+				AND (@GroupId = 1 OR ISNULL(cr.IsView, ~l.IsInternal) = 1 OR (@GroupId = 0 AND ISNULL(cr.IsView, 1) = 1))
 
             
             
@@ -226,10 +226,11 @@ BEGIN
 								WHERE f.FinanceCode IN (s.username, m.username, a.username, p.username)
 								      AND l.IsInternal = 1
 									  AND f.GroupId = @GroupId 
-									  AND @GroupId NOT IN (0 , 1)	
+									  AND @GroupId NOT IN (-1 , 1)	
 								ORDER BY f.RoleId ASC
 						) cr
-					WHERE tf.refno = @_RefNo AND (@GroupId = 1 OR ISNULL(cr.IsView, ~l.IsInternal) = 1 OR l.IsInternal IS NULL)
+					WHERE tf.refno = @_RefNo 
+					      AND(@GroupId = 1 OR ISNULL(cr.IsView, ~l.IsInternal) = 1 OR l.IsInternal IS NULL OR (@GroupId = 0 AND ISNULL(cr.IsView, 1) = 1))
 
 			END
     

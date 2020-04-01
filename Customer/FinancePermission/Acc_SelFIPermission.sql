@@ -18,11 +18,11 @@ Original:
 
 BEGIN
 DECLARE @IsView BIT = NULL,@Username_s  NVARCHAR(50), @Username_m NVARCHAR(50), @Username_r NVARCHAR(50) , @Username_p NVARCHAR(50), 
-		@GroupId SMALLINT = 0, @CustId INT, @Roleid SMALLINT, @Username_Login NVARCHAR(50), @IsInternal BIT = 0
+		@GroupId SMALLINT = -1, @CustId INT, @Roleid SMALLINT, @Username_Login NVARCHAR(50), @IsInternal BIT = 0
 
 SELECT @Username_Login =  username FROM Customer WITH (NOLOCK) WHERE custid = @UserID
 
-SELECT @GroupId = ISNULL(GroupId,0) 
+SELECT @GroupId = ISNULL(GroupId,-1) 
 FROM dbo.Acc_FinancePermission WITH(NOLOCK) 
 WHERE FinanceCode = @Username_Login AND RoleId > 4
 
@@ -61,11 +61,11 @@ BEGIN
 	WHERE FinanceCode IN (@Username_s, @Username_m, @Username_r, @Username_p) 
 		  AND GroupId = @GroupId 
 		  AND f.RoleId BETWEEN 1 AND 4
-		  AND @GroupId <> 0
+		  AND @GroupId <> -1
 		  AND @IsInternal = 1		  
 	ORDER BY RoleId ASC
 
 END
 
-SELECT ISNULL(@IsView, ~ @IsInternal) IsView
+SELECT CASE WHEN @GroupId <> 0 THEN ISNULL(@IsView, ~@IsInternal) ELSE ISNULL(@IsView, 1) END  IsView
 END
