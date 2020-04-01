@@ -94,8 +94,7 @@ BEGIN
 		ORDER BY A.ProductId
 
 	DROP TABLE #SportBettype
-	DROP TABLE #WL	
-	DROP TABLE #Match
+	DROP TABLE #WL	 
 		
 END
 GO
