@@ -25,8 +25,71 @@ BEGIN
 
 	SELECT @PageIndex = @PageIndex - 1, @RowStart = @PageIndex * @PageSize + 1, @RowEnd = @RowStart + @PageSize - 1
 
-    SELECT *, ROW_NUMBER() OVER(ORDER BY SportType) AS RowNum
-	INTO #Tmp
+	CREATE TABLE #Tmp (
+	 	SportType		SMALLINT,
+		SportName		NVARCHAR(50),
+		SportNameCh		NVARCHAR(50),
+		SportNameCs		NVARCHAR(50),
+		SportNameJp		NVARCHAR(50),
+		SportNameIt		NVARCHAR(50),
+		SportNameTh		NVARCHAR(50),
+		ParlayMaxPayout INT,
+		SportNameKo		NVARCHAR(50),
+		SportNameES		NVARCHAR(50),
+		SportNameVN		NVARCHAR(50),
+		SportNameEL		NVARCHAR(50),
+		SportNameRU		NVARCHAR(50),
+		SportNameID		NVARCHAR(50),
+		SportNamePT		NVARCHAR(50),
+		SportNameFR		NVARCHAR(50),
+		SportNameMMR	NVARCHAR(50),
+		SportNamePL		NVARCHAR(50),
+		SportNameHI		NVARCHAR(50),
+		RowNum          INT
+	)
+
+	INSERT INTO #Tmp(
+			   SportType,
+		       ParlayMaxPayout,
+			   SportName,
+			   SportNameCh,
+			   SportNameCs,
+			   SportNameJp,
+			   SportNameIt,
+			   SportNameTh,		   
+			   SportNameKo,
+			   SportNameES,
+			   SportNameVN,
+			   SportNameEL,
+			   SportNameRU,
+			   SportNameID,
+			   SportNamePT,
+			   SportNameFR,
+			   SportNameMMR,
+			   SportNamePL,
+			   SportNameHI,
+			   RowNum
+	)
+    SELECT     SportType,
+		       ParlayMaxPayout,
+			   SportName,
+			   SportNameCh,
+			   SportNameCs,
+			   SportNameJp,
+			   SportNameIt,
+			   SportNameTh,		   
+			   SportNameKo,
+			   SportNameES,
+			   SportNameVN,
+			   SportNameEL,
+			   SportNameRU,
+			   SportNameID,
+			   SportNamePT,
+			   SportNameFR,
+			   SportNameMMR,
+			   SportNamePL,
+			   SportNameHI,
+			   ROW_NUMBER() OVER(ORDER BY SportType) AS RowNum
 	FROM Sports WITH(NOLOCK)
 	WHERE (SportType = @Sporttype OR ISNULL(@Sporttype,0) = 0) 
 		  AND (SportName LIKE '%' + @SportName +'%' OR ISNULL(@SportName,'') = '')
@@ -34,56 +97,29 @@ BEGIN
 	ORDER BY SportType
 
 	SELECT @TotalRows = COUNT(*) FROM #Tmp 
-
-	IF @PageIndex < 0 OR @PageSize <= 0
-	BEGIN
-		SELECT SportType,
-		       ParlayMaxPayout,
-			   SportName,
-			   SportNameCh,
-			   SportNameCs,
-			   SportNameJp,
-			   SportNameIt,
-			   SportNameTh,		   
-			   SportNameKo,
-			   SportNameES,
-			   SportNameVN,
-			   SportNameEL,
-			   SportNameRU,
-			   SportNameID,
-			   SportNamePT,
-			   SportNameFR,
-			   SportNameMMR,
-			   SportNamePL,
-			   SportNameHI,
-			   RowNum
-		FROM #Tmp
-	END 
-	ELSE
-	BEGIN
-		SELECT SportType,
-		       ParlayMaxPayout,
-			   SportName,
-			   SportNameCh,
-			   SportNameCs,
-			   SportNameJp,
-			   SportNameIt,
-			   SportNameTh,		   
-			   SportNameKo,
-			   SportNameES,
-			   SportNameVN,
-			   SportNameEL,
-			   SportNameRU,
-			   SportNameID,
-			   SportNamePT,
-			   SportNameFR,
-			   SportNameMMR,
-			   SportNamePL,
-			   SportNameHI,
-			   RowNum
-		FROM #Tmp
-		WHERE RowNum BETWEEN @RowStart AND @RowEnd
-	END
+	
+	SELECT  SportType,
+		    ParlayMaxPayout,
+		    SportName,
+		    SportNameCh,
+		    SportNameCs,
+			SportNameJp,
+			SportNameIt,
+			SportNameTh,		   
+			SportNameKo,
+			SportNameES,
+			SportNameVN,
+			SportNameEL,
+			SportNameRU,
+			SportNameID,
+			SportNamePT,
+			SportNameFR,
+			SportNameMMR,
+			SportNamePL,
+			SportNameHI,
+			RowNum
+	FROM #Tmp
+	WHERE @PageIndex < 0 OR @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd)
 
 	DROP TABLE #Tmp
  
