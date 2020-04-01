@@ -1,7 +1,7 @@
 /*<info serverAlias="DBPRO-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 
 CREATE PROCEDURE  dbo.Acc_Sporttype_Upd
-	@File		VARCHAR(MAX),
+	@File		NVARCHAR(MAX),
 	@LoginIP	VARCHAR(20)='',
 	@ErrCode	INT = 0 OUTPUT,
 	@ErrMsg		NVARCHAR(4000) = '' OUTPUT,
@@ -131,25 +131,25 @@ BEGIN
 
 		SELECT @Sporttype = SportType FROM #input WHERE ID = @CurrentRow
 
-		SELECT @LogSPData2 = '<R SportType="'+ COALESCE(CAST(SportType AS VARCHAR(40)), SPACE(1)) + '" ' +
-		                     'ParlayMaxPayout="' + COALESCE(CAST(ParlayMaxPayout  AS VARCHAR(50)), SPACE(1)) + '" ' +
-		                     'SportName="' + COALESCE(CAST(SportName   AS VARCHAR(50)), SPACE(1)) + '" ' +
-							 'SportNameCh="' + COALESCE(CAST(SportNameCh  AS VARCHAR(50)), SPACE(1)) + '" ' +
-						   	 'SportNameCs="' + COALESCE(CAST(SportNameCs  AS VARCHAR(50)), SPACE(1)) + '" ' +
-							 'SportNameJp="' + COALESCE(CAST(SportNameJp  AS VARCHAR(50)), SPACE(1)) + '" ' +
-							 'SportNameIt="' + COALESCE(CAST(SportNameIt  AS VARCHAR(50)), SPACE(1)) + '" ' +
-							 'SportNameTh="' + COALESCE(CAST(SportNameTh  AS VARCHAR(50)), SPACE(1)) + '" ' +							
-							 'SportNameKo="' + COALESCE(CAST(SportNameKo  AS VARCHAR(50)), SPACE(1)) + '" ' +
-							 'SportNameES="' + COALESCE(CAST(SportNameES  AS VARCHAR(50)), SPACE(1)) + '" ' +
-							 'SportNameVN="' + COALESCE(CAST(SportNameVN  AS VARCHAR(50)), SPACE(1)) + '" ' +
-							 'SportNameEL="' + COALESCE(CAST(SportNameEL  AS VARCHAR(50)), SPACE(1)) + '" ' +
-							 'SportNameRU="' + COALESCE(CAST(SportNameRU  AS VARCHAR(50)), SPACE(1)) + '" ' +
-							 'SportNameID="' + COALESCE(CAST(SportNameID  AS VARCHAR(50)), SPACE(1)) + '" ' +
-							 'SportNamePT="' + COALESCE(CAST(SportNamePT  AS VARCHAR(50)), SPACE(1)) + '" ' +
-							 'SportNameFR="' + COALESCE(CAST(SportNameFR  AS VARCHAR(50)), SPACE(1)) + '" ' +
-							 'SportNameMMR="' + COALESCE(CAST(SportNameMMR  AS VARCHAR(50)), SPACE(1)) + '" ' +
-							 'SportNamePL="' + COALESCE(CAST(SportNamePL  AS VARCHAR(50)), SPACE(1)) + '" ' +
-							 'SportNameHI="' + COALESCE(CAST(SportNameHI  AS VARCHAR(50)), SPACE(1)) + '" ' +
+		SELECT @LogSPData2 = '<R SportType="'+ COALESCE(CAST(SportType AS VARCHAR(6)), SPACE(1)) + '" ' +
+		                     'ParlayMaxPayout="' + COALESCE(CAST(ParlayMaxPayout  AS VARCHAR(15)), SPACE(1)) + '" ' +
+		                     'SportName="' + COALESCE(CAST(SportName   AS NVARCHAR(50)), SPACE(1)) + '" ' +
+							 'SportNameCh="' + COALESCE(CAST(SportNameCh  AS NVARCHAR(50)), SPACE(1)) + '" ' +
+						   	 'SportNameCs="' + COALESCE(CAST(SportNameCs  AS NVARCHAR(50)), SPACE(1)) + '" ' +
+							 'SportNameJp="' + COALESCE(CAST(SportNameJp  AS NVARCHAR(50)), SPACE(1)) + '" ' +
+							 'SportNameIt="' + COALESCE(CAST(SportNameIt  AS NVARCHAR(50)), SPACE(1)) + '" ' +
+							 'SportNameTh="' + COALESCE(CAST(SportNameTh  AS NVARCHAR(50)), SPACE(1)) + '" ' +							
+							 'SportNameKo="' + COALESCE(CAST(SportNameKo  AS NVARCHAR(50)), SPACE(1)) + '" ' +
+							 'SportNameES="' + COALESCE(CAST(SportNameES  AS NVARCHAR(50)), SPACE(1)) + '" ' +
+							 'SportNameVN="' + COALESCE(CAST(SportNameVN  AS NVARCHAR(50)), SPACE(1)) + '" ' +
+							 'SportNameEL="' + COALESCE(CAST(SportNameEL  AS NVARCHAR(50)), SPACE(1)) + '" ' +
+							 'SportNameRU="' + COALESCE(CAST(SportNameRU  AS NVARCHAR(50)), SPACE(1)) + '" ' +
+							 'SportNameID="' + COALESCE(CAST(SportNameID  AS NVARCHAR(50)), SPACE(1)) + '" ' +
+							 'SportNamePT="' + COALESCE(CAST(SportNamePT  AS NVARCHAR(50)), SPACE(1)) + '" ' +
+							 'SportNameFR="' + COALESCE(CAST(SportNameFR  AS NVARCHAR(50)), SPACE(1)) + '" ' +
+							 'SportNameMMR="' + COALESCE(CAST(SportNameMMR  AS NVARCHAR(50)), SPACE(1)) + '" ' +
+							 'SportNamePL="' + COALESCE(CAST(SportNamePL  AS NVARCHAR(50)), SPACE(1)) + '" ' +
+							 'SportNameHI="' + COALESCE(CAST(SportNameHI  AS NVARCHAR(50)), SPACE(1)) + '" ' +
 							 'LoginIP="'+ COALESCE(CAST(@LoginIP as VARCHAR(20)),SPACE(1)) + '" />'
 		FROM Sports WITH(NOLOCK)
 		WHERE SportType = @Sporttype
@@ -185,25 +185,25 @@ BEGIN
 		END CATCH
 		
 		     
-	    SELECT @LogSPData = '<R SportType="'+ COALESCE(CAST(SportType AS VARCHAR(40)), SPACE(1)) + '" ' +
-		                    'ParlayMaxPayout="' + COALESCE(CAST(ParlayMaxPayout  AS VARCHAR(50)), SPACE(1)) + '" ' +
-		                    'SportName="' + COALESCE(CAST(SportName   AS VARCHAR(50)), SPACE(1)) + '" ' +
-							'SportNameCh="' + COALESCE(CAST(SportNameCh  AS VARCHAR(50)), SPACE(1)) + '" ' +
-							'SportNameCs="' + COALESCE(CAST(SportNameCs  AS VARCHAR(50)), SPACE(1)) + '" ' +
-							'SportNameJp="' + COALESCE(CAST(SportNameJp  AS VARCHAR(50)), SPACE(1)) + '" ' +
-							'SportNameIt="' + COALESCE(CAST(SportNameIt  AS VARCHAR(50)), SPACE(1)) + '" ' +
-							'SportNameTh="' + COALESCE(CAST(SportNameTh  AS VARCHAR(50)), SPACE(1)) + '" ' +							
-							'SportNameKo="' + COALESCE(CAST(SportNameKo  AS VARCHAR(50)), SPACE(1)) + '" ' +
-							'SportNameES="' + COALESCE(CAST(SportNameES  AS VARCHAR(50)), SPACE(1)) + '" ' +
-							'SportNameVN="' + COALESCE(CAST(SportNameVN  AS VARCHAR(50)), SPACE(1)) + '" ' +
-							'SportNameEL="' + COALESCE(CAST(SportNameEL  AS VARCHAR(50)), SPACE(1)) + '" ' +
-							'SportNameRU="' + COALESCE(CAST(SportNameRU  AS VARCHAR(50)), SPACE(1)) + '" ' +
-							'SportNameID="' + COALESCE(CAST(SportNameID  AS VARCHAR(50)), SPACE(1)) + '" ' +
-							'SportNamePT="' + COALESCE(CAST(SportNamePT  AS VARCHAR(50)), SPACE(1)) + '" ' +
-							'SportNameFR="' + COALESCE(CAST(SportNameFR  AS VARCHAR(50)), SPACE(1)) + '" ' +
-							'SportNameMMR="' + COALESCE(CAST(SportNameMMR  AS VARCHAR(50)), SPACE(1)) + '" ' +
-							'SportNamePL="' + COALESCE(CAST(SportNamePL  AS VARCHAR(50)), SPACE(1)) + '" ' +
-							'SportNameHI="' + COALESCE(CAST(SportNameHI  AS VARCHAR(50)), SPACE(1)) + '" ' +
+	    SELECT @LogSPData = '<R SportType="'+ COALESCE(CAST(SportType AS VARCHAR(6)), SPACE(1)) + '" ' +
+		                    'ParlayMaxPayout="' + COALESCE(CAST(ParlayMaxPayout  AS VARCHAR(15)), SPACE(1)) + '" ' +
+		                    'SportName="' + COALESCE(CAST(SportName   AS NVARCHAR(50)), SPACE(1)) + '" ' +
+							'SportNameCh="' + COALESCE(CAST(SportNameCh  AS NVARCHAR(50)), SPACE(1)) + '" ' +
+							'SportNameCs="' + COALESCE(CAST(SportNameCs  AS NVARCHAR(50)), SPACE(1)) + '" ' +
+							'SportNameJp="' + COALESCE(CAST(SportNameJp  AS NVARCHAR(50)), SPACE(1)) + '" ' +
+							'SportNameIt="' + COALESCE(CAST(SportNameIt  AS NVARCHAR(50)), SPACE(1)) + '" ' +
+							'SportNameTh="' + COALESCE(CAST(SportNameTh  AS NVARCHAR(50)), SPACE(1)) + '" ' +							
+							'SportNameKo="' + COALESCE(CAST(SportNameKo  AS NVARCHAR(50)), SPACE(1)) + '" ' +
+							'SportNameES="' + COALESCE(CAST(SportNameES  AS NVARCHAR(50)), SPACE(1)) + '" ' +
+							'SportNameVN="' + COALESCE(CAST(SportNameVN  AS NVARCHAR(50)), SPACE(1)) + '" ' +
+							'SportNameEL="' + COALESCE(CAST(SportNameEL  AS NVARCHAR(50)), SPACE(1)) + '" ' +
+							'SportNameRU="' + COALESCE(CAST(SportNameRU  AS NVARCHAR(50)), SPACE(1)) + '" ' +
+							'SportNameID="' + COALESCE(CAST(SportNameID  AS NVARCHAR(50)), SPACE(1)) + '" ' +
+							'SportNamePT="' + COALESCE(CAST(SportNamePT  AS NVARCHAR(50)), SPACE(1)) + '" ' +
+							'SportNameFR="' + COALESCE(CAST(SportNameFR  AS NVARCHAR(50)), SPACE(1)) + '" ' +
+							'SportNameMMR="' + COALESCE(CAST(SportNameMMR  AS NVARCHAR(50)), SPACE(1)) + '" ' +
+							'SportNamePL="' + COALESCE(CAST(SportNamePL  AS NVARCHAR(50)), SPACE(1)) + '" ' +
+							'SportNameHI="' + COALESCE(CAST(SportNameHI  AS NVARCHAR(50)), SPACE(1)) + '" ' +
 							'LoginIP="'+ COALESCE(CAST(@LoginIP as VARCHAR(20)),SPACE(1)) + '" />'
 		FROM #input 
 		WHERE  ID = @CurrentRow

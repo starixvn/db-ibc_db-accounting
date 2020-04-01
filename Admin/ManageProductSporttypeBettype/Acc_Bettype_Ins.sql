@@ -1,6 +1,6 @@
 /*<info serverAlias="DBPRO-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE  dbo.Acc_Bettype_Ins
-	@File	    VARCHAR(MAX),
+	@File	    NVARCHAR(MAX),
 	@LoginIP	VARCHAR(20)='',
 	@ErrCode	INT = 0 OUTPUT,
 	@ErrMsg		NVARCHAR(4000) = '' OUTPUT,
@@ -63,7 +63,7 @@ BEGIN
 		typenamee       NVARCHAR(128),
 		typenamec		NVARCHAR(128),
 		typedesc		NVARCHAR(128),
-		typenamec_uni	NVARCHAR,
+		typenamec_uni	NVARCHAR(128),
 		typenamej		NVARCHAR(128),
 		typenamcn		NVARCHAR(128),
 		typenamecn		NVARCHAR(128),
@@ -139,7 +139,7 @@ BEGIN
 														typenamee		NVARCHAR(128),
 														typenamec		NVARCHAR(128),
 														typedesc		NVARCHAR(128),
-														typenamec_uni	NVARCHAR,
+														typenamec_uni	NVARCHAR(128),
 														typenamej		NVARCHAR(128),
 														typenamcn		NVARCHAR(128),
 														typenamecn		NVARCHAR(128),
@@ -233,29 +233,29 @@ BEGIN
 		END CATCH 
 		
 
-		SELECT @LogSPData =   '<R typeid="'+ COALESCE(CAST(typeid AS VARCHAR(40)), SPACE(1)) + '" ' +
-								'DisplayedTypeID="' + COALESCE(CAST(DisplayedTypeID  AS VARCHAR(40)), SPACE(1)) + '" ' +
-								'ParentTypeid="' + COALESCE(CAST(ParentTypeid  AS VARCHAR(40)), SPACE(1)) + '" ' +
-								'typenamee="' + COALESCE(CAST(typenamee  AS VARCHAR(128)), SPACE(1)) + '" ' +
-								'typenamec="' + COALESCE(CAST(typenamec  AS VARCHAR(128)), SPACE(1)) + '" ' +
-								'typedesc="' + COALESCE(CAST(typedesc  AS VARCHAR(128)), SPACE(1)) + '" ' +								
-								'typenamec_uni="' + COALESCE(CAST(typenamec_uni  AS VARCHAR(128)), SPACE(1)) + '" ' +
-								'typenamej="' + COALESCE(CAST(typenamej  AS VARCHAR(128)), SPACE(1)) + '" ' +
-								'typenamcn="' + COALESCE(CAST(typenamcn  AS VARCHAR(128)), SPACE(1)) + '" ' +
-								'typenamecn="' + COALESCE(CAST(typenamecn  AS VARCHAR(128)), SPACE(1)) + '" ' +
-								'typenameth="' + COALESCE(CAST(typenameth  AS VARCHAR(128)), SPACE(1)) + '" ' +
-								'typenameit="' + COALESCE(CAST(typenameit  AS VARCHAR(128)), SPACE(1)) + '" ' +
-								'typenameko="' + COALESCE(CAST(typenameko  AS VARCHAR(128)), SPACE(1)) + '" ' +
-								'typenameES="' + COALESCE(CAST(typenameES  AS VARCHAR(128)), SPACE(1)) + '" ' +
-								'typenameVN="' + COALESCE(CAST(typenameVN  AS VARCHAR(128)), SPACE(1)) + '" ' +
-								'typenameEL="' + COALESCE(CAST(typenameEL  AS VARCHAR(128)), SPACE(1)) + '" ' +
-								'typenamee_Eu="' + COALESCE(CAST(typenamee_Eu  AS VARCHAR(128)), SPACE(1)) + '" ' +
-								'typenameRU="' + COALESCE(CAST(typenameRU  AS VARCHAR(128)), SPACE(1)) + '" ' +
-								'typenameID="' + COALESCE(CAST(typenameID  AS VARCHAR(128)), SPACE(1)) + '" ' +
-								'typenamePT="' + COALESCE(CAST(typenamePT  AS VARCHAR(128)), SPACE(1)) + '" ' +
-								'typenameFR="' + COALESCE(CAST(typenameFR  AS VARCHAR(256)), SPACE(1)) + '" ' +							
-								'typenameMMR="' + COALESCE(CAST(typenameMMR  AS VARCHAR(128)), SPACE(1)) + '" ' +
-								'typenameHI="' + COALESCE(CAST(typenameHI  AS VARCHAR(128)), SPACE(1)) + '" ' +							
+		SELECT @LogSPData =   '<R typeid="'+ COALESCE(CAST(typeid AS VARCHAR(15)), SPACE(1)) + '" ' +
+								'DisplayedTypeID="' + COALESCE(CAST(DisplayedTypeID  AS VARCHAR(15)), SPACE(1)) + '" ' +
+								'ParentTypeid="' + COALESCE(CAST(ParentTypeid  AS VARCHAR(15)), SPACE(1)) + '" ' +
+								'typenamee="' + COALESCE(CAST(typenamee  AS NVARCHAR(128)), SPACE(1)) + '" ' +
+								'typenamec="' + COALESCE(CAST(typenamec  AS NVARCHAR(128)), SPACE(1)) + '" ' +
+								'typedesc="' + COALESCE(CAST(typedesc  AS NVARCHAR(128)), SPACE(1)) + '" ' +								
+								'typenamec_uni="' + COALESCE(CAST(typenamec_uni  AS NVARCHAR(128)), SPACE(1)) + '" ' +
+								'typenamej="' + COALESCE(CAST(typenamej  AS NVARCHAR(128)), SPACE(1)) + '" ' +
+								'typenamcn="' + COALESCE(CAST(typenamcn  AS NVARCHAR(128)), SPACE(1)) + '" ' +
+								'typenamecn="' + COALESCE(CAST(typenamecn  AS NVARCHAR(128)), SPACE(1)) + '" ' +
+								'typenameth="' + COALESCE(CAST(typenameth  AS NVARCHAR(128)), SPACE(1)) + '" ' +
+								'typenameit="' + COALESCE(CAST(typenameit  AS NVARCHAR(128)), SPACE(1)) + '" ' +
+								'typenameko="' + COALESCE(CAST(typenameko  AS NVARCHAR(128)), SPACE(1)) + '" ' +
+								'typenameES="' + COALESCE(CAST(typenameES  AS NVARCHAR(128)), SPACE(1)) + '" ' +
+								'typenameVN="' + COALESCE(CAST(typenameVN  AS NVARCHAR(128)), SPACE(1)) + '" ' +
+								'typenameEL="' + COALESCE(CAST(typenameEL  AS NVARCHAR(128)), SPACE(1)) + '" ' +
+								'typenamee_Eu="' + COALESCE(CAST(typenamee_Eu  AS NVARCHAR(128)), SPACE(1)) + '" ' +
+								'typenameRU="' + COALESCE(CAST(typenameRU  AS NVARCHAR(128)), SPACE(1)) + '" ' +
+								'typenameID="' + COALESCE(CAST(typenameID  AS NVARCHAR(128)), SPACE(1)) + '" ' +
+								'typenamePT="' + COALESCE(CAST(typenamePT  AS NVARCHAR(128)), SPACE(1)) + '" ' +
+								'typenameFR="' + COALESCE(CAST(typenameFR  AS NVARCHAR(256)), SPACE(1)) + '" ' +							
+								'typenameMMR="' + COALESCE(CAST(typenameMMR  AS NVARCHAR(128)), SPACE(1)) + '" ' +
+								'typenameHI="' + COALESCE(CAST(typenameHI  AS NVARCHAR(128)), SPACE(1)) + '" ' +							
 								'LoginIP="'+ COALESCE(CAST(@LoginIP as VARCHAR(20)),SPACE(1)) + '" />'
 			FROM #input
 			WHERE ID = @CurrentRow

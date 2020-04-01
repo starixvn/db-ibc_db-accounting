@@ -28,7 +28,7 @@ BEGIN
     SELECT *, ROW_NUMBER() OVER(ORDER BY SportType) AS RowNum
 	INTO #Tmp
 	FROM Sports WITH(NOLOCK)
-	WHERE (SportType = @Sporttype OR ISNULL(@Sporttype,'') = '') 
+	WHERE (SportType = @Sporttype OR ISNULL(@Sporttype,0) = 0) 
 		  AND (SportName LIKE '%' + @SportName +'%' OR ISNULL(@SportName,'') = '')
 
 	ORDER BY SportType
