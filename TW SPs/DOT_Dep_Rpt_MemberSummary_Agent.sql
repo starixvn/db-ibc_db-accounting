@@ -162,7 +162,7 @@ BEGIN
 	
 	INSERT INTO @TodayData (custid, currency, recommend, mrecommend, srecommend, OpeningBalance, Deposit, Aff2MemTransfer, Withdrawal, Bonus, Adjustment,
 							Transfer3rd, Turnover, DrawGame, Outstanding, Winloss, Transfer3rd_Opus, Transfer3rd_HoGaming, Transfer3rd_AG, Transfer3rd_GD, Transfer3rd_VB, Transfer3rd_CRYSTAL, Transfer3rd_LBKeno, Transfer3rd_Opal,
-							Transfer3rd_BetSoft, Transfer3rd_iSoftBet, Transfer3rd_CitiBet, Transfer3rd_Topaz, Transfer3rd_IMone, Transfer3rd_BTi, Transfer3rd_VRLottery, Transfer3rd_Sapphire, Promotion, Transfer3rd_KYGaming)
+							Transfer3rd_BetSoft, Transfer3rd_iSoftBet, Transfer3rd_CitiBet, Transfer3rd_Topaz, Transfer3rd_IMone, Transfer3rd_BTi, Transfer3rd_VRLottery, Transfer3rd_Sapphire, Transfer3rd_KYGaming, Promotion)
 	SELECT b.custid, b.currency, b.recommend, b.mrecommend, b.srecommend,
 		   @TodayOpeningBalance, -- OpeningBalance
 		   SUM(CASE WHEN winlostdate = @dbtodaydate AND bettype = 22001 THEN winlost-actual_stake ELSE 0 END), -- Deposit
