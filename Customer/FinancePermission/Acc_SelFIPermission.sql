@@ -24,7 +24,7 @@ Original:
 
 BEGIN
 DECLARE @IsView BIT = NULL,@Username_s  VARCHAR(30), @Username_m VARCHAR(30), @Username_r VARCHAR(30) , @Username_p VARCHAR(30), 
-		@GroupId SMALLINT = -1, @CustId INT, @Roleid SMALLINT, @Username_Login NVARCHAR(50), @IsInternal BIT = 0
+		@GroupId SMALLINT = -1, @CustId INT, @Username_Login VARCHAR(30), @IsInternal BIT = 0
 
 SELECT @Username_Login =  username FROM Customer WITH (NOLOCK) WHERE custid = @UserID
 
@@ -45,7 +45,6 @@ BEGIN
            @Username_m = Ma.username, 
 		   @Username_r = Ag.username, 
 		   @Username_p = p.username, 
-		   @Roleid     = p.roleid,
 		   @IsInternal = ISNULL(f.IsInternal, 0)
 	FROM dbo.Customer p WITH(NOLOCK)
 	     LEFT JOIN dbo.Customer Ag WITH (NOLOCK) ON p.recommend  = Ag.custid
