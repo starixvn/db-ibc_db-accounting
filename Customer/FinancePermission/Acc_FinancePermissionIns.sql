@@ -2,7 +2,7 @@
 CREATE PROC dbo.Acc_FinancePermissionIns
 	 @UserId INT,
 	 @GroupId SMALLINT,
-	 @Username NVARCHAR(50),
+	 @Username VARCHAR(30),
 	 @IsView BIT = 0,
 	 @Type SMALLINT = 0
 	 	
@@ -41,7 +41,7 @@ BEGIN
 	
 
 	SELECT @LogSPData = '<R GroupId="'+ COALESCE(CAST(@GroupId AS VARCHAR(10)), SPACE(1)) + '" ' +
-	                       'Username="'+ COALESCE(CAST(@Username AS VARCHAR(50)), SPACE(1)) + '" ' +
+	                       'Username="'+ COALESCE(CAST(@Username AS VARCHAR(30)), SPACE(1)) + '" ' +
 						   'Type="'+ COALESCE(CAST(@Type AS VARCHAR(2)), SPACE(1)) + '" ' +
 						   'RoleId="'+ COALESCE(CAST(@RoleId AS VARCHAR(4)), SPACE(1)) + '" ' +
 						   'IsView="'+ COALESCE(CAST(@IsView AS VARCHAR(2)), SPACE(1)) + '" ' +
