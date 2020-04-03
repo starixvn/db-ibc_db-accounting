@@ -3,26 +3,33 @@ CREATE PROC dbo.Acc_FinancePermissionIns
 	 @UserId INT,
 	 @GroupId SMALLINT,
 	 @Username NVARCHAR(50),
-	 @RoleId INT,
 	 @IsView BIT = 0,
 	 @Type SMALLINT = 0
 	 	
 AS
 /*
     Created by: 20200325@Malcolm
-	Task: Insert Finance User/ Finance Code into FinancePermission table [Redmine : #128128]
+	Task: Insert Admin/ Finance Code into FinancePermission table [Redmine : #128128]
 	DB : DBCUST/CustDB
 
 	Revisions:
-		- 20200325@Malcolm: Insert Finance User/ Finance Code into FinancePermission table [Redmine : #128128]
+		- 20200325@Malcolm: Insert Admin/ Finance Code into FinancePermission table [Redmine : #128128]
 	Param's Explanation:
 		- @Type   = 0 : Finance code
-		          = 1 : Finance User	
-	    - @IsView = 0 for Finance User
+		          = 1 : Admin
+	    - @IsView = 0 for Admine
 */
 BEGIN
-    DECLARE @startRun DATETIME, @endRun DATETIME, @duration INT, @LogSPData NVARCHAR(MAX), @CustId INT = 0, @ErrCode INT = 0, @ErrMsg NVARCHAR(4000) = '' 
+    DECLARE @startRun DATETIME, @endRun DATETIME, @duration INT, @LogSPData NVARCHAR(MAX), @CustId INT = NULL, @ErrCode INT = 0, @ErrMsg NVARCHAR(4000) = '', @RoleId INT
 	SET @startRun = GETDATE();
+
+	SELECT @RoleId = roleid, @CustId = custid FROM Customer WITH(NOLOCK) WHERE username = @Username
+
+	IF @CustId IS NULL
+	BEGIN
+	     SELECT  @ErrMsg = 'username is uncorrect';
+		 RETURN
+	END
 
     BEGIN TRY
 		INSERT INTO dbo.Acc_FinancePermission(GroupId, FinanceCode, RoleId, IsView)
@@ -32,9 +39,6 @@ BEGIN
 	    SELECT @ErrCode = ERROR_NUMBER(), @ErrMsg = ERROR_MESSAGE();
 	END CATCH
 	
-	SELECT @CustId = custid
-	FROM  dbo.Customer WITH(NOLOCK)
-	WHERE username = @Username
 
 	SELECT @LogSPData = '<R GroupId="'+ COALESCE(CAST(@GroupId AS VARCHAR(10)), SPACE(1)) + '" ' +
 	                       'Username="'+ COALESCE(CAST(@Username AS VARCHAR(50)), SPACE(1)) + '" ' +
@@ -47,9 +51,9 @@ BEGIN
 	SET @duration = DATEDIFF (MILLISECOND,@startRun,@endRun)
 	EXEC  DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 			        @UserID = @UserID,
-				    @CustID = 0,
-					@ActionID = 95005,
-					@TrackingValue = @LogSPData	,
+				    @CustID = @CustId,
+					@ActionID = 95003,
+					@TrackingValue = @LogSPData,
 					@duration = @duration
 				
 END
