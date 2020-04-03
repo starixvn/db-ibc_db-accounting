@@ -28,7 +28,6 @@ BEGIN
 
     BEGIN TRY
 		DELETE t
-		OUTPUT deleted.IsView
 		FROM dbo.Acc_FinancePermission t 
 		WHERE t.FinanceCode = @Username AND t.GroupId = @GroupId
 	END TRY
