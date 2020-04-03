@@ -4,12 +4,12 @@ GO
 
 /*
    Created: Malcolm
-	Date: 2020-03-17
-	Task:   Configuration for CN88 Headlines to view all periods - [Redmine: #127520]
+	Date: 2020-04-01
+	Task:   Add finance code/ finance user - [Redmine: #128128]
 	DB: DBCUST/CustDB
 
 	Revisions:
-		- 20200317@Malcolm:  Configuration for CN88 Headlines to view all periods - [Redmine: #127520]
+		- 20200317@Malcolm:  Add finance code/ finance user - [Redmine: #128128]
 	Parameter's explaination:
 */
 DELETE
