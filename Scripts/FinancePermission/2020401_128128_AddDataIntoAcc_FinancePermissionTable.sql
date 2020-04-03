@@ -9,7 +9,7 @@ GO
 	DB: DBCUST/CustDB
 
 	Revisions:
-		- 20200317@Malcolm:  Add finance code/ finance user - [Redmine: #128128]
+		- 20200401@Malcolm:  Add finance code/ finance user - [Redmine: #128128]
 	Parameter's explaination:
 */
 DELETE

@@ -5,15 +5,17 @@ GO
 /*
    Created: Malcolm
 	Date: 2020-04-03
-	Task:   Add finance code/ finance user - [Redmine: #128128]
+	Task:   Remove finance code/ finance user - [Redmine: #128128]
 	DB: DBCUST/CustDB
 
 	Revisions:
-		- 20200403@Malcolm:  Add finance code/ finance user - [Redmine: #128128]
+		- 20200403@Malcolm:  Remove finance code/ finance user - [Redmine: #128128]
 	Parameter's explaination:
 */
 
 --for test
+DELETE 
+FROM 
 INSERT INTO dbo.Acc_FinancePermission (GroupId, FinanceCode,RoleId,IsView)
 VALUES (1,'starix16',6,0),
 (3,'starix23',6,0),
