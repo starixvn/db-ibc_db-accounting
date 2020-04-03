@@ -15,11 +15,12 @@ GO
 
 --for test
 DELETE 
-FROM 
-INSERT INTO dbo.Acc_FinancePermission (GroupId, FinanceCode,RoleId,IsView)
-VALUES (1,'starix16',6,0),
-(3,'starix23',6,0),
-(6,'starix27',6,0),
-(2,'starix47',6,0),
-(5,'starix59',6,0),
-(4,'starix77',6,0)
+FROM dbo.Acc_FinancePermission
+WHERE GroupId = 1 AND FinanceCode ='starix16'
+      OR GroupId = 3 AND FinanceCode ='starix23'
+	  OR GroupId = 6 AND FinanceCode ='starix27'
+	  OR GroupId = 2 AND FinanceCode ='starix47'
+	  OR GroupId = 5 AND FinanceCode ='starix59'
+	  OR GroupId = 4 AND FinanceCode ='starix77'
+
+	  
