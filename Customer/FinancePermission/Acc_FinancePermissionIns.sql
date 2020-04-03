@@ -57,3 +57,4 @@ BEGIN
 					@duration = @duration
 				
 END
+GO
