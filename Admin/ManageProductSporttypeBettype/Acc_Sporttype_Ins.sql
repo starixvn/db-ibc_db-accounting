@@ -32,6 +32,13 @@ BEGIN
 	IF ISNULL(@File, '') = ''
 			RETURN
 
+	IF LEN(@File) > 4000
+	   BEGIN
+	       SELECT @ErrCode = 1, @ErrMsg = 'The number of characters of file must be smaller than 4000'
+		   RETURN
+	   END 
+   
+
 	SET NOCOUNT ON
 	DECLARE @startRun DATETIME, @endRun DATETIME, @duration INT, @LogSPData NVARCHAR(MAX), @LogSPData2 NVARCHAR(MAX)
 	
