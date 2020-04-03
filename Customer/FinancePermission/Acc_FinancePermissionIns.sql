@@ -25,11 +25,6 @@ BEGIN
 
 	SELECT @RoleId = roleid, @CustId = custid FROM Customer WITH(NOLOCK) WHERE username = @Username
 
-	IF @CustId IS NULL
-	BEGIN
-	     SELECT  @ErrMsg = 'username is uncorrect';
-		 RETURN
-	END
 
     BEGIN TRY
 		INSERT INTO dbo.Acc_FinancePermission(GroupId, FinanceCode, RoleId, IsView)

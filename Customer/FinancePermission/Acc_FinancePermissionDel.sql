@@ -26,11 +26,6 @@ BEGIN
 	FROM dbo.Acc_FinancePermission 
 	WHERE FinanceCode = @Username AND GroupId = @GroupId
 
-	IF @CustId IS NULL
-	BEGIN
-	    SELECT @ErrMsg = 'username is uncorrect'
-		RETURN
-	END 
     BEGIN TRY
 		DELETE t
 		OUTPUT deleted.IsView
@@ -39,7 +34,6 @@ BEGIN
 	END TRY
 	BEGIN CATCH
 		SELECT @ErrCode = ERROR_NUMBER(), @ErrMsg = ERROR_MESSAGE();
-		RETURN;
 	END CATCH
 
 	
