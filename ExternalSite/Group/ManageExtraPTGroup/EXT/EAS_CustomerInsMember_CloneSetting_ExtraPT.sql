@@ -1,5 +1,5 @@
 /*<info serverAlias="DBCUST-CUSTDB" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
-CREATE PROCEDURE [dbo].[EAS_CustomerInsMember_CloneSetting_ExtraPT]
+ALTER PROCEDURE [dbo].[EAS_CustomerInsMember_CloneSetting_ExtraPT]
 	@CustID				INT,
 	@ExistingCustid		INT,	
 	@Creator			INT,
@@ -23,97 +23,49 @@ BEGIN
 	DECLARE @StartRun DATETIME, @EndRun DATETIME, @Duration INT, @LogData NVARCHAR(MAX)
 	SELECT  @StartRun = GETDATE()
 	
-	DECLARE @EffectiveDate DATETIME = '', @GroupName VARCHAR(50) = '', @Today DATE = GETDATE()	    
+	DECLARE @EffectiveDate DATETIME = '',  @Today DATE = GETDATE(), @GroupName VARCHAR(1000) = '', @EffectiveDates VARCHAR(1000) = ''  
 		
-	----- 1. check existing GroupName of existing Super	(current group)
-	SELECT 	@EffectiveDate= MIN(FromDate) , @GroupName = GroupName 			 
-	FROM 	dbo.Acc_GroupExtraPTSetting WITH(NOLOCK)
-	WHERE 	SuperId = @ExistingCustid
-			AND @Today BETWEEN FromDate AND ToDate 
-	GROUP BY GroupName	
-
-	IF ISNULL(@GroupName,'') <> '' 
+ 		
+	SELECT @EffectiveDate= @Today	
+	
+	IF NOT EXISTS (SELECT 1 FROM dbo.Acc_GroupExtraPTSetting WITH (NOLOCK) WHERE SuperID = @Custid AND ToDate > = @EffectiveDate)
 	BEGIN 
- 
-		IF NOT EXISTS (SELECT TOP 1 1 FROM dbo.Acc_CustGroup WITH(NOLOCK) WHERE CustID = @CustID AND GroupName = @GroupName)
-		BEGIN
-			SELECT
-				@ErrCode = 102,
-				@ErrMsg = N'This Customer does not belong to this group:' + @GroupName
-			RETURN
-		END
-
-
-		-- Update table Acc_GroupExtraPTSetting
-		EXEC dbo.Acc_GroupExtraPTSetting_Upd
-			@CustID = @CustID,
-			@GroupName = @GroupName,
-			@EffectiveDate = @Today,
-			@UserID = @Creator,
-			@ErrCode = @ErrCode OUTPUT,
-			@ErrMsg = @ErrMsg OUTPUT
-
-		IF @ErrCode <> 0
-			RETURN			
+		INSERT INTO dbo.Acc_GroupExtraPTSetting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct,
+												ExtraPT, FromDate, ToDate, UplineId)
+		SELECT @CustId, GroupId, GroupName, ProductID, Sporttype, SubProduct, ExtraPT,
+			CASE WHEN @EffectiveDate < FromDate THEN FromDate ELSE @EffectiveDate END AS FromDate,
+			ToDate,	UplineId
+		FROM Acc_GroupExtraPTSetting WITH (NOLOCK)
+		WHERE SuperId = @ExistingCustid
+			  AND ToDate >= @EffectiveDate			  
 	END
-	 
-	-- Write log 
-	SELECT  @LogData = '<EAS_CustomerInsMember_CloneSetting_ExtraPT CustID="' + CONVERT(NVARCHAR(20), @CustID)
-						+ '" GroupName="' + @GroupName
-						+ '" EffectiveDate="' + CONVERT(NVARCHAR(10), @Today, 120)
-						+ '" IP="' + @IP
-						+ '" ErrCode="' + CONVERT(NVARCHAR(4), @ErrCode)
-						+ '" ErrMsg="' + @ErrMsg + '" />'
-	SELECT @EndRun = GETDATE()
-	SELECT @Duration = DATEDIFF(MILLISECOND, @StartRun, @EndRun)
-		
-	EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
-			@UserID = @Creator,
-			@CustID = @CustID,
-			@ActionID = 95010,
-			@TrackingValue = @LogData,
-			@Duration = @Duration 
-	
-	
-	---------2. check existing GroupName of existing Super (Future group)
-	SELECT 	@EffectiveDate= MIN(FromDate) , @GroupName = GroupName 			 
-	FROM 	dbo.Acc_GroupExtraPTSetting WITH(NOLOCK)
-	WHERE 	SuperId = @ExistingCustid
-			AND @Today < FromDate
-	GROUP BY GroupName
-	
-	IF ISNULL(@EffectiveDate,'') <> '' 
+	ELSE
 	BEGIN 
- 
-		IF NOT EXISTS (SELECT TOP 1 1 FROM dbo.Acc_CustGroup WITH(NOLOCK) WHERE CustID = @CustID AND GroupName = @GroupName)
-		BEGIN
 			SELECT
-				@ErrCode = 102,
-				@ErrMsg = N'This Customer does not belong to this group:' + @GroupName
+				@ErrCode = 101,
+				@ErrMsg = N'This CustID ' + CONVERT(VARCHAR(10), @CustID) + ' had had ExtraPT group.'
 			RETURN
-		END
+	END 
+				
+	SELECT	DISTINCT GroupName, FromDate  
+	INTO	#GroupName
+	FROM	dbo.Acc_GroupExtraPTSetting WITH (NOLOCK) 
+	WHERE	SuperID = @Custid AND ToDate > = @EffectiveDate
 
-
-		-- Update table Acc_GroupExtraPTSetting
-		EXEC dbo.Acc_GroupExtraPTSetting_Upd
-			@CustID = @CustID,
-			@GroupName = @GroupName,
-			@EffectiveDate = @Today,
-			@UserID = @Creator,
-			@ErrCode = @ErrCode OUTPUT,
-			@ErrMsg = @ErrMsg OUTPUT
-
-		IF @ErrCode <> 0
-			RETURN
-
-	 
-		-- Write log
+	SELECT  @GroupName = COALESCE (@GroupName, ', ','') + GroupName,
+			@EffectiveDates = COALESCE (@EffectiveDates, ', ','') + FromDate
+	FROM   #GroupName
+	
+		-- Write log 
 		SELECT  @LogData = '<EAS_CustomerInsMember_CloneSetting_ExtraPT CustID="' + CONVERT(NVARCHAR(20), @CustID)
-							+ '" GroupName="' + @GroupName
-							+ '" EffectiveDate="' + CONVERT(NVARCHAR(10), @EffectiveDate, 120)
+							+ '" GroupName="' + @GroupName						
+							+ '" EffectiveDate="' + CONVERT(NVARCHAR(10), @EffectiveDates, 120)
 							+ '" IP="' + @IP
 							+ '" ErrCode="' + CONVERT(NVARCHAR(4), @ErrCode)
 							+ '" ErrMsg="' + @ErrMsg + '" />'
+							
+	
+							
 		SELECT @EndRun = GETDATE()
 		SELECT @Duration = DATEDIFF(MILLISECOND, @StartRun, @EndRun)
 			
@@ -123,7 +75,7 @@ BEGIN
 				@ActionID = 95010,
 				@TrackingValue = @LogData,
 				@Duration = @Duration 
-	END
+	  
 	
 END
 GO
