@@ -25,7 +25,7 @@ BEGIN
 			RETURN
  
 
-	DECLARE @iDoc INT, @RowTotal INT = 0, @CurrentRow INT = 0, @Bettype INT
+	DECLARE @iDoc INT, @RowTotal INT = 0, @CurrentRow INT = 0, @Bettype INT, @BettypeError NVARCHAR(MAX) = '', @ValueError NVARCHAR(MAX) = '', @LimitValue BIGINT
 
 	DECLARE @startRun DATETIME, @endRun DATETIME, @duration INT, @LogSPData NVARCHAR(MAX), @LogSPData2 NVARCHAR(MAX)
 
@@ -57,60 +57,87 @@ BEGIN
 		DisplayedTypeID INT
 		)
 
+		CREATE TABLE #inputTmp
+	(    
+		typeid          NVARCHAR(MAX),
+		typenamee       NVARCHAR(MAX),
+		typenamec		NVARCHAR(MAX),
+		typedesc		NVARCHAR(MAX),
+		typenamec_uni	NVARCHAR(MAX),
+		typenamej		NVARCHAR(MAX),
+		typenamcn		NVARCHAR(MAX),
+		typenamecn		NVARCHAR(MAX),
+		typenameth		NVARCHAR(MAX),
+		typenameit		NVARCHAR(MAX),
+		typenameko		NVARCHAR(MAX),
+		typenameES		NVARCHAR(MAX),
+		typenameVN		NVARCHAR(MAX),
+		typenameEL		NVARCHAR(MAX),
+		typenamee_Eu	NVARCHAR(MAX),
+		typenameRU		NVARCHAR(MAX),
+		typenameID		NVARCHAR(MAX),
+		typenamePT		NVARCHAR(MAX),
+		typenameFR		NVARCHAR(MAX),
+		ParentTypeid	NVARCHAR(MAX),
+		typenameMMR		NVARCHAR(MAX),
+		typenameHI		NVARCHAR(MAX),
+		DisplayedTypeID NVARCHAR(MAX)
+		)
+
 	BEGIN TRY
 			EXEC sp_xml_preparedocument @iDoc OUTPUT, @File
 		
-			INSERT #input (typeid,
-						   typenamee,
-						   typenamec,
-						   typedesc,
-						   typenamec_uni,
-						   typenamej,
-						   typenamcn,
-						   typenamecn,
-						   typenameth,
-						   typenameit,
-						   typenameko,
-						   typenameES,
-						   typenameVN,
-						   typenameEL,
-						   typenamee_Eu,
-						   typenameRU,
-						   typenameID,
-						   typenamePT,
-						   typenameFR,
-						   ParentTypeid,
-						   typenameMMR,
-						   typenameHI,
-						   DisplayedTypeID)
+			INSERT #inputTmp ( typeid,
+							typenamee,
+							typenamec,
+							typedesc,
+							typenamec_uni,
+							typenamej,
+							typenamcn,
+							typenamecn,
+							typenameth,
+							typenameit,
+							typenameko,
+							typenameES,
+							typenameVN,
+							typenameEL,
+							typenamee_Eu,
+							typenameRU,
+							typenameID,
+							typenamePT,
+							typenameFR,
+							ParentTypeid,
+							typenameMMR,
+							typenameHI,
+							DisplayedTypeID)
 
-			SELECT		   typeid,
-						   typenamee,
-						   typenamec,
-						   typedesc,
-						   typenamec_uni,
-						   typenamej,
-						   typenamcn,
-						   typenamecn,
-						   typenameth,
-						   typenameit,
-						   typenameko,
-						   typenameES,
-						   typenameVN,
-						   typenameEL,
-						   typenamee_Eu,
-						   typenameRU,
-						   typenameID,
-						   typenamePT,
-						   typenameFR,
-						   ParentTypeid,
-						   typenameMMR,
-						   typenameHI,
-						   DisplayedTypeID
+			SELECT          typeid ,
+							typenamee,
+							typenamec,
+							typedesc,
+							typenamec_uni,
+							typenamej,
+							typenamcn,
+							typenamecn,
+							typenameth,
+							typenameit,
+							typenameko,
+							typenameES,
+							typenameVN,
+							typenameEL,
+							typenamee_Eu,
+							typenameRU,
+							typenameID,
+							typenamePT,
+							typenameFR,
+							ParentTypeid,
+							typenameMMR,
+							typenameHI,
+							DisplayedTypeID
 
-			FROM OPENXML(@iDoc, '/ROOT/File', 1) WITH  (typeid			INT,
+			FROM OPENXML(@iDoc, '/ROOT/File', 1) WITH  (typeid			NVARCHAR(MAX),
 														typenamee		NVARCHAR(MAX),
-														typenamec	    NVARCHAR(MAX),
+														typenamec		NVARCHAR(MAX),
 														typedesc		NVARCHAR(MAX),
 														typenamec_uni	NVARCHAR(MAX),
 														typenamej		NVARCHAR(MAX),
@@ -127,16 +154,80 @@ BEGIN
 														typenameID		NVARCHAR(MAX),
 														typenamePT		NVARCHAR(MAX),
 														typenameFR		NVARCHAR(MAX),
-														ParentTypeid	INT,
+														ParentTypeid	NVARCHAR(MAX),
 														typenameMMR		NVARCHAR(MAX),
 														typenameHI		NVARCHAR(MAX),
-														DisplayedTypeID INT)
+														DisplayedTypeID NVARCHAR(MAX))
 		    
 			EXEC sp_xml_removedocument @iDoc
 	END TRY
 
 	BEGIN CATCH
-		SELECT  @ErrCode = ERROR_NUMBER(),@ErrMsg = ERROR_MESSAGE()
+		SELECT  @ErrCode = ERROR_NUMBER(),@ErrMsg = ERROR_MESSAGE();
+		RETURN
+	END CATCH
+
+	SELECT TOP(1) @BettypeError = typeid, 
+	              @ValueError   = CASE WHEN LEN(typenamee)		> 128 THEN typenamee
+									   WHEN LEN(typenamec)		> 128 THEN typenamec
+									   WHEN LEN(typedesc)		> 128 THEN typedesc
+							           WHEN LEN(typenamec_uni)	> 128 THEN typenamec_uni
+							           WHEN LEN(typenamej)		> 128 THEN typenamej
+							           WHEN LEN(typenamcn)		> 128 THEN TYPENAMECN
+									   WHEN LEN(typenamecn)		> 128 THEN typenamecn
+									   WHEN LEN(typenameth)		> 128 THEN typenameth
+							           WHEN LEN(typenameit)		> 128 THEN typenameit
+							           WHEN LEN(typenameko)		> 128 THEN typenameko
+							           WHEN LEN(typenameES)		> 128 THEN typenameES
+							           WHEN LEN(typenameVN)		> 128 THEN typenameVN
+									   WHEN LEN(typenameEL)		> 128 THEN typenameEL
+							           WHEN LEN(typenamee_Eu)	> 128 THEN typenamee_Eu
+							           WHEN LEN(typenameRU)		> 128 THEN typenameRU
+							           WHEN LEN(typenameID)		> 128 THEN typenameID
+							           WHEN LEN(typenamePT)		> 128 THEN typenamePT
+							           WHEN LEN(typenameFR)		> 128 THEN typenameFR
+							           WHEN LEN(typenameMMR)	> 128 THEN typenameMMR
+							           ELSE typenameHI END,
+				@LimitValue = 128
+	FROM #inputTmp
+	WHERE LEN(typenamee)		> 128 
+		  OR LEN(typenamec)		> 128
+		  OR LEN(typedesc)		> 128
+		  OR LEN(typenamec_uni) > 128
+		  OR LEN(typenamej)		> 128
+		  OR LEN(typenamcn)		> 128
+		  OR LEN(typenamecn)	> 128
+		  OR LEN(typenameth)	> 128
+	      OR LEN(typenameit)	> 128
+		  OR LEN(typenameko)	> 128
+		  OR LEN(typenameES)	> 128
+		  OR LEN(typenameVN)	> 128
+		  OR LEN(typenameEL)	> 128
+		  OR LEN(typenamee_Eu)	> 128
+		  OR LEN(typenameRU)	> 128
+		  OR LEN(typenameID)	> 128
+		  OR LEN(typenamePT)	> 128
+		  OR LEN(typenameFR)	> 128
+		  OR LEN(typenameMMR)	> 128
+		  OR LEN(typenameHI)	> 128
+							
+
+	IF @ValueError <> ''
+	   BEGIN
+		 SELECT @ErrCode = 1007, 
+		        @ErrMsg = 'At bettype = ' + @BettypeError + 
+				           ' . The values  ' + @ValueError + ' is exceeded max length ' + @LimitValue
+	     RETURN
+	   END
+	   
+	BEGIN TRY
+		INSERT INTO #input
+		SELECT *
+		FROM #inputTmp
+	END TRY
+
+	BEGIN CATCH
+	    SELECT @ErrCode = ERROR_NUMBER(), @ErrMsg = ERROR_MESSAGE()
 		RETURN
 	END CATCH
 

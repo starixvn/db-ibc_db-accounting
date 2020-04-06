@@ -25,7 +25,7 @@ BEGIN
 		RETURN
 
 
-	DECLARE @iDoc INT, @RowTotal INT = 0, @CurrentRow INT = 0, @Sporttype  SMALLINT = 0
+	DECLARE @iDoc INT, @RowTotal INT = 0, @CurrentRow INT = 0, @Sporttype  SMALLINT = 0, @SportError NVARCHAR(MAX) = '', @ValueError NVARCHAR(MAX) = '', @LimitValue BIGINT
 
     DECLARE @startRun DATETIME, @endRun DATETIME, @duration INT, @LogSPData NVARCHAR(MAX), @LogSPData2 NVARCHAR(MAX)
 	
@@ -53,74 +53,155 @@ BEGIN
 		SportNameHI		NVARCHAR(50)
 	)
 
+		CREATE TABLE #inputTmp
+	(    
+		SportType		NVARCHAR(MAX),
+		SportName		NVARCHAR(MAX),
+		SportNameCh		NVARCHAR(MAX),
+		SportNameCs		NVARCHAR(MAX),
+		SportNameJp		NVARCHAR(MAX),
+		SportNameIt		NVARCHAR(MAX),
+		SportNameTh		NVARCHAR(MAX),
+		ParlayMaxPayout NVARCHAR(MAX),
+		SportNameKo		NVARCHAR(MAX),
+		SportNameES		NVARCHAR(MAX),
+		SportNameVN		NVARCHAR(MAX),
+		SportNameEL		NVARCHAR(MAX),
+		SportNameRU		NVARCHAR(MAX),
+		SportNameID		NVARCHAR(MAX),
+		SportNamePT		NVARCHAR(MAX),
+		SportNameFR		NVARCHAR(MAX),
+		SportNameMMR	NVARCHAR(MAX),
+		SportNamePL		NVARCHAR(MAX),
+		SportNameHI		NVARCHAR(MAX)
+	)
+
 	BEGIN TRY
-		EXEC sp_xml_preparedocument @iDoc OUTPUT, @File
+			EXEC sp_xml_preparedocument @iDoc OUTPUT, @File
 		
-		INSERT #input (SportType,
-					   SportName,
-					   SportNameCh,
-					   SportNameCs,
-					   SportNameJp,
-					   SportNameIt,
-		               SportNameTh,
-					   ParlayMaxPayout,
-					   SportNameKo,
-					   SportNameES,
-					   SportNameVN,
-					   SportNameEL,
-					   SportNameRU,
-					   SportNameID,
-					   SportNamePT,
-					   SportNameFR,
-					   SportNameMMR,
-					   SportNamePL,
-					   SportNameHI)
+		  INSERT #inputTmp (SportType,
+						   SportName,
+						   SportNameCh,
+						   SportNameCs,
+						   SportNameJp,
+						   SportNameIt,
+						   SportNameTh,
+						   ParlayMaxPayout,
+						   SportNameKo,
+						   SportNameES,
+						   SportNameVN,
+						   SportNameEL,
+						   SportNameRU,
+						   SportNameID,
+						   SportNamePT,
+						   SportNameFR,
+						   SportNameMMR,
+						   SportNamePL,
+						   SportNameHI)
 
-		SELECT         SportType,
-					   SportName,
-					   SportNameCh,
-					   SportNameCs,
-					   SportNameJp,
-					   SportNameIt,
-		               SportNameTh,
-					   ParlayMaxPayout,
-					   SportNameKo,
-					   SportNameES,
-					   SportNameVN,
-					   SportNameEL,
-			           SportNameRU,
-					   SportNameID,
-					   SportNamePT,
-					   SportNameFR,
-					   SportNameMMR,
-					   SportNamePL,
-					   SportNameHI
+			SELECT         SportType,
+						   SportName,
+						   SportNameCh,
+						   SportNameCs,
+						   SportNameJp,
+						   SportNameIt,
+						   SportNameTh,
+						   ParlayMaxPayout,
+						   SportNameKo,
+						   SportNameES,
+						   SportNameVN,
+						   SportNameEL,
+						   SportNameRU,
+						   SportNameID,
+						   SportNamePT,
+						   SportNameFR,
+						   SportNameMMR,
+						   SportNamePL,
+						   SportNameHI
 
-		FROM OPENXML(@iDoc, '/ROOT/File', 1) WITH  (SportType		SMALLINT,
-													SportName		NVARCHAR(MAX),
-													SportNameCh		NVARCHAR(MAX),
-													SportNameCs		NVARCHAR(MAX),
-													SportNameJp		NVARCHAR(MAX),
-													SportNameIt		NVARCHAR(MAX),
-													SportNameTh		NVARCHAR(MAX),
-													ParlayMaxPayout INT,
-													SportNameKo		NVARCHAR(MAX),
-													SportNameES		NVARCHAR(MAX),
-													SportNameVN		NVARCHAR(MAX),
-													SportNameEL		NVARCHAR(MAX),
-													SportNameRU		NVARCHAR(MAX),
-													SportNameID		NVARCHAR(MAX),
-													SportNamePT		NVARCHAR(MAX),
-													SportNameFR		NVARCHAR(MAX),
-													SportNameMMR	NVARCHAR(MAX),
-													SportNamePL		NVARCHAR(MAX),
-													SportNameHI		NVARCHAR(MAX))
-		    
-		EXEC sp_xml_removedocument @iDoc
+			FROM OPENXML(@iDoc, '/ROOT/File', 1) WITH  (SportType		NVARCHAR(MAX),
+														SportName		NVARCHAR(MAX),
+														SportNameCh		NVARCHAR(MAX),
+														SportNameCs		NVARCHAR(MAX),
+														SportNameJp		NVARCHAR(MAX),
+														SportNameIt		NVARCHAR(MAX),
+														SportNameTh		NVARCHAR(MAX),
+														ParlayMaxPayout NVARCHAR(MAX),
+														SportNameKo		NVARCHAR(MAX),
+														SportNameES		NVARCHAR(MAX),
+														SportNameVN		NVARCHAR(MAX),
+														SportNameEL		NVARCHAR(MAX),
+														SportNameRU		NVARCHAR(MAX),
+														SportNameID		NVARCHAR(MAX),
+														SportNamePT		NVARCHAR(MAX),
+														SportNameFR		NVARCHAR(MAX),
+														SportNameMMR	NVARCHAR(MAX),
+														SportNamePL		NVARCHAR(MAX),
+														SportNameHI		NVARCHAR(MAX))
+														
+			EXEC sp_xml_removedocument @iDoc
 	END TRY
 
 	BEGIN CATCH
-		SELECT  @ErrCode = ERROR_NUMBER(),@ErrMsg = ERROR_MESSAGE()
+		SELECT  @ErrCode = ERROR_NUMBER(),@ErrMsg = ERROR_MESSAGE();		
+		RETURN
+	END CATCH
+
+	SELECT TOP(1) @SportError = SportType, 
+	              @ValueError = CASE  WHEN LEN(SportName)	> 50 THEN SportName			
+								  WHEN LEN(SportNameCh)		> 50 THEN SportNameCh		
+								  WHEN LEN(SportNameCs)		> 50 THEN SportNameCs		
+								  WHEN LEN(SportNameJp)		> 50 THEN SportNameJp		
+								  WHEN LEN(SportNameIt)		> 50 THEN SportNameIt      
+								  WHEN LEN(SportNameTh)		> 50 THEN SportNameTh		
+								  WHEN LEN(SportNameKo)		> 50 THEN SportNameKo		
+								  WHEN LEN(SportNameES)		> 50 THEN SportNameES      
+								  WHEN LEN(SportNameVN)		> 50 THEN SportNameVN		
+								  WHEN LEN(SportNameEL)		> 50 THEN SportNameEL		
+								  WHEN LEN(SportNameRU)		> 50 THEN SportNameRU		
+								  WHEN LEN(SportNameID)		> 50 THEN SportNameID		
+								  WHEN LEN(SportNamePT)		> 50 THEN SportNamePT		
+								  WHEN LEN(SportNameFR)		> 50 THEN SportNameFR		
+								  WHEN LEN(SportNameMMR)	> 50 THEN SportNameMMR		
+								  WHEN LEN(SportNamePL)		> 50 THEN SportNamePL		
+								  ELSE SportNameHI  END,
+
+				@LimitValue =     50
+	FROM #inputTmp
+	WHERE  LEN(SportName)		    > 50
+		   OR LEN(SportNameCh)		> 50
+		   OR LEN(SportNameCs)		> 50
+		   OR LEN(SportNameJp)		> 50
+		   OR LEN(SportNameIt)		> 50
+		   OR LEN(SportNameTh)		> 50
+		   OR LEN(SportNameKo)		> 50
+		   OR LEN(SportNameES)		> 50
+		   OR LEN(SportNameVN)		> 50
+		   OR LEN(SportNameEL)		> 50
+		   OR LEN(SportNameRU)		> 50
+		   OR LEN(SportNameID)		> 50
+		   OR LEN(SportNamePT)		> 50
+		   OR LEN(SportNameFR)		> 50
+		   OR LEN(SportNameMMR)		> 50
+		   OR LEN(SportNamePL)		> 50
+		   OR LEN(SportNameHI)		> 50
+
+	IF @ValueError <> ''
+	   BEGIN
+		 SELECT @ErrCode = 1007, 
+		        @ErrMsg = 'At Sporttype = ' + @SportError + 
+				           ' . The values  ' + @ValueError + ' is exceeded max length ' + @LimitValue
+	     RETURN
+	   END
+	   
+	BEGIN TRY
+		INSERT INTO #input
+		SELECT *
+		FROM #inputTmp
+	END TRY
+
+	BEGIN CATCH
+	    SELECT @ErrCode = ERROR_NUMBER(), @ErrMsg = ERROR_MESSAGE()
 		RETURN
 	END CATCH
 
