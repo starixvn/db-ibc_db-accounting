@@ -52,7 +52,7 @@ BEGIN
 		INSERT INTO #WL (ProductId, ProductName, TurnOver, winlost, ExtraWinlost)
 		SELECT  s.ProductId, s.ProductName,
 				---Base currency
-				SUM (   CASE WHEN b.StatusID = 111 AND b.Bettype IN (911,912) THEN 0 ELSE  
+				SUM (   CASE WHEN b.StatusID = 111 OR b.Bettype IN (911,912) THEN 0 ELSE  
 						CASE WHEN ABS(modds) = 0.25 THEN ABS(Stake) / 2 ELSE  ABS(Stake) END END
 						* (1 - b.tpositiontaking - ISNULL(CAST(b.epositiontaking AS DECIMAL(9, 8)), 0)) 
 						* CASE
@@ -173,8 +173,9 @@ BEGIN
 		----- Get Data -----
 		SELECt  a.ProductName, a.TurnOver, a.Margin, a.HouseWinlost
 		FROM  (
-				SELECT	w.ProductId, w.ProductName, w.TurnOver, CASE WHEN w.TurnOver = 0 THEN 0 ELSE (w.winlost - ExtraWinlost) / w.TurnOver * 100 END AS Margin , (w.winlost - ExtraWinlost) AS HouseWinlost
-				FROM 	#WL w 				
+				SELECT	w.ProductId, w.ProductName, SUM(w.TurnOver) as TurnOver, CASE WHEN SUM(w.TurnOver)  = 0 THEN 0 ELSE SUM(w.winlost - ExtraWinlost) / SUM(w.TurnOver)  * 100 END AS Margin , SUM (w.winlost - ExtraWinlost) AS HouseWinlost
+				FROM 	#WL w 
+				GROUP BY w.ProductId, w.ProductName 		
 				UNION 
 				SELECT	0 AS orderId, 'All Non Sports' AS ProductName, 
 						SUM (w.TurnOver) AS TurnOver, 
