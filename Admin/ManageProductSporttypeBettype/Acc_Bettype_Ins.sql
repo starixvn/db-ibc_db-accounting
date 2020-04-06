@@ -244,7 +244,7 @@ BEGIN
 	   BEGIN
 		 SELECT @ErrCode = 1007, 
 		        @ErrMsg = 'At bettype = ' + @BettypeError + 
-				           ' . The values  ' + @ValueError + ' is exceeded max length ' + @LimitValue
+				           ' . The values  ' + @ValueError + ' is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue)
 	     RETURN
 	   END
 	   
