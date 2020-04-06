@@ -108,24 +108,24 @@ BEGIN
 						   SportNameHI
 
 			FROM OPENXML(@iDoc, '/ROOT/File', 1) WITH  (SportType		SMALLINT,
-														SportName		NVARCHAR(50),
-														SportNameCh		NVARCHAR(50),
-														SportNameCs		NVARCHAR(50),
-														SportNameJp		NVARCHAR(50),
-														SportNameIt		NVARCHAR(50),
-														SportNameTh		NVARCHAR(50),
+														SportName		NVARCHAR(MAX),
+														SportNameCh		NVARCHAR(MAX),
+														SportNameCs		NVARCHAR(MAX),
+														SportNameJp		NVARCHAR(MAX),
+														SportNameIt		NVARCHAR(MAX),
+														SportNameTh		NVARCHAR(MAX),
 														ParlayMaxPayout INT,
-														SportNameKo		NVARCHAR(50),
-														SportNameES		NVARCHAR(50),
-														SportNameVN		NVARCHAR(50),
-														SportNameEL		NVARCHAR(50),
-														SportNameRU		NVARCHAR(50),
-														SportNameID		NVARCHAR(50),
-														SportNamePT		NVARCHAR(50),
-														SportNameFR		NVARCHAR(50),
-														SportNameMMR	NVARCHAR(50),
-														SportNamePL		NVARCHAR(50),
-														SportNameHI		NVARCHAR(50))
+														SportNameKo		NVARCHAR(MAX),
+														SportNameES		NVARCHAR(MAX),
+														SportNameVN		NVARCHAR(MAX),
+														SportNameEL		NVARCHAR(MAX),
+														SportNameRU		NVARCHAR(MAX),
+														SportNameID		NVARCHAR(MAX),
+														SportNamePT		NVARCHAR(MAX),
+														SportNameFR		NVARCHAR(MAX),
+														SportNameMMR	NVARCHAR(MAX),
+														SportNamePL		NVARCHAR(MAX),
+														SportNameHI		NVARCHAR(MAX))
 														
 			EXEC sp_xml_removedocument @iDoc
 	END TRY
@@ -218,7 +218,6 @@ BEGIN
 
 		EXEC  DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 				@UserID = @UserID,
-				@CustID = 0,
 				@ActionID = 95007,
 				@TrackingValue = @LogSPData,
 				@duration = @duration
