@@ -342,4 +342,5 @@ BEGIN
 					@duration = @duration
 	END
 	DROP TABLE #input
+	DROP TABLE #inputTmp
 END
