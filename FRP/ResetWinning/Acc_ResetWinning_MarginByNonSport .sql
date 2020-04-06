@@ -20,12 +20,12 @@ BEGIN
  	 	
 	------Get Sport Bettype Matrix------
 	
-	CREATE TABLE  #SportBettype (ProductName VARCHAR(256), ProductID INT, Bettype INT )
+	CREATE TABLE  #SportBettype (ProductName VARCHAR(256), ProductID INT, Bettype INT, RefTable SMALLINT )
 	INSERT INTO #SportBettype
 	SELECT	CASE WHEN s.SubProduct = 'MG-SuperLive' THEN 'Metric Gaming - Super Live'
 			WHEN s.SubProduct = 'Bet Builder' THEN 'Bet Builder'
 			ELSE p.ProductName END AS ProductName, 
-			s.ProductID, s.Bettype 
+			s.ProductID, s.Bettype, s.RefTable
 	FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', 0) s
 	LEFT JOIN dbo.Products p WITH (NOLOCK) 
 			ON p.ProductID = s.ProductID
@@ -38,93 +38,149 @@ BEGIN
  	
 
 	--------------------------------------------------------------------------------------------------------- 
-		CREATE TABLE #wl 
+		CREATE TABLE #WL 
 		(	
 			ProductId  		SMALLINT, 
 			ProductName     VARCHAR(256),			
 			TurnOver		MONEY,
-			Winlost			MONEY,
-			WinlostDueTo    MONEY,
+			Winlost			MONEY, 		
 			ExtraWinlost	MONEY
-		) 	 
-		INSERT INTO #wl (ProductId, ProductName, TurnOver, Winlost, WinlostDueTo, ExtraWinlost)
+		) 
+
+
+		------1. Bettrans
+		INSERT INTO #WL (ProductId, ProductName, TurnOver, winlost, ExtraWinlost)
 		SELECT  s.ProductId, s.ProductName,
 				---Base currency
-				SUM (   CASE WHEN b.StatusID = 111 THEN 0 ELSE 
-						CASE WHEN ABS(modds) = 0.25 AND b.Bettype <> 29 THEN ABS(Stake) / 2 ELSE  ABS(Stake) END END
+				SUM (   CASE WHEN b.StatusID = 111 AND b.Bettype IN (911,912) THEN 0 ELSE  
+						CASE WHEN ABS(modds) = 0.25 THEN ABS(Stake) / 2 ELSE  ABS(Stake) END END
 						* (1 - b.tpositiontaking - ISNULL(CAST(b.epositiontaking AS DECIMAL(9, 8)), 0)) 
 						* CASE
 							  WHEN virtualrate > actualrate
 							  THEN virtualrate
 							  ELSE actualrate
 							END
-					)	 AS TurnOver,			
-			 
+					)	 AS TurnOver,
 				SUM(
-						CASE WHEN b.bettype IN (2199, 2399, 2999) THEN 0 
+						CASE WHEN b.bettype IN (2199, 2399, 2999) THEN 0
 							ELSE
-							(ISNULL(winlost,0)-ISNULL(actual_stake,0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)
-								+ CASE
-									-- Jackpot
-									WHEN b.bettype IN (2198, 2398, 2998) THEN ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000),0)
-									-- Bet Builder
-									WHEN b.bettype = 38 THEN - ((ISNULL(b.winlost,0) - ISNULL(b.actual_stake,0) + ISNULL(b.scomm,0)) * ISNULL(b.oddsspread,0))
-									ELSE 0 END
-							) *  actualrate  END
-					) AS Winlost, 
-				
+								(ISNULL(winlost,0)-ISNULL(actual_stake,0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)
+									+ CASE
+										-- Jackpot
+										WHEN b.bettype IN (2198, 2398, 2998) THEN ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000),0)
+										ELSE 0 END
+								) * b.actualrate 
+							END
+					) AS winlost,						
+			
 				SUM(
-						(CASE
-								-- Jackpot
-								WHEN b.bettype IN (2198, 2398, 2998) THEN -ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0)
-								WHEN b.bettype IN (2199, 2399, 2999) THEN ISNULL(b.winlost, 0) - ISNULL(b.actual_stake, 0)
-								-- Bet Builder
-								WHEN b.bettype = 38 THEN (ISNULL(b.winlost,0) - ISNULL(b.actual_stake,0) + ISNULL(b.scomm,0)) * ISNULL(b.oddsspread,0)
-								ELSE 0 END
-						) * b.actualrate
-					) AS winlostDueTo,
-					
-				SUM(
-						(
+						(	
 							CASE
 							-- Jackpot
 							WHEN b.bettype IN (2198, 2398, 2998) THEN
 								CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) END
-							WHEN b.bettype IN (2199, 2399, 2999) THEN 0					  
+							WHEN b.bettype IN (2199, 2399, 2999) THEN 0
 							ELSE
 								CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
 							END
 						) 
-							* b.actualrate 
-							* ISNULL(CAST(b.epositiontaking AS DECIMAL(9, 8)), 0)
+						* ISNULL(CAST(b.epositiontaking AS DECIMAL(9, 8)), 0)
+						*  b.actualrate 
 					) AS ExtraWinlost
-					 
+					
 		FROM dbo.bettrans b WITH (NOLOCK, index = CIX_matchid_bettype)  
 		INNER JOIN #SportBettype s ON s.BetType = b.bettype 								  
 		WHERE   b.Winlostdate = @WinlostDate
 			AND b.statusid IN (111, 112, 113)		
 			AND b.bettype < 19001
 			AND b.MatchID >= 0
+			AND s.RefTable NOT IN (1,2)
 			AND NOT EXISTS (SELECT 1 FROM CS_CustSuper c WITH (NOLOCK) WHERE c.CustID = b.Srecommend)
 		GROUP BY s.ProductId, s.ProductName			 
 
 			 
+		------2. BettransRNG
+		INSERT INTO #WL (ProductId, ProductName, TurnOver, winlost, ExtraWinlost)
+		SELECT  s.ProductId, s.ProductName,
+				---Base currency
+				SUM (   CASE WHEN b.StatusID = 111 THEN 0 ELSE ABS(Stake) END
+						* (1 - b.tpositiontaking - ISNULL(CAST(b.epositiontaking AS DECIMAL(9, 8)), 0)) 
+						* CASE
+							  WHEN virtualrate > actualrate
+							  THEN virtualrate
+							  ELSE actualrate
+							END
+					)	 AS TurnOver,					
+					
+				SUM(
+						(CASE
+							WHEN b.gameId IN(2198, 2398, 2998)
+								THEN b.ContributionRate * b.BetStake + awinlost + mwinlost + swinlost + scomm 
+							WHEN b.GameId IN (2199,2399,2999,4299,4300)	THEN 0 /*Progressive Jackpot, PP Promotion Prize, PP Tournament Prize*/
+							ELSE winlost - actual_stake + awinlost + mwinlost + swinlost + scomm 
+							END) * actualrate
+					) AS winlost,	
+
+				SUM(			(CASE
+                                    WHEN tpositiontaking = 1
+                                    THEN 0
+                                    WHEN b.GameId IN (2199,2399,2999,4299,4300)	THEN 0 /*Progressive Jackpot, PP Promotion Prize, PP Tournament Prize*/
+                                    WHEN b.gameId IN(2198, 2398, 2998)
+                                    THEN ContributionRate * BetStake + 1.0 * scomm / (1 - tpositiontaking) --Jackpot Contribution
+                                    ELSE winlost - actual_stake + 1.0 * scomm / (1 - tpositiontaking)
+                                END) * ISNULL(CAST(b.epositiontaking AS DECIMAL(9, 8)), 0) * actualrate
+					) AS ExtraWinlost				
+		FROM dbo.bettransRNG b WITH (NOLOCK)  
+		INNER JOIN #SportBettype s ON s.BetType = b.gameID 								  
+		WHERE   b.Winlostdate = @WinlostDate
+			AND b.statusid IN (111, 112, 113)
+			AND s.RefTable = 1			
+			AND NOT EXISTS (SELECT 1 FROM CS_CustSuper c WITH (NOLOCK) WHERE c.CustID = b.Srecommend)
+		GROUP BY s.ProductId, s.ProductName			
+	
+		------3. BettransLC
+		INSERT INTO #WL (ProductId, ProductName, TurnOver, winlost, ExtraWinlost)
+		SELECT  s.ProductId, s.ProductName,
+				---Base currency
+				SUM (   CASE WHEN b.StatusID = 111 THEN 0 ELSE ABS(Stake) END
+						* (1 - b.tpositiontaking - ISNULL(CAST(b.epositiontaking AS DECIMAL(9, 8)), 0)) 
+						* CASE
+							  WHEN virtualrate > actualrate
+							  THEN virtualrate
+							  ELSE actualrate
+							END
+					)	 AS TurnOver,					
+					
+				SUM(
+						( winlost - actual_stake + awinlost + mwinlost + swinlost + scomm ) 
+						* actualrate
+					) AS winlost,	
+
+				SUM(
+						(winlost - actual_stake + 1.0 * scomm / (1 - tpositiontaking)) 
+						* ISNULL(CAST(b.epositiontaking AS DECIMAL(9, 8)), 0) 
+						* actualrate
+					) AS ExtraWinlost	
+		FROM dbo.bettransLC b WITH (NOLOCK)  
+		INNER JOIN #SportBettype s ON s.BetType = b.gameID 								  
+		WHERE   b.Winlostdate = @WinlostDate
+			AND b.statusid IN (111, 112, 113)
+			AND s.RefTable = 2			
+			AND NOT EXISTS (SELECT 1 FROM CS_CustSuper c WITH (NOLOCK) WHERE c.CustID = b.Srecommend)
+		GROUP BY s.ProductId, s.ProductName		
 	
 		-----------------------------------------------------------------------------------------------
 		----- Get Data -----
 		SELECt  a.ProductName, a.TurnOver, a.Margin, a.HouseWinlost
 		FROM  (
-				SELECT	w.ProductId, w.ProductName, 
-						w.TurnOver, 
-						CASE WHEN w.TurnOver = 0 THEN 0 ELSE (w.winlost - ExtraWinlost) / w.TurnOver * 100 END AS Margin , 
-						(w.winlost - ExtraWinlost) AS HouseWinlost
-				FROM 	#wl w 				
+				SELECT	w.ProductId, w.ProductName, w.TurnOver, CASE WHEN w.TurnOver = 0 THEN 0 ELSE (w.winlost - ExtraWinlost) / w.TurnOver * 100 END AS Margin , (w.winlost - ExtraWinlost) AS HouseWinlost
+				FROM 	#WL w 				
 				UNION 
 				SELECT	0 AS orderId, 'All Non Sports' AS ProductName, 
 						SUM (w.TurnOver) AS TurnOver, 
 						CASE WHEN SUM (w.TurnOver) = 0 THEN 0 ELSE SUM (w.winlost - ExtraWinlost) / SUM (w.TurnOver) * 100 END AS Margin , 
 						SUM (w.winlost - ExtraWinlost) AS HouseWinlost
-				FROM 	#wl w  
+				FROM 	#WL w  
 				HAVING  SUM (w.TurnOver) IS NOT NULL 
 				) A
 		ORDER BY A.ProductId
