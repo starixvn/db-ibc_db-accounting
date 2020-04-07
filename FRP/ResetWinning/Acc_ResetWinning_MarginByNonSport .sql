@@ -14,10 +14,23 @@ AS
 	Param Explanation:
 		 
 	   
-*/
+*/ 
 BEGIN	
 	SET NOCOUNT ON
- 	 	
+
+
+	DECLARE @MinTransID_RNG BIGINT,  @MinTransID_LC BIGINT, @MaxTransID_RNG BIGINT,  @MaxTransID_LC BIGINT
+
+	SELECT  @MinTransID_RNG = MIN (TransID) , @MaxTransID_RNG = MAX(TransID) 
+	FROM	dbo.BettransRNG WITH (NOLOCK)
+	WHERE	@winlostdate = @Winlostdate
+
+
+	SELECT  @MinTransID_LC = MIN (TransID), @MaxTransID_LC = MAX(TransID) 
+	FROM	dbo.BettransLC WITH (NOLOCK)
+	WHERE	@winlostdate = @Winlostdate
+
+
 	------Get Sport Bettype Matrix------
 	
 	CREATE TABLE  #SportBettype (ProductName VARCHAR(256), ProductID INT, Bettype INT, RefTable SMALLINT )
@@ -52,8 +65,7 @@ BEGIN
 		INSERT INTO #WL (ProductId, ProductName, TurnOver, winlost, ExtraWinlost)
 		SELECT  s.ProductId, s.ProductName,
 				---Base currency
-				SUM (   CASE WHEN b.StatusID = 111 OR b.Bettype IN (911,912) THEN 0 ELSE  
-						CASE WHEN ABS(modds) = 0.25 THEN ABS(Stake) / 2 ELSE  ABS(Stake) END END
+				SUM (   CASE WHEN b.StatusID = 111 OR b.Bettype IN (911,912) THEN 0 ELSE  ABS(Stake) END
 						* (1 - b.tpositiontaking - ISNULL(CAST(b.epositiontaking AS DECIMAL(9, 8)), 0)) 
 						* CASE
 							  WHEN virtualrate > actualrate
@@ -130,11 +142,12 @@ BEGIN
                                     ELSE winlost - actual_stake + 1.0 * scomm / (1 - tpositiontaking)
                                 END) * ISNULL(CAST(b.epositiontaking AS DECIMAL(9, 8)), 0) * actualrate
 					) AS ExtraWinlost				
-		FROM dbo.bettransRNG b WITH (NOLOCK)  
+		FROM dbo.bettransRNG b WITH (NOLOCK, index = PK_bettransRnG)  
 		INNER JOIN #SportBettype s ON s.BetType = b.gameID 								  
 		WHERE   b.Winlostdate = @WinlostDate
 			AND b.statusid IN (111, 112, 113)
-			AND s.RefTable = 1			
+			AND s.RefTable = 1	
+			AND b.transID BETWEEN @MinTransID_RNG AND @MaxTransID_RNG
 			AND NOT EXISTS (SELECT 1 FROM CS_CustSuper c WITH (NOLOCK) WHERE c.CustID = b.Srecommend)
 		GROUP BY s.ProductId, s.ProductName			
 	
@@ -161,12 +174,13 @@ BEGIN
 						* ISNULL(CAST(b.epositiontaking AS DECIMAL(9, 8)), 0) 
 						* actualrate
 					) AS ExtraWinlost	
-		FROM dbo.bettransLC b WITH (NOLOCK)  
+		FROM dbo.bettransLC b WITH (NOLOCK, index = PK_bettransLC)  
 		INNER JOIN #SportBettype s ON s.BetType = b.gameID 								  
 		WHERE   b.Winlostdate = @WinlostDate
 			AND b.statusid IN (111, 112, 113)
 			AND s.RefTable = 2			
 			AND NOT EXISTS (SELECT 1 FROM CS_CustSuper c WITH (NOLOCK) WHERE c.CustID = b.Srecommend)
+			AND b.transID BETWEEN @MinTransID_LC AND @MaxTransID_LC
 		GROUP BY s.ProductId, s.ProductName		
 	
 		-----------------------------------------------------------------------------------------------
