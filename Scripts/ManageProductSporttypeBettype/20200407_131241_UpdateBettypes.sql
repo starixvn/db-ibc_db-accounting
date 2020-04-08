@@ -9,6 +9,11 @@ FROM bettype t
 WHERE typeid = 1
 
 UPDATE t
+SET t.typenamcn = N'亚洲盘'
+FROM bettype t
+WHERE typeid = 1
+
+UPDATE t
 SET t.typenamec = N'單雙盤'
 FROM bettype t
 WHERE typeid = 2
