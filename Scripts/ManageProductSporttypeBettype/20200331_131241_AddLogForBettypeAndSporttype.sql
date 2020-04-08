@@ -13,7 +13,7 @@ GO
 	Parameter's explaination:
 */
 Insert LogAction(ActionID, ActionTypeID,SPName,ActionNameEN,ActionNameCH,ActionNameCS,ActionNameJP,ActionNameIT,ActionNameTH,ActionNameKO,XsltContent,IsInternal,ActionNameVI,ActionNameCN)
-SELECT  95005,4,'Acc_Bettype_Ins','insert new bettypes','insert new bettypes','insert new bettypes','insert new bettypes',NULL,'insert new bettypes','insert new bettypes',null,0,'insert new bettypes','insert new bettypes'
+SELECT  95005,4,'Acc_Bettype_Ins','Insert new bettypes','Insert new bettypes','Insert new bettypes','Insert new bettypes',NULL,'Insert new bettypes','Insert new bettypes',null,0,'Insert new bettypes','Insert new bettypes'
 UNION ALL
 SELECT  95006,4,'Acc_Bettype_Upd','Update new bettypes','Update new bettypes','Update new bettypes','Update new bettypes',NULL,'Update new bettypes','Update new bettypes',null,0,'Update new bettypes','Update new bettypes'
 UNION ALL
