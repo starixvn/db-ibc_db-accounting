@@ -219,7 +219,15 @@ BEGIN
 		  AND LEN(typenameFR)		= 0
 		  AND LEN(typenameMMR)		= 0
 		  AND LEN(typenameHI)		= 0
+   
+    UPDATE #inputTmp
+	SET typeid			 = CASE WHEN LEN(typeid)			= 0 THEN  NULL ELSE typeid			END,
+		ParentTypeid     = CASE WHEN LEN(ParentTypeid)		= 0 THEN  NULL ELSE ParentTypeid	END,
+		DisplayedTypeID  = CASE WHEN LEN(DisplayedTypeID)	= 0 THEN  NULL ELSE DisplayedTypeID END
 
+	WHERE LEN(typeid)				= 0 
+	      OR LEN(ParentTypeid)		= 0
+		  OR LEN(DisplayedTypeID)	= 0
 
 	SELECT TOP(1) @BettypeError = typeid, 
 	              @ValueError   = CASE WHEN LEN(typenamee)		> 128 THEN typenamee
@@ -241,9 +249,6 @@ BEGIN
 							           WHEN LEN(typenamePT)		> 128 THEN typenamePT
 							           WHEN LEN(typenameFR)		> 128 THEN typenameFR
 							           WHEN LEN(typenameMMR)	> 128 THEN typenameMMR
-									   WHEN LEN(typeid)         = 0   THEN 'typeid'
-									   WHEN LEN(ParentTypeid)   = 0   THEN 'ParentTypeid'
-									   WHEN LEN(DisplayedTypeID)= 0   THEN 'DisplayedTypeID'
 							           ELSE typenameHI END,
 				@LimitValue = 128
 	FROM #inputTmp
@@ -267,21 +272,13 @@ BEGIN
 		  OR LEN(typenameFR)	  > 128
 		  OR LEN(typenameMMR)	  > 128
 		  OR LEN(typenameHI)	  > 128
-		  OR LEN(typeid)		  = 0
-		  OR LEN(ParentTypeid)    = 0
-		  OR LEN(DisplayedTypeID) = 0
 							
 
 	IF @ValueError <> ''
 	   BEGIN
-	     IF @ValueError NOT IN('typeid','ParentTypeid','DisplayedTypeID')
 		 SELECT @ErrCode = 1007, 
 		        @ErrMsg = 'At bettype = "' + @BettypeError + 
 				           '" . The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
-		 ELSE
-		 SELECT @ErrCode = 1007,
-		        @ErrMsg = 'At bettype = "' + @BettypeError + 
-				           '" . the value of "' + @ValueError +'" column must be different from "".'
 
 	     RETURN
 	   END
