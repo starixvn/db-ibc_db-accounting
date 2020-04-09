@@ -226,12 +226,12 @@ BEGIN
 	   BEGIN
 	     IF @ValueError NOT IN('SportType','ParlayMaxPayout')
 		 SELECT @ErrCode = 1007, 
-		        @ErrMsg = 'At Sporttype = ' + @SportError + 
-				           ' . The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) +'.'
+		        @ErrMsg = 'At Sporttype = "' + @SportError + 
+				           '" . The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) +'.'
 		 ELSE
 		 SELECT @ErrCode = 1007,
-				@ErrMsg = 'At bettype = ' + @SportError + 
-				           ' . the value of "' + @ValueError +'" column must be different from "".'
+				@ErrMsg = 'At Sporttype = "' + @SportError + 
+				           '" . the value of "' + @ValueError +'" column must be different from "".'
 	     RETURN
 	   END
 	   

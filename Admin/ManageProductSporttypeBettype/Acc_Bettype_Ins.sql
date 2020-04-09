@@ -276,12 +276,12 @@ BEGIN
 	   BEGIN
 	     IF @ValueError NOT IN('typeid','ParentTypeid','DisplayedTypeID')
 		 SELECT @ErrCode = 1007, 
-		        @ErrMsg = 'At bettype = ' + @BettypeError + 
-				           ' . The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
+		        @ErrMsg = 'At bettype = "' + @BettypeError + 
+				           '" . The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
 		 ELSE
 		 SELECT @ErrCode = 1007,
-		        @ErrMsg = 'At bettype = ' + @BettypeError + 
-				           ' . the value of "' + @ValueError +'" column must be different from "".'
+		        @ErrMsg = 'At bettype = "' + @BettypeError + 
+				           '" . the value of "' + @ValueError +'" column must be different from "".'
 
 	     RETURN
 	   END
