@@ -167,6 +167,32 @@ BEGIN
 		RETURN
 	END CATCH
 
+	-- remove row
+	DELETE #inputTmp  
+	WHERE LEN(typeid)				= 0
+	      AND LEN(ParentTypeid)		= 0
+		  AND LEN(DisplayedTypeID)	= 0
+		  AND LEN(typenamee)		= 0
+		  AND LEN(typenamec)		= 0
+		  AND LEN(typedesc)			= 0
+		  AND LEN(typenamec_uni)	= 0
+		  AND LEN(typenamej)		= 0
+		  AND LEN(typenamcn)		= 0
+		  AND LEN(typenamecn)		= 0
+		  AND LEN(typenameth)		= 0
+	      AND LEN(typenameit)		= 0
+		  AND LEN(typenameko)		= 0
+		  AND LEN(typenameES)		= 0
+		  AND LEN(typenameVN)		= 0
+		  AND LEN(typenameEL)		= 0
+		  AND LEN(typenamee_Eu)		= 0
+		  AND LEN(typenameRU)		= 0
+		  AND LEN(typenameID)		= 0
+		  AND LEN(typenamePT)		= 0
+		  AND LEN(typenameFR)		= 0
+		  AND LEN(typenameMMR)		= 0
+		  AND LEN(typenameHI)		= 0
+
 	SELECT TOP(1) @BettypeError = typeid, 
 	              @ValueError   = CASE WHEN LEN(typenamee)		> 128 THEN typenamee
 									   WHEN LEN(typenamec)		> 128 THEN typenamec
@@ -187,36 +213,48 @@ BEGIN
 							           WHEN LEN(typenamePT)		> 128 THEN typenamePT
 							           WHEN LEN(typenameFR)		> 128 THEN typenameFR
 							           WHEN LEN(typenameMMR)	> 128 THEN typenameMMR
+									   WHEN LEN(typeid)         = 0   THEN 'typeid'
+									   WHEN LEN(ParentTypeid)   = 0   THEN 'ParentTypeid'
+									   WHEN LEN(DisplayedTypeID)= 0   THEN 'DisplayedTypeID'
 							           ELSE typenameHI END,
 				@LimitValue = 128
 	FROM #inputTmp
-	WHERE LEN(typenamee)		> 128 
-		  OR LEN(typenamec)		> 128
-		  OR LEN(typedesc)		> 128
-		  OR LEN(typenamec_uni) > 128
-		  OR LEN(typenamej)		> 128
-		  OR LEN(typenamcn)		> 128
-		  OR LEN(typenamecn)	> 128
-		  OR LEN(typenameth)	> 128
-	      OR LEN(typenameit)	> 128
-		  OR LEN(typenameko)	> 128
-		  OR LEN(typenameES)	> 128
-		  OR LEN(typenameVN)	> 128
-		  OR LEN(typenameEL)	> 128
-		  OR LEN(typenamee_Eu)	> 128
-		  OR LEN(typenameRU)	> 128
-		  OR LEN(typenameID)	> 128
-		  OR LEN(typenamePT)	> 128
-		  OR LEN(typenameFR)	> 128
-		  OR LEN(typenameMMR)	> 128
-		  OR LEN(typenameHI)	> 128
+		WHERE LEN(typenamee)	  > 128 
+		  OR LEN(typenamec)		  > 128
+		  OR LEN(typedesc)		  > 128
+		  OR LEN(typenamec_uni)   > 128
+		  OR LEN(typenamej)		  > 128
+		  OR LEN(typenamcn)		  > 128
+		  OR LEN(typenamecn)	  > 128
+		  OR LEN(typenameth)	  > 128
+	      OR LEN(typenameit)	  > 128
+		  OR LEN(typenameko)	  > 128
+		  OR LEN(typenameES)	  > 128
+		  OR LEN(typenameVN)	  > 128
+		  OR LEN(typenameEL)	  > 128
+		  OR LEN(typenamee_Eu)	  > 128
+		  OR LEN(typenameRU)	  > 128
+		  OR LEN(typenameID)	  > 128
+		  OR LEN(typenamePT)	  > 128
+		  OR LEN(typenameFR)	  > 128
+		  OR LEN(typenameMMR)	  > 128
+		  OR LEN(typenameHI)	  > 128
+		  OR LEN(typeid)		  = 0
+		  OR LEN(ParentTypeid)    = 0
+		  OR LEN(DisplayedTypeID) = 0
 							
 
 	IF @ValueError <> ''
 	   BEGIN
+	     IF @ValueError NOT IN('typeid','ParentTypeid','DisplayedTypeID')
 		 SELECT @ErrCode = 1007, 
 		        @ErrMsg = 'At bettype = ' + @BettypeError + 
 				           ' . The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
+		 ELSE
+		 SELECT @ErrCode = 1007,
+		        @ErrMsg = 'At bettype = ' + @BettypeError + 
+				           ' . the value of "' + @ValueError +'" column must be different from "".'
+
 	     RETURN
 	   END
 	   

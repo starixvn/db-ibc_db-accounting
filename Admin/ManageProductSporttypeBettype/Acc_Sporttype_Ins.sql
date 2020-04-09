@@ -158,6 +158,27 @@ BEGIN
 		RETURN
 	END CATCH
 
+	DELETE #inputTmp
+	WHERE  LEN(SportName)		    = 0
+		   AND LEN(SportNameCh)		= 0
+		   AND LEN(SportNameCs)		= 0
+		   AND LEN(SportNameJp)		= 0
+		   AND LEN(SportNameIt)		= 0
+		   AND LEN(SportNameTh)		= 0
+		   AND LEN(SportNameKo)		= 0
+		   AND LEN(SportNameES)		= 0
+		   AND LEN(SportNameVN)		= 0
+		   AND LEN(SportNameEL)		= 0
+		   AND LEN(SportNameRU)		= 0
+		   AND LEN(SportNameID)		= 0
+		   AND LEN(SportNamePT)		= 0
+		   AND LEN(SportNameFR)		= 0
+		   AND LEN(SportNameMMR)    = 0
+		   AND LEN(SportNamePL)		= 0
+		   AND LEN(SportNameHI)		= 0
+		   AND LEN(SportType)       = 0
+		   AND LEN(ParlayMaxPayout) = 0
+
 	SELECT TOP(1) @SportError = SportType, 
 	              @ValueError = CASE  WHEN LEN(SportName)	> 50 THEN SportName			
 								  WHEN LEN(SportNameCh)		> 50 THEN SportNameCh		
@@ -174,7 +195,9 @@ BEGIN
 								  WHEN LEN(SportNamePT)		> 50 THEN SportNamePT		
 								  WHEN LEN(SportNameFR)		> 50 THEN SportNameFR		
 								  WHEN LEN(SportNameMMR)	> 50 THEN SportNameMMR		
-								  WHEN LEN(SportNamePL)		> 50 THEN SportNamePL		
+								  WHEN LEN(SportNamePL)		> 50 THEN SportNamePL
+								  WHEN LEN(SportType)	    = 0  THEN 'SportType'
+								  WHEN LEN(ParlayMaxPayout)	= 0  THEN 'ParlayMaxPayout'
 								  ELSE SportNameHI  END,
 
 				@LimitValue =     50
@@ -196,12 +219,19 @@ BEGIN
 		   OR LEN(SportNameMMR)		> 50
 		   OR LEN(SportNamePL)		> 50
 		   OR LEN(SportNameHI)		> 50
+		   OR LEN(SportType)        = 0
+		   OR LEN(ParlayMaxPayout)  = 0
 
 	IF @ValueError <> ''
 	   BEGIN
+	     IF @ValueError NOT IN('SportType','ParlayMaxPayout')
 		 SELECT @ErrCode = 1007, 
 		        @ErrMsg = 'At Sporttype = ' + @SportError + 
 				           ' . The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) +'.'
+		 ELSE
+		 SELECT @ErrCode = 1007,
+				@ErrMsg = 'At bettype = ' + @SportError + 
+				           ' . the value of "' + @ValueError +'" column must be different from "".'
 	     RETURN
 	   END
 	   
