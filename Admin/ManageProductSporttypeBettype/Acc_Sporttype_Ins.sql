@@ -179,6 +179,11 @@ BEGIN
 		   AND LEN(SportType)       = 0
 		   AND LEN(ParlayMaxPayout) = 0
 
+	UPDATE #inputTmp
+	SET ParlayMaxPayout = CASE WHEN LEN(ParlayMaxPayout) = 0 THEN NULL ELSE ParlayMaxPayout END,
+	    SportType       = CASE WHEN LEN(SportType)       = 0 THEN NULL ELSE SportType       END
+	WHERE LEN(ParlayMaxPayout) = 0 OR LEN(SportType) = 0
+
 	SELECT TOP(1) @SportError = SportType, 
 	              @ValueError = CASE  WHEN LEN(SportName)	> 50 THEN SportName			
 								  WHEN LEN(SportNameCh)		> 50 THEN SportNameCh		
@@ -196,8 +201,6 @@ BEGIN
 								  WHEN LEN(SportNameFR)		> 50 THEN SportNameFR		
 								  WHEN LEN(SportNameMMR)	> 50 THEN SportNameMMR		
 								  WHEN LEN(SportNamePL)		> 50 THEN SportNamePL
-								  WHEN LEN(SportType)	    = 0  THEN 'SportType'
-								  WHEN LEN(ParlayMaxPayout)	= 0  THEN 'ParlayMaxPayout'
 								  ELSE SportNameHI  END,
 
 				@LimitValue =     50
@@ -219,19 +222,12 @@ BEGIN
 		   OR LEN(SportNameMMR)		> 50
 		   OR LEN(SportNamePL)		> 50
 		   OR LEN(SportNameHI)		> 50
-		   OR LEN(SportType)        = 0
-		   OR LEN(ParlayMaxPayout)  = 0
 
 	IF @ValueError <> ''
 	   BEGIN
-	     IF @ValueError NOT IN('SportType','ParlayMaxPayout')
 		 SELECT @ErrCode = 1007, 
-		        @ErrMsg = 'At Sporttype = "' + @SportError + 
-				           '" . The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) +'.'
-		 ELSE
-		 SELECT @ErrCode = 1007,
-				@ErrMsg = 'At Sporttype = "' + @SportError + 
-				           '" . the value of "' + @ValueError +'" column must be different from "".'
+		        @ErrMsg = 'At Sporttype = ' + @SportError + 
+				           ' . The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) +'.'
 	     RETURN
 	   END
 	   
