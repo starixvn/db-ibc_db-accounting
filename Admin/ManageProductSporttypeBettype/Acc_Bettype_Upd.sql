@@ -167,31 +167,6 @@ BEGIN
 		RETURN
 	END CATCH
 
-	-- remove row
-	DELETE #inputTmp  
-	WHERE LEN(typeid)				= 0
-	      AND LEN(ParentTypeid)		= 0
-		  AND LEN(DisplayedTypeID)	= 0
-		  AND LEN(typenamee)		= 0
-		  AND LEN(typenamec)		= 0
-		  AND LEN(typedesc)			= 0
-		  AND LEN(typenamec_uni)	= 0
-		  AND LEN(typenamej)		= 0
-		  AND LEN(typenamcn)		= 0
-		  AND LEN(typenamecn)		= 0
-		  AND LEN(typenameth)		= 0
-	      AND LEN(typenameit)		= 0
-		  AND LEN(typenameko)		= 0
-		  AND LEN(typenameES)		= 0
-		  AND LEN(typenameVN)		= 0
-		  AND LEN(typenameEL)		= 0
-		  AND LEN(typenamee_Eu)		= 0
-		  AND LEN(typenameRU)		= 0
-		  AND LEN(typenameID)		= 0
-		  AND LEN(typenamePT)		= 0
-		  AND LEN(typenameFR)		= 0
-		  AND LEN(typenameMMR)		= 0
-		  AND LEN(typenameHI)		= 0
 
 	SELECT TOP(1) @BettypeError = typeid, 
 	              @ValueError   = CASE WHEN LEN(typenamee)		> 128 THEN typenamee

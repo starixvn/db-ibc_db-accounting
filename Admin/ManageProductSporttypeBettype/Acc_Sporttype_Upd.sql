@@ -147,26 +147,6 @@ BEGIN
 		RETURN
 	END CATCH
 	
-	DELETE #inputTmp
-	WHERE  LEN(SportName)		    = 0
-		   AND LEN(SportNameCh)		= 0
-		   AND LEN(SportNameCs)		= 0
-		   AND LEN(SportNameJp)		= 0
-		   AND LEN(SportNameIt)		= 0
-		   AND LEN(SportNameTh)		= 0
-		   AND LEN(SportNameKo)		= 0
-		   AND LEN(SportNameES)		= 0
-		   AND LEN(SportNameVN)		= 0
-		   AND LEN(SportNameEL)		= 0
-		   AND LEN(SportNameRU)		= 0
-		   AND LEN(SportNameID)		= 0
-		   AND LEN(SportNamePT)		= 0
-		   AND LEN(SportNameFR)		= 0
-		   AND LEN(SportNameMMR)    = 0
-		   AND LEN(SportNamePL)		= 0
-		   AND LEN(SportNameHI)		= 0
-		   AND LEN(SportType)       = 0
-		   AND LEN(ParlayMaxPayout) = 0
 
 	SELECT TOP(1) @SportError = SportType, 
 	              @ValueError = CASE  WHEN LEN(SportName)	> 50 THEN SportName			
