@@ -13,1997 +13,776 @@ GO
 	Parameter's explaination:
 */
 
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,2214919,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,2214919,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,1478546,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,1478546,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,7181123,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,7181123,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,7181198,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,7181198,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,7181234,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,7181234,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,7181310,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,7181310,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7181310,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,7181346,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,7181346,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,7181421,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,7181421,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7181137,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7181210,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7181247,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7205641,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7181397,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7181433,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,32132234,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,173900,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,1670094,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (5,41534476,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (5,41534563,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (5,41534530,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,7216685,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,7181199,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,11757895,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,7181347,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,7181347,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,7181422,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,7181422,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7205642,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7181434,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,37639221,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,37639221,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,37639291,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,37639291,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,7181354,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,7181354,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,7372556,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,7372556,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7166197,3,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,7166193,3,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,7166193,3,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7166193,3,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7166196,3,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,37377259,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,8346483,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,7181206,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7181206,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,6911960,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,6911960,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,6911960,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7181320,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,6911959,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,6911959,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,6911959,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,6911943,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,21984546,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7214059,1,0)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (5,41048208,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,6911962,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,6911962,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,6911962,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,7216688,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,7181203,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,7181426,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7181215,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7181327,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,20308353,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,11325378,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,11325378,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,11325378,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,13062591,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,13062584,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,29918681,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,29918681,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,11755931,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,11755927,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,11755929,1,0)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,29263864,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,31703461,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,31703461,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,31905373,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,31905373,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,31905373,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,15845793,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,15845785,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,21914297,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,7375269,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,7375269,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,7384232,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,7384232,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,14226891,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,21914302,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,21914302,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,7375295,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,7375295,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7213826,1,0)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,7374703,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,7374703,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,7374671,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,7374671,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,4095660,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,4095660,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,4095650,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,4095650,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,9020811,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,9020818,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,9020821,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,9020817,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,9020825,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,9020828,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,9020832,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,9020830,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,9020836,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,9020837,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,9020841,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,9020850,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,20307215,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,20315939,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,20932752,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,20932752,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,20307203,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,20524055,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,21948319,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,21948319,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,20307207,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,19866694,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,19866676,1,0)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,20605829,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,7181200,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,7181200,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7181200,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,7181275,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,7181275,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7181275,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,7181348,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,7181348,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7181348,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,7181424,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,7181424,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7181424,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,7181249,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,7181249,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7181249,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7205643,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7215900,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7215954,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7215976,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7216053,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7216063,2,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,2519,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,10440756,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,25334771,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,26676807,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,10440759,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,10440763,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,10440762,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,10513412,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,10440758,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,9674533,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,10396732,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,10228568,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,17180894,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,10396737,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,10440889,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,10396739,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,12910071,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,12910071,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,10854450,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,10440891,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,10539094,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,9546100,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,9546100,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,25962306,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,25962306,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,25962306,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,9546093,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,9546093,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,5024150,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,5024150,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,5024137,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (3,5024137,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,5024137,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,8665035,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7384994,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,6068301,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7213962,1,0)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7385216,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (4,7385212,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,13755664,1,1)
-INSERT INTO dbo.Acc_FinancePermission (GroupId, CustId,RoleId,IsView) VALUES (2,2211891,1,1)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+INSERT INTO dbo.Acc_FinancePermission (GroupId, FinanceCode,RoleId,IsView)
+VALUES (2,'008PM',1,1),
+(2,'BA06RM',1,1),
+(2,'BANKS/PHL-AUD',2,1),
+(2,'BANKS/PHL-EUR',2,1),
+(2,'BANKS/PHL-GBP',2,1),
+(2,'BANKS/PHL-MYR',2,1),
+(2,'BANKS/PHL-PHP',2,1),
+(2,'BANKS/PHL-USD',2,1),
+(2,'BANKS/VNM-AUD',2,0),
+(2,'BANKS/VNM-EUR',2,0),
+(2,'BANKS/VNM-GBP',2,0),
+(2,'BANKS/VNM-INH',2,0),
+(2,'BANKS/VNM-SGD',2,0),
+(2,'BANKS/VNM-USD',2,0),
+(2,'BE1CASH',1,0),
+(2,'BP1CASH',1,0),
+(2,'CASH-PE',1,1),
+(2,'CASH/N88-IDR',2,0),
+(2,'CASH/N88-MYR',2,0),
+(2,'CASH/N88-THB',2,0),
+(2,'CASH/PHL-CNY',2,1),
+(2,'CASH/PHL-EUR',2,1),
+(2,'CASH/PHL-IDR',2,1),
+(2,'CASH/PHL-PHP',2,1),
+(2,'CASH/PHL-USD',2,1),
+(2,'CASH/VNM-INH',2,0),
+(2,'CASH/VNM-USD',2,0),
+(2,'CN88 EXP CNY',1,1),
+(2,'CN88 EXP PHP',1,1),
+(2,'CREDITOR/PHL-PHP',2,1),
+(2,'DEBTOR/PHL-PHP',2,1),
+(2,'EXP-MYS',3,0),
+(2,'EXP-PHL',3,1),
+(2,'EXP-VNM',3,0),
+(2,'FEIINH',1,0),
+(2,'feiusd',1,0),
+(2,'INTERCO/PHL-EUR',2,1),
+(2,'Interest Income',1,1),
+(2,'INVEST/VNM-MYR',2,0),
+(2,'Investment Income',1,1),
+(2,'Licensee',2,1),
+(2,'MYIOU-MYR',1,0),
+(2,'MYS-Staff Bonus',1,0),
+(2,'Nova88-PHL',2,0),
+(2,'Other Income',1,1),
+(2,'OTHERS/PHL-CNY',2,1),
+(2,'OTHERS/PHL-EUR',2,1),
+(2,'OTHERS/PHL-USD',2,1),
+(2,'OTHERS/VNM-EUR',2,0),
+(2,'OTHERS/VNM-MYR',2,0),
+(2,'PHL-AVIDA BKVT MYR',1,0),
+(2,'PHL-CONTRA SGD',1,1),
+(2,'PHL-DANA CASH-MYR',1,1),
+(2,'PHL-DANA CASH-SGD',1,1),
+(2,'PHL-FS-CASH MYR',1,1),
+(2,'PHL-GARY CASH MYR',1,1),
+(2,'PHL-GARY CASH SGD',1,1),
+(2,'PHL-GARY CASH USD',1,1),
+(2,'PHL-JAMES CASH-SGD',1,1),
+(2,'PHL-MNL-CASH EUR',1,1),
+(2,'PHL-MNL-CASH HKD',1,1),
+(2,'PHL-MNL-CASH PHP',1,1),
+(2,'PHL-MNL-CASH USD',1,1),
+(2,'PHL-ONEWORK MYR',1,0),
+(2,'PHL-Oth Creditors USD',1,1),
+(2,'PHL-Oth Debtor USD',1,1),
+(2,'PHL-Security Deposits EUR',1,1),
+(2,'PHL-Security Deposits MYR',1,1),
+(2,'PHL-Security Deposits USD',1,1),
+(2,'PHL-Staff Bonus',1,0),
+(2,'PHL-Staff Expenses Adv PHP',1,1),
+(2,'PHL-Staff Expenses Adv USD',1,1),
+(2,'PHL-Staff Operating Adv PHP',1,1),
+(2,'PHL-Staff Operating Adv USD',1,1),
+(2,'PHL-STLM MYR 12Bet',1,1),
+(2,'PHL-STLM MYR Alog',1,1),
+(2,'PHL-STLM MYR Bodog',1,1),
+(2,'PHL-STLM MYR F88',1,1),
+(2,'PHL-STLM MYR Haifa',1,1),
+(2,'PHL-STLM MYR Macaobet',1,1),
+(2,'PHL-STLM MYR MF',1,1),
+(2,'PHL-STLM MYR MS88',1,1),
+(2,'PHL-STLM MYR Suncity',1,1),
+(2,'PHL-STLM MYR TLC',1,1),
+(2,'PHL-STLM MYR Tycoon',1,1),
+(2,'PHL-STLM MYR ZZUN',1,1),
+(2,'PHL-TWN BANK DP-SGD',1,0),
+(2,'PHL-TWN BANK HC-EUR',1,1),
+(2,'PHL-TWN BANK HC-HKD',1,1),
+(2,'PHL-TWN BANK HC-SGD',1,0),
+(2,'PHL-TWN BANK SC-EUR',1,1),
+(2,'PHL-TWN BANK SC-HKD',1,1),
+(2,'PHL-TWN BANK SC-SGD',1,0),
+(2,'PHL-VCCI CASH-HKD',1,1),
+(2,'PHL-VCCI CASH-PHP',1,1),
+(2,'PHL-WMD-CASH EUR',1,1),
+(2,'POB/PHL-EUR',2,1),
+(2,'POB/PHL-HKD',2,1),
+(2,'POB/PHL-PHP',2,1),
+(2,'POB/PHL-USD',2,1),
+(2,'POB/VNM-GBP',2,1),
+(2,'POB/VNM-INH',2,0),
+(2,'SH ACC/MYS-AUD',2,0),
+(2,'SH ACC/MYS-HKD',2,0),
+(2,'SH ACC/MYS-MYR',2,0),
+(2,'SH ACC/MYS-SGD',2,0),
+(2,'SH ACC/MYS-USD',2,0),
+(2,'STEV',1,1),
+(2,'Studio 40% Revenue Split',1,0),
+(2,'VNM-12Bet USD',1,0),
+(2,'VNM-ALBERT CASH CNY',1,0),
+(2,'VNM-ALBERT CASH EUR',1,0),
+(2,'VNM-ALBERT CASH GBP',1,0),
+(2,'VNM-ALBERT CASH HKD',1,0),
+(2,'VNM-ALBERT CASH IDR',1,0),
+(2,'VNM-ALBERT CASH MYR',1,0),
+(2,'VNM-ALBERT CASH SGD',1,0),
+(2,'VNM-ALBERT CASH THB',1,0),
+(2,'VNM-Cardiff MYR',1,0),
+(2,'VNM-HENRY CASH CNY',1,1),
+(2,'VNM-HENRY CASH EUR',1,1),
+(2,'VNM-HENRY CASH GBP',1,1),
+(2,'VNM-HENRY CASH HKD',1,1),
+(2,'VNM-HENRY CASH IDR',1,1),
+(2,'VNM-HENRY CASH MYR',1,1),
+(2,'VNM-HENRY CASH PHP',1,1),
+(2,'VNM-HENRY CASH SGD',1,1),
+(2,'VNM-HENRY CASH THB',1,1),
+(2,'VNM-HENRY CASH USD',1,1),
+(2,'VNM-HRC-ECL AUD',1,1),
+(2,'VNM-HRC-ECL EUR INV',1,1),
+(2,'VNM-HRC-ECL GBP',1,1),
+(2,'VNM-HRC-LTSB GBP SA',1,1),
+(2,'VNM-HRC-LTSB USD SA',1,1),
+(2,'VNM-OneWorks MYR',1,0),
+(2,'VNM-Oth Creditors USD',1,0),
+(2,'VNM-POB re 12Bet USD',1,0),
+(2,'VNM-POB re Onework USD',1,0),
+(2,'VNM-POB re PHL USD',1,0),
+(2,'VNM-Staff Bonus',1,0),
+(2,'VNM-Staff Expenses Adv INH',1,0),
+(2,'VNM-Staff Operating Adv INH',1,0),
+(2,'YUANHKD',1,1),
+(2,'YUANUSD',1,1),
+(3,'008PM',1,0),
+(3,'BA06RM',1,0),
+(3,'BANKS/PHL-AUD',2,1),
+(3,'BANKS/PHL-EUR',2,1),
+(3,'BANKS/PHL-GBP',2,1),
+(3,'BANKS/PHL-MYR',2,1),
+(3,'BANKS/PHL-PHP',2,1),
+(3,'BANKS/PHL-USD',2,1),
+(3,'BANKS/VNM-AUD',2,0),
+(3,'BANKS/VNM-EUR',2,0),
+(3,'BANKS/VNM-GBP',2,0),
+(3,'BANKS/VNM-INH',2,0),
+(3,'BANKS/VNM-SGD',2,0),
+(3,'BANKS/VNM-USD',2,0),
+(3,'BE1CASH',1,0),
+(3,'BP1CASH',1,0),
+(3,'CASH-PE',1,0),
+(3,'CASH/N88-IDR',2,0),
+(3,'CASH/N88-MYR',2,0),
+(3,'CASH/N88-THB',2,0),
+(3,'CASH/PHL-CNY',2,0),
+(3,'CASH/PHL-EUR',2,0),
+(3,'CASH/PHL-IDR',2,0),
+(3,'CASH/PHL-PHP',2,1),
+(3,'CASH/PHL-USD',2,1),
+(3,'CASH/VNM-INH',2,0),
+(3,'CASH/VNM-USD',2,0),
+(3,'CN88 EXP CNY',1,1),
+(3,'CN88 EXP PHP',1,1),
+(3,'CREDITOR/PHL-PHP',2,1),
+(3,'DEBTOR/PHL-PHP',2,1),
+(3,'EXP-MYS',3,0),
+(3,'EXP-PHL',3,1),
+(3,'EXP-VNM',3,0),
+(3,'FEIINH',1,0),
+(3,'feiusd',1,0),
+(3,'INTERCO/PHL-EUR',2,0),
+(3,'Interest Income',1,1),
+(3,'INVEST/VNM-MYR',2,0),
+(3,'Investment Income',1,1),
+(3,'Licensee',2,0),
+(3,'MYIOU-MYR',1,0),
+(3,'MYS-Staff Bonus',1,0),
+(3,'Nova88-PHL',2,0),
+(3,'Other Income',1,1),
+(3,'OTHERS/PHL-CNY',2,0),
+(3,'OTHERS/PHL-EUR',2,0),
+(3,'OTHERS/PHL-USD',2,0),
+(3,'OTHERS/VNM-EUR',2,0),
+(3,'OTHERS/VNM-MYR',2,0),
+(3,'PHL-AVIDA BKVT MYR',1,0),
+(3,'PHL-CONTRA SGD',1,1),
+(3,'PHL-DANA CASH-MYR',1,0),
+(3,'PHL-DANA CASH-SGD',1,0),
+(3,'PHL-FS-CASH MYR',1,1),
+(3,'PHL-GARY CASH MYR',1,0),
+(3,'PHL-GARY CASH SGD',1,0),
+(3,'PHL-GARY CASH USD',1,0),
+(3,'PHL-JAMES CASH-SGD',1,0),
+(3,'PHL-MNL-CASH EUR',1,1),
+(3,'PHL-MNL-CASH HKD',1,1),
+(3,'PHL-MNL-CASH PHP',1,1),
+(3,'PHL-MNL-CASH USD',1,1),
+(3,'PHL-ONEWORK MYR',1,0),
+(3,'PHL-Oth Creditors USD',1,1),
+(3,'PHL-Oth Debtor USD',1,1),
+(3,'PHL-Security Deposits EUR',1,1),
+(3,'PHL-Security Deposits MYR',1,1),
+(3,'PHL-Security Deposits USD',1,1),
+(3,'PHL-Staff Bonus',1,0),
+(3,'PHL-Staff Expenses Adv PHP',1,1),
+(3,'PHL-Staff Expenses Adv USD',1,1),
+(3,'PHL-Staff Operating Adv PHP',1,1),
+(3,'PHL-Staff Operating Adv USD',1,1),
+(3,'PHL-STLM MYR 12Bet',1,0),
+(3,'PHL-STLM MYR Alog',1,0),
+(3,'PHL-STLM MYR Bodog',1,0),
+(3,'PHL-STLM MYR F88',1,0),
+(3,'PHL-STLM MYR Haifa',1,0),
+(3,'PHL-STLM MYR Macaobet',1,0),
+(3,'PHL-STLM MYR MF',1,0),
+(3,'PHL-STLM MYR MS88',1,0),
+(3,'PHL-STLM MYR Suncity',1,0),
+(3,'PHL-STLM MYR TLC',1,0),
+(3,'PHL-STLM MYR Tycoon',1,0),
+(3,'PHL-STLM MYR ZZUN',1,0),
+(3,'PHL-TWN BANK DP-SGD',1,0),
+(3,'PHL-TWN BANK HC-EUR',1,0),
+(3,'PHL-TWN BANK HC-HKD',1,0),
+(3,'PHL-TWN BANK HC-SGD',1,0),
+(3,'PHL-TWN BANK SC-EUR',1,0),
+(3,'PHL-TWN BANK SC-HKD',1,0),
+(3,'PHL-TWN BANK SC-SGD',1,0),
+(3,'PHL-VCCI CASH-HKD',1,0),
+(3,'PHL-VCCI CASH-PHP',1,0),
+(3,'PHL-WMD-CASH EUR',1,1),
+(3,'POB/PHL-EUR',2,1),
+(3,'POB/PHL-HKD',2,1),
+(3,'POB/PHL-PHP',2,1),
+(3,'POB/PHL-USD',2,1),
+(3,'POB/VNM-GBP',2,1),
+(3,'POB/VNM-INH',2,0),
+(3,'SH ACC/MYS-AUD',2,0),
+(3,'SH ACC/MYS-HKD',2,0),
+(3,'SH ACC/MYS-MYR',2,0),
+(3,'SH ACC/MYS-SGD',2,0),
+(3,'SH ACC/MYS-USD',2,0),
+(3,'STEV',1,0),
+(3,'Studio 40% Revenue Split',1,0),
+(3,'VNM-12Bet USD',1,0),
+(3,'VNM-ALBERT CASH CNY',1,0),
+(3,'VNM-ALBERT CASH EUR',1,0),
+(3,'VNM-ALBERT CASH GBP',1,0),
+(3,'VNM-ALBERT CASH HKD',1,0),
+(3,'VNM-ALBERT CASH IDR',1,0),
+(3,'VNM-ALBERT CASH MYR',1,0),
+(3,'VNM-ALBERT CASH SGD',1,0),
+(3,'VNM-ALBERT CASH THB',1,0),
+(3,'VNM-Cardiff MYR',1,0),
+(3,'VNM-HENRY CASH CNY',1,0),
+(3,'VNM-HENRY CASH EUR',1,0),
+(3,'VNM-HENRY CASH GBP',1,0),
+(3,'VNM-HENRY CASH HKD',1,0),
+(3,'VNM-HENRY CASH IDR',1,0),
+(3,'VNM-HENRY CASH MYR',1,0),
+(3,'VNM-HENRY CASH PHP',1,1),
+(3,'VNM-HENRY CASH SGD',1,0),
+(3,'VNM-HENRY CASH THB',1,0),
+(3,'VNM-HENRY CASH USD',1,0),
+(3,'VNM-HRC-ECL AUD',1,1),
+(3,'VNM-HRC-ECL EUR INV',1,1),
+(3,'VNM-HRC-ECL GBP',1,1),
+(3,'VNM-HRC-LTSB GBP SA',1,1),
+(3,'VNM-HRC-LTSB USD SA',1,1),
+(3,'VNM-OneWorks MYR',1,0),
+(3,'VNM-Oth Creditors USD',1,0),
+(3,'VNM-POB re 12Bet USD',1,0),
+(3,'VNM-POB re Onework USD',1,0),
+(3,'VNM-POB re PHL USD',1,0),
+(3,'VNM-Staff Bonus',1,0),
+(3,'VNM-Staff Expenses Adv INH',1,0),
+(3,'VNM-Staff Operating Adv INH',1,0),
+(3,'YUANHKD',1,0),
+(3,'YUANUSD',1,0),
+(4,'008PM',1,1),
+(4,'BA06RM',1,1),
+(4,'BANKS/PHL-AUD',2,0),
+(4,'BANKS/PHL-EUR',2,0),
+(4,'BANKS/PHL-GBP',2,0),
+(4,'BANKS/PHL-MYR',2,1),
+(4,'BANKS/PHL-PHP',2,0),
+(4,'BANKS/PHL-USD',2,0),
+(4,'BANKS/VNM-AUD',2,1),
+(4,'BANKS/VNM-EUR',2,1),
+(4,'BANKS/VNM-GBP',2,1),
+(4,'BANKS/VNM-INH',2,1),
+(4,'BANKS/VNM-SGD',2,1),
+(4,'BANKS/VNM-USD',2,1),
+(4,'BE1CASH',1,1),
+(4,'BP1CASH',1,1),
+(4,'CASH-PE',1,0),
+(4,'CASH/N88-IDR',2,0),
+(4,'CASH/N88-MYR',2,0),
+(4,'CASH/N88-THB',2,0),
+(4,'CASH/PHL-CNY',2,0),
+(4,'CASH/PHL-EUR',2,0),
+(4,'CASH/PHL-IDR',2,0),
+(4,'CASH/PHL-PHP',2,0),
+(4,'CASH/PHL-USD',2,0),
+(4,'CASH/VNM-INH',2,1),
+(4,'CASH/VNM-USD',2,1),
+(4,'CN88 EXP CNY',1,0),
+(4,'CN88 EXP PHP',1,0),
+(4,'CREDITOR/PHL-PHP',2,0),
+(4,'DEBTOR/PHL-PHP',2,0),
+(4,'EXP-MYS',3,1),
+(4,'EXP-PHL',3,1),
+(4,'EXP-VNM',3,1),
+(4,'FEIINH',1,1),
+(4,'feiusd',1,1),
+(4,'INTERCO/PHL-EUR',2,1),
+(4,'Interest Income',1,1),
+(4,'INVEST/VNM-MYR',2,1),
+(4,'Investment Income',1,1),
+(4,'Licensee',2,0),
+(4,'MYIOU-MYR',1,1),
+(4,'MYS-Staff Bonus',1,0),
+(4,'Nova88-PHL',2,0),
+(4,'Other Income',1,1),
+(4,'OTHERS/PHL-CNY',2,0),
+(4,'OTHERS/PHL-EUR',2,0),
+(4,'OTHERS/PHL-USD',2,0),
+(4,'OTHERS/VNM-EUR',2,1),
+(4,'OTHERS/VNM-MYR',2,1),
+(4,'PHL-AVIDA BKVT MYR',1,1),
+(4,'PHL-CONTRA SGD',1,1),
+(4,'PHL-DANA CASH-MYR',1,0),
+(4,'PHL-DANA CASH-SGD',1,0),
+(4,'PHL-FS-CASH MYR',1,0),
+(4,'PHL-GARY CASH MYR',1,0),
+(4,'PHL-GARY CASH SGD',1,0),
+(4,'PHL-GARY CASH USD',1,0),
+(4,'PHL-JAMES CASH-SGD',1,0),
+(4,'PHL-MNL-CASH EUR',1,1),
+(4,'PHL-MNL-CASH HKD',1,1),
+(4,'PHL-MNL-CASH PHP',1,1),
+(4,'PHL-MNL-CASH USD',1,1),
+(4,'PHL-ONEWORK MYR',1,1),
+(4,'PHL-Oth Creditors USD',1,0),
+(4,'PHL-Oth Debtor USD',1,0),
+(4,'PHL-Security Deposits EUR',1,0),
+(4,'PHL-Security Deposits MYR',1,0),
+(4,'PHL-Security Deposits USD',1,0),
+(4,'PHL-Staff Bonus',1,0),
+(4,'PHL-Staff Expenses Adv PHP',1,0),
+(4,'PHL-Staff Expenses Adv USD',1,0),
+(4,'PHL-Staff Operating Adv PHP',1,0),
+(4,'PHL-Staff Operating Adv USD',1,0),
+(4,'PHL-STLM MYR 12Bet',1,0),
+(4,'PHL-STLM MYR Alog',1,0),
+(4,'PHL-STLM MYR Bodog',1,0),
+(4,'PHL-STLM MYR F88',1,0),
+(4,'PHL-STLM MYR Haifa',1,0),
+(4,'PHL-STLM MYR Macaobet',1,0),
+(4,'PHL-STLM MYR MF',1,0),
+(4,'PHL-STLM MYR MS88',1,0),
+(4,'PHL-STLM MYR Suncity',1,0),
+(4,'PHL-STLM MYR TLC',1,0),
+(4,'PHL-STLM MYR Tycoon',1,0),
+(4,'PHL-STLM MYR ZZUN',1,0),
+(4,'PHL-TWN BANK DP-SGD',1,1),
+(4,'PHL-TWN BANK HC-EUR',1,1),
+(4,'PHL-TWN BANK HC-HKD',1,1),
+(4,'PHL-TWN BANK HC-SGD',1,1),
+(4,'PHL-TWN BANK SC-EUR',1,1),
+(4,'PHL-TWN BANK SC-HKD',1,1),
+(4,'PHL-TWN BANK SC-SGD',1,1),
+(4,'PHL-VCCI CASH-HKD',1,0),
+(4,'PHL-VCCI CASH-PHP',1,0),
+(4,'PHL-WMD-CASH EUR',1,0),
+(4,'POB/PHL-EUR',2,1),
+(4,'POB/PHL-HKD',2,1),
+(4,'POB/PHL-PHP',2,1),
+(4,'POB/PHL-USD',2,1),
+(4,'POB/VNM-GBP',2,1),
+(4,'POB/VNM-INH',2,1),
+(4,'SH ACC/MYS-AUD',2,1),
+(4,'SH ACC/MYS-HKD',2,1),
+(4,'SH ACC/MYS-MYR',2,1),
+(4,'SH ACC/MYS-SGD',2,1),
+(4,'SH ACC/MYS-USD',2,1),
+(4,'STEV',1,0),
+(4,'Studio 40% Revenue Split',1,0),
+(4,'VNM-12Bet USD',1,0),
+(4,'VNM-ALBERT CASH CNY',1,1),
+(4,'VNM-ALBERT CASH EUR',1,1),
+(4,'VNM-ALBERT CASH GBP',1,1),
+(4,'VNM-ALBERT CASH HKD',1,1),
+(4,'VNM-ALBERT CASH IDR',1,1),
+(4,'VNM-ALBERT CASH MYR',1,1),
+(4,'VNM-ALBERT CASH SGD',1,1),
+(4,'VNM-ALBERT CASH THB',1,1),
+(4,'VNM-Cardiff MYR',1,1),
+(4,'VNM-HENRY CASH CNY',1,0),
+(4,'VNM-HENRY CASH EUR',1,0),
+(4,'VNM-HENRY CASH GBP',1,0),
+(4,'VNM-HENRY CASH HKD',1,0),
+(4,'VNM-HENRY CASH IDR',1,0),
+(4,'VNM-HENRY CASH MYR',1,0),
+(4,'VNM-HENRY CASH PHP',1,0),
+(4,'VNM-HENRY CASH SGD',1,0),
+(4,'VNM-HENRY CASH THB',1,0),
+(4,'VNM-HENRY CASH USD',1,0),
+(4,'VNM-HRC-ECL AUD',1,1),
+(4,'VNM-HRC-ECL EUR INV',1,1),
+(4,'VNM-HRC-ECL GBP',1,1),
+(4,'VNM-HRC-LTSB GBP SA',1,1),
+(4,'VNM-HRC-LTSB USD SA',1,1),
+(4,'VNM-OneWorks MYR',1,1),
+(4,'VNM-Oth Creditors USD',1,1),
+(4,'VNM-POB re 12Bet USD',1,0),
+(4,'VNM-POB re Onework USD',1,0),
+(4,'VNM-POB re PHL USD',1,1),
+(4,'VNM-Staff Bonus',1,0),
+(4,'VNM-Staff Expenses Adv INH',1,1),
+(4,'VNM-Staff Operating Adv INH',1,1),
+(4,'YUANHKD',1,0),
+(4,'YUANUSD',1,0),
+(5,'008PM',1,0),
+(5,'BA06RM',1,0),
+(5,'BANKS/PHL-AUD',2,0),
+(5,'BANKS/PHL-EUR',2,0),
+(5,'BANKS/PHL-GBP',2,0),
+(5,'BANKS/PHL-MYR',2,0),
+(5,'BANKS/PHL-PHP',2,0),
+(5,'BANKS/PHL-USD',2,0),
+(5,'BANKS/VNM-AUD',2,0),
+(5,'BANKS/VNM-EUR',2,0),
+(5,'BANKS/VNM-GBP',2,0),
+(5,'BANKS/VNM-INH',2,0),
+(5,'BANKS/VNM-SGD',2,0),
+(5,'BANKS/VNM-USD',2,0),
+(5,'BE1CASH',1,0),
+(5,'BP1CASH',1,0),
+(5,'CASH-PE',1,0),
+(5,'CASH/N88-IDR',2,1),
+(5,'CASH/N88-MYR',2,1),
+(5,'CASH/N88-THB',2,1),
+(5,'CASH/PHL-CNY',2,0),
+(5,'CASH/PHL-EUR',2,0),
+(5,'CASH/PHL-IDR',2,0),
+(5,'CASH/PHL-PHP',2,0),
+(5,'CASH/PHL-USD',2,0),
+(5,'CASH/VNM-INH',2,0),
+(5,'CASH/VNM-USD',2,0),
+(5,'CN88 EXP CNY',1,0),
+(5,'CN88 EXP PHP',1,0),
+(5,'CREDITOR/PHL-PHP',2,0),
+(5,'DEBTOR/PHL-PHP',2,0),
+(5,'EXP-MYS',3,0),
+(5,'EXP-PHL',3,0),
+(5,'EXP-VNM',3,0),
+(5,'FEIINH',1,0),
+(5,'feiusd',1,0),
+(5,'INTERCO/PHL-EUR',2,0),
+(5,'Interest Income',1,0),
+(5,'INVEST/VNM-MYR',2,0),
+(5,'Investment Income',1,0),
+(5,'Licensee',2,0),
+(5,'MYIOU-MYR',1,0),
+(5,'MYS-Staff Bonus',1,0),
+(5,'Nova88-PHL',2,1),
+(5,'Other Income',1,0),
+(5,'OTHERS/PHL-CNY',2,0),
+(5,'OTHERS/PHL-EUR',2,0),
+(5,'OTHERS/PHL-USD',2,0),
+(5,'OTHERS/VNM-EUR',2,0),
+(5,'OTHERS/VNM-MYR',2,0),
+(5,'PHL-AVIDA BKVT MYR',1,0),
+(5,'PHL-CONTRA SGD',1,0),
+(5,'PHL-DANA CASH-MYR',1,0),
+(5,'PHL-DANA CASH-SGD',1,0),
+(5,'PHL-FS-CASH MYR',1,0),
+(5,'PHL-GARY CASH MYR',1,0),
+(5,'PHL-GARY CASH SGD',1,0),
+(5,'PHL-GARY CASH USD',1,0),
+(5,'PHL-JAMES CASH-SGD',1,0),
+(5,'PHL-MNL-CASH EUR',1,0),
+(5,'PHL-MNL-CASH HKD',1,0),
+(5,'PHL-MNL-CASH PHP',1,0),
+(5,'PHL-MNL-CASH USD',1,0),
+(5,'PHL-ONEWORK MYR',1,0),
+(5,'PHL-Oth Creditors USD',1,0),
+(5,'PHL-Oth Debtor USD',1,0),
+(5,'PHL-Security Deposits EUR',1,0),
+(5,'PHL-Security Deposits MYR',1,0),
+(5,'PHL-Security Deposits USD',1,0),
+(5,'PHL-Staff Bonus',1,0),
+(5,'PHL-Staff Expenses Adv PHP',1,0),
+(5,'PHL-Staff Expenses Adv USD',1,0),
+(5,'PHL-Staff Operating Adv PHP',1,0),
+(5,'PHL-Staff Operating Adv USD',1,0),
+(5,'PHL-STLM MYR 12Bet',1,0),
+(5,'PHL-STLM MYR Alog',1,0),
+(5,'PHL-STLM MYR Bodog',1,0),
+(5,'PHL-STLM MYR F88',1,0),
+(5,'PHL-STLM MYR Haifa',1,0),
+(5,'PHL-STLM MYR Macaobet',1,0),
+(5,'PHL-STLM MYR MF',1,0),
+(5,'PHL-STLM MYR MS88',1,0),
+(5,'PHL-STLM MYR Suncity',1,0),
+(5,'PHL-STLM MYR TLC',1,0),
+(5,'PHL-STLM MYR Tycoon',1,0),
+(5,'PHL-STLM MYR ZZUN',1,0),
+(5,'PHL-TWN BANK DP-SGD',1,0),
+(5,'PHL-TWN BANK HC-EUR',1,0),
+(5,'PHL-TWN BANK HC-HKD',1,0),
+(5,'PHL-TWN BANK HC-SGD',1,0),
+(5,'PHL-TWN BANK SC-EUR',1,0),
+(5,'PHL-TWN BANK SC-HKD',1,0),
+(5,'PHL-TWN BANK SC-SGD',1,0),
+(5,'PHL-VCCI CASH-HKD',1,0),
+(5,'PHL-VCCI CASH-PHP',1,0),
+(5,'PHL-WMD-CASH EUR',1,0),
+(5,'POB/PHL-EUR',2,0),
+(5,'POB/PHL-HKD',2,0),
+(5,'POB/PHL-PHP',2,0),
+(5,'POB/PHL-USD',2,0),
+(5,'POB/VNM-GBP',2,0),
+(5,'POB/VNM-INH',2,0),
+(5,'SH ACC/MYS-AUD',2,0),
+(5,'SH ACC/MYS-HKD',2,0),
+(5,'SH ACC/MYS-MYR',2,0),
+(5,'SH ACC/MYS-SGD',2,0),
+(5,'SH ACC/MYS-USD',2,0),
+(5,'STEV',1,0),
+(5,'Studio 40% Revenue Split',1,0),
+(5,'VNM-12Bet USD',1,0),
+(5,'VNM-ALBERT CASH CNY',1,0),
+(5,'VNM-ALBERT CASH EUR',1,0),
+(5,'VNM-ALBERT CASH GBP',1,0),
+(5,'VNM-ALBERT CASH HKD',1,0),
+(5,'VNM-ALBERT CASH IDR',1,0),
+(5,'VNM-ALBERT CASH MYR',1,0),
+(5,'VNM-ALBERT CASH SGD',1,0),
+(5,'VNM-ALBERT CASH THB',1,0),
+(5,'VNM-Cardiff MYR',1,0),
+(5,'VNM-HENRY CASH CNY',1,0),
+(5,'VNM-HENRY CASH EUR',1,0),
+(5,'VNM-HENRY CASH GBP',1,0),
+(5,'VNM-HENRY CASH HKD',1,0),
+(5,'VNM-HENRY CASH IDR',1,0),
+(5,'VNM-HENRY CASH MYR',1,0),
+(5,'VNM-HENRY CASH PHP',1,0),
+(5,'VNM-HENRY CASH SGD',1,0),
+(5,'VNM-HENRY CASH THB',1,0),
+(5,'VNM-HENRY CASH USD',1,0),
+(5,'VNM-HRC-ECL AUD',1,0),
+(5,'VNM-HRC-ECL EUR INV',1,0),
+(5,'VNM-HRC-ECL GBP',1,0),
+(5,'VNM-HRC-LTSB GBP SA',1,0),
+(5,'VNM-HRC-LTSB USD SA',1,0),
+(5,'VNM-OneWorks MYR',1,0),
+(5,'VNM-Oth Creditors USD',1,0),
+(5,'VNM-POB re 12Bet USD',1,0),
+(5,'VNM-POB re Onework USD',1,0),
+(5,'VNM-POB re PHL USD',1,0),
+(5,'VNM-Staff Bonus',1,0),
+(5,'VNM-Staff Expenses Adv INH',1,0),
+(5,'VNM-Staff Operating Adv INH',1,0),
+(5,'YUANHKD',1,0),
+(5,'YUANUSD',1,0),
+(6,'008PM',1,1),
+(6,'BA06RM',1,1),
+(6,'BANKS/PHL-AUD',2,1),
+(6,'BANKS/PHL-EUR',2,1),
+(6,'BANKS/PHL-GBP',2,1),
+(6,'BANKS/PHL-MYR',2,1),
+(6,'BANKS/PHL-PHP',2,1),
+(6,'BANKS/PHL-USD',2,1),
+(6,'BANKS/VNM-AUD',2,1),
+(6,'BANKS/VNM-EUR',2,1),
+(6,'BANKS/VNM-GBP',2,1),
+(6,'BANKS/VNM-INH',2,1),
+(6,'BANKS/VNM-SGD',2,1),
+(6,'BANKS/VNM-USD',2,1),
+(6,'BE1CASH',1,1),
+(6,'BP1CASH',1,1),
+(6,'CASH-PE',1,1),
+(6,'CASH/N88-IDR',2,1),
+(6,'CASH/N88-MYR',2,1),
+(6,'CASH/N88-THB',2,1),
+(6,'CASH/PHL-CNY',2,1),
+(6,'CASH/PHL-EUR',2,1),
+(6,'CASH/PHL-IDR',2,1),
+(6,'CASH/PHL-PHP',2,1),
+(6,'CASH/PHL-USD',2,1),
+(6,'CASH/VNM-INH',2,1),
+(6,'CASH/VNM-USD',2,1),
+(6,'CN88 EXP CNY',1,1),
+(6,'CN88 EXP PHP',1,1),
+(6,'CREDITOR/PHL-PHP',2,1),
+(6,'DEBTOR/PHL-PHP',2,1),
+(6,'EXP-MYS',3,0),
+(6,'EXP-PHL',3,0),
+(6,'EXP-VNM',3,0),
+(6,'FEIINH',1,1),
+(6,'feiusd',1,1),
+(6,'INTERCO/PHL-EUR',2,1),
+(6,'Interest Income',1,1),
+(6,'INVEST/VNM-MYR',2,1),
+(6,'Investment Income',1,1),
+(6,'Licensee',2,1),
+(6,'MYIOU-MYR',1,1),
+(6,'MYS-Staff Bonus',1,0),
+(6,'Nova88-PHL',2,1),
+(6,'Other Income',1,1),
+(6,'OTHERS/PHL-CNY',2,1),
+(6,'OTHERS/PHL-EUR',2,1),
+(6,'OTHERS/PHL-USD',2,1),
+(6,'OTHERS/VNM-EUR',2,1),
+(6,'OTHERS/VNM-MYR',2,1),
+(6,'PHL-AVIDA BKVT MYR',1,1),
+(6,'PHL-CONTRA SGD',1,1),
+(6,'PHL-DANA CASH-MYR',1,1),
+(6,'PHL-DANA CASH-SGD',1,1),
+(6,'PHL-FS-CASH MYR',1,1),
+(6,'PHL-GARY CASH MYR',1,1),
+(6,'PHL-GARY CASH SGD',1,1),
+(6,'PHL-GARY CASH USD',1,1),
+(6,'PHL-JAMES CASH-SGD',1,1),
+(6,'PHL-MNL-CASH EUR',1,1),
+(6,'PHL-MNL-CASH HKD',1,1),
+(6,'PHL-MNL-CASH PHP',1,1),
+(6,'PHL-MNL-CASH USD',1,1),
+(6,'PHL-ONEWORK MYR',1,1),
+(6,'PHL-Oth Creditors USD',1,1),
+(6,'PHL-Oth Debtor USD',1,1),
+(6,'PHL-Security Deposits EUR',1,1),
+(6,'PHL-Security Deposits MYR',1,1),
+(6,'PHL-Security Deposits USD',1,1),
+(6,'PHL-Staff Bonus',1,0),
+(6,'PHL-Staff Expenses Adv PHP',1,1),
+(6,'PHL-Staff Expenses Adv USD',1,1),
+(6,'PHL-Staff Operating Adv PHP',1,1),
+(6,'PHL-Staff Operating Adv USD',1,1),
+(6,'PHL-STLM MYR 12Bet',1,1),
+(6,'PHL-STLM MYR Alog',1,1),
+(6,'PHL-STLM MYR Bodog',1,1),
+(6,'PHL-STLM MYR F88',1,1),
+(6,'PHL-STLM MYR Haifa',1,1),
+(6,'PHL-STLM MYR Macaobet',1,1),
+(6,'PHL-STLM MYR MF',1,1),
+(6,'PHL-STLM MYR MS88',1,1),
+(6,'PHL-STLM MYR Suncity',1,1),
+(6,'PHL-STLM MYR TLC',1,1),
+(6,'PHL-STLM MYR Tycoon',1,1),
+(6,'PHL-STLM MYR ZZUN',1,1),
+(6,'PHL-TWN BANK DP-SGD',1,1),
+(6,'PHL-TWN BANK HC-EUR',1,1),
+(6,'PHL-TWN BANK HC-HKD',1,1),
+(6,'PHL-TWN BANK HC-SGD',1,1),
+(6,'PHL-TWN BANK SC-EUR',1,1),
+(6,'PHL-TWN BANK SC-HKD',1,1),
+(6,'PHL-TWN BANK SC-SGD',1,1),
+(6,'PHL-VCCI CASH-HKD',1,1),
+(6,'PHL-VCCI CASH-PHP',1,1),
+(6,'PHL-WMD-CASH EUR',1,1),
+(6,'POB/PHL-EUR',2,1),
+(6,'POB/PHL-HKD',2,1),
+(6,'POB/PHL-PHP',2,1),
+(6,'POB/PHL-USD',2,1),
+(6,'POB/VNM-GBP',2,1),
+(6,'POB/VNM-INH',2,1),
+(6,'SH ACC/MYS-AUD',2,1),
+(6,'SH ACC/MYS-HKD',2,1),
+(6,'SH ACC/MYS-MYR',2,1),
+(6,'SH ACC/MYS-SGD',2,1),
+(6,'SH ACC/MYS-USD',2,1),
+(6,'STEV',1,1),
+(6,'Studio 40% Revenue Split',1,1),
+(6,'VNM-12Bet USD',1,1),
+(6,'VNM-ALBERT CASH CNY',1,1),
+(6,'VNM-ALBERT CASH EUR',1,1),
+(6,'VNM-ALBERT CASH GBP',1,1),
+(6,'VNM-ALBERT CASH HKD',1,1),
+(6,'VNM-ALBERT CASH IDR',1,1),
+(6,'VNM-ALBERT CASH MYR',1,1),
+(6,'VNM-ALBERT CASH SGD',1,1),
+(6,'VNM-ALBERT CASH THB',1,1),
+(6,'VNM-Cardiff MYR',1,1),
+(6,'VNM-HENRY CASH CNY',1,1),
+(6,'VNM-HENRY CASH EUR',1,1),
+(6,'VNM-HENRY CASH GBP',1,1),
+(6,'VNM-HENRY CASH HKD',1,1),
+(6,'VNM-HENRY CASH IDR',1,1),
+(6,'VNM-HENRY CASH MYR',1,1),
+(6,'VNM-HENRY CASH PHP',1,1),
+(6,'VNM-HENRY CASH SGD',1,1),
+(6,'VNM-HENRY CASH THB',1,1),
+(6,'VNM-HENRY CASH USD',1,1),
+(6,'VNM-HRC-ECL AUD',1,1),
+(6,'VNM-HRC-ECL EUR INV',1,1),
+(6,'VNM-HRC-ECL GBP',1,1),
+(6,'VNM-HRC-LTSB GBP SA',1,1),
+(6,'VNM-HRC-LTSB USD SA',1,1),
+(6,'VNM-OneWorks MYR',1,1),
+(6,'VNM-Oth Creditors USD',1,1),
+(6,'VNM-POB re 12Bet USD',1,1),
+(6,'VNM-POB re Onework USD',1,1),
+(6,'VNM-POB re PHL USD',1,1),
+(6,'VNM-Staff Bonus',1,0),
+(6,'VNM-Staff Expenses Adv INH',1,1),
+(6,'VNM-Staff Operating Adv INH',1,1),
+(6,'YUANHKD',1,1),
+(6,'YUANUSD',1,1),
+
+--FOR ADMIN
+
+(1,'accSteven',6,0),
+(1,'DAVIDTAN',5,0),
+(1,'accChevon',6,0),
+(1,'accmeiteng',6,0),
+(1,'sabill',10,0),
+(1,'steven',10,0),
+(1,'KIONG',10,0),
+(1,'BCHAI',9,0),
+(1,'CRYSTAL',10,0),
+(1,'steven1',10,0),
+(1,'ahwan23',10,0),
+(1,'ALYN',10,0),
+(1,'SS33',6,0),
+(1,'PATRICK',10,0),
+(1,'hyc',10,0),
+(1,'CRYSTAL1',10,0),
+(1,'June3',6,0),
+(1,'doreen1',10,0),
+(1,'Foong',6,0),
+(1,'darren5',6,0),
+(1,'hyc1',6,0),
+(1,'sunny',5,0),
+(1,'ahwan1',6,0),
+(1,'Ling',6,0),
+(1,'SAN33',5,0),
+(2,'Rachel',6,0),
+(2,'accMyleen',6,0),
+(3,'accDiane',6,0),
+(3,'AccLawrence',5,0),
+(3,'AccMayann',6,0),
+(3,'Amy',6,0),
+(3,'Ched',6,0),
+(3,'Wendy',6,0),
+(4,'ACCMIMI',6,0),
+(4,'AccLinh',6,0),
+(5,'N88.calvinckm',6,0),
+(6,'WENG',5,0),
+(6,'CNSDBENG',5,0),
+(6,'CMTDXU',5,0),
+
+
+--for test
+
+(1,'starix16',6,0),
+(3,'starix23',6,0),
+(6,'starix27',6,0),
+(2,'starix47',6,0),
+(5,'starix59',6,0),
+(4,'starix77',6,0)

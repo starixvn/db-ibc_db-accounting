@@ -29,6 +29,7 @@ AS
 		- 20181003@Helen: Modify code to adapt indexes changed on DB053 [Redmine:101405]
 		- 20200305@Elodie: Hardcode list finance permission [Redmine: #129890]
 		- 20200316@Elodie: Remove from Hardcode list finance permission for Nova [Redmine: #130499]
+		- 20200317@Malcolm: grant permission for finance account [Redmine : #128128] 
 
 	Param's Explanation:
 	
@@ -55,12 +56,13 @@ BEGIN
 	DECLARE @srecommend INT
 	SELECT  @srecommend = srecommend FROM dbo.custInfo WITH(NOLOCK) WHERE custid = @custid
 
-	IF (@UserId = 41916921	--N88.calvinckm
-			AND @custid NOT IN (41534504,41534596,41534543,41534488,41534580,41534539,41534479,41534574,41534535,41048221)
-			AND @srecommend NOT IN (39744331,39744349,39744361,39744373,39744386,39744399,39744411,39744423,39744435,39744447,39744460,41799106,41799118,41799200,41799212)					
-		)
-		RETURN
-
+	DECLARE @GroupId SMALLINT = -1
+	
+	SELECT @GroupId = ISNULL(GroupId,-1)
+	FROM DBCUST.CustDB.dbo.Acc_FinancePermission f WITH(NOLOCK) 
+		 INNER JOIN Customer c WITH(NOLOCK) ON f.FinanceCode = c.username
+    WHERE c.custid = @UserId AND c.roleid > 4
+	
 	IF @roleID = 4 -- Super
 	BEGIN
 		-- bettrans
@@ -297,13 +299,13 @@ BEGIN
 	END	
  
 
-	DECLARE @result TABLE (rownum INT, custid INT PRIMARY KEY, username VARCHAR(30), closed BIT, firstname NVARCHAR(100), lastname NVARCHAR(100), credit MONEY, recommend INT, mrecommend INT, SyncCasino BIT)
-	INSERT INTO @result (rownum, custid, username, closed, firstname, lastname, credit, recommend, mrecommend, SyncCasino)
-	SELECT rownum, custid, username, closed, firstname, lastname, credit, recommend, mrecommend, SyncCasino
+	DECLARE @result TABLE (rownum INT, custid INT PRIMARY KEY, username VARCHAR(30), closed BIT, firstname NVARCHAR(100), lastname NVARCHAR(100), credit MONEY, recommend INT, mrecommend INT, srecommend INT, SyncCasino BIT)
+	INSERT INTO @result (rownum, custid, username, closed, firstname, lastname, credit, recommend, mrecommend, srecommend, SyncCasino)
+	SELECT rownum, custid, username, closed, firstname, lastname, credit, recommend, mrecommend, srecommend, SyncCasino
 	FROM (
 		SELECT
 			ROW_NUMBER() OVER(ORDER BY ci.closed, c.username) AS rownum,
-			c.custid, c.username, ci.closed, c.firstname, c.lastname, ci.credit, c.recommend, c.mrecommend, ci.SyncCasino /* recommend, mrecommend, SyncCasino for agent level*/
+			c.custid, c.username, ci.closed, c.firstname, c.lastname, ci.credit, c.recommend, c.mrecommend, c.srecommend, ci.SyncCasino /* recommend, mrecommend, SyncCasino for agent level*/
 		FROM dbo.Customer c WITH(NOLOCK)
 			INNER JOIN dbo.custInfo ci WITH(NOLOCK) ON c.custid = ci.custid
 		WHERE c.srecommend = @srecommend -- to using index on srecommend
@@ -345,8 +347,8 @@ BEGIN
 		r.custid AS CustId,
 		r.closed AS Closed,
 		ISNULL(cr.ClosedReason, 0) AS ClosedReason,
-		firstname AS FirstName,
-		lastname AS LastName,
+		r.firstname AS FirstName,
+		r.lastname AS LastName,
 		ISNULL(b.outstanding, 0) Outstanding,
 		ISNULL(b.balance, 0) Balance,
 		ISNULL(b.yesterday_balance, 0) YesterdayBalance,
@@ -359,6 +361,28 @@ BEGIN
 		r.mrecommend AS Mrecommend,
 		r.SyncCasino
 	FROM @result r
+		LEFT JOIN dbo.Customer p WITH(NOLOCK) ON r.custid = p.custid
+		LEFT JOIN dbo.Customer a WITH(NOLOCK) ON r.recommend = a.custid
+		LEFT JOIN dbo.Customer m WITH(NOLOCK) ON r.mrecommend = m.custid
+		LEFT JOIN dbo.Customer s WITH(NOLOCK) ON r.srecommend = s.custid
+		OUTER APPLY (
+				SELECT TOP 1  IsInternal FROM CustSuper  WITH (NOLOCK) WHERE p.custid    = custid AND p.roleid  = 4
+				UNION ALL 
+				SELECT TOP 1  IsInternal FROM CustMaster WITH (NOLOCK) WHERE p.custid    = custid AND p.roleid  = 3
+				UNION ALL 
+				SELECT TOP 1  IsInternal FROM CustAgent  WITH (NOLOCK) WHERE p.custid    = custid AND  p.roleid = 2
+				UNION ALL 
+				SELECT TOP 1  IsInternal FROM CustAgent  WITH (NOLOCK) WHERE p.recommend = custid AND  p.roleid = 1
+				) l
+		OUTER APPLY (
+				  SELECT TOP 1  f.IsView
+				  FROM  DBCUST.CustDB.dbo.Acc_FinancePermission f WITH(NOLOCK)				
+				  WHERE  f.FinanceCode IN (s.username, m.username, a.username, p.username)
+						 AND f.GroupId = @GroupId 
+						 AND l.IsInternal = 1
+						 AND @GroupId NOT IN (-1, 1)
+				  ORDER BY f.RoleId ASC
+				) f
 	CROSS APPLY (
 		SELECT SUM(credit) AS used_credit
 		FROM dbo.custInfo WITH(NOLOCK)
@@ -381,6 +405,10 @@ BEGIN
 			GROUP BY custid
 		) b ON r.custid = b.custid
 		LEFT JOIN #ClosedReason cr ON r.custid = cr.custid
+	WHERE @GroupId = 1 
+	      OR (ISNULL(f.IsView, ~l.IsInternal) = 1)
+		  OR l.IsInternal IS NULL
+		  OR (@GroupId = 0) AND ISNULL(f.IsView, 1) = 1 
 	ORDER BY rownum
 	
 	DROP TABLE #data
