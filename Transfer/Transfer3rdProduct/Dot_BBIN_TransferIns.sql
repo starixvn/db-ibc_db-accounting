@@ -1,5 +1,5 @@
 /*<info serverAlias="DBTXN-bodb02" executers="Dot_Member,Dot_Bonus" isFunction="0" isNested="0"></info>*/ 
-CREATE PROCEDURE [dbo].[Dot_BBIN_TransferIns]
+ALTER PROCEDURE [dbo].[Dot_BBIN_TransferIns]
 	@CustId				INT,
 	@TypeId				TINYINT,
 	@Amount				MONEY,
@@ -139,9 +139,10 @@ BEGIN
 	--IF @TypeID = 2 THEN Bettrans.TransDesc will be: 'Transfer FROM 3rd party' + @TransDesc
 	--IF @TypeID = 0 THEN Bettrans.TransDesc will be: 'Transfer cancelled' + @TransDesc 
 
-	SELECT @TransDesc =  CASE @TypeId WHEN 1 THEN 'Transfer to 3rd party'  
-									  WHEN 2 THEN 'Transfer FROM 3rd party' 
-									  ELSE 'Transfer cancelled' END				
+	SELECT @TransDesc =  CASE WHEN @TypeId = 1 AND @Bettype = 21008 THEN 'Transfer to 3rd party'  ELSE
+							CASE WHEN @TypeId = 2 AND @Bettype = 21008 THEN 'Transfer from 3rd party' ELSE
+								CASE WHEN @TypeId = 0 AND @Bettype = 21009 THEN 'Transfer cancelled'  
+									ELSE '' END	END END			
 						+ CASE WHEN @TransDesc <> '' THEN ' - ' + @TransDesc END
 						
 	IF @Amount > 0  
@@ -322,32 +323,34 @@ BEGIN
 		END
 		
 		------------Write Log ----------------
-	DECLARE @LogData VARCHAR(1000)	
-	SELECT @LogData = '<R CustId="'+ COALESCE(CAST(@CustId AS VARCHAR(10)), SPACE(1)) + '" ' +
-	                       'TypeId="'+ COALESCE(CAST(@TypeId AS VARCHAR(10)), SPACE(1)) + '" ' +
-						   'Amount="'+ COALESCE(CAST(@Amount AS VARCHAR(10)), SPACE(1)) + '" ' +
-						   'Bettype="'+ COALESCE(CAST(@Bettype AS VARCHAR(10)), SPACE(1)) + '" ' +
-						   'BatchRefNo="'+ COALESCE(CAST(@BatchRefNo AS VARCHAR(10)), SPACE(1)) + '" ' +
-						   'RefTransID="'+ COALESCE(CAST(@RefTransID AS VARCHAR(10)), SPACE(1)) + '" ' +
-						   'BetCheck="'+ COALESCE(CAST(@BetCheck AS NVARCHAR(50)), SPACE(1)) + '" ' +
-						   'APositiontaking="'+ COALESCE(CAST(@APositiontaking AS VARCHAR(10)), SPACE(1)) + '" ' +
-						   'MPositiontaking="'+ COALESCE(CAST(@MPositiontaking AS VARCHAR(10)), SPACE(1)) + '" ' +
-						   'SPositiontaking="'+ COALESCE(CAST(@SPositiontaking AS VARCHAR(10)), SPACE(1)) + '" ' +
-						   'EPositiontaking="'+ COALESCE(CAST(@EPositiontaking AS VARCHAR(10)), SPACE(1)) + '" ' +
-						   'PlayerDiscount="'+ COALESCE(CAST(@PlayerDiscount AS VARCHAR(10)), SPACE(1)) + '" ' +
-						   'Discount="'+ COALESCE(CAST(@Discount AS VARCHAR(10)), SPACE(1)) + '" ' +
-						   'ADiscount="'+ COALESCE(CAST(@ADiscount AS VARCHAR(10)), SPACE(1)) + '" ' +
-						   'SDiscount="'+ COALESCE(CAST(@SDiscount AS VARCHAR(10)), SPACE(1)) + '" ' +
+	DECLARE @LogData NVARCHAR(4000)	
+	SELECT @LogData = '<R CustId="'+ COALESCE(CAST(@CustId AS VARCHAR(20)), SPACE(1)) + '" ' +
 						   'TransDesc="'+ COALESCE(CAST(@TransDesc AS NVARCHAR(1000)), SPACE(1)) + '" ' +
-						   'IP="'+ COALESCE(CAST(@IP AS VARCHAR(20)), SPACE(1)) + '" ' +
-						   'RefNo="'+ COALESCE(CAST(@RefNo AS VARCHAR(10)), SPACE(1)) + '" ' +
-						   'TransID="'+ COALESCE(CAST(@TransID AS VARCHAR(10)), SPACE(1)) + '" ' +
-						   'TransDate="'+ COALESCE(CAST(@TransDate AS VARCHAR(10)), SPACE(1)) + '" ' +		   
-						   'ErrCode="'+ COALESCE(CAST(@ErrCode AS VARCHAR(10)), SPACE(1)) + '" ' +
-						   'ErrMsg="'+ COALESCE(CAST(@ErrMsg as VARCHAR(4000)),SPACE(1)) + '" />'
+	                       'TypeId="'+ COALESCE(CAST(@TypeId AS VARCHAR(20)), SPACE(1)) + '" ' +
+						   'Amount="'+ COALESCE(CAST(@Amount AS VARCHAR(20)), SPACE(1)) + '" ' +
+						   'Bettype="'+ COALESCE(CAST(@Bettype AS VARCHAR(20)), SPACE(1)) + '" ' +
+						   'BatchRefNo="'+ COALESCE(CAST(@BatchRefNo AS VARCHAR(20)), SPACE(1)) + '" ' +
+						   'RefTransID="'+ COALESCE(CAST(@RefTransID AS VARCHAR(20)), SPACE(1)) + '" ' +
+						   'BetCheck="'+ COALESCE(CAST(@BetCheck AS NVARCHAR(50)), SPACE(1)) + '" ' +
+						   'TransID="'+ COALESCE(CAST(@TransID AS VARCHAR(20)), SPACE(1)) + '" ' +
+						   'TransDate="'+ COALESCE(CAST(@TransDate AS VARCHAR(20)), SPACE(1)) + '" ' +	
+						   'RefNo="'+ COALESCE(CAST(@RefNo AS VARCHAR(20)), SPACE(1)) + '" ' +						   
+						   'APositiontaking="'+ COALESCE(CAST(@APositiontaking AS VARCHAR(20)), SPACE(1)) + '" ' +
+						   'MPositiontaking="'+ COALESCE(CAST(@MPositiontaking AS VARCHAR(20)), SPACE(1)) + '" ' +
+						   'SPositiontaking="'+ COALESCE(CAST(@SPositiontaking AS VARCHAR(20)), SPACE(1)) + '" ' +
+						   'EPositiontaking="'+ COALESCE(CAST(@EPositiontaking AS VARCHAR(20)), SPACE(1)) + '" ' +
+						   'PlayerDiscount="'+ COALESCE(CAST(@PlayerDiscount AS VARCHAR(20)), SPACE(1)) + '" ' +
+						   'Discount="'+ COALESCE(CAST(@Discount AS VARCHAR(20)), SPACE(1)) + '" ' +
+						   'ADiscount="'+ COALESCE(CAST(@ADiscount AS VARCHAR(20)), SPACE(1)) + '" ' +
+						   'SDiscount="'+ COALESCE(CAST(@SDiscount AS VARCHAR(20)), SPACE(1)) + '" ' +						  
+						   'IP="'+ COALESCE(CAST(@IP AS VARCHAR(20)), SPACE(1)) + '" ' +	
+						   'ErrCode="'+ COALESCE(CAST(@ErrCode AS VARCHAR(20)), SPACE(1)) + '" ' +
+						   'ErrMsg="'+ COALESCE(CAST(@ErrMsg as NVARCHAR(200)),SPACE(1)) + '" />'
+
+		
 	
 	--SELECT @LogData = 'Customer ' + convert(varchar(20), @CustID) + ' ' + @TransDesc + ' with amount ' + convert(varchar(20), @amount) 
-    --			+ ' Ref.No ' + convert(varchar(20), @RefNo) + ' TransID ' + convert(varchar(20), @TransID)  
+		--			+ ' Ref.No ' + convert(varchar(20), @RefNo) + ' TransID ' + convert(varchar(20), @TransID)  
 
 
 	BEGIN TRY
