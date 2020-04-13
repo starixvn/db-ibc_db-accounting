@@ -76,24 +76,22 @@ BEGIN
 
 	
 	DECLARE 
-		@Username VARCHAR(50),
-		@Currency TINYINT,
-		@CurrencyName VARCHAR(5),	
-		@ActualRate FLOAT,
-		@Winlost MONEY,	
-		@Actual_stake MONEY,		
+		@Username 		VARCHAR(50),
+		@Currency 		TINYINT,
+		@CurrencyName 	VARCHAR(5),	
+		@ActualRate 	FLOAT,
+		@Winlost 		MONEY,	
+		@Actual_stake 	MONEY,		
 		
-		@mrecommend INT,
-		@recommend INT,
-		@srecommend INT,
-		@RoleId TINYINT,
+		@mrecommend 	INT,
+		@recommend 		INT,
+		@srecommend 	INT,
+		@RoleId 		TINYINT,
 		
-		@AmountABS MONEY,
-		@Balance MONEY,	
-		@GivenCredit MONEY,		
-		@Balance_Translog MONEY,
-		@Balance_bettransRNG	MONEY,
-		@Balance_bettransLC		MONEY
+		@AmountABS 		MONEY,	
+		@GivenCredit 	MONEY,	
+		@Balance 		MONEY,	
+		@NetPosition 	MONEY 
 		
 	IF @Amount = 0
 	BEGIN
@@ -155,76 +153,29 @@ BEGIN
 		SELECT @Actual_Stake = ABS(@Amount), @AmountABS = ABS(@Amount), @Winlost = 0
 	END 
 
-	--------------------------------------------
-	----Check enough Balance for transfer In ----
+	------------------------------------------------
+	----Check Member's Balance for tranfer in -------
 	IF @Amount < 0 
-	BEGIN
-			--//1st check: MB/BU is running?
-			EXEC dbo.Acc_Core_IsMainProcessRunning
-				  @CustId = @CustId
-				, @UplineId = @recommend
-				, @IsDepositMember = 0
-				, @ErrCode = @ErrCode OUTPUT
-				, @ErrMsg = @ErrMsg OUTPUT
-
-			IF @ErrCode <> 0
-			BEGIN
-				SELECT @ErrMsg = @ErrMsg, @ErrCode = 333
-				RETURN
-			END
-			
+	BEGIN		
 			SELECT 	@GivenCredit = ISNULL(credit,0) 
 			FROM 	CustDB.dbo.custinfo WITH(NOLOCK) 
 			WHERE   custid = @custid	
-
-			SELECT	@Balance = SUM(winlost - actual_stake + playercomm) 
-			FROM 	dbo.Bettrans WITH(NOLOCK) 
-			WHERE 	CustId = @CustId
 			
-			SELECT	@Balance = ISNULL(@Balance, 0)	
-		
-			SELECT	@Balance_Translog = ISNULL(SUM(ISNULL(actual_stake,0)) ,0)
-			FROM 	dbo.Translog WITH(NOLOCK) 
-			WHERE 	CustId = @CustId and statusID=0	
-		
-			SELECT	@Balance_bettransRNG = SUM(winlost - actual_stake + playercomm)
-			FROM	dbo.BettransRnG WITH(NOLOCK)
-			WHERE	CustId = @CustId 
-					AND IsSum = 0
-				
-			SELECT	@Balance_bettransLC = SUM(winlost - actual_stake + playercomm)
-			FROM	dbo.BettransLC WITH(NOLOCK)
-			WHERE	CustId = @CustId 
-					AND IsSum = 0
-		
-			--//2nd check: MB/BU is running?
-			EXEC dbo.Acc_Core_IsMainProcessRunning
-				  @CustId = @custId
-				, @UplineId = @recommend
-				, @IsDepositMember = 0
-				, @ErrCode = @ErrCode OUTPUT
-				, @ErrMsg = @ErrMsg OUTPUT
-
-			IF @ErrCode <> 0
-			BEGIN
-				SELECT @ErrMsg = @ErrMsg, @ErrCode = 333
-				RETURN
-			END
-	
+			EXEC dbo.Acc_BalanceMemberSel 
+				@CustID		 = @CustID,
+				@Balance	 = @Balance OUTPUT,
+				@NetPosition = @NetPosition OUTPUT		
 		/*
 			Check Member's Balance for tranfer in 
-		*/ 
-			SELECT 	@Balance_bettransRNG = ISNULL(@Balance_bettransRNG,0)
-					,@Balance_bettransLC = ISNULL(@Balance_bettransLC,0)
-
-			IF ISNULL(@GivenCredit,0) + ISNULL(@Balance,0) + ISNULL(@Balance_bettransRNG,0) + ISNULL(@Balance_bettransLC,0) + @winlost - @actual_stake - ISNULL(@Balance_Translog,0) <= 0
+		*/ 	
+		
+			IF ISNULL(@GivenCredit,0) + ISNULL(@Balance,0) + ISNULL(@NetPosition,0) <= 0
 			BEGIN
 				SELECT @ErrMsg = 'Sorry, you do not have enough money to transfer in', @ErrCode = 103				
 				RETURN		
 			END
 		END 		
- 
-	
+ 	
 	------------------Insert trans into DB---------------------------------------------------------------
 	IF ISNULL(@BatchRefNo,0) = 0  	
 	BEGIN	
@@ -235,7 +186,6 @@ BEGIN
 	BEGIN 
 		SELECT @RefNo = @BatchRefNo
 	END 
-
 	
 		IF @Amount < 0 
 		BEGIN 
@@ -352,10 +302,6 @@ BEGIN
 						   'ErrCode="'+ COALESCE(CAST(@ErrCode AS VARCHAR(20)), SPACE(1)) + '" ' +						   
 						   'ErrMsg="'+ COALESCE(CAST(@ErrMsg as NVARCHAR(200)),SPACE(1)) + '" ' +
 						   'SPName ="'+ COALESCE(CAST('Dot_BBIN_TransferIns' AS VARCHAR(30)), SPACE(1))  + '" />'
-
-		 
-	--SELECT @LogData = 'Customer ' + convert(varchar(20), @CustID) + ' ' + @TransDesc + ' with amount ' + convert(varchar(20), @amount) 
-		--			+ ' Ref.No ' + convert(varchar(20), @RefNo) + ' TransID ' + convert(varchar(20), @TransID)  
 
 
 	BEGIN TRY
