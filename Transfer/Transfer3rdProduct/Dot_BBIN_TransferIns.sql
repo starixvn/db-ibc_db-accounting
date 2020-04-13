@@ -264,11 +264,11 @@ BEGIN
 		
 		INSERT INTO dbo.bettrans 
 			(custid, username, refno, transdate, matchid, bettype, transdesc,winlost, actual_stake, winlostdate, 
-			 creator, recommend, mrecommend, srecommend, currency, actualrate, currencyName, ruben, status, statusID, ip, betcheck, 
+			 creator, recommend, mrecommend, srecommend, currency, actualrate, currencyName, ruben, status, statusID, ip, betcheck, betid, 
 			 APositiontaking, MPositiontaking, SPositiontaking, EPositiontaking, PlayerDiscount, Discount, ADiscount, SDiscount)
 		VALUES 
 			(@CustID, @username, @RefNo, @transdate, 0, @bettype, @transdesc, @winlost, @actual_stake, convert(nvarchar(10), @transdate, 120), 
-			 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency, @ActualRate, @CurrencyName, 1, 'Completed', 131, @ip, @BetCheck,
+			 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency, @ActualRate, @CurrencyName, 1, 'Completed', 131, @ip, @BetCheck, 0, 
 			 @APositiontaking, @MPositiontaking, @SPositiontaking, @EPositiontaking, @PlayerDiscount, @Discount, @ADiscount, @SDiscount)
 
 		IF @@ERROR <> 0
