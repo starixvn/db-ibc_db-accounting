@@ -89,7 +89,8 @@ BEGIN
 		@RoleId TINYINT,
 		
 		@AmountABS MONEY,
-		@Balance MONEY,			
+		@Balance MONEY,	
+		@GivenCredit MONEY,		
 		@Balance_Translog MONEY,
 		@Balance_bettransRNG	MONEY,
 		@Balance_bettransLC		MONEY
@@ -171,6 +172,10 @@ BEGIN
 				SELECT @ErrMsg = @ErrMsg, @ErrCode = 333
 				RETURN
 			END
+			
+			SELECT 	@GivenCredit = ISNULL(credit,0) 
+			FROM 	CustDB.dbo.custinfo WITH(NOLOCK) 
+			WHERE   custid = @custid	
 
 			SELECT	@Balance = SUM(winlost - actual_stake + playercomm) 
 			FROM 	dbo.Bettrans WITH(NOLOCK) 
@@ -209,10 +214,10 @@ BEGIN
 		/*
 			Check Member's Balance for tranfer in 
 		*/ 
-			SELECT @Balance_bettransRNG = ISNULL(@Balance_bettransRNG,0)
+			SELECT 	@Balance_bettransRNG = ISNULL(@Balance_bettransRNG,0)
 					,@Balance_bettransLC = ISNULL(@Balance_bettransLC,0)
 
-			IF @Balance + @Balance_bettransRNG + @Balance_bettransLC + @winlost - @actual_stake - @Balance_Translog <= 0
+			IF ISNULL(@GivenCredit,0) + ISNULL(@Balance,0) + ISNULL(@Balance_bettransRNG,0) + ISNULL(@Balance_bettransLC,0) + @winlost - @actual_stake - ISNULL(@Balance_Translog,0) <= 0
 			BEGIN
 				SELECT @ErrMsg = 'Sorry, you do not have enough money to transfer in', @ErrCode = 103				
 				RETURN		
