@@ -169,7 +169,7 @@ BEGIN
 			Check Member's Balance for tranfer in 
 		*/ 	
 		
-			IF ISNULL(@GivenCredit,0) + ISNULL(@Balance,0) + ISNULL(@NetPosition,0) <= 0
+			IF ISNULL(@GivenCredit,0) + ISNULL(@Balance,0) + ISNULL(@NetPosition,0) + @Amount < 0
 			BEGIN
 				SELECT @ErrMsg = 'Sorry, you do not have enough money to transfer in', @ErrCode = 103				
 				RETURN		
@@ -190,7 +190,7 @@ BEGIN
 		IF @Amount < 0 
 		BEGIN 
 			---Update Debit Balance	 
-			EXEC Dot_BalanceDebitUpd @CustID = @CustID, @Balance = @AmountABS, @type = 2, @ErrCode = @ErrCode OUTPUT
+			EXEC Dot_BalanceDebitUpd @CustID = @CustID, @Balance = @AmountABS, @type = 2, @isForced = 1, @ErrCode = @ErrCode OUTPUT
 			
 			IF @ErrCode <> 0
 			BEGIN
@@ -234,7 +234,7 @@ BEGIN
 			ELSE
 			BEGIN 
 				---Rollback Debit Balance
-				EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Amount, @type = 2, @ErrCode = @ErrCode OUTPUT
+				EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Amount, @type = 2, @isForced = 1, @ErrCode = @ErrCode OUTPUT
 			END 
 			
 			RETURN
@@ -271,7 +271,7 @@ BEGIN
 			ELSE
 			BEGIN 
 				---Rollback Debit Balance
-				EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Amount, @type = 2, @ErrCode = @ErrCode OUTPUT
+				EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Amount, @type = 2, @isForced = 1, @ErrCode = @ErrCode OUTPUT
 			END 
 			
 			RETURN		
