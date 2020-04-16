@@ -69,12 +69,27 @@ BEGIN
 		SELECT @EndRun = GETDATE()
 		SELECT @Duration = DATEDIFF(MILLISECOND, @StartRun, @EndRun)
 			
+
+	BEGIN TRY
+		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
+			@UserID = @Creator,
+			@CustID = @CustID,
+			@ActionID = 95010,
+			@TrackingValue = @LogData,
+			@Duration = @Duration 		
+
+	END TRY
+	BEGIN CATCH
 		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
-				@UserID = @Creator,
-				@CustID = @CustID,
-				@ActionID = 95010,
-				@TrackingValue = @LogData,
-				@Duration = @Duration 
+			@UserID = @Creator,
+			@CustID = @CustID,
+			@ActionID = 95010,
+			@TrackingValue = @LogData,
+			@Duration = @Duration 		
+
+	END CATCH
+	
+	
 	  
 	
 END
