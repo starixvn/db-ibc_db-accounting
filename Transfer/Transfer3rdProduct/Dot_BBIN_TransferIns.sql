@@ -1,4 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="Dot_Member,Dot_Intg" isFunction="0" isNested="0"></info>*/ 
+/*<info serverAlias="DBTXN-bodb02" executers="Dot_Intg" isFunction="0" isNested="0"></info>*/ 
 ALTER PROCEDURE [dbo].[Dot_BBIN_TransferIns]
 	@CustId				INT,
 	@TypeId				TINYINT,
