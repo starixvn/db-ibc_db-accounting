@@ -3,6 +3,7 @@ GO
 
 /*
 Grant permission Dot_BBIN_TransferIns TO Dot_Intg  [redmind: #131347]
+DB : DBTXN.bodb02
 */
 
 
