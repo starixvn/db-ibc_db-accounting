@@ -10,7 +10,7 @@ DB: DBACC.BODB02
 		- 20101225@Lukas: Re-arrange bettype
 		- 20120405@Hurri: Add bettype 23102 (P2P Pending) into condition
 		- 20181105@Louis: Credit Collection Summary  [RedmineID: #98621]
-		- 20200414@Sophia: Add BBIN [Redmine: #131358]
+		- 20200414@Sophia: Exclude BBIN bettype [Redmine: #131358]
 */ 
 BEGIN
 	SET NOCOUNT ON 
