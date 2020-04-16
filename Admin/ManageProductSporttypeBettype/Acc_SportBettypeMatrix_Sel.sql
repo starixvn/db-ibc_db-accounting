@@ -71,7 +71,7 @@ BEGIN
 		  AND (RefTable		= @RefTable		OR ISNULL(@RefTable,0)	= 0)
 
 
-	ORDER BY SportType
+	ORDER BY SportType, BetType, IsLive
 
 	SELECT @TotalRows = COUNT(*) FROM #Tmp 
 	
