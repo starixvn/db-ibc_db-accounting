@@ -91,7 +91,8 @@ BEGIN
 		@AmountABS 		MONEY,	
 		@GivenCredit 	MONEY,	
 		@Balance 		MONEY,	
-		@NetPosition 	MONEY 
+		@NetPosition 	MONEY,
+		@TPositiontaking	SMALLMONEY		
 		
 	IF @Amount = 0
 	BEGIN
@@ -127,6 +128,8 @@ BEGIN
 			ON ci.Currency = e.ExchangeId
 		WHERE ci.CustId = @CustId
 	END
+	
+	SELECT @TPositiontaking = @APositiontaking + @MPositiontaking + @SPositiontaking
 	
 	IF @RoleId <> 1
 	BEGIN
@@ -215,11 +218,11 @@ BEGIN
 		INSERT INTO dbo.bettrans 
 			(custid, username, refno, transdate, matchid, bettype, transdesc,winlost, actual_stake, winlostdate, 
 			 creator, recommend, mrecommend, srecommend, currency, actualrate, currencyName, ruben, status, statusID, ip, betcheck, betid, 
-			 APositiontaking, MPositiontaking, SPositiontaking, EPositiontaking, PlayerDiscount, Discount, ADiscount, SDiscount)
+			 APositiontaking, MPositiontaking, SPositiontaking, TPositiontaking, EPositiontaking, PlayerDiscount, Discount, ADiscount, SDiscount)
 		VALUES 
 			(@CustID, @username, @RefNo, @transdate, 0, @bettype, @transdesc, @winlost, @actual_stake, convert(nvarchar(10), @transdate, 120), 
 			 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency, @ActualRate, @CurrencyName, 1, 'Completed', 131, @ip, @BetCheck, 0, 
-			 @APositiontaking, @MPositiontaking, @SPositiontaking, @EPositiontaking, @PlayerDiscount, @Discount, @ADiscount, @SDiscount)
+			 @APositiontaking, @MPositiontaking, @SPositiontaking, @TPositiontaking, @EPositiontaking, @PlayerDiscount, @Discount, @ADiscount, @SDiscount)
 
 		IF @@ERROR <> 0
 		BEGIN						
@@ -293,6 +296,7 @@ BEGIN
 						   'APositiontaking="'+ COALESCE(CAST(@APositiontaking AS VARCHAR(20)), SPACE(1)) + '" ' +
 						   'MPositiontaking="'+ COALESCE(CAST(@MPositiontaking AS VARCHAR(20)), SPACE(1)) + '" ' +
 						   'SPositiontaking="'+ COALESCE(CAST(@SPositiontaking AS VARCHAR(20)), SPACE(1)) + '" ' +
+						   'TPositiontaking="'+ COALESCE(CAST(@TPositiontaking AS VARCHAR(20)), SPACE(1)) + '" ' +
 						   'EPositiontaking="'+ COALESCE(CAST(@EPositiontaking AS VARCHAR(20)), SPACE(1)) + '" ' +
 						   'PlayerDiscount="'+ COALESCE(CAST(@PlayerDiscount AS VARCHAR(20)), SPACE(1)) + '" ' +
 						   'Discount="'+ COALESCE(CAST(@Discount AS VARCHAR(20)), SPACE(1)) + '" ' +
