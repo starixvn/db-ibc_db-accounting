@@ -18,7 +18,7 @@ Original:
 	- @Fie:		
 		<ROOT>
 				<File 
-						ProductID = "1" ProductName= "a"  ProductPrefix= "" Enabled=""  EndOfSupportDate=""  BalanceType=""
+						ProductID = "1" ProductName= "a"  Description = "ml" ProductPrefix= "" Enabled=""  EndOfSupportDate=""  BalanceType=""
 						SubProductBalanceType="" GroupType="" CasinoType="4" IsOfferPlayForFun=""  VendorID="5"	OrderNo = ""
 				/>
 		</ROOT>	
