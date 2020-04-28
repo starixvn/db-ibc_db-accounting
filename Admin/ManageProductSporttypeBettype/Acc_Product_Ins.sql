@@ -18,9 +18,8 @@ Original:
 	- @Fie:		
 		<ROOT>
 				<File 
-						ProductID = "1" ProductName= "a" Description="" ProductPrefix= "" Enabled="" ProductNameCh="" ProductNameCs="" ProductNameJp="" ProductNameIt=""
-						ProductNameTh="" ProductNameKo="" ProductNameES="" ProductNameVN="" ProductNameEL="" ProductNameRU="" ProductNameID="" BalanceType="" 
-						SubProductBalanceType="" GroupType="" CasinoType="4" IsOfferPlayForFun="" EndOfSupportDate="" VendorID="5"				
+						ProductID = "1" ProductName= "a"  ="" ProductPrefix= "" Enabled=""  EndOfSupportDate=""  BalanceType=""
+						SubProductBalanceType="" GroupType="" CasinoType="4" IsOfferPlayForFun=""  VendorID="5"	OrderNo = ""
 				/>
 		</ROOT>	
 		
@@ -44,25 +43,15 @@ BEGIN
 		ProductName 			VARCHAR(50),
 		Description 			VARCHAR(100),
 		ProductPrefix 			VARCHAR(10),
-		Enabled 				BIT,
-		ProductNameCh 			NVARCHAR(50),
-		ProductNameCs 			NVARCHAR(50),
-		ProductNameJp 			NVARCHAR(50),
-		ProductNameIt 			NVARCHAR(50),
-		ProductNameTh 			NVARCHAR(50),
-		ProductNameKo 			NVARCHAR(50),
-		ProductNameES 			NVARCHAR(50),
-		ProductNameVN 			NVARCHAR(50),
-		ProductNameEL 			NVARCHAR(50),
-		ProductNameRU 			NVARCHAR(50),
-		ProductNameID 			NVARCHAR(50),
+		Enabled 				BIT,	
+		EndOfSupportDate 		DATE,
 		BalanceType 			TINYINT,
 		SubProductBalanceType 	VARCHAR(512),
 		GroupType 				TINYINT,
 		CasinoType 				TINYINT,
-		IsOfferPlayForFun 		BIT,
-		EndOfSupportDate 		DATE,
-		VendorID 				SMALLINT 
+		IsOfferPlayForFun 		BIT,		
+		VendorID 				SMALLINT,
+		OrderNo                 INT
 	)
 
 	CREATE TABLE #inputTmp
@@ -72,24 +61,14 @@ BEGIN
 		Description 			NVARCHAR(MAX),
 		ProductPrefix 			NVARCHAR(MAX),
 		Enabled 				NVARCHAR(MAX),
-		ProductNameCh 			NVARCHAR(MAX),
-		ProductNameCs 			NVARCHAR(MAX),
-		ProductNameJp 			NVARCHAR(MAX),
-		ProductNameIt 			NVARCHAR(MAX),
-		ProductNameTh 			NVARCHAR(MAX),
-		ProductNameKo 			NVARCHAR(MAX),
-		ProductNameES 			NVARCHAR(MAX),
-		ProductNameVN 			NVARCHAR(MAX),
-		ProductNameEL 			NVARCHAR(MAX),
-		ProductNameRU 			NVARCHAR(MAX),
-		ProductNameID 			NVARCHAR(MAX),
+		EndOfSupportDate 		NVARCHAR(MAX),
 		BalanceType 			NVARCHAR(MAX),
 		SubProductBalanceType 	NVARCHAR(MAX),
 		GroupType 				NVARCHAR(MAX),
 		CasinoType 				NVARCHAR(MAX),
-		IsOfferPlayForFun 		NVARCHAR(MAX),
-		EndOfSupportDate 		NVARCHAR(MAX),
-		VendorID 				NVARCHAR(MAX)
+		IsOfferPlayForFun 		NVARCHAR(MAX),	
+		VendorID 				NVARCHAR(MAX),
+		OrderNo					NVARCHAR(MAX)
 	)
 
 	BEGIN TRY
@@ -101,74 +80,44 @@ BEGIN
 							ProductName,
 							Description,
 							ProductPrefix,
-							Enabled,
-							ProductNameCh,
-							ProductNameCs,
-							ProductNameJp,
-							ProductNameIt,
-							ProductNameTh,
-							ProductNameKo,
-							ProductNameES,
-							ProductNameVN,
-							ProductNameEL,
-							ProductNameRU,
-							ProductNameID,
+							Enabled,	
+							EndOfSupportDate,							
 							BalanceType,
 							SubProductBalanceType,
 							GroupType,
 							CasinoType,
-							IsOfferPlayForFun,
-							EndOfSupportDate,
-							VendorID
+							IsOfferPlayForFun,							
+							VendorID,
+							OrderNo
 			)
 
 			SELECT          ProductID,
 							ProductName,
 							Description,
 							ProductPrefix,
-							Enabled,
-							ProductNameCh,
-							ProductNameCs,
-							ProductNameJp,
-							ProductNameIt,
-							ProductNameTh,
-							ProductNameKo,
-							ProductNameES,
-							ProductNameVN,
-							ProductNameEL,
-							ProductNameRU,
-							ProductNameID,
+							Enabled,		
+							EndOfSupportDate,							
 							BalanceType,
 							SubProductBalanceType,
 							GroupType,
 							CasinoType,
 							IsOfferPlayForFun,
-							EndOfSupportDate,
-							VendorID
+							VendorID,
+							OrderNo
 
 			FROM OPENXML(@iDoc, '/ROOT/File', 1) WITH  (ProductID 				NVARCHAR(MAX),
 														ProductName 			NVARCHAR(MAX),
 														Description 			NVARCHAR(MAX),
 														ProductPrefix 			NVARCHAR(MAX),
 														Enabled 				NVARCHAR(MAX),
-														ProductNameCh 			NVARCHAR(MAX),
-														ProductNameCs 			NVARCHAR(MAX),
-														ProductNameJp 			NVARCHAR(MAX),
-														ProductNameIt 			NVARCHAR(MAX),
-														ProductNameTh 			NVARCHAR(MAX),
-														ProductNameKo 			NVARCHAR(MAX),
-														ProductNameES 			NVARCHAR(MAX),
-														ProductNameVN 			NVARCHAR(MAX),
-														ProductNameEL 			NVARCHAR(MAX),
-														ProductNameRU 			NVARCHAR(MAX),
-														ProductNameID 			NVARCHAR(MAX),
+														EndOfSupportDate 		NVARCHAR(MAX),														
 														BalanceType 			NVARCHAR(MAX),
 														SubProductBalanceType 	NVARCHAR(MAX),
 														GroupType 				NVARCHAR(MAX),
 														CasinoType 				NVARCHAR(MAX),
-														IsOfferPlayForFun 		NVARCHAR(MAX),
-														EndOfSupportDate 		NVARCHAR(MAX),
-														VendorID 				NVARCHAR(MAX))
+														IsOfferPlayForFun 		NVARCHAR(MAX),												
+														VendorID 				NVARCHAR(MAX),
+														OrderNo 				NVARCHAR(MAX))
 		    
 			EXEC sp_xml_removedocument @iDoc
 	END TRY
@@ -183,62 +132,43 @@ BEGIN
 			AND LEN(ProductName) 			= 0
 			AND LEN(Description) 			= 0
 			AND LEN(ProductPrefix) 			= 0
-			AND LEN(Enabled) 				= 0
-			AND LEN(ProductNameCh) 			= 0
-			AND LEN(ProductNameCs) 			= 0
-			AND LEN(ProductNameJp) 			= 0
-			AND LEN(ProductNameIt) 			= 0
-			AND LEN(ProductNameTh) 			= 0
-			AND LEN(ProductNameKo) 			= 0
-			AND LEN(ProductNameES) 			= 0
-			AND LEN(ProductNameVN) 			= 0
-			AND LEN(ProductNameEL) 			= 0
-			AND LEN(ProductNameRU) 			= 0
-			AND LEN(ProductNameID) 			= 0
+			AND LEN(Enabled) 				= 0		
+			AND LEN(EndOfSupportDate) 		= 0
 			AND LEN(BalanceType) 			= 0
 			AND LEN(SubProductBalanceType) 	= 0
 			AND LEN(GroupType) 				= 0
 			AND LEN(CasinoType) 			= 0
-			AND LEN(IsOfferPlayForFun) 		= 0
-			AND LEN(EndOfSupportDate) 		= 0
+			AND LEN(IsOfferPlayForFun) 		= 0			
 			AND LEN(VendorID) 				= 0
+			AND LEN(OrderNo) 				= 0
    
     UPDATE #inputTmp
 	SET ProductID			= CASE WHEN LEN(ProductID)			= 0 THEN  NULL ELSE ProductID 			END,
 		Enabled     		= CASE WHEN LEN(Enabled)			= 0 THEN  NULL ELSE Enabled				END,
+		EndOfSupportDate  	= CASE WHEN LEN(EndOfSupportDate)	= 0 THEN  NULL ELSE EndOfSupportDate 	END,
 		BalanceType  		= CASE WHEN LEN(BalanceType)		= 0 THEN  NULL ELSE BalanceType 		END,
 		GroupType  			= CASE WHEN LEN(GroupType)			= 0 THEN  NULL ELSE GroupType 			END,
 		CasinoType  		= CASE WHEN LEN(CasinoType)			= 0 THEN  NULL ELSE CasinoType 			END,
-		IsOfferPlayForFun  	= CASE WHEN LEN(IsOfferPlayForFun)	= 0 THEN  NULL ELSE IsOfferPlayForFun 	END,
-		EndOfSupportDate  	= CASE WHEN LEN(EndOfSupportDate)	= 0 THEN  NULL ELSE EndOfSupportDate 	END,
-		VendorID  			= CASE WHEN LEN(VendorID)			= 0 THEN  NULL ELSE VendorID 			END
+		IsOfferPlayForFun  	= CASE WHEN LEN(IsOfferPlayForFun)	= 0 THEN  NULL ELSE IsOfferPlayForFun 	END,	
+		VendorID  			= CASE WHEN LEN(VendorID)			= 0 THEN  NULL ELSE VendorID 			END,
+		OrderNo  			= CASE WHEN LEN(OrderNo)			= 0 THEN  NULL ELSE OrderNo 			END
 
 	WHERE LEN(ProductID)			= 0 
 	      OR LEN(Enabled)			= 0
+		  OR LEN(EndOfSupportDate)	= 0
 		  OR LEN(BalanceType)		= 0
 		  OR LEN(GroupType)			= 0
 		  OR LEN(CasinoType)		= 0
-		  OR LEN(IsOfferPlayForFun)	= 0
-		  OR LEN(EndOfSupportDate)	= 0
+		  OR LEN(IsOfferPlayForFun)	= 0  
 		  OR LEN(VendorID)			= 0
+		  OR LEN(OrderNo)			= 0
 
 	SELECT TOP(1) @ProductError = ProductID, 
 	
 	              @ValueError   = CASE WHEN LEN(Description)			> 100 THEN Description
 									   WHEN LEN(SubProductBalanceType) 	> 512 THEN SubProductBalanceType
-									   WHEN LEN(ProductPrefix)			> 10  THEN ProductPrefix
-									   WHEN LEN(ProductName)			> 50  THEN ProductName
-							           WHEN LEN(ProductNameCh)			> 50  THEN ProductNameCh
-							           WHEN LEN(ProductNameCs)			> 50  THEN ProductNameCs
-							           WHEN LEN(ProductNameJp)			> 50  THEN ProductNameJp
-									   WHEN LEN(ProductNameIt)			> 50  THEN ProductNameIt
-									   WHEN LEN(ProductNameTh)			> 50  THEN ProductNameTh
-							           WHEN LEN(ProductNameKo)			> 50  THEN ProductNameKo
-							           WHEN LEN(ProductNameES)			> 50  THEN ProductNameES
-							           WHEN LEN(ProductNameVN)			> 50  THEN ProductNameVN
-							           WHEN LEN(ProductNameEL)			> 50  THEN ProductNameEL
-									   WHEN LEN(ProductNameRU)			> 50  THEN ProductNameRU
-							           ELSE ProductNameID END,
+									   WHEN LEN(ProductPrefix)			> 10  THEN ProductPrefix				           
+							           ELSE ProductName END,
 									   
 				  @LimitValue   = CASE WHEN LEN(Description)        	> 100 THEN 100
                               	       WHEN LEN(SubProductBalanceType)  > 512 THEN 512
@@ -249,18 +179,7 @@ BEGIN
 	WHERE LEN(Description)		  		> 100 
 		  OR LEN(SubProductBalanceType)	> 512
 		  OR LEN(ProductPrefix)		  	> 10
-		  OR LEN(ProductName)   		> 50
-		  OR LEN(ProductNameCh)		 	> 50
-		  OR LEN(ProductNameCs)		  	> 50
-		  OR LEN(ProductNameJp)	  		> 50
-		  OR LEN(ProductNameIt)	  		> 50
-	      OR LEN(ProductNameTh)	  		> 50
-		  OR LEN(ProductNameKo)	  		> 50
-		  OR LEN(ProductNameES)	  		> 50
-		  OR LEN(ProductNameVN)	  		> 50
-		  OR LEN(ProductNameEL)	  		> 50
-		  OR LEN(ProductNameRU)	  		> 50
-		  OR LEN(ProductNameID)	  		> 50
+		  OR LEN(ProductName)   		> 50	  
 							
 
 	IF @ValueError <> ''
@@ -296,50 +215,30 @@ BEGIN
 									ProductName,
 									Description,
 									ProductPrefix,
-									Enabled,
-									ProductNameCh,
-									ProductNameCs,
-									ProductNameJp,
-									ProductNameIt,
-									ProductNameTh,
-									ProductNameKo,
-									ProductNameES,
-									ProductNameVN,
-									ProductNameEL,
-									ProductNameRU,
-									ProductNameID,
+									Enabled,	
+									EndOfSupportDate,									
 									BalanceType,
 									SubProductBalanceType,
 									GroupType,
 									CasinoType,
-									IsOfferPlayForFun,
-									EndOfSupportDate,
-									VendorID
+									IsOfferPlayForFun,									
+									VendorID,
+									OrderNo									
 			)
 
 			SELECT					ProductID,
 									ProductName,
 									Description,
 									ProductPrefix,
-									Enabled,
-									ProductNameCh,
-									ProductNameCs,
-									ProductNameJp,
-									ProductNameIt,
-									ProductNameTh,
-									ProductNameKo,
-									ProductNameES,
-									ProductNameVN,
-									ProductNameEL,
-									ProductNameRU,
-									ProductNameID,
+									Enabled,	
+									EndOfSupportDate,									
 									BalanceType,
 									SubProductBalanceType,
 									GroupType,
 									CasinoType,
-									IsOfferPlayForFun,
-									EndOfSupportDate,
-									VendorID
+									IsOfferPlayForFun,								
+									VendorID,
+									OrderNo
 			FROM #input
 			WHERE ID = @CurrentRow
 		END TRY
@@ -353,26 +252,16 @@ BEGIN
 		SELECT @LogSPData =   '<R ProductID="'+ COALESCE(CAST(ProductID AS VARCHAR(4)), SPACE(1)) + '" ' +
 								'ProductName="' + COALESCE(CAST(ProductName  AS VARCHAR(50)), SPACE(1)) + '" ' +
 								'Description="' + COALESCE(CAST(Description  AS VARCHAR(100)), SPACE(1)) + '" ' +
-								'ProductPrefix="' + COALESCE(CAST(ProductPrefix  AS NVARCHAR(10)), SPACE(1)) + '" ' +
-								'ProductNameCh="' + COALESCE(CAST(ProductNameCh  AS NVARCHAR(50)), SPACE(1)) + '" ' +
-								'ProductNameCs="' + COALESCE(CAST(ProductNameCs  AS NVARCHAR(50)), SPACE(1)) + '" ' +								
-								'ProductNameJp="' + COALESCE(CAST(ProductNameJp  AS NVARCHAR(50)), SPACE(1)) + '" ' +
-								'ProductNameIt="' + COALESCE(CAST(ProductNameIt  AS NVARCHAR(50)), SPACE(1)) + '" ' +
-								'ProductNameTh="' + COALESCE(CAST(ProductNameTh  AS NVARCHAR(50)), SPACE(1)) + '" ' +
-								'ProductNameKo="' + COALESCE(CAST(ProductNameKo  AS NVARCHAR(50)), SPACE(1)) + '" ' +
-								'ProductNameES="' + COALESCE(CAST(ProductNameES  AS NVARCHAR(50)), SPACE(1)) + '" ' +
-								'ProductNameVN="' + COALESCE(CAST(ProductNameVN  AS NVARCHAR(50)), SPACE(1)) + '" ' +
-								'ProductNameEL="' + COALESCE(CAST(ProductNameEL  AS NVARCHAR(50)), SPACE(1)) + '" ' +
-								'ProductNameRU="' + COALESCE(CAST(ProductNameRU  AS NVARCHAR(50)), SPACE(1)) + '" ' +
-								'ProductNameID="' + COALESCE(CAST(ProductNameID  AS NVARCHAR(50)), SPACE(1)) + '" ' +
-								'SubProductBalanceType="' + COALESCE(CAST(SubProductBalanceType  AS VARCHAR(512)), SPACE(1)) + '" ' +
+								'ProductPrefix="' + COALESCE(CAST(ProductPrefix  AS NVARCHAR(10)), SPACE(1)) + '" ' +																
 								'Enabled="' + COALESCE(CAST(Enabled  AS NVARCHAR(2)), SPACE(1)) + '" ' +
+								'EndOfSupportDate="' + COALESCE(CAST(EndOfSupportDate  AS NVARCHAR(30)), SPACE(1)) + '" ' +
 								'BalanceType="' + COALESCE(CAST(BalanceType  AS NVARCHAR(4)), SPACE(1)) + '" ' +
+								'SubProductBalanceType="' + COALESCE(CAST(SubProductBalanceType  AS VARCHAR(512)), SPACE(1)) + '" ' +
 								'GroupType="' + COALESCE(CAST(GroupType  AS NVARCHAR(4)), SPACE(1)) + '" ' +
 								'CasinoType="' + COALESCE(CAST(CasinoType  AS NVARCHAR(4)), SPACE(1)) + '" ' +
-								'IsOfferPlayForFun="' + COALESCE(CAST(IsOfferPlayForFun  AS NVARCHAR(2)), SPACE(1)) + '" ' +							
-								'EndOfSupportDate="' + COALESCE(CAST(EndOfSupportDate  AS NVARCHAR(30)), SPACE(1)) + '" ' +
-								'VendorID="' + COALESCE(CAST(VendorID  AS NVARCHAR(8)), SPACE(1)) + '" ' +							
+								'IsOfferPlayForFun="' + COALESCE(CAST(IsOfferPlayForFun  AS NVARCHAR(2)), SPACE(1)) + '" ' +														
+								'VendorID="' + COALESCE(CAST(VendorID  AS NVARCHAR(8)), SPACE(1)) + '" ' +		
+								'OrderNo="' + COALESCE(CAST(OrderNo  AS NVARCHAR(12)), SPACE(1)) + '" ' +									
 								'LoginIP="'+ COALESCE(CAST(@LoginIP as VARCHAR(20)),SPACE(1)) + '" />'
 			FROM #input
 			WHERE ID = @CurrentRow
