@@ -18,7 +18,7 @@ Original:
 	- @Fie:		
 		<ROOT>
 				<File 
-						ProductID = "1" ProductName= "a"  ="" ProductPrefix= "" Enabled=""  EndOfSupportDate=""  BalanceType=""
+						ProductID = "1" ProductName= "a"  ProductPrefix= "" Enabled=""  EndOfSupportDate=""  BalanceType=""
 						SubProductBalanceType="" GroupType="" CasinoType="4" IsOfferPlayForFun=""  VendorID="5"	OrderNo = ""
 				/>
 		</ROOT>	
@@ -144,6 +144,7 @@ BEGIN
    
     UPDATE #inputTmp
 	SET ProductID			= CASE WHEN LEN(ProductID)			= 0 THEN  NULL ELSE ProductID 			END,
+		ProductName			= CASE WHEN LEN(ProductName)		= 0 THEN  NULL ELSE ProductName 		END,
 		Enabled     		= CASE WHEN LEN(Enabled)			= 0 THEN  NULL ELSE Enabled				END,
 		EndOfSupportDate  	= CASE WHEN LEN(EndOfSupportDate)	= 0 THEN  NULL ELSE EndOfSupportDate 	END,
 		BalanceType  		= CASE WHEN LEN(BalanceType)		= 0 THEN  NULL ELSE BalanceType 		END,
@@ -154,6 +155,7 @@ BEGIN
 		OrderNo  			= CASE WHEN LEN(OrderNo)			= 0 THEN  NULL ELSE OrderNo 			END
 
 	WHERE LEN(ProductID)			= 0 
+	      OR LEN(ProductName)       = 0
 	      OR LEN(Enabled)			= 0
 		  OR LEN(EndOfSupportDate)	= 0
 		  OR LEN(BalanceType)		= 0
