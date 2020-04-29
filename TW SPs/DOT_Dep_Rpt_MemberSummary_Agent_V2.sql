@@ -48,6 +48,8 @@ Revisions:
 --20191218@Benson: Add select promotion column
 --20191227@Benson: hotfix column of promotion not aligned
 --20200107@Benson: new FG replace old FG, PartnerId 13->18 | bettype 22032,22033 -> 22042,22043
+--20200317@Rong(DB06.bodb02): Add KYGaming Report Data
+--20200331@James(DB06.bodb02): Add Virtual Games(245), Virtual Soccer Champions Cup(196), Virtual Soccer Asian Cup(194)  Report Data
 */
 BEGIN
 	SET NOCOUNT ON
@@ -76,11 +78,12 @@ BEGIN
 		KLDraw money default(0), KLTOver money default(0), KLWL money default(0), --KENO Lottery
 		VS2Draw money default(0), VS2TOver money default(0), VS2WL money default(0), --BetRadar Virtual Sports
 		H5Draw money default(0), H5TOver money default(0), H5WL money default(0), --Happy5
+		VGDraw money default(0), VGTOver money default(0), VGWL money default(0), --Virtual Games
 		Winloss money default(0), ClosingBalance money default(0), Transfer3rd money default(0), DrawGame money default(0),
 		recommend int, mrecommend int, srecommend int, actualrate float, Promotion money, Transfer3rd_Opus money default(0), Transfer3rd_HoGaing money default(0),
 		Transfer3rd_AG money default(0), Transfer3rd_GD money default(0), Transfer3rd_VB money default(0),Transfer3rd_CRYSTAL money default(0),Transfer3rd_LBKeno money default(0),
 		Transfer3rd_Opal money default(0), Transfer3rd_BetSoft money default(0), Transfer3rd_iSoftBet money default(0), Transfer3rd_CitiBet money default(0), Transfer3rd_Topaz money default(0),
-		Transfer3rd_IMone money default(0), Transfer3rd_BTi money default(0), Transfer3rd_VRLottery money default(0), Transfer3rd_Sapphire money default(0))
+		Transfer3rd_IMone money default(0), Transfer3rd_BTi money default(0), Transfer3rd_VRLottery money default(0), Transfer3rd_Sapphire money default(0), Transfer3rd_KYGaming money default(0))
 		
 	DECLARE @WinlostTmp TABLE (
 		winlostdate datetime, custid int, currency int, OpeningBalance money default(0), Deposit money default(0), Aff2MemTransfer money default(0),
@@ -102,13 +105,14 @@ BEGIN
 		KLDraw money default(0), KLTOver money default(0), KLWL money default(0), --KENO Lottery
 		VS2Draw money default(0), VS2TOver money default(0), VS2WL money default(0), --BetRadar Virtual Sports
 		H5Draw money default(0), H5TOver money default(0), H5WL money default(0), --Happy5
+		VGDraw money default(0), VGTOver money default(0), VGWL money default(0), --Virtual Games
 		Winloss money default(0), ClosingBalance money default(0), Transfer3rd money default(0), DrawGame money default(0),
 		recommend int, mrecommend int, srecommend int, actualrate float, Promotion money)
 
 	--Get Transfer 3rd Winlost data
 	DECLARE @WinlostTransfer3rd TABLE(CustId int , winlostdate datetime, Transfer3rd_Opus money, Transfer3rd_HoGaming money, Transfer3rd_AG money, Transfer3rd_GD money, Transfer3rd_VB money ,
 		Transfer3rd_CRYSTAL money, Transfer3rd_LBKeno money, Transfer3rd_Opal money, Transfer3rd_BetSoft money, Transfer3rd_iSoftBet money, Transfer3rd_CitiBet money, Transfer3rd_Topaz money,
-		Transfer3rd_IMone money, Transfer3rd_BTi money, Transfer3rd_VRLottery money, Transfer3rd_Sapphire money)
+		Transfer3rd_IMone money, Transfer3rd_BTi money, Transfer3rd_VRLottery money, Transfer3rd_Sapphire money, Transfer3rd_KYGaming money)
 		
 	IF (@fromDate < @CutDate) OR (@toDate < @CutDate)
 	BEGIN
@@ -132,6 +136,7 @@ BEGIN
 			   ISNULL(p1.KLDraw, 0) AS KLDraw, ISNULL(p1.KLTOver, 0) AS KLTOver, ISNULL(p1.KLWL, 0) AS KLWL, --KENO Lottery
 			   ISNULL(p1.VS2Draw, 0) AS VS2Draw, ISNULL(p1.VS2TOver, 0) AS VS2TOver, ISNULL(p1.VS2WL, 0) AS VS2WL, --BetRadar Virtual Sports
 			   ISNULL(p1.H5Draw, 0) AS H5Draw, ISNULL(p1.H5TOver, 0) AS H5TOver, ISNULL(p1.H5WL, 0) AS H5WL, --Happy5
+			   ISNULL(p1.VGDraw, 0) AS VGDraw, ISNULL(p1.VGTOver, 0) AS VGTOver, ISNULL(p1.VGWL, 0) AS VGWL, --Virtual Games
 			   b.Winloss, b.ClosingBalance, b.Transfer3rd, b.DrawGame,
 			   b.recommend, b.mrecommend, b.srecommend, b.actualrate, b.Promotion
 		FROM bodb_Report.dbo.rptDepWinlost_bk b WITH(NOLOCK)
@@ -179,19 +184,22 @@ BEGIN
 								SUM(CASE WHEN p.sporttype = 220 THEN p.drawTO ELSE 0 END) AS KLDraw, 
 								SUM(CASE WHEN p.sporttype = 220 THEN p.turnover ELSE 0 END) AS KLTOver,
 								SUM(CASE WHEN p.sporttype = 220 THEN p.winlost ELSE 0 END) AS KLWL ,
-								SUM(CASE WHEN p.sporttype IN (190,191,192,193) THEN p.drawTO ELSE 0 END) AS VS2Draw, 
-								SUM(CASE WHEN p.sporttype IN (190,191,192,193) THEN p.turnover ELSE 0 END) AS VS2TOver,
-								SUM(CASE WHEN p.sporttype IN (190,191,192,193) THEN p.winlost ELSE 0 END) AS VS2WL ,
+								SUM(CASE WHEN p.sporttype IN (190,191,192,193,194,196) THEN p.drawTO ELSE 0 END) AS VS2Draw, 
+								SUM(CASE WHEN p.sporttype IN (190,191,192,193,194,196) THEN p.turnover ELSE 0 END) AS VS2TOver,
+								SUM(CASE WHEN p.sporttype IN (190,191,192,193,194,196) THEN p.winlost ELSE 0 END) AS VS2WL ,
 								SUM(CASE WHEN p.sporttype = -6 THEN p.drawTO ELSE 0 END) AS CODraw,
 								SUM(CASE WHEN p.sporttype = -6 THEN p.turnover ELSE 0 END) AS COTOver,
 								SUM(CASE WHEN p.sporttype = -6 THEN p.winlost ELSE 0 END) AS COWL,
 								SUM(CASE WHEN p.sporttype = 164 THEN p.drawTO ELSE 0 END) AS H5Draw,
 								SUM(CASE WHEN p.sporttype = 164 THEN p.turnover ELSE 0 END) AS H5TOver,
-								SUM(CASE WHEN p.sporttype = 164 THEN p.winlost ELSE 0 END) AS H5WL 								
+								SUM(CASE WHEN p.sporttype = 164 THEN p.winlost ELSE 0 END) AS H5WL,
+								SUM(CASE WHEN p.sporttype = 245 THEN p.drawTO ELSE 0 END) AS VGDraw,
+								SUM(CASE WHEN p.sporttype = 245 THEN p.turnover ELSE 0 END) AS VGTOver,
+								SUM(CASE WHEN p.sporttype = 245 THEN p.winlost ELSE 0 END) AS VGWL								
 
 						FROM bodb_Report.dbo.rptDepWinlostByProduct_BK p WITH(NOLOCK)
 						WHERE winlostdate BETWEEN @fromDate AND @toDate 
-							AND p.sporttype IN (0,151,161,162,180,190,191,192,193,202,203,204,205,210,211,212,219,220,251,208,209,-6,164) 
+							AND p.sporttype IN (0,151,161,162,180,190,191,192,193,202,203,204,205,210,211,212,219,220,251,208,209,-6,164,194,196,245) 
 							AND p.custid = @CustId 
 						GROUP BY p.winlostdate, p.custid
 					) p1 ON b.winlostdate = p1.winlostdate
@@ -201,7 +209,7 @@ BEGIN
 
 		INSERT INTO @WinlostTransfer3rd (CustId, winlostdate, Transfer3rd_Opus, Transfer3rd_HoGaming, Transfer3rd_AG, Transfer3rd_GD, Transfer3rd_VB ,
 			Transfer3rd_CRYSTAL, Transfer3rd_LBKeno, Transfer3rd_Opal, Transfer3rd_BetSoft, Transfer3rd_iSoftBet, Transfer3rd_CitiBet, Transfer3rd_Topaz,
-			Transfer3rd_IMone, Transfer3rd_BTi, Transfer3rd_VRLottery, Transfer3rd_Sapphire)
+			Transfer3rd_IMone, Transfer3rd_BTi, Transfer3rd_VRLottery, Transfer3rd_Sapphire, Transfer3rd_KYGaming)
 		SELECT custid, winlostdate, 
 			SUM(CASE PartnerId WHEN 2 THEN TransferAmount ELSE 0 END), -- oops
 			SUM(CASE PartnerId WHEN 1 THEN TransferAmount ELSE 0 END), -- HoGaming
@@ -218,7 +226,8 @@ BEGIN
 			SUM(CASE PartnerId WHEN 14 THEN TransferAmount ELSE 0 END), -- IMone
 			SUM(CASE PartnerId WHEN 15 THEN TransferAmount ELSE 0 END), -- BTi
 			SUM(CASE PartnerId WHEN 16 THEN TransferAmount ELSE 0 END), -- VRLottery
-			SUM(CASE PartnerId WHEN 17 THEN TransferAmount ELSE 0 END)  -- Sapphire
+			SUM(CASE PartnerId WHEN 17 THEN TransferAmount ELSE 0 END), -- Sapphire
+			SUM(CASE PartnerId WHEN 19 THEN TransferAmount ELSE 0 END)  -- KYGaming
 		FROM bodb_Report.dbo.rptDepWinlost_Transfer3rdOthers_bk  WITH (NOLOCK) 
 		WHERE  (winlostdate BETWEEN @fromDate AND @toDate) AND custid = @Custid AND recommend IN (SELECT val FROM strSplit(@agentid,','))  
 		GROUP BY winlostdate,CustId
@@ -247,6 +256,7 @@ BEGIN
 			   ISNULL(p1.KLDraw, 0) AS KLDraw, ISNULL(p1.KLTOver, 0) AS KLTOver, ISNULL(p1.KLWL, 0) AS KLWL, --KENO Lottery
 			   ISNULL(p1.VS2Draw, 0) AS VS2Draw, ISNULL(p1.VS2TOver, 0) AS VS2TOver, ISNULL(p1.VS2WL, 0) AS VS2WL, --BetRadar Virtual Sports
 			   ISNULL(p1.H5Draw, 0) AS H5Draw, ISNULL(p1.H5TOver, 0) AS H5TOver, ISNULL(p1.H5WL, 0) AS H5WL, --Happy5
+			   ISNULL(p1.VGDraw, 0) AS VGDraw, ISNULL(p1.VGTOver, 0) AS VGTOver, ISNULL(p1.VGWL, 0) AS VGWL, --Virtual Games
 			   b.Winloss, b.ClosingBalance, b.Transfer3rd, b.DrawGame,
 			   b.recommend, b.mrecommend, b.srecommend, b.actualrate, b.Promotion
 		FROM bodb_Report.dbo.rptDepWinlost b WITH(NOLOCK)
@@ -294,18 +304,21 @@ BEGIN
 								SUM(CASE WHEN p.sporttype = 220 THEN p.drawTO ELSE 0 END) AS KLDraw, 
 								SUM(CASE WHEN p.sporttype = 220 THEN p.turnover ELSE 0 END) AS KLTOver,
 								SUM(CASE WHEN p.sporttype = 220 THEN p.winlost ELSE 0 END) AS KLWL ,
-								SUM(CASE WHEN p.sporttype IN (190,191,192,193) THEN p.drawTO ELSE 0 END) AS VS2Draw, 
-								SUM(CASE WHEN p.sporttype IN (190,191,192,193) THEN p.turnover ELSE 0 END) AS VS2TOver,
-								SUM(CASE WHEN p.sporttype IN (190,191,192,193) THEN p.winlost ELSE 0 END) AS VS2WL ,
+								SUM(CASE WHEN p.sporttype IN (190,191,192,193,194,196) THEN p.drawTO ELSE 0 END) AS VS2Draw, 
+								SUM(CASE WHEN p.sporttype IN (190,191,192,193,194,196) THEN p.turnover ELSE 0 END) AS VS2TOver,
+								SUM(CASE WHEN p.sporttype IN (190,191,192,193,194,196) THEN p.winlost ELSE 0 END) AS VS2WL,
 								SUM(CASE WHEN p.sporttype = -6 THEN p.drawTO ELSE 0 END) AS CODraw,
 								SUM(CASE WHEN p.sporttype = -6 THEN p.turnover ELSE 0 END) AS COTOver,
 								SUM(CASE WHEN p.sporttype = -6 THEN p.winlost ELSE 0 END) AS COWL,
 								SUM(CASE WHEN p.sporttype = 164 THEN p.drawTO ELSE 0 END) AS H5Draw,
 								SUM(CASE WHEN p.sporttype = 164 THEN p.turnover ELSE 0 END) AS H5TOver,
-								SUM(CASE WHEN p.sporttype = 164 THEN p.winlost ELSE 0 END) AS H5WL
+								SUM(CASE WHEN p.sporttype = 164 THEN p.winlost ELSE 0 END) AS H5WL,
+								SUM(CASE WHEN p.sporttype = 245 THEN p.drawTO ELSE 0 END) AS VGDraw,
+								SUM(CASE WHEN p.sporttype = 245 THEN p.turnover ELSE 0 END) AS VGTOver,
+								SUM(CASE WHEN p.sporttype = 245 THEN p.winlost ELSE 0 END) AS VGWL
 						FROM bodb_Report.dbo.rptDepWinlostByProduct p WITH(NOLOCK)
 						WHERE winlostdate BETWEEN @fromDate AND @toDate 
-							AND p.sporttype IN (0,151,161,162,180,190,191,192,193,202,203,204,205,210,211,212,219,220,251,208,209,-6,164) 
+							AND p.sporttype IN (0,151,161,162,180,190,191,192,193,202,203,204,205,210,211,212,219,220,251,208,209,-6,164,194,196,245) 
 							AND p.custid = @CustId 
 						GROUP BY p.winlostdate, p.custid
 					) p1 ON b.winlostdate = p1.winlostdate
@@ -316,7 +329,7 @@ BEGIN
 
 		INSERT INTO @WinlostTransfer3rd (CustId, winlostdate, Transfer3rd_Opus, Transfer3rd_HoGaming, Transfer3rd_AG, Transfer3rd_GD, Transfer3rd_VB,
 			Transfer3rd_CRYSTAL, Transfer3rd_LBKeno, Transfer3rd_Opal, Transfer3rd_BetSoft, Transfer3rd_iSoftBet, Transfer3rd_CitiBet, Transfer3rd_Topaz,
-			Transfer3rd_IMone, Transfer3rd_BTi, Transfer3rd_VRLottery, Transfer3rd_Sapphire)
+			Transfer3rd_IMone, Transfer3rd_BTi, Transfer3rd_VRLottery, Transfer3rd_Sapphire, Transfer3rd_KYGaming)
 		SELECT custid, winlostdate, 
 			SUM(CASE PartnerId WHEN 2 THEN TransferAmount ELSE 0 END), -- oops
 			SUM(CASE PartnerId WHEN 1 THEN TransferAmount ELSE 0 END), -- HoGaming
@@ -333,7 +346,8 @@ BEGIN
 			SUM(CASE PartnerId WHEN 14 THEN TransferAmount ELSE 0 END), -- IMone
 			SUM(CASE PartnerId WHEN 15 THEN TransferAmount ELSE 0 END), -- BTi
 			SUM(CASE PartnerId WHEN 16 THEN TransferAmount ELSE 0 END), -- VRLottery
-			SUM(CASE PartnerId WHEN 17 THEN TransferAmount ELSE 0 END)  -- Sapphire
+			SUM(CASE PartnerId WHEN 17 THEN TransferAmount ELSE 0 END), -- Sapphire
+			SUM(CASE PartnerId WHEN 19 THEN TransferAmount ELSE 0 END)  -- KYGaming
 		FROM bodb_Report.dbo.rptDepWinlost_Transfer3rdOthers  WITH(NOLOCK) 
 		WHERE  (winlostdate BETWEEN @fromDate AND @toDate) AND winlostdate <> @dbtodaydate AND custid = @Custid AND recommend IN (SELECT val FROM strSplit(@agentid,','))  
 		GROUP BY winlostdate,CustId
@@ -353,7 +367,8 @@ BEGIN
 			Transfer3rd_HoGaing, Transfer3rd_AG, Transfer3rd_GD, Transfer3rd_VB,
 			Transfer3rd_CRYSTAL, Transfer3rd_LBKeno, Transfer3rd_Opal, Transfer3rd_BetSoft,
 			Transfer3rd_iSoftBet, Transfer3rd_CitiBet, Transfer3rd_Topaz, Transfer3rd_IMone,
-			Transfer3rd_BTi, Transfer3rd_VRLottery, Transfer3rd_Sapphire, Promotion)
+			Transfer3rd_BTi, Transfer3rd_VRLottery, Transfer3rd_Sapphire, Transfer3rd_KYGaming,
+			Promotion)
 		SELECT b.custid, b.currency, b.recommend, b.mrecommend, b.srecommend,
 			   @TodayOpeningBalance, -- OpeningBalance
 			   SUM(CASE WHEN winlostdate = @dbtodaydate AND bettype = 22001 THEN winlost-actual_stake ELSE 0 END), -- Deposit
@@ -382,6 +397,7 @@ BEGIN
 			   SUM(CASE WHEN winlostdate = @dbtodaydate AND bettype IN (22036,22037) THEN winlost-actual_stake ELSE 0 END),   -- Transfer3rd BTi
 			   SUM(CASE WHEN winlostdate = @dbtodaydate AND bettype IN (22038,22039) THEN winlost-actual_stake ELSE 0 END),   -- Transfer3rd VRLottery
 			   SUM(CASE WHEN winlostdate = @dbtodaydate AND bettype IN (22040,22041) THEN winlost-actual_stake ELSE 0 END),   -- Transfer3rd Sapphire
+			   SUM(CASE WHEN winlostdate = @dbtodaydate AND bettype IN (22044,22045) THEN winlost-actual_stake ELSE 0 END),   -- Transfer3rd KYGaming
 			   SUM(CASE WHEN winlostdate = @dbtodaydate AND bettype = 17000 THEN winlost-actual_stake ELSE 0 END)	-- Promotion
 		FROM bodb02.dbo.bettrans b WITH(NOLOCK)
 		WHERE b.custid = @CustId 
@@ -389,8 +405,7 @@ BEGIN
 		GROUP BY b.custid, b.currency, b.recommend, b.mrecommend, b.srecommend
 		
 		UPDATE d
-		SET ClosingBalance = OpeningBalance + Deposit + Aff2MemTransfer - Withdrawal + Bonus + Adjustment - Outstanding + Winloss + Transfer3rd + Transfer3rd_HoGaing + Transfer3rd_Opus + Transfer3rd_AG + Transfer3rd_GD + Transfer3rd_VB + Transfer3rd_CRYSTAL + T
-ransfer3rd_LBKeno + Transfer3rd_Opal + Transfer3rd_BetSoft + Transfer3rd_iSoftBet + Transfer3rd_CitiBet + Transfer3rd_Topaz + Transfer3rd_IMone + Transfer3rd_BTi + Transfer3rd_VRLottery + Transfer3rd_Sapphire + Promotion,
+		SET ClosingBalance = OpeningBalance + Deposit + Aff2MemTransfer - Withdrawal + Bonus + Adjustment - Outstanding + Winloss + Transfer3rd + Transfer3rd_HoGaing + Transfer3rd_Opus + Transfer3rd_AG + Transfer3rd_GD + Transfer3rd_VB + Transfer3rd_CRYSTAL + Transfer3rd_LBKeno + Transfer3rd_Opal + Transfer3rd_BetSoft + Transfer3rd_iSoftBet + Transfer3rd_CitiBet + Transfer3rd_Topaz + Transfer3rd_IMone + Transfer3rd_BTi + Transfer3rd_VRLottery + Transfer3rd_Sapphire + Transfer3rd_KYGaming + Promotion,
 			actualrate = e.ActualRate
 		FROM @TodayData d 
 			INNER JOIN exchangedailyoanda e WITH(NOLOCK) ON d.currency = e.ExchangeId
@@ -411,7 +426,8 @@ ransfer3rd_LBKeno + Transfer3rd_Opal + Transfer3rd_BetSoft + Transfer3rd_iSoftBe
 			CODraw = ISNULL(p1.CODraw,0), COTOver = ISNULL(p1.COTOver,0), COWL = ISNULL(p1.COWL,0), --Cash Out
 			KLDraw = ISNULL(p1.KLDraw,0), KLTOver = ISNULL(p1.KLTOver,0), KLWL = ISNULL(p1.KLWL,0), --KENO Lottery
 			VS2Draw = ISNULL(p1.VS2Draw,0), VS2TOver = ISNULL(p1.VS2TOver,0), VS2WL = ISNULL(p1.VS2WL,0), --BetRadar Virtual Sports
-			H5Draw = ISNULL(p1.H5Draw,0), H5TOver = ISNULL(p1.H5TOver,0), H5WL = ISNULL(p1.H5WL,0) --Happy5
+			H5Draw = ISNULL(p1.H5Draw,0), H5TOver = ISNULL(p1.H5TOver,0), H5WL = ISNULL(p1.H5WL,0), --Happy5
+			VGDraw = ISNULL(p1.VGDraw,0), VGTOver = ISNULL(p1.VGTOver,0), VGWL = ISNULL(p1.VGWL,0)  --Virtual Games
 		FROM @TodayData d
 			LEFT JOIN (
 						SELECT p.winlostdate, p.custid, 
@@ -458,18 +474,21 @@ ransfer3rd_LBKeno + Transfer3rd_Opal + Transfer3rd_BetSoft + Transfer3rd_iSoftBe
 							   SUM(CASE WHEN p.sporttype = 220 THEN p.drawTO ELSE 0 END) AS KLDraw, 
 							   SUM(CASE WHEN p.sporttype = 220 THEN p.turnover ELSE 0 END) AS KLTOver,
 							   SUM(CASE WHEN p.sporttype = 220 THEN p.winlost ELSE 0 END) AS KLWL ,
-							   SUM(CASE WHEN p.sporttype IN (190,191,192,193) THEN p.drawTO ELSE 0 END) AS VS2Draw, 
-							   SUM(CASE WHEN p.sporttype IN (190,191,192,193) THEN p.turnover ELSE 0 END) AS VS2TOver,
-							   SUM(CASE WHEN p.sporttype IN (190,191,192,193) THEN p.winlost ELSE 0 END) AS VS2WL ,
+							   SUM(CASE WHEN p.sporttype IN (190,191,192,193,194,196) THEN p.drawTO ELSE 0 END) AS VS2Draw, 
+							   SUM(CASE WHEN p.sporttype IN (190,191,192,193,194,196) THEN p.turnover ELSE 0 END) AS VS2TOver,
+							   SUM(CASE WHEN p.sporttype IN (190,191,192,193,194,196) THEN p.winlost ELSE 0 END) AS VS2WL ,
 							   SUM(CASE WHEN p.sporttype = -6 THEN p.drawTO ELSE 0 END) AS CODraw,
 							   SUM(CASE WHEN p.sporttype = -6 THEN p.turnover ELSE 0 END) AS COTOver,
 							   SUM(CASE WHEN p.sporttype = -6 THEN p.winlost ELSE 0 END) AS COWL,
 							   SUM(CASE WHEN p.sporttype = 164 THEN p.drawTO ELSE 0 END) AS H5Draw,
 							   SUM(CASE WHEN p.sporttype = 164 THEN p.turnover ELSE 0 END) AS H5TOver,
-							   SUM(CASE WHEN p.sporttype = 164 THEN p.winlost ELSE 0 END) AS H5WL 							   
+							   SUM(CASE WHEN p.sporttype = 164 THEN p.winlost ELSE 0 END) AS H5WL,
+							   SUM(CASE WHEN p.sporttype = 245 THEN p.drawTO ELSE 0 END) AS VGDraw,
+							   SUM(CASE WHEN p.sporttype = 245 THEN p.turnover ELSE 0 END) AS VGTOver,
+							   SUM(CASE WHEN p.sporttype = 245 THEN p.winlost ELSE 0 END) AS VGWL										   
 						FROM bodb_Report.dbo.rptDepWinlostByProduct p WITH(NOLOCK)
 						WHERE winlostdate = @dbtodaydate
-							AND p.sporttype IN (0,151,161,162,180,190,191,192,193,202,203,204,205,210,211,212,219,220,251,208,209,-6,164)  
+							AND p.sporttype IN (0,151,161,162,180,190,191,192,193,202,203,204,205,210,211,212,219,220,251,208,209,-6,164,194,196,245)  
 							AND p.custid = @CustId 
 						GROUP BY p.winlostdate, p.custid
 					) p1 ON d.custid = p1.custid
@@ -484,7 +503,8 @@ ransfer3rd_LBKeno + Transfer3rd_Opal + Transfer3rd_BetSoft + Transfer3rd_iSoftBe
 		   ISNULL(o.Transfer3rd_IMone, 0) AS Transfer3rd_IMone,
 		   ISNULL(o.Transfer3rd_BTi, 0) AS Transfer3rd_BTi,
 		   ISNULL(o.Transfer3rd_VRLottery, 0) AS Transfer3rd_VRLottery,
-		   ISNULL(o.Transfer3rd_Sapphire, 0) AS Transfer3rd_Sapphire
+		   ISNULL(o.Transfer3rd_Sapphire, 0) AS Transfer3rd_Sapphire,
+		   ISNULL(o.Transfer3rd_KYGaming, 0) AS Transfer3rd_KYGaming
 	FROM @WinlostTmp b
 		LEFT JOIN @WinlostTransfer3rd o ON b.winlostdate = o.winlostdate
 	UNION
