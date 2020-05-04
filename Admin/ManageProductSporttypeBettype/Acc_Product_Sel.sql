@@ -50,6 +50,7 @@ BEGIN
 		IsOfferPlayForFun 		BIT,
 		EndOfSupportDate 		DATE,
 		VendorID 				SMALLINT,
+		OrderNo					INT,
 		RowNum 					INT
 	)
 
@@ -78,6 +79,7 @@ BEGIN
 			IsOfferPlayForFun,
 			EndOfSupportDate,
 			VendorID,
+			OrderNo,
 			RowNum
 	)
     SELECT	ProductID,
@@ -103,6 +105,7 @@ BEGIN
 			IsOfferPlayForFun,
 			EndOfSupportDate,
 			VendorID,
+			OrderNo,
 			ROW_NUMBER() OVER(ORDER BY ProductID) AS RowNum  
 			
 	FROM dbo.Products WITH(NOLOCK)
@@ -137,6 +140,7 @@ BEGIN
 			IsOfferPlayForFun,
 			EndOfSupportDate,
 			VendorID,
+			OrderNo,
 			RowNum
 	FROM #Tmp
 	WHERE @PageIndex < 0 OR @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd) 
