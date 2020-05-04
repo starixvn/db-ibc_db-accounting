@@ -2,6 +2,7 @@
 CREATE PROCEDURE  dbo.Acc_Product_Sel
 	@ProductID		INT = NULL,
 	@ProductName	VARCHAR(50) = NULL,
+	@ProductPrefix  VARCHAR(10) = NULL,
 	@PageSize		INT = 0,
 	@PageIndex		INT = 0,
 	@TotalRows		INT = 0 OUTPUT
@@ -107,6 +108,7 @@ BEGIN
 	FROM dbo.Products WITH(NOLOCK)
 	WHERE (ProductID = @ProductID OR ISNULL(@ProductID,0) = 0) 
 	      AND (ProductName LIKE '%' + @ProductName + '%' OR ISNULL(@ProductName,'') = '')
+		  AND (ProductPrefix LIKE '%' + @ProductPrefix + '%' OR ISNULL(@ProductPrefix,'') = '')
 
 	ORDER BY ProductID
 
