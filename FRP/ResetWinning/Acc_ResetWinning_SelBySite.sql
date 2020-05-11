@@ -14,7 +14,8 @@ AS
 		- 20200213@Sophia: Modify Exchange product [redmine: #128471]
 		- 20200226@Sophia: Using new column bettrans.epositiontaking instead of Acc_GroupExtraPTSetting.ExtraPT [RedmineID: #125418]
 		- 20200303@Sophia: Remove CutOffDate of ExtraPT, use new column [RedmineID: #129653]
-		 
+		- 20200508@Sophia: add margin by Site [redmine: #133879] 
+		
 	Param Explanation:
 		outout: IsDeposit = 0: Credit 
 						  = 1: deposit 
@@ -40,10 +41,9 @@ BEGIN
 			Winlost			MONEY, 
 			WinlostDueTo	MONEY, 
 			WinlostForExtraPT MONEY,	
-			eWinlost			MONEY
+			eWinlost		MONEY
 		) 	 
-		INSERT INTO #wl (winlostdate, srecommend,
-						 winlost, WinlostDueTo, eWinlost)
+		INSERT INTO #wl (winlostdate, srecommend, winlost, WinlostDueTo, eWinlost)
 		SELECT  b.winlostdate,
 				b.srecommend,			 			
 				---Base currency
