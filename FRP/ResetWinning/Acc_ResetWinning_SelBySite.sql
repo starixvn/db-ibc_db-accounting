@@ -1,4 +1,4 @@
-/*<info serverAlias="DBEXT-bodb02" executers="" isFunction="0" isNested="1"></info>*/
+/*<info serverAlias="DBEXT-bodb02" executers="bodbAdminNet" isFunction="0" isNested="1"></info>*/
 ALTER PROCEDURE [dbo].[Acc_ResetWinning_SelBySite]
 	@fromdate smalldatetime,
 	@todate   smalldatetime 
@@ -14,8 +14,7 @@ AS
 		- 20200213@Sophia: Modify Exchange product [redmine: #128471]
 		- 20200226@Sophia: Using new column bettrans.epositiontaking instead of Acc_GroupExtraPTSetting.ExtraPT [RedmineID: #125418]
 		- 20200303@Sophia: Remove CutOffDate of ExtraPT, use new column [RedmineID: #129653]
-		- 20200508@Sophia: add margin by Site [redmine: #133879] 
-		
+		 
 	Param Explanation:
 		outout: IsDeposit = 0: Credit 
 						  = 1: deposit 
@@ -27,25 +26,53 @@ BEGIN
 	SET NOCOUNT ON
 	 	 
 	------Get Sport Bettype Matrix------	
+	CREATE TABLE  #SportBettype (ProductID INT, Bettype INT,SubProduct VARCHAR(500))
+	INSERT INTO #SportBettype
+	SELECT ProductID, Bettype, SubProduct FROM bodb02.dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', 0)
 	
-	CREATE TABLE #Match (MATCHID INT PRIMARY KEY)
-	INSERT INTO #Match (MatchID)
-	SELECT DISTINCT MatchID 	
-	FROM Bettrans WITH (NOLOCK) 
-	WHERE Winlostdate = @FromDate 
+	--- Exclude Exchange product
+	DELETE #SportBettype 
+	WHERE  ProductID = 31 
+
 	
+	CREATE CLUSTERED INDEX CIX_Bettype ON #SportBettype (bettype) 
+	----- End get sport bettype  
+		
+    DECLARE @wldate DATE = @todate,
+            @seq    smallint = 0,
+            @maxseq smallint = 0 
+	
+	DECLARE @Date AS TABLE (WLDate DATE )
+	
+	WHILE (@FromDate <= @wldate)
+	BEGIN 
+		INSERT INTO @Date (WLDate)
+		VALUES (@wldate)
+
+		SELECT @wldate = DATEADD( DAY, -1, @wldate)
+	END
+
 	--------------------------------------------------------------------------------------------------------- 
 		CREATE TABLE #wl 
 		(	winlostdate 	SMALLDATETIME, 
 			srecommend 		INT, 
+			Currency		INT,
+			Sporttype  		SMALLINT, 
+			ProductId		INT, 
+			ProductName		VARCHAR(250), 
+			SubProduct		VARCHAR(250), 
 			Winlost			MONEY, 
 			WinlostDueTo	MONEY, 
 			WinlostForExtraPT MONEY,	
-			eWinlost		MONEY
+			eWinlost			MONEY
 		) 	 
-		INSERT INTO #wl (winlostdate, srecommend, winlost, WinlostDueTo, eWinlost)
+		INSERT INTO #wl (winlostdate, srecommend, Sporttype, ProductId, SubProduct, 
+						 winlost, WinlostDueTo, WinlostForExtraPT, eWinlost)
 		SELECT  b.winlostdate,
-				b.srecommend,			 			
+				b.srecommend,
+				CASE WHEN ISNULL(m.Sporttype, 0) <> 0 THEN m.Sporttype ELSE 0 END AS Sporttype,
+			    s.ProductId,		
+				CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss','Bet Builder') THEN s.SubProduct ELSE '' END AS SubProduct,				
 				---Base currency
 				SUM(
 						CASE WHEN b.bettype IN (2199, 2399, 2999) THEN 0
@@ -67,7 +94,19 @@ BEGIN
 							ELSE 0 
 							END
 						) * b.actualrate
-					) AS WinlostDueTo,				
+					) AS WinlostDueTo,
+				SUM(
+						(	
+							CASE
+							-- Jackpot
+							WHEN b.bettype IN (2198, 2398, 2998) THEN
+								CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) END
+							WHEN b.bettype IN (2199, 2399, 2999) THEN 0
+							ELSE
+								CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
+							END
+						) * b.actualrate
+					) AS WinlostForExtraPT,
 				SUM(
 						(	
 							CASE
@@ -79,17 +118,21 @@ BEGIN
 								CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
 							END
 						) *  b.actualrate * ISNULL(CAST(b.epositiontaking AS DECIMAL(9, 8)), 0)
-					) AS eWinlost 			 			
+					) AS eWinlost 
+			 			
 				
-		FROM dbo.bettrans b WITH (NOLOCK, index = CIX_Matchid_Bettype)  
-		INNER JOIN #Match m ON m.MatchID = b.MatchID		
-		WHERE   b.Winlostdate = @Fromdate 
+		FROM dbo.bettrans b WITH (NOLOCK)  
+		INNER JOIN #SportBettype s ON s.BetType = b.bettype
+		LEFT JOIN dbo.Match m WITH (NOLOCK) ON m.MatchId = b.MatchId AND m.Sporttype = 44		
+		WHERE   b.Winlostdate between @fromdate and @todate
 			AND b.statusid IN (111, 112, 113)		
 			AND b.bettype < 19001
 			AND b.MatchID >= 0
-			AND b.Bettype <> 8000 --- exclude Exchange
 		GROUP BY b.Winlostdate,				
-				b.srecommend 			  			
+				b.srecommend,
+				CASE WHEN ISNULL(m.Sporttype, 0) <> 0 THEN m.Sporttype ELSE 0 END ,
+			    s.ProductId,		
+				CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss','Bet Builder') THEN s.SubProduct ELSE '' END 			
 				 
 		-----------------------------------------------------------------------------------------------
 
@@ -111,10 +154,9 @@ BEGIN
 			--EXEC Acc_Rpt_HouseNetIncome_EX_Deposit @fromdate, @fromdate    ----- cannot use FromDate - ToDate because of output will be different
 								 
 			DECLARE @FDate  DATE, @TDate    DATE
-								
+			
 			SELECT @FDate = @FromDate
-				, @TDate = @FromDate;  ------ Support 1 day only   
-				
+				, @TDate = @ToDate;
 			-- Region: Active licensees
 
 			DECLARE @TmpPartyList AS TABLE(
@@ -324,10 +366,12 @@ BEGIN
 	DROP TABLE #ExchangeOANDA
 	DROP TABLE #TempDataEX
 	DROP TABLE #FinalResult	
-	 
+	
+
+	DROP TABLE #SportBettype
     DROP TABLE #Winlost 
 	DROP TABLE #WL
-	DROP TABLE #Match
+	
 		
 END
 GO
