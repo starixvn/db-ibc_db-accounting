@@ -27,8 +27,8 @@ CREATE TABLE #tmpResetWinning (
 INSERT INTO #tmpResetWinning (Site, TurnOver, Margin, HouseWinlost, isDeposit)
 EXEC Acc_ResetWinning_MarginBySite @Winlostdate = @wldate
 
-DECLARE @WLBySite as TABLE (S varchar(30), WL money, MG MONEY, rn int)
-INSERT INTO @WLBySite(S, MG, WL, rn)
+DECLARE @WLBySite as TABLE (S varchar(30), WL money, TurnOver money , MG MONEY, rn int)
+INSERT INTO @WLBySite(S, WL, TurnOver, MG, rn)
 SELECT  S = CASE 
 				WHEN Site IN ('BEST-ODDS','XYZBET') THEN 'XYZ & Bestodds'
 				WHEN Site IN ('611111') THEN '611 (China)'
@@ -37,8 +37,10 @@ SELECT  S = CASE
 				WHEN Site IN ('INDO') THEN 'Indo'
 				WHEN Site IN ('722222','222223','222225','222227','spotico','KORIBC','766666','7aa666') THEN 'Others'
 				WHEN Site IN ('789y', 'y987') THEN '789Y'
+				WHEN Site = 'Total (w/o CN88)' THEN 'TOTAL (w/o CN88)'
 			ELSE 'CASH' END			
-		,WL = -SUM(ISNULL(HouseWinlost,0)) 
+		,WL = -SUM(ISNULL(HouseWinlost,0))  
+		,TurnOver = SUM(ISNULL(TurnOver,0)) 
 		,MG = CASE WHEN SUM (ISNULL(TurnOver,0)) = 0 THEN 0 ELSE -SUM(ISNULL(HouseWinlost,0))/SUM (ISNULL(TurnOver,0)) * 100 END
 		,rn = CASE 
 				WHEN Site IN ('BEST-ODDS','XYZBET') THEN 1
@@ -48,9 +50,10 @@ SELECT  S = CASE
 				WHEN Site IN ('INDO') THEN 5
 				WHEN Site IN ('722222','222223','222225','222227','spotico','KORIBC','766666','7aa666') THEN 6
 				WHEN Site IN ('789y', 'y987') THEN 7
+				WHEN Site = 'Total (w/o CN88)' THEN 9
 			ELSE 8 END
 FROM #tmpResetWinning
-WHERE SITE NOT IN ('CN88')
+WHERE SITE NOT IN ('CN88') 
 GROUP BY CASE 
 				WHEN Site IN ('BEST-ODDS','XYZBET') THEN 'XYZ & Bestodds'
 				WHEN Site IN ('611111') THEN '611 (China)'
@@ -59,6 +62,7 @@ GROUP BY CASE
 				WHEN Site IN ('INDO') THEN 'Indo'
 				WHEN Site IN ('722222','222223','222225','222227','spotico','KORIBC','766666','7aa666') THEN 'Others'
 				WHEN Site IN ('789y', 'y987') THEN '789Y'
+				WHEN Site = 'Total (w/o CN88)' THEN 'TOTAL (w/o CN88)'
 			ELSE 'CASH' END
 		,CASE 
 				WHEN Site IN ('BEST-ODDS','XYZBET') THEN 1
@@ -68,6 +72,7 @@ GROUP BY CASE
 				WHEN Site IN ('INDO') THEN 5
 				WHEN Site IN ('722222','222223','222225','222227','spotico','KORIBC','766666','7aa666') THEN 6
 				WHEN Site IN ('789y', 'y987') THEN 7
+				WHEN Site = 'Total (w/o CN88)' THEN 9
 			ELSE 8 END
 
 -- generate string for winlost by site
@@ -76,13 +81,6 @@ SELECT @msg = @msg + '<br>' + S + ': '
 		+ ' ' + CAST(CONVERT(DECIMAL(10,2), MG) as VARCHAR(10)) + '%'	
 FROM @WLBySite
 ORDER BY rn
-
----- generate string for TOTAL (w/o CN88)
---SELECT @msg = @msg + '<br>--<br>TOTAL (w/o CN88): ' 
---		+ CASE WHEN ABS(SUM(WL)) > 1000000 THEN CAST(CONVERT(DECIMAL(10,1),SUM(WL)/1000000) as VARCHAR(10)) + 'm' ELSE CAST(CONVERT(DECIMAL(10,0),SUM(WL)/1000) as VARCHAR(10)) + 'k' END 
---		+ 
---		+ '<br>'
---FROM @WLBySite
 
 -- generate string for CN88
 SELECT @msg = @msg + '<br>**CN88: '
@@ -143,6 +141,6 @@ DECLARE @letstalkNewLine varchar(1000) = '
 SET @msg = replace(@msg, '<br>', @letstalkNewLine)
 
 
-Select  @msg 
+PRINT  @msg 
 -- send letstalk's message
 ---EXECUTE	DBSPARE.NotificationDB.dbo.Letstalk_SendMessage @To = 'vietgroup.UAT', @Msg = @msg, @Title = @title -- UAT group
