@@ -10,6 +10,7 @@ AS
 	
 	Revision:
 		- 20200321@Sophia: Initial SPs  
+		- 20200512@Sophia: Margin By Site - break down by Sport / Non Sports [Redmine: #134035]
 		 
 	Param Explanation:
 		 
@@ -42,14 +43,15 @@ BEGIN
 	FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', 0) s
 	LEFT JOIN dbo.Products p WITH (NOLOCK) 
 			ON p.ProductID = s.ProductID
-	WHERE  s.ProductID <> 31    ---  exclude exchange product	 
-			
+	WHERE  s.ProductID <> 31    ---  exclude exchange product 
+						
 	 
 	----- End get sport bettype 
 	--------------------------------------------------------------------------------------------------------- 
 		CREATE TABLE #WL 
 		(	
 			srecommend 		INT, 
+			SB				TINYINT,
 			TurnOver		MONEY,
 			Winlost			MONEY, 
 			WinlostDueTo	MONEY, 
@@ -58,8 +60,9 @@ BEGIN
 
 
 		------1. Bettrans
-		INSERT INTO #WL (srecommend, TurnOver, winlost, WinlostDueTo, ExtraWinlost)
+		INSERT INTO #WL (srecommend, SB, TurnOver, winlost, WinlostDueTo, ExtraWinlost)
 		SELECT  b.srecommend,
+				CASE WHEN s.productID = 1 THEN 1 ELSE 0 END AS SB,
 				---Base currency
 				SUM (   CASE WHEN b.StatusID = 111 OR b.Bettype IN (911,912) THEN 0 ELSE  ABS(Stake) END
 						* (1 - b.tpositiontaking - ISNULL(CAST(b.epositiontaking AS DECIMAL(9, 8)), 0)) 
@@ -115,12 +118,14 @@ BEGIN
 			AND b.Bettype <> 8000   --- exclude Exchange Product
 			AND b.MatchID >= 0
 			AND s.RefTable NOT IN (1,2)			
-		GROUP BY b.srecommend		 
+		GROUP BY b.srecommend,
+			CASE WHEN s.productID = 1 THEN 1 ELSE 0 END		
 
 			 
 		------2. BettransRNG
-		INSERT INTO #WL (srecommend, TurnOver, winlost, WinlostDueTo, ExtraWinlost)
-		SELECT b.srecommend,
+		INSERT INTO #WL (srecommend, SB, TurnOver, winlost, WinlostDueTo, ExtraWinlost)
+		SELECT  b.srecommend,
+				0 AS SB,
 				---Base currency
 				SUM (   CASE WHEN b.StatusID = 111 THEN 0 ELSE ABS(Stake) END
 						* (1 - b.tpositiontaking - ISNULL(CAST(b.epositiontaking AS DECIMAL(9, 8)), 0)) 
@@ -169,8 +174,9 @@ BEGIN
 		GROUP BY b.srecommend			
 	
 		------3. BettransLC
-		INSERT INTO #WL (srecommend, TurnOver, winlost, WinlostDueTo, ExtraWinlost)
+		INSERT INTO #WL (srecommend, SB, TurnOver, winlost, WinlostDueTo, ExtraWinlost)
 		SELECT  b.srecommend,
+				0 AS SB,
 				---Base currency
 				SUM (   CASE WHEN b.StatusID = 111 THEN 0 ELSE ABS(Stake) END
 						* (1 - b.tpositiontaking - ISNULL(CAST(b.epositiontaking AS DECIMAL(9, 8)), 0)) 
@@ -405,49 +411,51 @@ BEGIN
 
 		-----------------------------------------------------------------------------------------------
 		----- Get Data -----		
-		CREATE TABLE #Winlost (Site VARCHAR(50), TurnOver MONEY, Winlost MONEY, ExtraWinlost MONEY)  
+		CREATE TABLE #Winlost (Site VARCHAR(50), SB TINYINT, TurnOver MONEY, Winlost MONEY, ExtraWinlost MONEY)  
 					
-		INSERT INTO #Winlost (Site, TurnOver, Winlost, ExtraWinlost)						
-		SELECT  c.Site, SUM(ISNULL(w.TurnOver,0)) AS TurnOver, 
+		INSERT INTO #Winlost (Site, SB, TurnOver, Winlost, ExtraWinlost)						
+		SELECT  c.Site, w.SB, SUM(ISNULL(w.TurnOver,0)) AS TurnOver, 
 				SUM(ISNULL( w.Winlost,0)) AS Winlost,
 				SUM(ISNULL(w.ExtraWinlost,0)) AS ExtraWinlost
 		FROM	#wl w
 		INNER JOIN bodb02.dbo.customer c WITH (NOLOCK) 
 				ON c.CustID = w.srecommend AND c.roleid = 4			
-		GROUP BY c.Site 
+		GROUP BY c.Site, w.SB 
  		  
 
-		SELECT a.Site, a.TurnOver, a.Margin, a.HouseWinlost, IsDeposit
+		SELECT a.Site, a.SB, a.TurnOver, a.Margin, a.HouseWinlost, IsDeposit
 		FROM  (  
 				---- Listed all Site included CN88
-				SELECT	Site, SUM(w.TurnOver) as TurnOver, 
+				SELECT	Site, SB, SUM(w.TurnOver) as TurnOver, 
 						CASE WHEN SUM(w.TurnOver) = 0 THEN 0 ELSE SUM(w.winlost - ExtraWinlost) / SUM(w.TurnOver) * 100 END AS Margin ,
 						SUM (w.winlost - ExtraWinlost) AS HouseWinlost,
 						CASE WHEN s.SiteID > 1000 THEN 0 ELSE 1 END AS IsDeposit
 				FROM 	#Winlost w 
 				INNER JOIN bodb_licensee.dbo.view_site_list s 
 					ON s.SiteName = w.Site
-				GROUP BY Site, CASE WHEN s.SiteID > 1000 THEN 0 ELSE 1 END 
+				GROUP BY Site, SB, CASE WHEN s.SiteID > 1000 THEN 0 ELSE 1 END 
 				HAVING  SUM (w.TurnOver) IS NOT NULL 
 				UNION 
 				----- Sum total excluded CN88
 				SELECT	'Total (w/o CN88)' AS Site, 
+						SB,
 						SUM (w.TurnOver) AS TurnOver, 
 						CASE WHEN SUM (w.TurnOver) = 0 THEN 0 ELSE SUM (w.winlost - ExtraWinlost) / SUM (w.TurnOver) * 100 END AS Margin , 
 						SUM (w.winlost - ExtraWinlost) AS HouseWinlost,
 						2 AS IsDeposit
 				FROM 	#Winlost w 
 				WHERE	Site <> 'CN88'
+				GROUP BY SB
 				HAVING  SUM (w.TurnOver) IS NOT NULL 
 				) a
 	 
 		---exchange product
 		UNION
-		SELECT 'Exchange Product', 0 AS TurnOver, 0 AS Margin , -1 * SUM(LicenseeWL+PayToSupplier) AS HouseWinlost, 3 AS IsDeposit
+		SELECT 'Exchange Product', 0 AS SB, 0 AS TurnOver, 0 AS Margin , -1 * SUM(LicenseeWL+PayToSupplier) AS HouseWinlost, 3 AS IsDeposit
 		FROM	#FinalResult
 		HAVING  SUM(LicenseeWL+PayToSupplier) IS NOT NULL 
 
-		ORDER BY  IsDeposit,  Site
+		ORDER BY  IsDeposit, Site
 
 	DROP TABLE #SportBettype
 	DROP TABLE #WL		
