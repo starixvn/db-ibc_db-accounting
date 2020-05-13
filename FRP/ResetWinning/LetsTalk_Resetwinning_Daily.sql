@@ -2,6 +2,7 @@
 DECLARE @dayOffset int = CASE WHEN DATEPART (hour, CURRENT_TIMESTAMP) >= 2 THEN 0 ELSE -1 END
 
 DECLARE @wldate smalldatetime = DATEADD(dd, DATEDIFF(dd, 0, CURRENT_TIMESTAMP), @dayOffset)
+
 DECLARE @msg VARCHAR(max) = ''
 
 DECLARE @title varchar(22)
@@ -21,11 +22,11 @@ BEGIN
 END
 
 CREATE TABLE #tmpResetWinning (
-	Site VARCHAR(50), TurnOver	MONEY, Margin MONEY, HouseWinlost MONEY, isDeposit smallint
+	Site VARCHAR(50), SB TINYINT, TurnOver	MONEY, Margin MONEY, HouseWinlost MONEY, isDeposit smallint
 )
 
-INSERT INTO #tmpResetWinning (Site, TurnOver, Margin, HouseWinlost, isDeposit)
-EXEC Acc_ResetWinning_MarginBySite @Winlostdate = @wldate
+INSERT INTO #tmpResetWinning (Site, SB, TurnOver, Margin, HouseWinlost, isDeposit)
+EXEC Acc_ResetWinning_MarginBySite_xtest @Winlostdate = @wldate
 
 DECLARE @WLBySite as TABLE (S varchar(30), WL money, TurnOver money , MG MONEY, rn int)
 INSERT INTO @WLBySite(S, WL, TurnOver, MG, rn)
@@ -36,9 +37,10 @@ SELECT  S = CASE
 				WHEN Site IN ('755555') THEN '755 (Thailand)'
 				WHEN Site IN ('INDO') THEN 'Indo'
 				WHEN Site IN ('722222','222223','222225','222227','spotico','KORIBC','766666','7aa666') THEN 'Others'
-				WHEN Site IN ('789y', 'y987') THEN '789Y'
+				WHEN Site IN ('789y', 'y987') AND SB = 1 THEN '789Y SB'
+				WHEN Site IN ('789y', 'y987') AND SB = 0 THEN '789Y Non-SB'
 				WHEN Site = 'Total (w/o CN88)' THEN 'TOTAL (w/o CN88)'
-			ELSE 'CASH' END			
+			ELSE CASE WHEN SB = 1 THEN 'CASH SB' ELSE 'CASH Non-SB' END END			
 		,WL = -SUM(ISNULL(HouseWinlost,0))  
 		,TurnOver = SUM(ISNULL(TurnOver,0)) 
 		,MG = CASE WHEN SUM (ISNULL(TurnOver,0)) = 0 THEN 0 ELSE -SUM(ISNULL(HouseWinlost,0))/SUM (ISNULL(TurnOver,0)) * 100 END
@@ -49,9 +51,10 @@ SELECT  S = CASE
 				WHEN Site IN ('755555') THEN 4
 				WHEN Site IN ('INDO') THEN 5
 				WHEN Site IN ('722222','222223','222225','222227','spotico','KORIBC','766666','7aa666') THEN 6
-				WHEN Site IN ('789y', 'y987') THEN 7
-				WHEN Site = 'Total (w/o CN88)' THEN 9
-			ELSE 8 END
+				WHEN Site IN ('789y', 'y987') AND SB = 1 THEN 7
+				WHEN Site IN ('789y', 'y987') AND SB = 0 THEN 8
+				WHEN Site = 'Total (w/o CN88)' THEN 11
+			ELSE CASE WHEN SB = 1 THEN 9 ELSE 10 END END	
 FROM #tmpResetWinning
 WHERE SITE NOT IN ('CN88') 
 GROUP BY CASE 
@@ -61,9 +64,10 @@ GROUP BY CASE
 				WHEN Site IN ('755555') THEN '755 (Thailand)'
 				WHEN Site IN ('INDO') THEN 'Indo'
 				WHEN Site IN ('722222','222223','222225','222227','spotico','KORIBC','766666','7aa666') THEN 'Others'
-				WHEN Site IN ('789y', 'y987') THEN '789Y'
+				WHEN Site IN ('789y', 'y987') AND SB = 1 THEN '789Y SB'
+				WHEN Site IN ('789y', 'y987') AND SB = 0 THEN '789Y Non-SB'
 				WHEN Site = 'Total (w/o CN88)' THEN 'TOTAL (w/o CN88)'
-			ELSE 'CASH' END
+			ELSE CASE WHEN SB = 1 THEN 'CASH SB' ELSE 'CASH Non-SB' END END	
 		,CASE 
 				WHEN Site IN ('BEST-ODDS','XYZBET') THEN 1
 				WHEN Site IN ('611111') THEN 2
@@ -71,9 +75,10 @@ GROUP BY CASE
 				WHEN Site IN ('755555') THEN 4
 				WHEN Site IN ('INDO') THEN 5
 				WHEN Site IN ('722222','222223','222225','222227','spotico','KORIBC','766666','7aa666') THEN 6
-				WHEN Site IN ('789y', 'y987') THEN 7
-				WHEN Site = 'Total (w/o CN88)' THEN 9
-			ELSE 8 END
+				WHEN Site IN ('789y', 'y987') AND SB = 1 THEN 7
+				WHEN Site IN ('789y', 'y987') AND SB = 0 THEN 8
+				WHEN Site = 'Total (w/o CN88)' THEN 11
+			ELSE CASE WHEN SB = 1 THEN 9 ELSE 10 END END
 
 -- generate string for winlost by site
 SELECT @msg = @msg + '<br>' + S + ': '
@@ -143,4 +148,4 @@ SET @msg = replace(@msg, '<br>', @letstalkNewLine)
 
 PRINT  @msg 
 -- send letstalk's message
----EXECUTE	DBSPARE.NotificationDB.dbo.Letstalk_SendMessage @To = 'vietgroup.UAT', @Msg = @msg, @Title = @title -- UAT group
+---EXECUTE	DBSPARE.NotificationDB.dbo.Letstalk_SendMessage @To = 'vietgroup.UAT', @Msg = @msg, @Title = @title -- UAT group 
