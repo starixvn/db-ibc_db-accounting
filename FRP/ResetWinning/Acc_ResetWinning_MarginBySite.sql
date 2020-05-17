@@ -11,6 +11,7 @@ AS
 	Revision:
 		- 20200321@Sophia: Initial SPs  
 		- 20200512@Sophia: Margin By Site - break down by Sport / Non Sports [Redmine: #134035]
+		- 20200516@Sophia: add code BARM/8RM; exclude MG-SuperLive/ Bet Builder; parlay /2 [Redmine: 134281]
 		 
 	Param Explanation:
 		 
@@ -62,9 +63,10 @@ BEGIN
 		------1. Bettrans
 		INSERT INTO #WL (srecommend, SB, TurnOver, winlost, WinlostDueTo, ExtraWinlost)
 		SELECT  b.srecommend,
-				CASE WHEN s.productID = 1 THEN 1 ELSE 0 END AS SB,
+				CASE WHEN s.productID = 1 AND ProductName = 'Sportsbook' THEN 1 ELSE 0 END AS SB,
 				---Base currency
-				SUM (   CASE WHEN b.StatusID = 111 OR b.Bettype IN (911,912) THEN 0 ELSE  ABS(Stake) END
+				SUM (   CASE WHEN b.StatusID = 111 OR b.Bettype IN (911,912) THEN 0 ELSE
+						CASE WHEN ABS(modds) = 0.25 AND b.Bettype <> 29 THEN ABS(Stake) / 2 ELSE  ABS(Stake) END END
 						* (1 - b.tpositiontaking - ISNULL(CAST(b.epositiontaking AS DECIMAL(9, 8)), 0)) 
 						* CASE
 							  WHEN virtualrate > actualrate
@@ -117,9 +119,10 @@ BEGIN
 			AND b.bettype < 19001
 			AND b.Bettype <> 8000   --- exclude Exchange Product
 			AND b.MatchID >= 0
-			AND s.RefTable NOT IN (1,2)			
+			AND s.RefTable NOT IN (1,2)	
+			AND b.Recommend NOT IN (52466,5707545)  --- Exclude 8RM, BARM			
 		GROUP BY b.srecommend,
-			CASE WHEN s.productID = 1 THEN 1 ELSE 0 END		
+			CASE WHEN s.productID = 1 AND ProductName = 'Sportsbook' THEN 1 ELSE 0 END		
 
 			 
 		------2. BettransRNG
