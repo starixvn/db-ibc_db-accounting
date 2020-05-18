@@ -466,6 +466,7 @@ BEGIN
 						SELECT	DISTINCT GroupName , SuperID 
 						FROM	bodb02.dbo.Acc_GroupExtraPTSetting E WITH (NOLOCK)   
 						WHERE 	@Winlostdate  BETWEEN FromDate AND ToDate 
+								OR FromDate = '2020-05-19'
 							) g
 					ON G.SuperId = c.custid  
 				WHERE	c.Site IN ('789y') and Currency <> 20 				
