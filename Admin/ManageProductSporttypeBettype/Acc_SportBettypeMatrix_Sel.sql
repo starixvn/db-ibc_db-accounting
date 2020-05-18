@@ -62,7 +62,7 @@ BEGIN
 			   EventType,
 			   SubProduct,
 			   RefTable,			   
-			   ROW_NUMBER() OVER(ORDER BY SportType, Bettype, IsLive) AS RowNum
+			   ROW_NUMBER() OVER(ORDER BY ProductID, SportType, Bettype, IsLive) AS RowNum
 	FROM dbo.SportBettypeMatrix WITH(NOLOCK)
 	WHERE (SportType = @Sporttype OR ISNULL(@Sporttype,0) = 0) 
 		  AND (BetType		= @BetType		OR ISNULL(@BetType,0)   = 0)
@@ -71,7 +71,8 @@ BEGIN
 		  AND (RefTable		= @RefTable		OR ISNULL(@RefTable,0)	= 0)
 
 
-	ORDER BY SportType, BetType, IsLive
+
+	ORDER BY ProductID, SportType, BetType, IsLive
 
 	SELECT @TotalRows = COUNT(*) FROM #Tmp 
 	
