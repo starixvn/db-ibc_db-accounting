@@ -299,7 +299,8 @@ BEGIN
 						   'Discount="'+ COALESCE(CAST(@Discount AS VARCHAR(20)), SPACE(1)) + '" ' +
 						   'ADiscount="'+ COALESCE(CAST(@ADiscount AS VARCHAR(20)), SPACE(1)) + '" ' +
 						   'SDiscount="'+ COALESCE(CAST(@SDiscount AS VARCHAR(20)), SPACE(1)) + '" ' +						  
-						   'IP="'+ COALESCE(CAST(@IP AS VARCHAR(20)), SPACE(1)) + '" ' +	
+						   'IP="'+ COALESCE(CAST(@IP AS VARCHAR(20)), SPACE(1)) + '" ' +
+						   'GivenCredit="'+ COALESCE(CAST(@GivenCredit AS VARCHAR(20)), SPACE(1)) + '" ' +								   
 						   'ErrCode="'+ COALESCE(CAST(@ErrCode AS VARCHAR(20)), SPACE(1)) + '" ' +						   
 						   'ErrMsg="'+ COALESCE(CAST(@ErrMsg as NVARCHAR(200)),SPACE(1)) + '" ' +
 						   'SPName ="'+ COALESCE(CAST('Dot_BBIN_TransferIns' AS VARCHAR(30)), SPACE(1))  + '" />'
