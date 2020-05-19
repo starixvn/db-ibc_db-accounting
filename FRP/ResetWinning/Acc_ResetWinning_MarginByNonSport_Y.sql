@@ -5,7 +5,7 @@ AS
  
 /*		
 	Created: 20200517@Viet
-	Task: Reset Winning - Margin By Non Sport (adhoc) [redmind: #131624]
+	Task: Reset Winning - Margin By Non Sport (adhoc) for 789Y [redmind: #131624]
 	DB: DBEXT.BODB02
 	
 	Revision:

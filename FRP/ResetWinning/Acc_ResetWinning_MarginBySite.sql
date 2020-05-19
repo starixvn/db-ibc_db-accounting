@@ -11,8 +11,8 @@ AS
 	Revision:
 		- 20200321@Sophia: Initial SPs  
 		- 20200512@Sophia: Margin By Site - break down by Sport / Non Sports [Redmine: #134035]
-		- 20200516@Sophia: add code BARM/8RM; exclude MG-SuperLive/ Bet Builder; parlay /2 [Redmine: 134281]
-		 
+		- 20200516@Sophia: add code BARM/8RM; exclude MG-SuperLive/ Bet Builder; parlay /2 [Redmine: #134281]
+		- 20200518@Sophia: add by groupHeadline [Redmine: #134281]
 	Param Explanation:
 		 
 	   
@@ -450,11 +450,33 @@ BEGIN
 				WHERE	Site <> 'CN88'
 				GROUP BY SB
 				HAVING  SUM (w.TurnOver) IS NOT NULL 
+				
+				----- Detail Group Headline of 789Y		
+				UNION				
+				SELECT  ISNULL(g.GroupName, 'Unassigned') AS Site,				         
+						w.SB, 
+						SUM (w.TurnOver) AS TurnOver, 
+						CASE WHEN SUM (w.TurnOver) = 0 THEN 0 ELSE SUM (w.winlost - ExtraWinlost) / SUM (w.TurnOver) * 100 END AS Margin , 
+						SUM (w.winlost - ExtraWinlost) AS HouseWinlost,
+						3 as isDeposit 
+				FROM	#wl w
+				INNER JOIN bodb02.dbo.customer c WITH (NOLOCK) 
+						ON c.CustID = w.srecommend AND c.roleid = 4	 	 
+				LEFT JOIN  (
+						SELECT	DISTINCT GroupName , SuperID 
+						FROM	bodb02.dbo.Acc_GroupExtraPTSetting E WITH (NOLOCK)   
+						WHERE 	@Winlostdate  BETWEEN FromDate AND ToDate 							
+							) g
+					ON G.SuperId = c.custid  
+				WHERE	c.Site IN ('789y') and Currency <> 20 				
+				GROUP BY ISNULL(g.GroupName, 'Unassigned'),  
+						w.SB
+
 				) a
 	 
 		---exchange product
 		UNION
-		SELECT 'Exchange Product', 0 AS SB, 0 AS TurnOver, 0 AS Margin , -1 * SUM(LicenseeWL+PayToSupplier) AS HouseWinlost, 3 AS IsDeposit
+		SELECT 'Exchange Product', 0 AS SB, 0 AS TurnOver, 0 AS Margin , -1 * SUM(LicenseeWL+PayToSupplier) AS HouseWinlost, 4 AS IsDeposit
 		FROM	#FinalResult
 		HAVING  SUM(LicenseeWL+PayToSupplier) IS NOT NULL 
 
