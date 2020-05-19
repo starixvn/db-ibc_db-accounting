@@ -17,6 +17,7 @@ ALTER PROCEDURE [dbo].[Dot_BBIN_TransferIns]
 	@SDiscount			DECIMAL(9,8),
 	@TransDesc			NVARCHAR(1000) = '',
 	@IP					NVARCHAR(15) = '',
+	@GivenCredit 		MONEY = NULL,
 	@RefNo		BIGINT = 0 			OUTPUT,
 	@TransID	BIGINT = 0 			OUTPUT,
 	@TransDate	DATETIME = NULL 	OUTPUT,
@@ -30,6 +31,7 @@ AS
 
 	Revision: 
 		- 20200411@Sophia.Nguyen: Initial SP [Redmine: #131347]
+		- 20200519@Sophia: add param GivenCredit [Redmine: #131347]
 
 	
 	Param's Explanation:
@@ -88,8 +90,7 @@ BEGIN
 		@srecommend 	INT,
 		@RoleId 		TINYINT,
 		
-		@AmountABS 		MONEY,	
-		@GivenCredit 	MONEY,	
+		@AmountABS 		MONEY,	 
 		@Balance 		MONEY,	
 		@NetPosition 	MONEY,
 		@TPositiontaking	SMALLMONEY		
@@ -159,11 +160,7 @@ BEGIN
 	------------------------------------------------
 	----Check Member's Balance for tranfer in -------
 	IF @Amount < 0 
-	BEGIN		
-			SELECT 	@GivenCredit = ISNULL(credit,0) 
-			FROM 	CustDB.dbo.custinfo WITH(NOLOCK) 
-			WHERE   custid = @custid	
-			
+	BEGIN					
 			EXEC dbo.Acc_BalanceMemberSel 
 				@CustID		 = @CustID,
 				@Balance	 = @Balance OUTPUT,
