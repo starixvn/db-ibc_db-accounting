@@ -30,6 +30,7 @@ AS
 		- 20200305@Elodie: Hardcode list finance permission [Redmine: #129890]
 		- 20200316@Elodie: Remove from Hardcode list finance permission for Nova [Redmine: #130499]
 		- 20200317@Malcolm: Grant permission for finance account [Redmine : #128128]
+		- 20200414@Sophia: add BBIN bettype [Redmine: #131358]
 
     Param's Explanation:
         - @FilterBy: 1:winlostdate - 2:transdate
@@ -125,19 +126,19 @@ BEGIN
 				b.transdesc + ' - Ex.Rate: ' + CAST(b.actualrate AS VARCHAR(10)) transdesc, 
 				b.creator,
 				CASE 
-					WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202) THEN NULL 
+					WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL 
 					ELSE b.betid 
 				END checkerID, --BalanceUP AND Transfer to Casino/Bingo/P2P
 				CASE 
-					WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202) THEN '0' 
+					WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN '0' 
 					ELSE b.betcheck 
 				END checkerName,
 				CASE 
-					WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202) THEN NULL 
+					WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL 
 					ELSE b.checkTime 
 				END checkTime,
 				CASE 
-					WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202) THEN 0 
+					WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN 0 
 					ELSE 1 
 				END isAllowVerify,
 				CASE b.bettype WHEN 20000 THEN 1 ELSE b.liveindicator END isReversal
@@ -266,19 +267,19 @@ BEGIN
 				b.transdesc + ' - Ex.Rate: ' + CAST(b.actualrate AS VARCHAR(10)) transdesc, 
 				b.creator,
 				CASE 
-					WHEN bettype.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN NULL 
+					WHEN bettype.typeid IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL 
 					ELSE b.betid 
 				END checkerID, --BalanceUP AND Transfer to Casino/Bingo/P2P
 				CASE 
-					WHEN bettype.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN '0' 
+					WHEN bettype.typeid IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN '0' 
 					ELSE b.betcheck 
 				END checkerName,
 				CASE 
-					WHEN bettype.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN NULL 
+					WHEN bettype.typeid IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL 
 					ELSE b.checkTime 
 				END checkTime,
 				CASE 
-					WHEN bettype.typeid IN (20000,23001,23002,23101,23102,23201,23202) THEN 0 
+					WHEN bettype.typeid IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN 0 
 					ELSE 1 
 				END isAllowVerify,
 				CASE b.bettype WHEN 20000 THEN 1 ELSE b.liveindicator END isReversal
