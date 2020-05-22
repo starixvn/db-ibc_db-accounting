@@ -1,7 +1,8 @@
 /*<info serverAlias="DBPRO-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE  dbo.Acc_SportBettypeMatrix_Sel
-	@SportType      SMALLINT = 0,
-	@BetType        SMALLINT = 0,
+    @ProductID      TINYINT = 0, 
+	@SportType      TINYINT = 0,
+	@BetType        INT = 0,
 	@ProductId      TINYINT  = 0,
 	@EventType      TINYINT  = NULL,
 	@RefTable       TINYINT  = NULL,
@@ -79,7 +80,8 @@ BEGIN
 		INNER JOIN dbo.Products p WITH(NOLOCK) ON m.ProductID = p.ProductID
 		INNER JOIN dbo.Sports s WITH(NOLOCK) ON m.SportType = s.SportType 
 		INNER JOIN dbo.bettype b WITH(NOLOCK) ON m.BetType = b.typeid
-	WHERE (m.SportType		= @Sporttype	OR ISNULL(@Sporttype,0) = 0) 
+	WHERE	(m.ProductID	= @ProductID	OR ISNULL(@ProductID,0) = 0) 
+		  AND (m.SportType	= @Sporttype	OR ISNULL(@Sporttype,0) = 0) 
 		  AND (m.BetType	= @BetType		OR ISNULL(@BetType,0)   = 0)
 		  AND (m.ProductID	= @ProductId	OR ISNULL(@ProductId,0) = 0)
 		  AND (m.EventType	= @EventType	OR @EventType IS NULL)
