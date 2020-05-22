@@ -3,7 +3,6 @@ CREATE PROCEDURE  dbo.Acc_SportBettypeMatrix_Sel
     @ProductID      TINYINT = 0, 
 	@SportType      TINYINT = 0,
 	@BetType        INT = 0,
-	@ProductId      TINYINT  = 0,
 	@EventType      TINYINT  = NULL,
 	@RefTable       TINYINT  = NULL,
 	@SportName      NVARCHAR(50)  = '',
