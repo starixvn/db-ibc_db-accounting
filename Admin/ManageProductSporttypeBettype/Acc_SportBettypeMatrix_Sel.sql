@@ -5,8 +5,8 @@ CREATE PROCEDURE  dbo.Acc_SportBettypeMatrix_Sel
 	@ProductId      TINYINT  = 0,
 	@EventType      TINYINT  = NULL,
 	@RefTable       TINYINT  = NULL,
-	@SportName      NVARCHAR(100),
-	@BettypeName    NVARCHAR(256),
+	@SportName      NVARCHAR(50)  = '',
+	@BettypeName    NVARCHAR(128) = '',
 	@PageSize		INT = 0,
 	@PageIndex		INT = 0,
 	@TotalRows		INT = 0 OUTPUT
