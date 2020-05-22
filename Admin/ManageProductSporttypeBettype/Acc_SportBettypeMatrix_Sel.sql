@@ -74,7 +74,7 @@ BEGIN
 				m.EventType,
 				m.SubProduct,
 				m.RefTable,		   
-			   ROW_NUMBER() OVER(ORDER BY ProductID, SportType, Bettype, IsLive) AS RowNum
+			   ROW_NUMBER() OVER(ORDER BY m.ProductID, m.SportType, m.Bettype, m.IsLive) AS RowNum
 	FROM dbo.SportBettypeMatrix m WITH(NOLOCK)
 		INNER JOIN dbo.Products p WITH(NOLOCK) ON m.ProductID = p.ProductID
 		INNER JOIN dbo.Sports s WITH(NOLOCK) ON m.SportType = s.SportType 
@@ -86,7 +86,7 @@ BEGIN
 		  AND (m.RefTable	= @RefTable		OR @RefTable IS NULL)
 		  AND (s.SportName	= '' OR s.SportName LIKE '%' + @SportName + '%')
 		  AND (b.typenamee	= '' OR b.typenamee LIKE '%' + @BettypeName + '%')
-	ORDER BY ProductID, SportType, BetType, IsLive
+	ORDER BY m.ProductID, m.SportType, m.BetType, m.IsLive
 
 	SELECT @TotalRows = COUNT(*) FROM #Tmp 
 	
