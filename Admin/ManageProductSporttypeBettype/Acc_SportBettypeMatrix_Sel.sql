@@ -1,10 +1,12 @@
 /*<info serverAlias="DBPRO-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE  dbo.Acc_SportBettypeMatrix_Sel
-	@SportType      SMALLINT = NULL,
-	@BetType        SMALLINT = NULL,
-	@ProductId      TINYINT  = NULL,
+	@SportType      SMALLINT = 0,
+	@BetType        SMALLINT = 0,
+	@ProductId      TINYINT  = 0,
 	@EventType      TINYINT  = NULL,
 	@RefTable       TINYINT  = NULL,
+	@SportName      NVARCHAR(100),
+	@BettypeName    NVARCHAR(256),
 	@PageSize		INT = 0,
 	@PageIndex		INT = 0,
 	@TotalRows		INT = 0 OUTPUT
@@ -29,10 +31,13 @@ BEGIN
 	SELECT @PageIndex = @PageIndex - 1, @RowStart = @PageIndex * @PageSize + 1, @RowEnd = @RowStart + @PageSize - 1
 
 	CREATE TABLE #Tmp (
+	    ProductID		TINYINT,
+		ProductName     VARCHAR(50),
 	 	SportType		SMALLINT,
-		BetType			SMALLINT,
+		SportName       NVARCHAR(100),
+		Bettype			SMALLINT,
+		BettypeName     NVARCHAR(256),
 		IsLive			BIT,
-		ProductID		TINYINT,
 		Enabled			BIT,
 		IsTest			BIT,
 		EventType		TINYINT,
@@ -41,51 +46,63 @@ BEGIN
 		RowNum          INT
 	)
 
-	INSERT INTO #Tmp(
-			   SportType,
-			   BetType,
-			   IsLive,
-			   ProductID,
-			   Enabled,
-			   IsTest,
-			   EventType,
-			   SubProduct,
-			   RefTable,
-			   RowNum
+	INSERT INTO #Tmp
+	(
+				ProductID,
+				ProductName,
+	 			SportType,
+				SportName,
+				Bettype,
+				BettypeName,
+				IsLive,
+				Enabled,
+				IsTest,
+				EventType,
+				SubProduct,
+				RefTable,
+				RowNum 
 	)
-    SELECT     SportType,
-			   BetType,
-			   IsLive,
-			   ProductID,
-			   Enabled,
-			   IsTest,
-			   EventType,
-			   SubProduct,
-			   RefTable,			   
+    SELECT      m.ProductID,
+				p.ProductName,
+	 			m.SportType,
+				s.SportName,
+				m.Bettype,
+				b.typenamee AS BettypeName,
+				m.IsLive,
+				m.Enabled,
+				m.IsTest,
+				m.EventType,
+				m.SubProduct,
+				m.RefTable,		   
 			   ROW_NUMBER() OVER(ORDER BY ProductID, SportType, Bettype, IsLive) AS RowNum
-	FROM dbo.SportBettypeMatrix WITH(NOLOCK)
-	WHERE (SportType = @Sporttype OR ISNULL(@Sporttype,0) = 0) 
-		  AND (BetType		= @BetType		OR ISNULL(@BetType,0)   = 0)
-		  AND (ProductID	= @ProductId	OR ISNULL(@ProductId,0) = 0)
-		  AND (EventType	= @EventType	OR ISNULL(@EventType,0) = 0)
-		  AND (RefTable		= @RefTable		OR ISNULL(@RefTable,0)	= 0)
-
-
-
+	FROM dbo.SportBettypeMatrix m WITH(NOLOCK)
+		INNER JOIN dbo.Products p WITH(NOLOCK) ON m.ProductID = p.ProductID
+		INNER JOIN dbo.Sports s WITH(NOLOCK) ON m.SportType = s.SportType 
+		INNER JOIN dbo.bettype b WITH(NOLOCK) ON m.BetType = b.typeid
+	WHERE (m.SportType		= @Sporttype	OR ISNULL(@Sporttype,0) = 0) 
+		  AND (m.BetType	= @BetType		OR ISNULL(@BetType,0)   = 0)
+		  AND (m.ProductID	= @ProductId	OR ISNULL(@ProductId,0) = 0)
+		  AND (m.EventType	= @EventType	OR @EventType IS NULL)
+		  AND (m.RefTable	= @RefTable		OR @RefTable IS NULL)
+		  AND (s.SportName	= '' OR s.SportName LIKE '%' + @SportName + '%')
+		  AND (b.typenamee	= '' OR b.typenamee LIKE '%' + @BettypeName + '%')
 	ORDER BY ProductID, SportType, BetType, IsLive
 
 	SELECT @TotalRows = COUNT(*) FROM #Tmp 
 	
-	SELECT  SportType,
-			BetType,
+	SELECT  ProductID,
+			ProductName,
+	 		SportType,
+			SportName,
+			Bettype,
+			BettypeName,
 			IsLive,
-			ProductID,
-			Enabled,
+			[Enabled],
 			IsTest,
 			EventType,
 			SubProduct,
 			RefTable,
-			RowNum
+			RowNum 
 	FROM #Tmp
 	WHERE @PageIndex < 0 OR @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd)
 

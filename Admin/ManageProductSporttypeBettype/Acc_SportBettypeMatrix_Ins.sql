@@ -30,12 +30,9 @@ BEGIN
 	IF ISNULL(@File, '') = ''
 			RETURN
 
-   
-
 	SET NOCOUNT ON
 	DECLARE @startRun DATETIME, @endRun DATETIME, @duration INT, @LogSPData NVARCHAR(MAX), @LogSPData2 NVARCHAR(MAX)
 	
-
 	DECLARE @iDoc INT, @RowTotal INT = 0, @CurrentRow INT = 0, @MatrixError NVARCHAR(MAX) = '', @ValueError NVARCHAR(MAX) = '', @LimitValue BIGINT
 
 	CREATE TABLE #input 
@@ -63,7 +60,7 @@ BEGIN
 		IsTest			NVARCHAR(MAX),
 		EventType		NVARCHAR(MAX),
 		SubProduct		NVARCHAR(MAX),
-		RefTable		NVARCHAR(MAX)
+		RefTable		NVARCHAR(MAX),
 	)
 
 	BEGIN TRY
@@ -138,16 +135,30 @@ BEGIN
 		   OR LEN(RefTable)		= 0
 
 	SELECT TOP(1) @MatrixError 	= CONVERT(VARCHAR(5),ID), 
-	              @ValueError 	= SubProduct,
-                  @LimitValue	= 500
+	              @ValueError 	= CASE WHEN IsLive		NOT IN (0,1,'')	THEN IsLive
+									   WHEN [Enabled]	NOT IN (0,1,'')	THEN  [Enabled]
+									   WHEN IsTest		NOT IN (0,1,'')	THEN IsTest
+									   ELSE SubProduct	END,
+                  @LimitValue	= CASE WHEN LEN(SubProduct) > 500 THEN 500
+				                       ELSE 1 END,
+				  @ErrCode      = CASE WHEN LEN(SubProduct) > 500 THEN 1007
+				                       ELSE 1008 END
 	FROM #inputTmp
 	WHERE  LEN(SubProduct) > 500
+			OR IsLive	NOT IN (0,1,'')
+			OR Enabled	NOT IN (0,1,'')
+			OR IsTest	NOT IN (0,1,'')
+
 
 	IF @ValueError <> ''
 	   BEGIN
-		 SELECT @ErrCode = 1007, 
-		        @ErrMsg = 'At Row = "' + @MatrixError + 
+	     IF @ErrCode = 1007
+		 SELECT  @ErrMsg = 'At Row = "' + @MatrixError + 
 				          '" . The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) +'.'
+		 IF @ErrCode = 1008
+		 SELECT  @ErrMsg = 'At Row = "' + @MatrixError + 
+				          '" . The values "' + @ValueError + '" is invalid'+'.'
+
 	     RETURN
 	   END
 	   
@@ -180,6 +191,43 @@ BEGIN
 	    SELECT @ErrCode = ERROR_NUMBER(), @ErrMsg = ERROR_MESSAGE()
 		RETURN
 	END CATCH
+
+	SELECT TOP(1) @MatrixError 	= CONVERT(VARCHAR(5),I.ID), 
+	              @ValueError 	= CASE WHEN i.BetType >= 19999 THEN i.BetType
+									   WHEN i.EventType NOT BETWEEN 0 AND 5 THEN  i.EventType
+									   WHEN  i.RefTable NOT BETWEEN 0 AND 3 THEN i.RefTable
+								  ELSE i.BetType END,
+
+				  @ErrCode      = CASE WHEN i.BetType >= 19999 THEN 1009
+									   WHEN i.EventType NOT BETWEEN 0 AND 5 THEN  1010
+									   WHEN  i.RefTable NOT BETWEEN 0 AND 3 THEN  1011
+								  ELSE 1012 END
+	FROM #input i
+		INNER JOIN #input p ON i.BetType = p.BetType
+	WHERE i.ProductID <> p.ProductID 
+		OR i.RefTable <> p.RefTable 
+		OR i.EventType <> p.EventType
+	    OR i.BetType >= 19999
+		OR i.EventType NOT BETWEEN 0 AND 5
+		OR i.RefTable NOT BETWEEN 0 AND 3
+
+	IF @ValueError <> ''
+	   BEGIN
+	     IF @ErrCode = 1009
+		 SELECT @ErrMsg = 'At Row = "' + @MatrixError + '". The values "' + @ValueError + '" is invalid (BetType < 19999).'
+
+		 IF @ErrCode = 1010 
+		 SELECT @ErrMsg = 'At Row = "' + @MatrixError + '". The values "' + @ValueError + '" is invalid (EventType between 0 and 5)'
+
+		 IF @ErrCode = 1011 
+		 SELECT @ErrMsg = 'At Row = "' + @MatrixError + '". The values "' + @ValueError + '" is invalid (RefTable between 0 and 3)'
+
+		 IF @ErrCode = 1012 
+		 SELECT @ErrMsg = 'At Row = "' + @MatrixError + '". The values "' + @ValueError + '" is invalid'
+
+	     RETURN
+	   END
+	
 
 	SELECT  @RowTotal = COUNT(*) FROM #input
 

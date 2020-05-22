@@ -167,28 +167,37 @@ BEGIN
 
 	SELECT TOP(1) @ProductError = ProductID, 
 	
-	              @ValueError   = CASE WHEN LEN(Description)			> 100 THEN Description
-									   WHEN LEN(SubProductBalanceType) 	> 512 THEN SubProductBalanceType
-									   WHEN LEN(ProductPrefix)			> 10  THEN ProductPrefix				           
+	              @ValueError   = CASE WHEN LEN(Description)			> 100	THEN Description
+									   WHEN LEN(SubProductBalanceType) 	> 512	THEN SubProductBalanceType
+									   WHEN LEN(ProductPrefix)			> 10	THEN ProductPrefix	
+									   WHEN IsOfferPlayForFun NOT IN (0,1,NULL)	THEN IsOfferPlayForFun
+									   WHEN [Enabled] NOT IN (0,1,NULL)			THEN IsOfferPlayForFun
 							           ELSE ProductName END,
 									   
-				  @LimitValue   = CASE WHEN LEN(Description)        	> 100 THEN 100
-                              	       WHEN LEN(SubProductBalanceType)  > 512 THEN 512
-									   WHEN LEN(ProductPrefix)			> 10  THEN 10	
-									   ELSE 50 END
+				  @LimitValue   = CASE WHEN LEN(Description)        	> 100	THEN 100
+                              	       WHEN LEN(SubProductBalanceType)  > 512	THEN 512
+									   WHEN LEN(ProductPrefix)			> 10	THEN 10	
+									   ELSE 50 END,
+				  @ErrCode      = CASE WHEN IsOfferPlayForFun NOT IN (0,1,NULL) THEN 1008
+				                       WHEN [Enabled] NOT IN (0,1,NULL)         THEN 1008
+								  ELSE 1007 END
 									
 	FROM #inputTmp
 	WHERE LEN(Description)		  		> 100 
 		  OR LEN(SubProductBalanceType)	> 512
 		  OR LEN(ProductPrefix)		  	> 10
 		  OR LEN(ProductName)   		> 50	  
+		  OR IsOfferPlayForFun	NOT IN (0,1,NULL)
+		  OR [Enabled]			NOT IN (0,1,NULL)
 							
 
 	IF @ValueError <> ''
 	   BEGIN
-		 SELECT @ErrCode = 1007, 
-		        @ErrMsg = 'At ProductId = "' + @ProductError + 
+	     IF @ErrCode = 1007
+		 SELECT @ErrMsg = 'At ProductId = "' + @ProductError + 
 				           '" . The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(4),@LimitValue) + '.'
+		 IF @ErrCode = 1008
+		 SELECT @ErrMsg = 'At ProductId = "' + @ProductError + '".The values "' + @ValueError + '" is invalid.'
 
 	     RETURN
 	   END

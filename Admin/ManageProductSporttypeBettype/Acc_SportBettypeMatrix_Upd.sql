@@ -24,8 +24,8 @@ BEGIN
     IF ISNULL(@File, '') = ''
 		RETURN
 
-
-	DECLARE @iDoc INT, @RowTotal INT = 0, @CurrentRow INT = 0, @Sporttype  SMALLINT = 0, @Bettype SMALLINT, @Islive BIT, @MatrixError NVARCHAR(MAX) = '', @ValueError NVARCHAR(MAX) = '', @LimitValue BIGINT
+	DECLARE @iDoc INT, @RowTotal INT = 0, @CurrentRow INT = 0, @Sporttype  SMALLINT = 0, @Bettype SMALLINT, @Islive BIT, 
+			@MatrixError NVARCHAR(MAX) = '', @ValueError NVARCHAR(MAX) = '', @LimitValue BIGINT
 
     DECLARE @startRun DATETIME, @endRun DATETIME, @duration INT, @LogSPData NVARCHAR(MAX), @LogSPData2 NVARCHAR(MAX)
 	
