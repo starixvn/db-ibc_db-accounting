@@ -144,7 +144,7 @@ BEGIN
 				  @ColumnName   = CASE WHEN EventType	IS NULL	OR EventType NOT BETWEEN 0 AND 5 THEN 'EventType'
 									   WHEN RefTable	IS NULL	OR RefTable	 NOT BETWEEN 0 AND 3 THEN 'RefTable'								   
 									   WHEN [Enabled]	NOT IN (0,1) AND [Enabled]	IS NOT NULL  THEN 'Enabled'
-									   WHEN EventType	NOT IN (0,1) AND EventType	IS NOT NULL  THEN 'EventType'
+									   WHEN IsTest		NOT IN (0,1) AND IsTest		IS NOT NULL  THEN 'IsTest'
 									   WHEN IsLive		NOT IN (0,1) AND IsLive		IS NOT NULL  THEN 'IsLive'
 								  ELSE NULL END
 	FROM #inputTmp
@@ -161,7 +161,7 @@ BEGIN
 		 SELECT  @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + 
 				          '" . The value "' + ISNULL(@ValueError,'') + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) +'.'
 		 IF @ErrCode = 1008
-		 SELECT  @ErrMsg = 'Invalid "' + @ColumnName + '" on row ' + @MatrixError + '.please check them again.'
+		 SELECT  @ErrMsg = 'Invalid "' + @ColumnName + '" on row "' + @MatrixError + '".please check them again.'
 
 	     RETURN
 	   END
