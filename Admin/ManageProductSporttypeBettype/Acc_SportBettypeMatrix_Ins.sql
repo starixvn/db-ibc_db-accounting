@@ -153,11 +153,11 @@ BEGIN
 	IF @ValueError <> ''
 	   BEGIN
 	     IF @ErrCode = 1007
-		 SELECT  @ErrMsg = 'At Row = "' + @MatrixError + 
-				          '" . The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) +'.'
+		 SELECT  @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + 
+				          '" . The values "' + ISNULL(@ValueError,'') + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) +'.'
 		 IF @ErrCode = 1008
-		 SELECT  @ErrMsg = 'At Row = "' + @MatrixError + 
-				          '" . The values "' + @ValueError + '" is invalid'+'.'
+		 SELECT  @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + 
+				          '" . The values "' + ISNULL(@ValueError,'') + '" is invalid'+'.'
 
 	     RETURN
 	   END
@@ -217,16 +217,16 @@ BEGIN
 	IF @ValueError <> ''
 	   BEGIN
 	     IF @ErrCode = 1009
-		 SELECT @ErrMsg = 'At Row = "' + @MatrixError + '". The values "' + @ValueError + '" is invalid (BetType < 19999).'
+		 SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '". The values "' + ISNULL(@ValueError,'') + '" is invalid (BetType < 19999).'
 
 		 IF @ErrCode = 1010 
-		 SELECT @ErrMsg = 'At Row = "' + @MatrixError + '". The values "' + @ValueError + '" is invalid (EventType between 0 and 5)'
+		 SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '". The values "' + ISNULL(@ValueError,'') + '" is invalid (EventType between 0 and 5)'
 
 		 IF @ErrCode = 1011 
-		 SELECT @ErrMsg = 'At Row = "' + @MatrixError + '". The values "' + @ValueError + '" is invalid (RefTable between 0 and 3)'
+		 SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '". The values "' + ISNULL(@ValueError,'') + '" is invalid (RefTable between 0 and 3)'
 
 		 IF @ErrCode = 1012 
-		 SELECT @ErrMsg = 'At Row = "' + @MatrixError + '". The values "' + @ValueError + '" is invalid'
+		 SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '". The values "' + ISNULL(@ValueError,'') + '" is invalid'
 
 	     RETURN
 	   END
