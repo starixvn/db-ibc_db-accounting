@@ -34,7 +34,7 @@ BEGIN
 
 	DECLARE @iDoc INT, @RowTotal INT = 0, @CurrentRow INT = 0, @ProductError NVARCHAR(MAX) = '', @ValueError NVARCHAR(MAX) = '', @LimitValue BIGINT
 
-	DECLARE @startRun DATETIME, @endRun DATETIME, @duration INT, @LogSPData NVARCHAR(MAX), @LogSPData2 NVARCHAR(MAX)
+	DECLARE @startRun DATETIME, @endRun DATETIME, @duration INT, @LogSPData NVARCHAR(MAX), @LogSPData2 NVARCHAR(MAX),@ColumnName VARCHAR(100)
 
 	CREATE TABLE #input 
 	(    
@@ -213,6 +213,22 @@ BEGIN
 		RETURN
 	END CATCH
 
+	SELECT  @ProductError = ProductID,
+			@ColumnName = CASE WHEN BalanceType IS NULL OR BalanceType  NOT BETWEEN 1 AND 4 THEN 'BalanceType'
+			                   WHEN GroupType  IS NULL OR GroupType NOT IN (0,1) THEN 'GroupType'
+						  ELSE 'CasinoType' END,
+			@ErrCode = 1007
+	FROM #input
+	WHERE BalanceType IS NULL OR BalanceType  NOT BETWEEN 1 AND 4
+	    OR GroupType  IS NULL OR GroupType NOT IN (0,1)
+		OR CasinoType  IS NULL OR CasinoType BETWEEN 0 AND 2
+
+	IF @ErrCode <> 0
+	BEGIN
+		SELECT @ErrMsg = 'Invalid "' + @ColumnName + '" On productID  = "' + @ProductError + '". Please check again.'
+	END
+		
+		 
 	SELECT  @RowTotal = COUNT(*) FROM #input
 
 	WHILE @CurrentRow <> @RowTotal
