@@ -215,7 +215,7 @@ BEGIN
 
 	SELECT  @ProductError = ProductID,
 			@ColumnName = CASE WHEN BalanceType IS NULL OR BalanceType  NOT BETWEEN 1 AND 4 THEN 'BalanceType'
-			                   WHEN GroupType  IS NULL OR GroupType NOT IN (0,1) THEN 'GroupType'
+			                   WHEN GroupType	IS NULL OR GroupType NOT IN (0,1) THEN 'GroupType'
 						  ELSE 'CasinoType' END,
 			@ErrCode = 1007
 	FROM #input
