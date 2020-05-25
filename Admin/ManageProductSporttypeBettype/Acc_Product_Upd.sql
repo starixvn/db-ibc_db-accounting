@@ -166,7 +166,7 @@ BEGIN
 	   BEGIN
 		 SELECT @ErrCode = 1007, 
 		        @ErrMsg = 'At ProductId = "' + @ProductError + 
-				           '" . The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
+				           '" . The value "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
 
 	     RETURN
 	   END

@@ -195,9 +195,9 @@ BEGIN
 	   BEGIN
 	     IF @ErrCode = 1007
 		 SELECT @ErrMsg = 'At ProductId = "' + @ProductError + 
-				           '" . The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(4),@LimitValue) + '.'
+				           '" . The value "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(4),@LimitValue) + '.'
 		 IF @ErrCode = 1008
-		 SELECT @ErrMsg = 'At ProductId = "' + @ProductError + '".The values "' + @ValueError + '" is invalid.'
+		 SELECT @ErrMsg = 'At ProductId = "' + @ProductError + '".The value "' + @ValueError + '" is invalid.'
 
 	     RETURN
 	   END

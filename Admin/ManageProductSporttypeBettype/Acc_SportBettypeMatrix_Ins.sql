@@ -162,12 +162,12 @@ BEGIN
 	   BEGIN
 	     IF @ErrCode = 1007
 		 SELECT  @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + 
-				          '" . The values "' + ISNULL(@ValueError,'') + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) +'.'
+				          '" . The value "' + ISNULL(@ValueError,'') + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) +'.'
 		 IF @ErrCode = 1008
 		 SELECT  @ErrMsg = 'Invalid "' + @ColumnName + '" on row ' + @MatrixError + '.please check them again.'
 
 		 IF @ErrCode = 1009
-		 SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '". The values "' +ISNULL(@ValueError,'') + '" is invalid.'
+		 SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '". The value "' +ISNULL(@ValueError,'') + '" is invalid.'
 
 	     RETURN
 	   END
@@ -215,10 +215,10 @@ BEGIN
 	IF @ErrCode <> 0
 	   BEGIN
 	     IF @ErrCode = 1009
-		 SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '". The values "' + ISNULL(@ValueError,'') + 
+		 SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '". The value "' + ISNULL(@ValueError,'') + 
 						  '" is invalid (BetType must be less than 19999).'
 		 IF @ErrCode = 1010 
-		 SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '". The values "' + ISNULL(@ValueError,'') + '" is invalid.'
+		 SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '". The bettype "' + ISNULL(@ValueError,'') + '" is incorrect.'
 		                              
 	     RETURN
 	   END
@@ -240,7 +240,7 @@ BEGIN
 
 	IF @ErrCode <> 0
 	BEGIN
-		SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '". '+@ColumnName + ' = "' + @ValueError + '" does not exist.'
+		SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '". The'+@ColumnName + ' ["' + @ValueError + '"] does not exist.'
 		RETURN
 	END
 
