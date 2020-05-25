@@ -135,18 +135,12 @@ BEGIN
 		   OR LEN(RefTable)		= 0
 
 	SELECT TOP(1) @MatrixError 	= CONVERT(VARCHAR(5),ID), 
-	              @ValueError 	= CASE WHEN IsLive		NOT IN (0,1) AND IsLive		IS NOT NULL	THEN  IsLive
-									   WHEN [Enabled]	NOT IN (0,1) AND [Enabled]	IS NOT NULL	THEN  [Enabled]
-									   WHEN IsTest		NOT IN (0,1) AND IsTest		IS NOT NULL	THEN  IsTest
-									   WHEN EventType	IS NULL	OR EventType NOT BETWEEN 0 AND 5 THEN EventType
-									   WHEN RefTable	IS NULL	OR RefTable	 NOT BETWEEN 0 AND 3 THEN EventType
-									   ELSE SubProduct	END,
+	              @ValueError 	= CASE WHEN LEN(SubProduct) > 500 THEN SubProduct
+								  ELSE NULL END,
                   @LimitValue	= CASE WHEN LEN(SubProduct) > 500 THEN 500
 				                       ELSE 1 END,
-				  @ErrCode      = CASE WHEN LEN(SubProduct) > 500 THEN 1007
-									   WHEN EventType	IS NULL	OR EventType NOT BETWEEN 0 AND 5 THEN 1008
-									   WHEN RefTable	IS NULL	OR RefTable	 NOT BETWEEN 0 AND 3 THEN 1008
-				                       ELSE 1009 END,
+				  @ErrCode      = CASE WHEN LEN(SubProduct) > 500 THEN 1007									   
+				                       ELSE 1008 END,
 				  @ColumnName   = CASE WHEN EventType	IS NULL	OR EventType NOT BETWEEN 0 AND 5 THEN 'EventType'
 									   WHEN RefTable	IS NULL	OR RefTable	 NOT BETWEEN 0 AND 3 THEN 'RefTable'
 								  ELSE NULL END
@@ -165,9 +159,6 @@ BEGIN
 				          '" . The value "' + ISNULL(@ValueError,'') + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) +'.'
 		 IF @ErrCode = 1008
 		 SELECT  @ErrMsg = 'Invalid "' + @ColumnName + '" on row ' + @MatrixError + '.please check them again.'
-
-		 IF @ErrCode = 1009
-		 SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '". The value "' +ISNULL(@ValueError,'') + '" is invalid.'
 
 	     RETURN
 	   END

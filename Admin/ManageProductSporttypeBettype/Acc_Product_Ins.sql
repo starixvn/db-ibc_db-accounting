@@ -171,8 +171,7 @@ BEGIN
 									   WHEN LEN(SubProductBalanceType) 	> 512	THEN SubProductBalanceType
 									   WHEN LEN(ProductPrefix)			> 10	THEN ProductPrefix	
 									   WHEN LEN(ProductName)			> 50	THEN ProductName
-									   WHEN [Enabled] NOT IN (0,1) AND [Enabled] IS NOT NULL THEN [Enabled]
-							           ELSE IsOfferPlayForFun END,
+									   ELSE NULL END,
 									   
 				  @LimitValue   = CASE WHEN LEN(Description)        	> 100	THEN 100
                               	       WHEN LEN(SubProductBalanceType)  > 512	THEN 512
@@ -180,7 +179,10 @@ BEGIN
 									   ELSE 50 END,
 				  @ErrCode      = CASE WHEN IsOfferPlayForFun NOT IN (0,1) AND IsOfferPlayForFun IS NOT NULL THEN 1008
 				                       WHEN [Enabled] NOT IN (0,1) AND [Enabled] IS NOT NULL THEN 1008
-								  ELSE 1007 END
+								  ELSE 1007 END,
+				  @ColumnName   =  CASE WHEN IsOfferPlayForFun NOT IN (0,1) AND IsOfferPlayForFun IS NOT NULL THEN 'IsOfferPlayForFun'
+				                       WHEN [Enabled] NOT IN (0,1) AND [Enabled] IS NOT NULL THEN 'Enabled'
+								   ELSE NULL END
 									
 	FROM #inputTmp
 	WHERE LEN(Description)		  		> 100 
@@ -197,7 +199,7 @@ BEGIN
 		 SELECT @ErrMsg = 'At ProductId = "' + ISNULL(@ProductError,'') + 
 				           '" . The value "' + ISNULL(@ValueError,'') + '" is exceeded max length ' + CONVERT(VARCHAR(4),@LimitValue) + '.'
 		 IF @ErrCode = 1008
-		 SELECT @ErrMsg = 'At ProductId = "' + ISNULL(@ProductError,'') + '".The value "' + ISNULL(@ValueError,'') + '" is invalid.'
+		 SELECT @ErrMsg = 'Invalid "' + @ColumnName + '" On productID  = "' + ISNULL(@ProductError,'') + '". Please check again.'
 
 	     RETURN
 	   END
@@ -221,7 +223,7 @@ BEGIN
 	FROM #input
 	WHERE BalanceType IS NULL OR BalanceType  NOT BETWEEN 1 AND 4
 	    OR GroupType  IS NULL OR GroupType NOT IN (0,1)
-		OR CasinoType  IS NULL OR CasinoType BETWEEN 0 AND 2
+		OR CasinoType  IS NULL OR CasinoType NOT BETWEEN 0 AND 2
 
 	IF @ErrCode <> 0
 	BEGIN
