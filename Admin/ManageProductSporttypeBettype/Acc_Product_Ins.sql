@@ -171,7 +171,7 @@ BEGIN
 									   WHEN LEN(SubProductBalanceType) 	> 512	THEN SubProductBalanceType
 									   WHEN LEN(ProductPrefix)			> 10	THEN ProductPrefix	
 									   WHEN LEN(ProductName)			> 50	THEN ProductName
-									   WHEN [Enabled] NOT IN (0,1) AND [Enabled] IS NOT NULL THEN IsOfferPlayForFun
+									   WHEN [Enabled] NOT IN (0,1) AND [Enabled] IS NOT NULL THEN [Enabled]
 							           ELSE IsOfferPlayForFun END,
 									   
 				  @LimitValue   = CASE WHEN LEN(Description)        	> 100	THEN 100
