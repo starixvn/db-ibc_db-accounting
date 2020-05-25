@@ -150,7 +150,7 @@ BEGIN
 			OR (IsTest		NOT IN (0,1) AND IsTest		IS NOT NULL)
 
 
-	IF @ValueError <> ''
+	IF @ErrCode <> 0
 	   BEGIN
 	     IF @ErrCode = 1007
 		 SELECT  @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + 
@@ -214,7 +214,7 @@ BEGIN
 		OR I.RefTable IS NULL
 	
 
-	IF @ValueError <> ''
+	IF @ErrCode <> 0
 	   BEGIN
 	     IF @ErrCode = 1009
 		 SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '". The values "' + ISNULL(@ValueError,'') + '" is invalid (BetType < 19999).'
