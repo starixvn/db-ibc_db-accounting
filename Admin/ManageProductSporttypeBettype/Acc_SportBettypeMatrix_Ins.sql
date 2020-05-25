@@ -33,7 +33,7 @@ BEGIN
 	SET NOCOUNT ON
 	DECLARE @startRun DATETIME, @endRun DATETIME, @duration INT, @LogSPData NVARCHAR(MAX), @LogSPData2 NVARCHAR(MAX)
 	
-	DECLARE @iDoc INT, @RowTotal INT = 0, @CurrentRow INT = 0, @MatrixError NVARCHAR(MAX) = '', @ValueError NVARCHAR(MAX) = '', @LimitValue BIGINT
+	DECLARE @iDoc INT, @RowTotal INT = 0, @CurrentRow INT = 0, @MatrixError NVARCHAR(MAX) = '', @ValueError NVARCHAR(MAX) = '', @LimitValue BIGINT,@ColumnName NVARCHAR(200)
 
 	CREATE TABLE #input 
 	(    
@@ -138,26 +138,33 @@ BEGIN
 	              @ValueError 	= CASE WHEN IsLive		NOT IN (0,1) AND IsLive		IS NOT NULL	THEN  IsLive
 									   WHEN [Enabled]	NOT IN (0,1) AND [Enabled]	IS NOT NULL	THEN  [Enabled]
 									   WHEN IsTest		NOT IN (0,1) AND IsTest		IS NOT NULL	THEN  IsTest
+									   WHEN EventType	IS NULL	OR EventType NOT BETWEEN 0 AND 5 THEN EventType
+									   WHEN RefTable	IS NULL	OR RefTable	 NOT BETWEEN 0 AND 3 THEN EventType
 									   ELSE SubProduct	END,
                   @LimitValue	= CASE WHEN LEN(SubProduct) > 500 THEN 500
 				                       ELSE 1 END,
 				  @ErrCode      = CASE WHEN LEN(SubProduct) > 500 THEN 1007
-				                       ELSE 1008 END
+									   WHEN EventType	IS NULL	OR EventType NOT BETWEEN 0 AND 5 THEN 1008
+									   WHEN RefTable	IS NULL	OR RefTable	 NOT BETWEEN 0 AND 3 THEN 1008
+				                       ELSE 1009 END,
+				  @ColumnName   = CASE WHEN EventType	IS NULL	OR EventType NOT BETWEEN 0 AND 5 THEN 'EventType'
+									   WHEN RefTable	IS NULL	OR RefTable	 NOT BETWEEN 0 AND 3 THEN 'RefTable'
+								  ELSE NULL END
 	FROM #inputTmp
 	WHERE  LEN(SubProduct) > 500
 			OR (IsLive		NOT IN (0,1) AND IsLive		IS NOT NULL)
 			OR ([Enabled]	NOT IN (0,1) AND [Enabled]	IS NOT NULL)
 			OR (IsTest		NOT IN (0,1) AND IsTest		IS NOT NULL)
-
-
+			OR EventType	IS NULL OR EventType NOT BETWEEN 0 AND 5	
+		    OR RefTable		IS NULL OR RefTable	 NOT BETWEEN 0 AND 3
+			
 	IF @ErrCode <> 0
 	   BEGIN
 	     IF @ErrCode = 1007
 		 SELECT  @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + 
 				          '" . The values "' + ISNULL(@ValueError,'') + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) +'.'
 		 IF @ErrCode = 1008
-		 SELECT  @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + 
-				          '" . The values "' + ISNULL(@ValueError,'') + '" is invalid'+'.'
+		 SELECT  @ErrMsg = 'Invalid "' + @ColumnName + '" on row ' + @MatrixError + '.please check them again.'
 
 	     RETURN
 	   END
@@ -193,46 +200,46 @@ BEGIN
 	END CATCH
 
 	SELECT TOP(1) @MatrixError 	= CONVERT(VARCHAR(5),I.ID), 
-	              @ValueError 	= CASE WHEN i.BetType >= 19999 THEN i.BetType
-									   WHEN i.EventType NOT BETWEEN 0 AND 5 OR i.EventType IS NULL THEN  i.EventType
-									   WHEN  i.RefTable NOT BETWEEN 0 AND 3 OR i.RefTable  IS NULL THEN i.RefTable
-								  ELSE i.BetType END,
-
-				  @ErrCode      = CASE WHEN i.BetType >= 19999 THEN 1009
-									   WHEN i.EventType NOT BETWEEN 0 AND 5 OR i.EventType IS NULL THEN  1010
-									   WHEN  i.RefTable NOT BETWEEN 0 AND 3 OR i.RefTable  IS NULL THEN  1011
-								  ELSE 1012 END
+	              @ValueError 	= i.BetType,
+				  @ErrCode      = CASE WHEN i.BetType >= 19999 THEN 1009								   
+								  ELSE 1010 END
 	FROM #input i
 		INNER JOIN #input p ON i.BetType = p.BetType
 		LEFT JOIN SportBettypeMatrix m WITH(NOLOCK) ON i.BetType = m.BetType
-	WHERE i.ProductID <> p.ProductID 
-		OR i.RefTable <> p.RefTable 
-		OR i.EventType <> p.EventType
-	    OR i.BetType >= 19999
-		OR i.EventType NOT BETWEEN 0 AND 5	
-		OR i.RefTable NOT BETWEEN 0 AND 3
-		OR i.EventType  IS NULL
-		OR I.RefTable IS NULL
-		OR (m.BetType IS NOT NULL AND (I.ProductID <> M.ProductID OR i.RefTable <> m.RefTable OR i.EventType <> m.EventType))
-	
+	WHERE i.ProductID <> p.ProductID OR i.RefTable <> p.RefTable OR i.EventType <> p.EventType OR i.BetType >= 19999
+		OR (m.BetType IS NOT NULL AND (i.ProductID <> M.ProductID OR i.RefTable <> m.RefTable OR i.EventType <> m.EventType))	
 
 	IF @ErrCode <> 0
 	   BEGIN
 	     IF @ErrCode = 1009
-		 SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '". The values "' + ISNULL(@ValueError,'') + '" is invalid (BetType < 19999).'
-
-		 IF @ErrCode = 1010 
-		 SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '". The values "' + ISNULL(@ValueError,'') + '" is invalid (EventType between 0 and 5)'
-
-		 IF @ErrCode = 1011 
-		 SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '". The values "' + ISNULL(@ValueError,'') + '" is invalid (RefTable between 0 and 3)'
-
+		 SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '". The values "' + ISNULL(@ValueError,'') + 
+						  '" is invalid (BetType must be less than 19999).'
 		 IF @ErrCode = 1012 
-		 SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '". The values "' + ISNULL(@ValueError,'') + '" is invalid'
-
+		 SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '". The values "' + ISNULL(@ValueError,'') + '" is invalid.'
+		                              
 	     RETURN
 	   END
 	
+	--Check bettype, Sporttype, Productid 
+	SELECT	@MatrixError 	= CONVERT(VARCHAR(5),I.ID),
+			@ErrCode = 1007,
+			@ValueError = CASE WHEN s.SportType IS NULL THEN i.SportType
+							   WHEN b.typeid    IS NULL THEN i.BetType
+						  ELSE i.ProductID END,
+			@ColumnName = CASE WHEN s.SportType IS NULL THEN 'Sporttype'
+			                   WHEN b.typeid    IS NULL THEN 'Bettype'
+						  ELSE 'ProductID' END
+	FROM #input i
+	     LEFT JOIN dbo.Sports s WITH(NOLOCK) ON s.SportType = i.SportType
+		 LEFT JOIN dbo.bettype b WITH(NOLOCK) ON b.typeid = i.BetType
+		 LEFT JOIN dbo.Products p WITH(NOLOCK) ON p.ProductID = i.ProductID
+	WHERE s.SportType IS NULL OR b.typeid IS NULL or p.ProductID IS NULL
+
+	IF @ErrCode <> 0
+	BEGIN
+		SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '". '+@ColumnName + ' = "' + @ValueError + '" is invalid.'
+		RETURN
+	END
 
 	SELECT  @RowTotal = COUNT(*) FROM #input
 

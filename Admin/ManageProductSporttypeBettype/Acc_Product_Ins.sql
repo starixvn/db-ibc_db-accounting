@@ -178,8 +178,8 @@ BEGIN
                               	       WHEN LEN(SubProductBalanceType)  > 512	THEN 512
 									   WHEN LEN(ProductPrefix)			> 10	THEN 10	
 									   ELSE 50 END,
-				  @ErrCode      = CASE WHEN IsOfferPlayForFun NOT IN (0,1,NULL) THEN 1008
-				                       WHEN [Enabled] NOT IN (0,1,NULL)         THEN 1008
+				  @ErrCode      = CASE WHEN IsOfferPlayForFun NOT IN (0,1) AND IsOfferPlayForFun IS NOT NULL THEN 1008
+				                       WHEN [Enabled] NOT IN (0,1,NULL) AND [Enabled] IS NOT NULL			 THEN 1008
 								  ELSE 1007 END
 									
 	FROM #inputTmp
@@ -187,8 +187,8 @@ BEGIN
 		  OR LEN(SubProductBalanceType)	> 512
 		  OR LEN(ProductPrefix)		  	> 10
 		  OR LEN(ProductName)   		> 50	  
-		  OR IsOfferPlayForFun	NOT IN (0,1,NULL)
-		  OR [Enabled]			NOT IN (0,1,NULL)
+		  OR (IsOfferPlayForFun	NOT IN (0,1) AND IsOfferPlayForFun IS NOT NULL)
+		  OR ([Enabled]			NOT IN (0,1) AND [Enabled] IS NOT NULL)
 							
 
 	IF @ValueError <> ''

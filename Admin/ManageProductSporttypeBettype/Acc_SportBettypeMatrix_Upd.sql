@@ -161,6 +161,21 @@ BEGIN
 		RETURN
 	END CATCH
 
+	SELECT TOP(1) @MatrixError 	= CONVERT(VARCHAR(5),I.ID), 
+	              @ValueError 	= i.BetType,
+				  @ErrCode      = CASE WHEN i.BetType >= 19999 THEN 1009								   
+								  ELSE 1010 END
+	FROM #input i
+		INNER JOIN #input p ON i.BetType = p.BetType
+		LEFT JOIN SportBettypeMatrix m WITH(NOLOCK) ON i.BetType = m.BetType
+	WHERE i.ProductID <> p.ProductID OR i.RefTable <> p.RefTable OR i.EventType <> p.EventType 
+		OR (m.BetType IS NOT NULL AND (i.ProductID <> M.ProductID OR i.RefTable <> m.RefTable OR i.EventType <> m.EventType))	
+	IF @ErrCode <> 0
+	BEGIN
+		SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '". The values "' + ISNULL(@ValueError,'') + '" is invalid.'
+		RETURN
+	END
+
 	SELECT  @RowTotal = COUNT(*) FROM #input
 
 	WHILE @CurrentRow <> @RowTotal
