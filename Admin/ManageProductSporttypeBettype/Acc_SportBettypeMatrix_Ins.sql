@@ -166,6 +166,9 @@ BEGIN
 		 IF @ErrCode = 1008
 		 SELECT  @ErrMsg = 'Invalid "' + @ColumnName + '" on row ' + @MatrixError + '.please check them again.'
 
+		 IF @ErrCode = 1009
+		 SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '". The values "' +ISNULL(@ValueError,'') + '" is invalid.'
+
 	     RETURN
 	   END
 	   
@@ -214,7 +217,7 @@ BEGIN
 	     IF @ErrCode = 1009
 		 SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '". The values "' + ISNULL(@ValueError,'') + 
 						  '" is invalid (BetType must be less than 19999).'
-		 IF @ErrCode = 1012 
+		 IF @ErrCode = 1010 
 		 SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '". The values "' + ISNULL(@ValueError,'') + '" is invalid.'
 		                              
 	     RETURN
