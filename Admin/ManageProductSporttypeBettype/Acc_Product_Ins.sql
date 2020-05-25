@@ -170,16 +170,16 @@ BEGIN
 	              @ValueError   = CASE WHEN LEN(Description)			> 100	THEN Description
 									   WHEN LEN(SubProductBalanceType) 	> 512	THEN SubProductBalanceType
 									   WHEN LEN(ProductPrefix)			> 10	THEN ProductPrefix	
-									   WHEN IsOfferPlayForFun NOT IN (0,1,NULL)	THEN IsOfferPlayForFun
-									   WHEN [Enabled] NOT IN (0,1,NULL)			THEN IsOfferPlayForFun
-							           ELSE ProductName END,
+									   WHEN LEN(ProductName)			> 50	THEN ProductName
+									   WHEN [Enabled] NOT IN (0,1) AND [Enabled] IS NOT NULL THEN IsOfferPlayForFun
+							           ELSE IsOfferPlayForFun END,
 									   
 				  @LimitValue   = CASE WHEN LEN(Description)        	> 100	THEN 100
                               	       WHEN LEN(SubProductBalanceType)  > 512	THEN 512
 									   WHEN LEN(ProductPrefix)			> 10	THEN 10	
 									   ELSE 50 END,
 				  @ErrCode      = CASE WHEN IsOfferPlayForFun NOT IN (0,1) AND IsOfferPlayForFun IS NOT NULL THEN 1008
-				                       WHEN [Enabled] NOT IN (0,1,NULL) AND [Enabled] IS NOT NULL			 THEN 1008
+				                       WHEN [Enabled] NOT IN (0,1) AND [Enabled] IS NOT NULL THEN 1008
 								  ELSE 1007 END
 									
 	FROM #inputTmp
@@ -226,6 +226,7 @@ BEGIN
 	IF @ErrCode <> 0
 	BEGIN
 		SELECT @ErrMsg = 'Invalid "' + @ColumnName + '" On productID  = "' + @ProductError + '". Please check again.'
+		RETURN
 	END
 		
 		 
