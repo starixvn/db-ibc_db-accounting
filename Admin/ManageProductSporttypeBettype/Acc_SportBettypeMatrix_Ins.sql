@@ -135,9 +135,9 @@ BEGIN
 		   OR LEN(RefTable)		= 0
 
 	SELECT TOP(1) @MatrixError 	= CONVERT(VARCHAR(5),ID), 
-	              @ValueError 	= CASE WHEN IsLive		NOT IN (0,1,'')	THEN IsLive
-									   WHEN [Enabled]	NOT IN (0,1,'')	THEN  [Enabled]
-									   WHEN IsTest		NOT IN (0,1,'')	THEN IsTest
+	              @ValueError 	= CASE WHEN IsLive		NOT IN (0,1) AND IsLive		IS NOT NULL	THEN  IsLive
+									   WHEN [Enabled]	NOT IN (0,1) AND [Enabled]	IS NOT NULL	THEN  [Enabled]
+									   WHEN IsTest		NOT IN (0,1) AND IsTest		IS NOT NULL	THEN  IsTest
 									   ELSE SubProduct	END,
                   @LimitValue	= CASE WHEN LEN(SubProduct) > 500 THEN 500
 				                       ELSE 1 END,
@@ -145,9 +145,9 @@ BEGIN
 				                       ELSE 1008 END
 	FROM #inputTmp
 	WHERE  LEN(SubProduct) > 500
-			OR IsLive	NOT IN (0,1,'')
-			OR Enabled	NOT IN (0,1,'')
-			OR IsTest	NOT IN (0,1,'')
+			OR (IsLive		NOT IN (0,1) AND IsLive		IS NOT NULL)
+			OR ([Enabled]	NOT IN (0,1) AND [Enabled]	IS NOT NULL)
+			OR (IsTest		NOT IN (0,1) AND IsTest		IS NOT NULL)
 
 
 	IF @ValueError <> ''
@@ -194,8 +194,8 @@ BEGIN
 
 	SELECT TOP(1) @MatrixError 	= CONVERT(VARCHAR(5),I.ID), 
 	              @ValueError 	= CASE WHEN i.BetType >= 19999 THEN i.BetType
-									   WHEN i.EventType NOT BETWEEN 0 AND 5 THEN  i.EventType
-									   WHEN  i.RefTable NOT BETWEEN 0 AND 3 THEN i.RefTable
+									   WHEN i.EventType NOT BETWEEN 0 AND 5 OR i.EventType IS NULL THEN  i.EventType
+									   WHEN  i.RefTable NOT BETWEEN 0 AND 3 OR i.RefTable  IS NULL THEN i.RefTable
 								  ELSE i.BetType END,
 
 				  @ErrCode      = CASE WHEN i.BetType >= 19999 THEN 1009
@@ -208,8 +208,11 @@ BEGIN
 		OR i.RefTable <> p.RefTable 
 		OR i.EventType <> p.EventType
 	    OR i.BetType >= 19999
-		OR i.EventType NOT BETWEEN 0 AND 5
+		OR i.EventType NOT BETWEEN 0 AND 5	
 		OR i.RefTable NOT BETWEEN 0 AND 3
+		OR i.EventType  IS NULL
+		OR I.RefTable IS NULL
+	
 
 	IF @ValueError <> ''
 	   BEGIN
