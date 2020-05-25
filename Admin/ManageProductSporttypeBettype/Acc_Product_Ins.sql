@@ -191,13 +191,13 @@ BEGIN
 		  OR ([Enabled]			NOT IN (0,1) AND [Enabled] IS NOT NULL)
 							
 
-	IF @ValueError <> ''
+	IF @ErrCode <> 0
 	   BEGIN
 	     IF @ErrCode = 1007
-		 SELECT @ErrMsg = 'At ProductId = "' + @ProductError + 
-				           '" . The value "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(4),@LimitValue) + '.'
+		 SELECT @ErrMsg = 'At ProductId = "' + ISNULL(@ProductError,'') + 
+				           '" . The value "' + ISNULL(@ValueError,'') + '" is exceeded max length ' + CONVERT(VARCHAR(4),@LimitValue) + '.'
 		 IF @ErrCode = 1008
-		 SELECT @ErrMsg = 'At ProductId = "' + @ProductError + '".The value "' + @ValueError + '" is invalid.'
+		 SELECT @ErrMsg = 'At ProductId = "' + ISNULL(@ProductError,'') + '".The value "' + ISNULL(@ValueError,'') + '" is invalid.'
 
 	     RETURN
 	   END
@@ -225,7 +225,7 @@ BEGIN
 
 	IF @ErrCode <> 0
 	BEGIN
-		SELECT @ErrMsg = 'Invalid "' + @ColumnName + '" On productID  = "' + @ProductError + '". Please check again.'
+		SELECT @ErrMsg = 'Invalid "' + @ColumnName + '" On productID  = "' + ISNULL(@ProductError,'') + '". Please check again.'
 		RETURN
 	END
 		
