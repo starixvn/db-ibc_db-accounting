@@ -142,7 +142,10 @@ BEGIN
 				  @ErrCode      = CASE WHEN LEN(SubProduct) > 500 THEN 1007									   
 				                       ELSE 1008 END,
 				  @ColumnName   = CASE WHEN EventType	IS NULL	OR EventType NOT BETWEEN 0 AND 5 THEN 'EventType'
-									   WHEN RefTable	IS NULL	OR RefTable	 NOT BETWEEN 0 AND 3 THEN 'RefTable'
+									   WHEN RefTable	IS NULL	OR RefTable	 NOT BETWEEN 0 AND 3 THEN 'RefTable'								   
+									   WHEN [Enabled]	NOT IN (0,1) AND [Enabled]	IS NOT NULL  THEN 'Enabled'
+									   WHEN EventType	NOT IN (0,1) AND EventType	IS NOT NULL  THEN 'EventType'
+									   WHEN IsLive		NOT IN (0,1) AND IsLive		IS NOT NULL  THEN 'IsLive'
 								  ELSE NULL END
 	FROM #inputTmp
 	WHERE  LEN(SubProduct) > 500
