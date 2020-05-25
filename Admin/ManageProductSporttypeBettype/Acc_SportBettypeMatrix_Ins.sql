@@ -199,11 +199,12 @@ BEGIN
 								  ELSE i.BetType END,
 
 				  @ErrCode      = CASE WHEN i.BetType >= 19999 THEN 1009
-									   WHEN i.EventType NOT BETWEEN 0 AND 5 THEN  1010
-									   WHEN  i.RefTable NOT BETWEEN 0 AND 3 THEN  1011
+									   WHEN i.EventType NOT BETWEEN 0 AND 5 OR i.EventType IS NULL THEN  1010
+									   WHEN  i.RefTable NOT BETWEEN 0 AND 3 OR i.RefTable  IS NULL THEN  1011
 								  ELSE 1012 END
 	FROM #input i
 		INNER JOIN #input p ON i.BetType = p.BetType
+		LEFT JOIN SportBettypeMatrix m WITH(NOLOCK) ON i.BetType = m.BetType
 	WHERE i.ProductID <> p.ProductID 
 		OR i.RefTable <> p.RefTable 
 		OR i.EventType <> p.EventType
@@ -212,6 +213,7 @@ BEGIN
 		OR i.RefTable NOT BETWEEN 0 AND 3
 		OR i.EventType  IS NULL
 		OR I.RefTable IS NULL
+		OR (m.BetType IS NOT NULL AND (I.ProductID <> M.ProductID OR i.RefTable <> m.RefTable OR i.EventType <> m.EventType))
 	
 
 	IF @ErrCode <> 0
