@@ -161,7 +161,7 @@ BEGIN
 		 SELECT  @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + 
 				          '" . The value "' + ISNULL(@ValueError,'') + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) +'.'
 		 IF @ErrCode = 1008
-		 SELECT  @ErrMsg = 'Invalid "' + @ColumnName + '" on row [' + @MatrixError + '].please check them again.'
+		 SELECT  @ErrMsg = 'Invalid "' + @ColumnName + '" on row ' + @MatrixError + ' .please check them again.'
 
 	     RETURN
 	   END
@@ -213,7 +213,7 @@ BEGIN
 						  '" is invalid (BetType must be less than 19999).'
 		 IF @ErrCode = 1010 
 		 SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '". The bettype "' + ISNULL(@ValueError,'') + '" is incorrect'
-		                  + ' (The ProductID, RefTable, EventType must be the same for the same BetType).'
+		                  + ' (the ProductID, RefTable, EventType must be the same for the same BetType).'
 		                              
 	     RETURN
 	   END

@@ -173,7 +173,7 @@ BEGIN
 	IF @ErrCode <> 0
 	BEGIN
 		SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '". The bettype "' + ISNULL(@ValueError,'') + '" is incorrect'
-						+ ' (The ProductID, RefTable, EventType must be the same for the same BetType).'
+						+ ' (the ProductID, RefTable, EventType must be the same for the same BetType).'
 		RETURN
 	END
 
