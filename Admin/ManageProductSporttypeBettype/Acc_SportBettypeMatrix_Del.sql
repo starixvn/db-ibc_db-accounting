@@ -3,8 +3,8 @@ CREATE PROCEDURE  dbo.Acc_SportBettypeMatrix_Del
 	@SportType   SMALLINT,
 	@BetType     SMALLINT,
 	@Islive      BIT,
-	@ErrCode     INT = 0,
-	@ErrMsg      NVARCHAR(MAX) = '',
+	@ErrCode     INT = 0 OUTPUT,
+	@ErrMsg      NVARCHAR(MAX) = '' OUTPUT,
 	@UserID      INT,
 	@LoginIP     VARCHAR(20) = ''
 AS
