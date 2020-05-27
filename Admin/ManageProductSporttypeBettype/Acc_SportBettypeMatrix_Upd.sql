@@ -1,6 +1,6 @@
 /*<info serverAlias="DBPRO-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 
-CREATE PROCEDURE  dbo.Acc_SportBettypeMatrix_Upd
+ALTER PROCEDURE  dbo.Acc_SportBettypeMatrix_Upd
 	@File		NVARCHAR(MAX),
 	@LoginIP	VARCHAR(20)='',
 	@ErrCode	INT = 0 OUTPUT,
@@ -126,8 +126,7 @@ BEGIN
 	IF @ValueError <> ''
 	   BEGIN
 		 SELECT @ErrCode = 1007, 
-		        @ErrMsg = 'At Row = "' + @MatrixError + 
-				          '" . The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) +'.'
+		        @ErrMsg = 'The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) +'.'
 	     RETURN
 	   END
 	   
@@ -169,10 +168,13 @@ BEGIN
 		INNER JOIN #input p ON i.BetType = p.BetType
 		LEFT JOIN SportBettypeMatrix m WITH(NOLOCK) ON i.BetType = m.BetType
 	WHERE i.ProductID <> p.ProductID OR i.RefTable <> p.RefTable OR i.EventType <> p.EventType 
-		OR (m.BetType IS NOT NULL AND (i.ProductID <> M.ProductID OR i.RefTable <> m.RefTable OR i.EventType <> m.EventType))	
+		OR (m.BetType IS NOT NULL 
+			AND (m.SportType <> p.SportType OR m.IsLive <> p.IsLive) 
+			AND (i.ProductID <> M.ProductID OR i.RefTable <> m.RefTable OR i.EventType <> m.EventType))	
+
 	IF @ErrCode <> 0
 	BEGIN
-		SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '". The bettype "' + ISNULL(@ValueError,'') + '" is incorrect'
+		SELECT @ErrMsg = 'The bettype "' + ISNULL(@ValueError,'') + '" is incorrect'
 						+ ' (the ProductID, RefTable, EventType must be the same for the same BetType).'
 		RETURN
 	END

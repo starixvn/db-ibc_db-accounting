@@ -165,8 +165,7 @@ BEGIN
 	IF @ValueError <> ''
 	   BEGIN
 		 SELECT @ErrCode = 1007, 
-		        @ErrMsg = 'At ProductId = "' + @ProductError + 
-				           '" . The value "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
+		        @ErrMsg =  'The value "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
 
 	     RETURN
 	   END
