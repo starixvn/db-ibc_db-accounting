@@ -161,7 +161,7 @@ BEGIN
 		 SELECT  @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + 
 				          '" . The value "' + ISNULL(@ValueError,'') + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) +'.'
 		 IF @ErrCode = 1008
-		 SELECT  @ErrMsg = 'Invalid "' + @ColumnName + '" on row ' + @MatrixError + ' .please check them again.'
+		  SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '", the Value of "' + @ColumnName + '" Column is invalid. Please check again.'
 
 	     RETURN
 	   END

@@ -1,6 +1,6 @@
 /*<info serverAlias="DBPRO-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE  dbo.Acc_Product_Sel
-	@ProductID		INT = NULL,
+	@ProductID		TINYINT = NULL,
 	@ProductName	VARCHAR(50) = NULL,
 	@ProductPrefix  VARCHAR(10) = NULL,
 	@PageSize		INT = 0,
