@@ -109,7 +109,7 @@ BEGIN
 			ROW_NUMBER() OVER(ORDER BY ProductID) AS RowNum  
 			
 	FROM dbo.Products WITH(NOLOCK)
-	WHERE (ProductID = @ProductID OR ISNULL(@ProductID,'') = '') 
+	WHERE (ProductID = @ProductID OR @ProductID IS NULL) 
 	      AND (ProductName LIKE '%' + @ProductName + '%' OR ISNULL(@ProductName,'') = '')
 		  AND (ProductPrefix LIKE '%' + @ProductPrefix + '%' OR ISNULL(@ProductPrefix,'') = '')
 
