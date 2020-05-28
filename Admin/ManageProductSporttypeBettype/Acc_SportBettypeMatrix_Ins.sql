@@ -149,11 +149,11 @@ BEGIN
 								  ELSE NULL END
 	FROM #inputTmp
 	WHERE  LEN(SubProduct) > 500
-			OR (IsLive		NOT IN (0,1) AND IsLive		IS NOT NULL)
-			OR ([Enabled]	NOT IN (0,1) AND [Enabled]	IS NOT NULL)
-			OR (IsTest		NOT IN (0,1) AND IsTest		IS NOT NULL)
-			OR EventType	IS NOT NULL  AND EventType  NOT BETWEEN 0 AND 5	
-		    OR RefTable		IS NOT NULL  AND RefTable	NOT BETWEEN 0 AND 3
+			OR IsLive		IS  NULL OR IsLive		NOT IN (0,1) 
+			OR [Enabled]	IS  NULL OR [Enabled]	NOT IN (0,1) 
+			OR IsTest		IS  NULL OR IsTest		NOT IN (0,1) 
+			OR EventType	IS  NULL OR EventType   NOT BETWEEN 0 AND 5	
+		    OR RefTable		IS  NULL OR RefTable	NOT BETWEEN 0 AND 3
 			
 	IF @ErrCode <> 0
 	   BEGIN
@@ -204,6 +204,7 @@ BEGIN
 		INNER JOIN #input p ON i.BetType = p.BetType
 		LEFT JOIN SportBettypeMatrix m WITH(NOLOCK) ON i.BetType = m.BetType
 	WHERE i.ProductID <> p.ProductID OR i.RefTable <> p.RefTable OR i.EventType <> p.EventType OR i.BetType >= 19999
+		
 		OR (m.BetType IS NOT NULL AND (i.ProductID <> m.ProductID OR i.RefTable <> m.RefTable OR i.EventType <> m.EventType))	
 
 	IF @ErrCode <> 0
