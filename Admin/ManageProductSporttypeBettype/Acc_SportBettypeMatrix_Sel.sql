@@ -80,8 +80,8 @@ BEGIN
 		INNER JOIN dbo.Sports s WITH(NOLOCK) ON m.SportType = s.SportType 
 		INNER JOIN dbo.bettype b WITH(NOLOCK) ON m.BetType = b.typeid
 	WHERE (',' + @ProductID + ',' LIKE '%,' + CONVERT(VARCHAR(4), m.ProductID) + ',%'	OR ISNULL(@ProductID,'') = '') 
-		  AND (m.SportType	= @Sporttype	OR ISNULL(@Sporttype,0) = 0) 
-		  AND (m.BetType	= @BetType		OR ISNULL(@BetType,0)   = 0)
+		  AND (m.SportType	= @Sporttype	OR ISNULL(@Sporttype,'') = '') 
+		  AND (m.BetType	= @BetType		OR ISNULL(@BetType,'')   = '')
 		  AND (m.EventType	= @EventType	OR @EventType IS NULL)
 		  AND (m.RefTable	= @RefTable		OR @RefTable IS NULL)
 		  AND (s.SportName	= '' OR s.SportName LIKE '%' + @SportName + '%')
