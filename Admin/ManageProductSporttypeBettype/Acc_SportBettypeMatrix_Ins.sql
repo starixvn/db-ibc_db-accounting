@@ -213,7 +213,7 @@ BEGIN
 
 	IF @ErrCode <> 0
 	BEGIN
-		SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '".'+@ColumnName + ' "' + @ValueError + '" does not exist.'
+		SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '".'+@ColumnName + ' = "' + @ValueError + '" does not exist.'
 		RETURN
 	END
 
