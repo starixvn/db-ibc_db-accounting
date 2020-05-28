@@ -141,11 +141,11 @@ BEGIN
 				                       ELSE 1 END,
 				  @ErrCode      = CASE WHEN LEN(SubProduct) > 500 THEN 1007									   
 				                       ELSE 1008 END,
-				  @ColumnName   = CASE WHEN EventType	IS NOT NULL  AND EventType	NOT BETWEEN 0 AND 5 THEN 'EventType'
-									   WHEN RefTable	IS NOT NULL  AND RefTable	NOT BETWEEN 0 AND 3 THEN 'RefTable'								   
-									   WHEN [Enabled]	NOT IN (0,1) AND [Enabled]	IS NOT NULL  THEN 'Enabled'
-									   WHEN IsTest		NOT IN (0,1) AND IsTest		IS NOT NULL  THEN 'IsTest'
-									   WHEN IsLive		NOT IN (0,1) AND IsLive		IS NOT NULL  THEN 'IsLive'
+				  @ColumnName   = CASE WHEN [Enabled]	IS  NULL OR [Enabled]	NOT IN (0,1)		THEN 'Enabled'
+									   WHEN IsTest		IS  NULL OR IsTest		NOT IN (0,1)		THEN 'IsTest'
+									   WHEN IsLive		IS  NULL OR IsLive		NOT IN (0,1)		THEN 'IsLive'
+									   WHEN EventType	IS  NULL OR EventType	NOT BETWEEN 0 AND 5 THEN 'EventType'
+									   WHEN RefTable	IS  NULL OR RefTable	NOT BETWEEN 0 AND 3 THEN 'RefTable'	
 								  ELSE NULL END
 	FROM #inputTmp
 	WHERE  LEN(SubProduct) > 500
@@ -196,6 +196,27 @@ BEGIN
 		RETURN
 	END CATCH
 
+	--Check bettype, Sporttype, Productid 
+	SELECT	@MatrixError 	= CONVERT(VARCHAR(5),I.ID),
+			@ErrCode = 1007,
+			@ValueError = CASE WHEN s.SportType IS NULL THEN i.SportType
+							   WHEN b.typeid    IS NULL THEN i.BetType
+						  ELSE i.ProductID END,
+			@ColumnName = CASE WHEN s.SportType IS NULL THEN 'Sporttype'
+			                   WHEN b.typeid    IS NULL THEN 'Bettype'
+						  ELSE 'ProductID' END
+	FROM #input i
+	     LEFT JOIN dbo.Sports s WITH(NOLOCK) ON s.SportType = i.SportType
+		 LEFT JOIN dbo.bettype b WITH(NOLOCK) ON b.typeid = i.BetType
+		 LEFT JOIN dbo.Products p WITH(NOLOCK) ON p.ProductID = i.ProductID
+	WHERE s.SportType IS NULL OR b.typeid IS NULL or p.ProductID IS NULL
+
+	IF @ErrCode <> 0
+	BEGIN
+		SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '". The '+@ColumnName + ' "' + @ValueError + '" does not exist.'
+		RETURN
+	END
+
 	SELECT TOP(1) @MatrixError 	= CONVERT(VARCHAR(5),I.ID), 
 	              @ValueError 	= i.BetType,
 				  @ErrCode      = CASE WHEN i.BetType >= 19999 THEN 1009								   
@@ -218,27 +239,6 @@ BEGIN
 		                              
 	     RETURN
 	   END
-	
-	--Check bettype, Sporttype, Productid 
-	SELECT	@MatrixError 	= CONVERT(VARCHAR(5),I.ID),
-			@ErrCode = 1007,
-			@ValueError = CASE WHEN s.SportType IS NULL THEN i.SportType
-							   WHEN b.typeid    IS NULL THEN i.BetType
-						  ELSE i.ProductID END,
-			@ColumnName = CASE WHEN s.SportType IS NULL THEN 'Sporttype'
-			                   WHEN b.typeid    IS NULL THEN 'Bettype'
-						  ELSE 'ProductID' END
-	FROM #input i
-	     LEFT JOIN dbo.Sports s WITH(NOLOCK) ON s.SportType = i.SportType
-		 LEFT JOIN dbo.bettype b WITH(NOLOCK) ON b.typeid = i.BetType
-		 LEFT JOIN dbo.Products p WITH(NOLOCK) ON p.ProductID = i.ProductID
-	WHERE s.SportType IS NULL OR b.typeid IS NULL or p.ProductID IS NULL
-
-	IF @ErrCode <> 0
-	BEGIN
-		SELECT @ErrMsg = 'At Row = "' + ISNULL(@MatrixError,'') + '". The '+@ColumnName + ' "' + @ValueError + '" does not exist.'
-		RETURN
-	END
 
 	SELECT  @RowTotal = COUNT(*) FROM #input
 

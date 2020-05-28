@@ -177,20 +177,22 @@ BEGIN
                               	       WHEN LEN(SubProductBalanceType)  > 512	THEN 512
 									   WHEN LEN(ProductPrefix)			> 10	THEN 10	
 									   ELSE 50 END,
-				  @ErrCode      = CASE WHEN IsOfferPlayForFun NOT IN (0,1) AND IsOfferPlayForFun IS NOT NULL THEN 1008
-				                       WHEN [Enabled] NOT IN (0,1) AND [Enabled] IS NOT NULL THEN 1008
+				  @ErrCode      = CASE WHEN IsOfferPlayForFun NOT IN (0,1) OR IsOfferPlayForFun IS  NULL THEN 1008
+				                       WHEN [Enabled] NOT IN (0,1) OR [Enabled] IS  NULL THEN 1008
 								  ELSE 1007 END,
-				  @ColumnName   =  CASE WHEN IsOfferPlayForFun NOT IN (0,1) AND IsOfferPlayForFun IS NOT NULL THEN 'IsOfferPlayForFun'
-				                       WHEN [Enabled] NOT IN (0,1) AND [Enabled] IS NOT NULL THEN 'Enabled'
-								   ELSE NULL END
+				  @ColumnName   = CASE WHEN IsOfferPlayForFun NOT IN (0,1) OR IsOfferPlayForFun IS  NULL THEN 'IsOfferPlayForFun'
+				                       WHEN [Enabled] NOT IN (0,1) OR [Enabled] IS  NULL THEN 'Enabled'
+								  ELSE NULL END
 									
 	FROM #inputTmp
 	WHERE LEN(Description)		  		> 100 
 		  OR LEN(SubProductBalanceType)	> 512
 		  OR LEN(ProductPrefix)		  	> 10
-		  OR LEN(ProductName)   		> 50	  
-		  OR (IsOfferPlayForFun	NOT IN (0,1) AND IsOfferPlayForFun IS NOT NULL)
-		  OR ([Enabled]			NOT IN (0,1) AND [Enabled] IS NOT NULL)
+		  OR LEN(ProductName)   		> 50
+		  OR IsOfferPlayForFun			IS NULL
+		  OR [Enabled]					IS NULL
+		  OR IsOfferPlayForFun			NOT IN (0,1) 
+		  OR [Enabled]					NOT IN (0,1)
 							
 
 	IF @ErrCode <> 0
@@ -217,13 +219,13 @@ BEGIN
 
 	SELECT  @ProductError = ProductID,
 			@ColumnName = CASE WHEN BalanceType IS NOT NULL AND BalanceType  NOT BETWEEN 1 AND 4 THEN 'BalanceType'
-			                   WHEN GroupType	IS NOT NULL AND GroupType NOT IN (0,1) THEN 'GroupType'
+			                   WHEN GroupType	IS  NULL OR GroupType NOT IN (0,1) THEN 'GroupType'
 						  ELSE 'CasinoType' END,
 			@ErrCode = 1007
 	FROM #input
 	WHERE BalanceType IS NOT NULL AND BalanceType  NOT BETWEEN 1 AND 4
-	    OR GroupType  IS NOT NULL AND GroupType NOT IN (0,1)
-		OR CasinoType IS NOT NULL AND CasinoType NOT IN (0,1,2)
+	    OR GroupType  IS NULL OR GroupType NOT IN (0,1)
+		OR CasinoType IS NULL OR CasinoType NOT IN (0,1,2)
 
 	IF @ErrCode <> 0
 	BEGIN
