@@ -216,14 +216,14 @@ BEGIN
 	END CATCH
 
 	SELECT  @ProductError = ProductID,
-			@ColumnName = CASE WHEN BalanceType IS NULL OR BalanceType  NOT BETWEEN 1 AND 4 THEN 'BalanceType'
-			                   WHEN GroupType	IS NULL OR GroupType NOT IN (0,1) THEN 'GroupType'
+			@ColumnName = CASE WHEN BalanceType IS NOT NULL AND BalanceType  NOT BETWEEN 1 AND 4 THEN 'BalanceType'
+			                   WHEN GroupType	IS NOT NULL AND GroupType NOT IN (0,1) THEN 'GroupType'
 						  ELSE 'CasinoType' END,
 			@ErrCode = 1007
 	FROM #input
-	WHERE BalanceType IS NULL OR BalanceType  NOT BETWEEN 1 AND 4
-	    OR GroupType  IS NULL OR GroupType NOT IN (0,1)
-		OR CasinoType  IS NULL OR CasinoType NOT BETWEEN 0 AND 2
+	WHERE BalanceType IS NOT NULL AND BalanceType  NOT BETWEEN 1 AND 4
+	    OR GroupType  IS NOT NULL AND GroupType NOT IN (0,1)
+		OR CasinoType IS NOT NULL AND CasinoType NOT IN (0,1,2)
 
 	IF @ErrCode <> 0
 	BEGIN
