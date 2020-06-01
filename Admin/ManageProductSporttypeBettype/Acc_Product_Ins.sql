@@ -56,6 +56,7 @@ BEGIN
 
 	CREATE TABLE #inputTmp
 	(    
+	    ID                      INT IDENTITY (1,1),
 		ProductID 				NVARCHAR(MAX),
 		ProductName 			NVARCHAR(MAX),
 		Description 			NVARCHAR(MAX),
@@ -165,7 +166,7 @@ BEGIN
 		  OR LEN(VendorID)			= 0
 		  OR LEN(OrderNo)			= 0
 
-	SELECT TOP(1) @ProductError = ProductID, 
+	SELECT TOP(1) @ProductError = ID, 
 	
 	              @ValueError   = CASE WHEN LEN(Description)			> 100	THEN Description
 									   WHEN LEN(SubProductBalanceType) 	> 512	THEN SubProductBalanceType
@@ -198,17 +199,45 @@ BEGIN
 	IF @ErrCode <> 0
 	   BEGIN
 	     IF @ErrCode = 1007
-		 SELECT @ErrMsg = 'At ProductId = "' + ISNULL(@ProductError,'') + 
-				           '" . The value "' + ISNULL(@ValueError,'') + '" is exceeded max length ' + CONVERT(VARCHAR(4),@LimitValue) + '.'
+		 SELECT @ErrMsg = 'Row "' + ISNULL(@ProductError,'') + 
+				           '" - The values "' + ISNULL(@ValueError,'') + '" is exceeded max length ' + CONVERT(VARCHAR(4),@LimitValue) + '.'
 		 IF @ErrCode = 1008
-		 SELECT @ErrMsg = 'At productID = "' + ISNULL(@ProductError,'') + '", the Value of "' + @ColumnName + '" Column is invalid. Please check again.'
+		 SELECT @ErrMsg = 'Invalid "' + @ColumnName + '" on row "' + @ProductError + '".Please check them again.'
 
 	     RETURN
 	   END
 	   
 	BEGIN TRY
 		INSERT INTO #input
-		SELECT *
+		(
+				ProductID, 			
+				ProductName, 			
+				Description, 			
+				ProductPrefix, 			
+				Enabled, 				
+				EndOfSupportDate, 		
+				BalanceType, 			
+				SubProductBalanceType,	
+				GroupType, 				
+				CasinoType, 				
+				IsOfferPlayForFun, 			
+				VendorID, 				
+				OrderNo
+		)
+		SELECT	ProductID, 			
+				ProductName, 			
+				Description, 			
+				ProductPrefix, 			
+				Enabled, 				
+				EndOfSupportDate, 		
+				BalanceType, 			
+				SubProductBalanceType,	
+				GroupType, 				
+				CasinoType, 				
+				IsOfferPlayForFun, 			
+				VendorID, 				
+				OrderNo
+
 		FROM #inputTmp
 	END TRY
 
@@ -217,7 +246,7 @@ BEGIN
 		RETURN
 	END CATCH
 
-	SELECT  @ProductError = ProductID,
+	SELECT  @ProductError = ID,
 			@ColumnName = CASE WHEN BalanceType IS NOT NULL AND BalanceType  NOT BETWEEN 1 AND 4 THEN 'BalanceType'
 			                   WHEN GroupType	IS  NULL OR GroupType NOT IN (0,1) THEN 'GroupType'
 						  ELSE 'CasinoType' END,
@@ -229,7 +258,7 @@ BEGIN
 
 	IF @ErrCode <> 0
 	BEGIN
-		SELECT @ErrMsg = 'At productID = "' + ISNULL(@ProductError,'') + '", The Value of "' + @ColumnName + '" Column is invalid. Please check again.'
+		SELECT @ErrMsg = 'Invalid "' + @ColumnName + '" on row "' + @ProductError +'". Please check them again.'
 		RETURN
 	END
 		

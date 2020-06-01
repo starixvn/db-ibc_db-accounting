@@ -174,8 +174,7 @@ BEGIN
 
 	IF @ErrCode <> 0
 	BEGIN
-		SELECT @ErrMsg = 'The bettype "' + ISNULL(@ValueError,'') + '" is incorrect'
-						+ ' (the ProductID, RefTable, EventType must be the same for the same BetType).'
+		SELECT @ErrMsg = 'the ProductID, RefTable, EventType of Rows must be the same for the same BetType.'
 		RETURN
 	END
 
