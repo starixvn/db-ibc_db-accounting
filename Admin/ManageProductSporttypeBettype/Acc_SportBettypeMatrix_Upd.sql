@@ -174,7 +174,7 @@ BEGIN
 
 	IF @ErrCode <> 0
 	BEGIN
-		SELECT @ErrMsg = 'the ProductID, RefTable, EventType of Rows must be the same for the same BetType.'
+		SELECT @ErrMsg = 'The ProductID, RefTable, EventType of Rows must be the same for the same BetType.'
 		RETURN
 	END
 
