@@ -87,6 +87,7 @@ BEGIN
 
 	CREATE TABLE #inputTmp
 	(    
+		ID              INT IDENTITY (1,1),
 		typeid          NVARCHAR(MAX),
 		typenamee       NVARCHAR(MAX),
 		typenamec		NVARCHAR(MAX),
@@ -229,7 +230,7 @@ BEGIN
 	      OR LEN(ParentTypeid)		= 0
 		  OR LEN(DisplayedTypeID)	= 0
 
-	SELECT TOP(1) @BettypeError = typeid, 
+	SELECT TOP(1) @BettypeError = ID, 
 	              @ValueError   = CASE WHEN LEN(typenamee)		> 128 THEN typenamee
 									   WHEN LEN(typenamec)		> 128 THEN typenamec
 									   WHEN LEN(typedesc)		> 128 THEN typedesc
@@ -277,15 +278,62 @@ BEGIN
 	IF @ValueError <> ''
 	   BEGIN
 		 SELECT @ErrCode = 1007, 
-		        @ErrMsg = 'At bettype = "' + @BettypeError + 
-				           '" . The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
+		        @ErrMsg = 'Row "' + @BettypeError + 
+				           '" - The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
 
 	     RETURN
 	   END
 	   
 	BEGIN TRY
 		INSERT INTO #input
-		SELECT *
+		(
+				typeid,
+				typenamee,
+				typenamec,
+				typedesc,
+				typenamec_uni,
+				typenamej,
+				typenamcn,
+				typenamecn,
+				typenameth,
+				typenameit,
+				typenameko,
+				typenameES,
+				typenameVN,
+				typenameEL,
+				typenamee_Eu,
+				typenameRU,
+				typenameID,
+				typenamePT,
+				typenameFR,
+				ParentTypeid,
+				typenameMMR,
+				typenameHI,
+				DisplayedTypeID
+		)
+		SELECT	typeid,
+				typenamee,
+				typenamec,
+				typedesc,
+				typenamec_uni,
+				typenamej,
+				typenamcn,
+				typenamecn,
+				typenameth,
+				typenameit,
+				typenameko,
+				typenameES,
+				typenameVN,
+				typenameEL,
+				typenamee_Eu,
+				typenameRU,
+				typenameID,
+				typenamePT,
+				typenameFR,
+				ParentTypeid,
+				typenameMMR,
+				typenameHI,
+				DisplayedTypeID
 		FROM #inputTmp
 	END TRY
 

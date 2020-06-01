@@ -66,6 +66,7 @@ BEGIN
 
 	CREATE TABLE #inputTmp
 	(    
+		ID				INT IDENTITY (1,1),
 		SportType		NVARCHAR(MAX),
 		SportName		NVARCHAR(MAX),
 		SportNameCh		NVARCHAR(MAX),
@@ -184,7 +185,7 @@ BEGIN
 	    SportType       = CASE WHEN LEN(SportType)       = 0 THEN NULL ELSE SportType       END
 	WHERE LEN(ParlayMaxPayout) = 0 OR LEN(SportType) = 0
 
-	SELECT TOP(1) @SportError = SportType, 
+	SELECT TOP(1) @SportError = ID, 
 	              @ValueError = CASE  WHEN LEN(SportName)	> 50 THEN SportName			
 								  WHEN LEN(SportNameCh)		> 50 THEN SportNameCh		
 								  WHEN LEN(SportNameCs)		> 50 THEN SportNameCs		
@@ -226,14 +227,54 @@ BEGIN
 	IF @ValueError <> ''
 	   BEGIN
 		 SELECT @ErrCode = 1007, 
-		        @ErrMsg = 'At Sporttype = ' + @SportError + 
-				           ' . The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) +'.'
+		        @ErrMsg = 'Row "' + @SportError + 
+				           '" - The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) +'.'
 	     RETURN
 	   END
 	   
 	BEGIN TRY
 		INSERT INTO #input
-		SELECT *
+		(
+			    SportType,
+				SportName,
+				SportNameCh,
+			    SportNameCs,
+				SportNameJp,
+				SportNameIt,
+				SportNameTh,
+				ParlayMaxPayout,
+				SportNameKo,
+				SportNameES,
+				SportNameVN,
+				SportNameEL,
+				SportNameRU,
+				SportNameID,
+				SportNamePT,
+				SportNameFR,
+				SportNameMMR,
+				SportNamePL,
+				SportNameHI
+		)
+		SELECT  SportType,
+				SportName,
+				SportNameCh,
+			    SportNameCs,
+				SportNameJp,
+				SportNameIt,
+				SportNameTh,
+				ParlayMaxPayout,
+				SportNameKo,
+				SportNameES,
+				SportNameVN,
+				SportNameEL,
+				SportNameRU,
+				SportNameID,
+				SportNamePT,
+				SportNameFR,
+				SportNameMMR,
+				SportNamePL,
+				SportNameHI
+
 		FROM #inputTmp
 	END TRY
 	BEGIN CATCH
