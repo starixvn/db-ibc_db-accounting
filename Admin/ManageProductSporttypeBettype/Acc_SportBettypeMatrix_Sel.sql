@@ -1,6 +1,6 @@
 /*<info serverAlias="DBPRO-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE  dbo.Acc_SportBettypeMatrix_Sel
-    @ProductID      VARCHAR(200) = '', 
+    @ProductID      VARCHAR(200) = 'All', 
 	@SportType      TINYINT = NULL,
 	@BetType        INT = NULL,
 	@EventType      TINYINT  = NULL,
@@ -28,7 +28,7 @@ BEGIN
 	
 	DECLARE @RowStart INT, @RowEnd INT
 
-	SELECT @PageIndex = @PageIndex - 1, @RowStart = @PageIndex * @PageSize + 1, @RowEnd = @RowStart + @PageSize - 1
+	SELECT @PageIndex = @PageIndex - 1, @RowStart = @PageIndex * @PageSize + 1, @RowEnd = @RowStart + @PageSize - 1, @ProductID = ISNULL(@ProductID,'')
 
 	CREATE TABLE #Tmp (
 	    ProductID		TINYINT,
@@ -79,7 +79,7 @@ BEGIN
 		INNER JOIN dbo.Products p WITH(NOLOCK) ON m.ProductID = p.ProductID
 		INNER JOIN dbo.Sports s WITH(NOLOCK) ON m.SportType = s.SportType 
 		INNER JOIN dbo.bettype b WITH(NOLOCK) ON m.BetType = b.typeid
-	WHERE (',' + @ProductID + ',' LIKE '%,' + CONVERT(VARCHAR(4), m.ProductID) + ',%'	OR ISNULL(@ProductID,'') = '') 
+	WHERE (',' + @ProductID + ',' LIKE '%,' + CONVERT(VARCHAR(4), m.ProductID) + ',%'	OR @ProductID = 'All') 
 		  AND (m.SportType	= @Sporttype	OR @Sporttype IS NULL) 
 		  AND (m.BetType	= @BetType		OR @BetType IS NULL)
 		  AND (m.EventType	= @EventType	OR @EventType IS NULL)
