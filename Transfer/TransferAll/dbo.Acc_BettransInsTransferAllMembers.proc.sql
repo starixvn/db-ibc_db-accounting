@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_BettransInsTransferAllMembers]	
 	@AgentName varchar(50),  
 	@UserID int,  
@@ -32,6 +32,7 @@ AS
 		- 20151021@Elodie: Set @IsForce = 1 for updating balance debit [Redmine:#40125]
 		- 20160126@Kathy: get balance from bettransRNG + bettransLC [Redmine:#50674]
 		- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
+		- 20200602@Percy: Separate 3rdPendingTransfer from Cash and Balance [RedmineID: #135200]
 		
 	Param's Explanation:
 */ 
@@ -139,6 +140,7 @@ BEGIN
 		SELECT	b.custid, b.bettype, b.winlostdate, b.winlost, b.actual_stake, b.playercomm
 		FROM	dbo.bettrans b WITH(NOLOCK)
 		WHERE	b.ruben = 1
+				AND bettype NOT IN (21008, 21009)
 				AND b.custid IN (SELECT custid FROM #Member)
 		UNION ALL
 		SELECT	r.custid, r.gameID, r.winlostdate, r.winlost, r.actual_stake, r.playercomm

@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet,bodbExtAccNet" viewers="" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet,bodbExtAccNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_ClearBalanceAllDownlines]
 	@AgentName varchar(50),	-- S99BD
 	@UserID int = 8,
@@ -36,6 +36,7 @@ AS
 		- 20150126@Elodie: Include to get balance from bettransRNG + bettransLC [Redmine:#50674]
 		- 20160722@Viet: Improve performance [Redmine:#58288]
 		- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
+		- 20200602@Percy: Separate 3rdPendingTransfer from Cash and Balance [RedmineID: #135200]
 		 				       
 	Param's Explanation:
 		@AgentName: username of agent/master/super to clear his all downlines' balance
@@ -146,6 +147,7 @@ BEGIN
 			INNER JOIN dbo.bettrans b WITH(NOLOCK) ON c.custid = b.custid
 		WHERE (winlostdate < @winlostdate OR (winlostdate >= @winlostdate AND bettype > 20000))
 			AND ruben = 1
+			AND bettype NOT IN (21008, 21009)
 		GROUP BY b.custid, b.recommend, b.mrecommend
 		
 		INSERT INTO #tempdata (custid, recommend, mrecommend, winlost, actual_stake, playercomm, awinlost, comm, mwinlost, acomm)
@@ -195,6 +197,7 @@ BEGIN
 		INNER JOIN dbo.bettrans b WITH(NOLOCK, INDEX=IX_Recommend) ON ag.custid = b.recommend
 	WHERE (winlostdate < @winlostdate OR (winlostdate >= @winlostdate AND bettype > 20000))
 		AND ruben = 1
+		AND bettype NOT IN (21008, 21009)
 	GROUP BY b.custid, b.recommend, b.mrecommend
 
 	INSERT INTO #tempdata (custid, recommend, mrecommend, winlost, actual_stake, playercomm, awinlost, comm, mwinlost, acomm)
