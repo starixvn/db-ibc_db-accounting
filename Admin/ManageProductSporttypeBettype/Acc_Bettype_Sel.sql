@@ -104,7 +104,7 @@ BEGIN
 			DisplayedTypeID, 
 			ROW_NUMBER() OVER(ORDER BY TypeID) AS RowNum   
 	FROM bettype WITH(NOLOCK)
-	WHERE (typeid = @TypeId OR ISNULL(@TypeId,0) = 0) 
+	WHERE (typeid = @TypeId OR @TypeId IS NULL) 
 	      AND (typenamee LIKE '%' + @TypeNamee + '%' OR ISNULL(@TypeNamee,'') = '')
 
 	ORDER BY typeid

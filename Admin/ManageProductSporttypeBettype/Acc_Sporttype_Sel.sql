@@ -91,7 +91,7 @@ BEGIN
 			   SportNameHI,
 			   ROW_NUMBER() OVER(ORDER BY SportType) AS RowNum
 	FROM Sports WITH(NOLOCK)
-	WHERE (SportType = @Sporttype OR ISNULL(@Sporttype,0) = 0) 
+	WHERE (SportType = @Sporttype OR @Sporttype IS NULL) 
 		  AND (SportName LIKE '%' + @SportName +'%' OR ISNULL(@SportName,'') = '')
 
 	ORDER BY SportType
