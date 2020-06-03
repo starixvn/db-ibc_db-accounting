@@ -43,7 +43,7 @@ Revisions:
 	- 20151021@Elodie: Set @IsForce = 1 for updating balance debit [Redmine:#40125]
 	- 20150126@Elodie: Include to get balance from bettransRNG + bettransLC [Redmine:#50674]
 	- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
-	- 20200602@Percy: Separate 3rdPendingTransfer from Cash and Balance [RedmineID: #135200]
+	- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 	
 Param's Explanation:
 */ 
