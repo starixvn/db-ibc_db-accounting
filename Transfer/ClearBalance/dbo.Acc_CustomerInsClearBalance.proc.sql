@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet,bodbExtAccNet" viewers="" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet,bodbExtAccNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_CustomerInsClearBalance]
  	@FromCustID int, --Agent ID here
 	@ToCustIDs varchar(4000), 
@@ -43,6 +43,7 @@ Revisions:
 	- 20151021@Elodie: Set @IsForce = 1 for updating balance debit [Redmine:#40125]
 	- 20150126@Elodie: Include to get balance from bettransRNG + bettransLC [Redmine:#50674]
 	- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
+	- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 	
 Param's Explanation:
 */ 
@@ -129,14 +130,15 @@ BEGIN
 		--GROUP BY b.custid ,c.username
 
 		;WITH cte_Balance AS (
-			SELECT b.custid,
-				   isnull(SUM(isnull(case when bettype < 19001 and b.winlostdate < @WinlostDate then winlost-actual_stake+playercomm 
+			SELECT
+				b.custid,
+				isnull(SUM(isnull(case when bettype < 19001 and b.winlostdate < @WinlostDate then winlost-actual_stake+playercomm 
 										  when bettype > 19000 then winlost-actual_stake +playercomm 
 										  else 0 
 										  end , 0)), 0) memberBal
 			FROM  Bettrans AS b with (NOLOCK)
 			INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
-			WHERE c.recommend = @AgentID and c.roleid = 1 and b.ruben = 1
+			WHERE c.recommend = @AgentID and c.roleid = 1 and b.ruben = 1 and b.bettype not in (21008, 21009)
 			GROUP BY b.custid 
 
 			UNION ALL 
@@ -187,7 +189,7 @@ BEGIN
 			FROM  Bettrans AS b with (NOLOCK)
 			INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
 			WHERE EXISTS (SELECT 1 FROM #ToCustIDs WHERE custid = b.custid)
-				  and c.recommend = @AgentID and b.ruben = 1 
+				  and c.recommend = @AgentID and b.ruben = 1 and b.bettype not in (21008, 21009)
 			GROUP BY b.custid ,c.username
 
 			UNION ALL 

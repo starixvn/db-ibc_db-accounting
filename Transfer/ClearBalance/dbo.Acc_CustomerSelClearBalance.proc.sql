@@ -29,7 +29,8 @@ AS
 		- 20181003@Helen: Modify code to adapt indexes changed on DB053 [Redmine:101405]
 		- 20200305@Elodie: Hardcode list finance permission [Redmine: #129890]
 		- 20200316@Elodie: Remove from Hardcode list finance permission for Nova [Redmine: #130499]
-		- 20200317@Malcolm: grant permission for finance account [Redmine : #128128] 
+		- 20200317@Malcolm: grant permission for finance account [Redmine : #128128]
+		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 
 	Param's Explanation:
 	
@@ -51,7 +52,7 @@ BEGIN
 	DECLARE @roleID TINYINT
 	SELECT  @roleID = roleID FROM dbo.custInfo WITH(NOLOCK) WHERE custid = @custid
 
-	CREATE TABLE #data (custid INT, yesterday_balance MONEY, balance MONEY, yesterday_cash MONEY, cash MONEY, outstanding MONEY)
+	CREATE TABLE #data (custid INT, yesterday_balance MONEY, balance MONEY, yesterday_cash MONEY, cash MONEY, outstanding MONEY, PendingTransfer3rd MONEY)
 
 	DECLARE @srecommend INT
 	SELECT  @srecommend = srecommend FROM dbo.custInfo WITH(NOLOCK) WHERE custid = @custid
@@ -66,18 +67,19 @@ BEGIN
 	IF @roleID = 4 -- Super
 	BEGIN
 		-- bettrans
-		INSERT INTO #data (custid, yesterday_balance, balance, yesterday_cash, cash, outstanding)
+		INSERT INTO #data (custid, yesterday_balance, balance, yesterday_cash, cash, outstanding, PendingTransfer3rd)
 		SELECT
 			b.mrecommend,
-			ISNULL(SUM(CASE WHEN ruben = 1 AND (winlostdate < @today OR (winlostdate = @today AND b.bettype > 20000)) THEN CASE WHEN b.custid = b.mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END ELSE 0 END), 0)
-			+ ISNULL(SUM(CASE WHEN ruben = 1 AND (winlostdate < @today OR (winlostdate = @today AND b.bettype > 20000)) THEN CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END), 0)
-			+ ISNULL(SUM(CASE WHEN ruben = 1 AND (winlostdate < @today OR (winlostdate = @today AND b.bettype > 20000)) THEN CASE WHEN b.custid <> b.recommend AND b.custid <> b.mrecommend THEN winlost-actual_stake+playercomm ELSE 0 END ELSE 0 END), 0) yesterday_balance,
-			ISNULL(SUM(CASE WHEN ruben = 1 THEN CASE WHEN b.custid = b.mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END ELSE 0 END), 0)
-			+ ISNULL(SUM(CASE WHEN ruben = 1 THEN CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END), 0)
-			+ ISNULL(SUM(CASE WHEN ruben = 1 THEN CASE WHEN b.custid <> b.recommend AND b.custid <> b.mrecommend THEN winlost-actual_stake+playercomm ELSE 0 END ELSE 0 END), 0) balance,
-			ISNULL(SUM(CASE WHEN ruben = 1 AND (winlostdate < @today OR (winlostdate = @today AND b.bettype > 20000)) THEN CASE WHEN b.custid = b.mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END ELSE 0 END), 0) yesterday_cash,
-			ISNULL(SUM(CASE WHEN ruben = 1 THEN CASE WHEN b.custid = b.mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END ELSE 0 END), 0) cash,
-			ISNULL(SUM(CASE WHEN ruben = 0 THEN ABS(actual_stake*mpositiontaking) END), 0) outstanding
+			ISNULL(SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 1 AND (winlostdate < @today OR (winlostdate = @today AND b.bettype > 20000)) THEN CASE WHEN b.custid = b.mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END ELSE 0 END END), 0)
+			+ ISNULL(SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 1 AND (winlostdate < @today OR (winlostdate = @today AND b.bettype > 20000)) THEN CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END END), 0)
+			+ ISNULL(SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 1 AND (winlostdate < @today OR (winlostdate = @today AND b.bettype > 20000)) THEN CASE WHEN b.custid <> b.recommend AND b.custid <> b.mrecommend THEN winlost-actual_stake+playercomm ELSE 0 END ELSE 0 END END), 0) yesterday_balance,
+			ISNULL(SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 1 THEN CASE WHEN b.custid = b.mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END ELSE 0 END END), 0)
+			+ ISNULL(SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 1 THEN CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END END), 0)
+			+ ISNULL(SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 1 THEN CASE WHEN b.custid <> b.recommend AND b.custid <> b.mrecommend THEN winlost-actual_stake+playercomm ELSE 0 END ELSE 0 END END), 0) balance,
+			ISNULL(SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 1 AND (winlostdate < @today OR (winlostdate = @today AND b.bettype > 20000)) THEN CASE WHEN b.custid = b.mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END ELSE 0 END END), 0) yesterday_cash,
+			ISNULL(SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 1 THEN CASE WHEN b.custid = b.mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END ELSE 0 END END), 0) cash,
+			ISNULL(SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 0 THEN ABS(actual_stake*mpositiontaking) END END), 0) outstanding,
+			ISNULL(SUM(CASE WHEN b.bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END), 0) PendingTransfer3rd
 		FROM dbo.bettrans b WITH(NOLOCK)
 			LEFT JOIN #SportBettypeMatrix s ON b.bettype = s.Bettype
 		WHERE srecommend = @custid
@@ -143,16 +145,17 @@ BEGIN
 	BEGIN
 		
 		-- bettrans
-		INSERT INTO #data (custid, yesterday_balance, balance, yesterday_cash, cash, outstanding)
+		INSERT INTO #data (custid, yesterday_balance, balance, yesterday_cash, cash, outstanding, PendingTransfer3rd)
 		SELECT
 			b.recommend,
-			ISNULL(SUM(CASE WHEN ruben = 1 AND (winlostdate < @today OR (winlostdate = @today AND b.bettype > 20000)) THEN CASE WHEN custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END), 0)
-			+ ISNULL(SUM(CASE WHEN ruben = 1 AND (winlostdate < @today OR (winlostdate = @today AND b.bettype > 20000)) THEN CASE WHEN b.custid <> b.recommend AND b.custid <> b.mrecommend THEN winlost-actual_stake+playercomm ELSE 0 END ELSE 0 END),0) yesterday_balance,
-			ISNULL(SUM(CASE WHEN ruben = 1 THEN CASE WHEN custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END), 0)
-			+ ISNULL(SUM(CASE WHEN ruben = 1 THEN CASE WHEN b.custid<> b.recommend AND b.custid <> b.mrecommend THEN winlost-actual_stake+playercomm ELSE 0 END ELSE 0 END),0) balance,
-			ISNULL(SUM(CASE WHEN ruben = 1 AND (winlostdate < @today OR (winlostdate = @today AND b.bettype > 20000)) THEN CASE WHEN custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END), 0) yesterday_cash,
-			ISNULL(SUM(CASE WHEN ruben = 1 THEN CASE WHEN custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END), 0) cash,
-			ISNULL(SUM(CASE WHEN ruben = 0 THEN ABS(actual_stake*apositiontaking) END), 0) outstanding
+			ISNULL(SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 1 AND (winlostdate < @today OR (winlostdate = @today AND b.bettype > 20000)) THEN CASE WHEN custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END END), 0)
+			+ ISNULL(SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 1 AND (winlostdate < @today OR (winlostdate = @today AND b.bettype > 20000)) THEN CASE WHEN b.custid <> b.recommend AND b.custid <> b.mrecommend THEN winlost-actual_stake+playercomm ELSE 0 END ELSE 0 END END),0) yesterday_balance,
+			ISNULL(SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 1 THEN CASE WHEN custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END END), 0)
+			+ ISNULL(SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 1 THEN CASE WHEN b.custid<> b.recommend AND b.custid <> b.mrecommend THEN winlost-actual_stake+playercomm ELSE 0 END ELSE 0 END END),0) balance,
+			ISNULL(SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 1 AND (winlostdate < @today OR (winlostdate = @today AND b.bettype > 20000)) THEN CASE WHEN custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END END), 0) yesterday_cash,
+			ISNULL(SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 1 THEN CASE WHEN custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END END), 0) cash,
+			ISNULL(SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 0 THEN ABS(actual_stake*apositiontaking) END END), 0) outstanding,
+			ISNULL(SUM(CASE WHEN b.bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END), 0) PendingTransfer3rd
 		FROM dbo.bettrans b WITH(NOLOCK)
 			LEFT JOIN #SportBettypeMatrix s ON b.bettype = s.Bettype
 		WHERE b.mrecommend = @custid AND
@@ -212,14 +215,15 @@ BEGIN
 	ELSE IF @roleID = 2
 	BEGIN
 		-- bettrans
-		INSERT INTO #data (custid, yesterday_balance, balance, yesterday_cash, cash, outstanding)
+		INSERT INTO #data (custid, yesterday_balance, balance, yesterday_cash, cash, outstanding, PendingTransfer3rd)
 		SELECT
 			b.custid,
-			ISNULL(SUM(CASE WHEN ruben = 1 AND (winlostdate < @today OR (winlostdate = @today AND b.bettype > 20000)) THEN winlost-actual_stake+playercomm END), 0) yesterday_balance,
-			ISNULL(SUM(CASE WHEN ruben = 1 THEN winlost-actual_stake+playercomm END), 0) balance,
-			ISNULL(SUM(CASE WHEN ruben = 1 AND (winlostdate < @today OR (winlostdate = @today AND b.bettype > 20000)) THEN winlost-actual_stake+playercomm END), 0) yesterday_cash,
-			ISNULL(SUM(CASE WHEN ruben = 1 THEN winlost-actual_stake+playercomm END), 0) cash,
-			ISNULL(SUM(CASE WHEN ruben = 0 THEN ABS(actual_stake) END), 0) outstanding
+			ISNULL(SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 1 AND (winlostdate < @today OR (winlostdate = @today AND b.bettype > 20000)) THEN winlost-actual_stake+playercomm END END), 0) yesterday_balance,
+			ISNULL(SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 1 THEN winlost-actual_stake+playercomm END END), 0) balance,
+			ISNULL(SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 1 AND (winlostdate < @today OR (winlostdate = @today AND b.bettype > 20000)) THEN winlost-actual_stake+playercomm END END), 0) yesterday_cash,
+			ISNULL(SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 1 THEN winlost-actual_stake+playercomm END END), 0) cash,
+			ISNULL(SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 0 THEN ABS(actual_stake) END END), 0) outstanding,
+			ISNULL(SUM(CASE WHEN b.bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END), 0) PendingTransfer3rd
 		FROM dbo.bettrans b WITH(NOLOCK)
 			LEFT JOIN #SportBettypeMatrix s ON b.bettype = s.Bettype
 		WHERE b.recommend = @custid
@@ -353,7 +357,8 @@ BEGIN
 		ISNULL(b.balance, 0) Balance,
 		ISNULL(b.yesterday_balance, 0) YesterdayBalance,
 		ISNULL(b.cash, 0) Cash,
-		ISNULL(b. yesterday_cash, 0) YesterdayCash,
+		ISNULL(b.yesterday_cash, 0) YesterdayCash,
+		ISNULL(b.PendingTransfer3rd, 0) PendingTransfer3rd,
 		r.credit AS GivenCredit,
 		c.used_credit AS UsedCredit,
 		r.credit - c.used_credit AS AvailableCredit,
@@ -400,7 +405,8 @@ BEGIN
 				SUM(balance) balance,
 				SUM(yesterday_balance) yesterday_balance,
 				SUM(cash) cash,
-				SUM(yesterday_cash) yesterday_cash
+				SUM(yesterday_cash) yesterday_cash,
+				SUM(ISNULL(PendingTransfer3rd, 0)) PendingTransfer3rd
 			FROM #data
 			GROUP BY custid
 		) b ON r.custid = b.custid
