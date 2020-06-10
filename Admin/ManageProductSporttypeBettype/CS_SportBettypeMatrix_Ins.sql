@@ -37,14 +37,6 @@ BEGIN
 	DECLARE @iDoc INT, @RowTotal INT = 0, @CurrentRow INT = 0, @MatrixError NVARCHAR(MAX) = '', @ValueError NVARCHAR(MAX) = '', 
 			@LimitValue BIGINT,@ColumnName NVARCHAR(200)
 
-	CREATE TABLE #SportTypeGroup
-	(
-		ProductID			INT,
-		SportTypeGroup		SMALLINT,
-		DisplaySport		VARCHAR(100),
-		DisplaySportName	VARCHAR(200)
-	)
-
 	CREATE TABLE #input 
 	(    
 		ID				INT IDENTITY (1,1),
@@ -124,15 +116,6 @@ BEGIN
 		RETURN
 	END CATCH
 
-	INSERT INTO #SportTypeGroup
-	(
-		ProductID,
-		SportTypeGroup,
-		DisplaySport,
-		DisplaySportName
-	)
-	EXEC dbo.CS_SportType_Sel
-
 	DELETE #inputTmp
 	WHERE  LEN(SportType)			= 0
 		   AND LEN(BetType)			= 0
@@ -176,19 +159,22 @@ BEGIN
 				                       ELSE 1 END,
 				  @ErrCode      = CASE WHEN LEN(SubProduct) > 500 THEN 1007									   
 				                       ELSE 1008 END,
-				  @ColumnName   = CASE WHEN [Enabled]	IS  NULL OR [Enabled]	NOT IN (0,1)		THEN 'Enabled'
-									   WHEN IsTest		IS  NULL OR IsTest		NOT IN (0,1)		THEN 'IsTest'
-									   WHEN IsLive		IS  NULL OR IsLive		NOT IN (0,1)		THEN 'IsLive'
-									   WHEN EventType	IS  NULL OR EventType	NOT BETWEEN 0 AND 5 THEN 'EventType'
-									   WHEN RefTable	IS  NULL OR RefTable	NOT BETWEEN 0 AND 3 THEN 'RefTable'	
+				  @ColumnName   = CASE WHEN [Enabled]		IS  NULL OR [Enabled]	NOT IN (0,1)		THEN 'Enabled'
+									   WHEN IsTest			IS  NULL OR IsTest		NOT IN (0,1)		THEN 'IsTest'
+									   WHEN IsLive			IS  NULL OR IsLive		NOT IN (0,1)		THEN 'IsLive'
+									   WHEN EventType		IS  NULL OR EventType	NOT BETWEEN 0 AND 5 THEN 'EventType'
+									   WHEN RefTable		IS  NULL OR RefTable	NOT BETWEEN 0 AND 3 THEN 'RefTable'	
+									   WHEN BetTypeGroup	IS NULL THEN 'BetTypeGroup'
+									   WHEN SportTypeGroup	IS NULL THEN 'SportTypeGroup'
 								  ELSE NULL END
 	FROM #inputTmp
 	WHERE  LEN(SubProduct) > 500
-			OR IsLive		IS  NULL OR IsLive		NOT IN (0,1) 
-			OR [Enabled]	IS  NULL OR [Enabled]	NOT IN (0,1) 
-			OR IsTest		IS  NULL OR IsTest		NOT IN (0,1) 
-			OR EventType	IS  NULL OR EventType   NOT BETWEEN 0 AND 5	
-		    OR RefTable		IS  NULL OR RefTable	NOT BETWEEN 0 AND 3
+			OR IsLive		IS  NULL OR IsLive			NOT IN (0,1) 
+			OR [Enabled]	IS  NULL OR [Enabled]		NOT IN (0,1) 
+			OR IsTest		IS  NULL OR IsTest			NOT IN (0,1) 
+			OR EventType	IS  NULL OR EventType		NOT BETWEEN 0 AND 5	
+		    OR RefTable		IS  NULL OR RefTable		NOT BETWEEN 0 AND 3
+			OR BetTypeGroup IS  NULL OR SportTypeGroup	IS NULL
 			
 	IF @ErrCode <> 0
 	   BEGIN
@@ -255,7 +241,7 @@ BEGIN
 		 LEFT JOIN dbo.Bettype b	WITH(NOLOCK) ON b.typeid = i.BetType
 		 LEFT JOIN dbo.Products p	WITH(NOLOCK) ON p.ProductID = i.ProductID
 		 LEFT JOIN dbo.Bettype bg	WITH(NOLOCK) ON bg.typeid = i.BetTypeGroup
-		 LEFT JOIN #SportTypeGroup f ON f.SportTypeGroup = i.SportTypeGroup
+		 LEFT JOIN CS_f_SportTypeGroup_OrderSel(1) f ON f.SportTypeGroup = i.SportTypeGroup
 	WHERE s.SportType		IS NULL 
 		OR b.typeid			IS NULL 
 		OR p.ProductID		IS NULL
@@ -354,7 +340,8 @@ BEGIN
 				@TrackingValue = @LogSPData,
 				@duration = @duration
 	END
+
 	DROP TABLE #input
+
 	DROP TABLE #inputTmp
-	DROP TABLE #SportTypeGroup
 END

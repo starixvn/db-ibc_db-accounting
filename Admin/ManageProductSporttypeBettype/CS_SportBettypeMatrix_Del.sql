@@ -41,6 +41,7 @@ BEGIN
 							'LoginIP="'+ COALESCE(CAST(@LoginIP as VARCHAR(20)),SPACE(1)) + '" />'
 
 	SET @endRun = GETDATE()
+
     SET @duration = DATEDIFF (MILLISECOND,@startRun,@endRun)
 
 	EXEC  DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP

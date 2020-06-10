@@ -75,17 +75,17 @@ BEGIN
 							SportTypeGroup,
 							BetTypeGroup)
 
-			SELECT         SportType,
-						   BetType,
-						   IsLive,
-						   ProductID,
-						   Enabled,
-						   IsTest,
-						   EventType,
-						   SubProduct,
-						   RefTable,
-						   SportTypeGroup,
-						   BetTypeGroup
+			SELECT			SportType,
+							BetType,
+							IsLive,
+							ProductID,
+							Enabled,
+							IsTest,
+							EventType,
+							SubProduct,
+							RefTable,
+							SportTypeGroup,
+							BetTypeGroup
 
 			FROM OPENXML(@iDoc, '/ROOT/File', 1) WITH  (SportType		NVARCHAR(MAX),
 														BetType			NVARCHAR(MAX),
@@ -267,7 +267,9 @@ BEGIN
 				@TrackingValue2 = @LogSPData2,
 				@duration = @duration
 	END
+
 	DROP TABLE #input
+
 	DROP TABLE #inputTmp
 END
 

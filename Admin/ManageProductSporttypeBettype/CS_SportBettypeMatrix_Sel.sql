@@ -35,7 +35,7 @@ BEGIN
 		ProductID			INT,
 		SportTypeGroup		SMALLINT,
 		DisplaySport		VARCHAR(100),
-		DisplaySportName	VARCHAR(200)
+		DisplaySportName	VARCHAR(300)
 	)
 
 	CREATE TABLE #Tmp 
@@ -136,14 +136,14 @@ BEGIN
 			SubProduct,
 			RefTable,
 			SportTypeGroup,
-			BetTypeGroup,
 			SportTypeGroupName,
+			BetTypeGroup,		
 			BetTypeGroupName,
 			RowNum 
 	FROM #Tmp
 	WHERE @PageIndex < 0 OR @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd)
 
-	DROP TABLE #Tmp
+	DROP TABLE #Tmp, #SportTypeGroup
  
 END
 
