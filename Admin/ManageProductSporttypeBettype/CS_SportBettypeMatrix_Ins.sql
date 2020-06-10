@@ -242,6 +242,7 @@ BEGIN
 		 LEFT JOIN dbo.Products p	WITH(NOLOCK) ON p.ProductID = i.ProductID
 		 LEFT JOIN dbo.Bettype bg	WITH(NOLOCK) ON bg.typeid = i.BetTypeGroup
 		 LEFT JOIN CS_f_SportTypeGroup_OrderSel(1) f ON f.SportTypeGroup = i.SportTypeGroup
+		 
 	WHERE s.SportType		IS NULL 
 		OR b.typeid			IS NULL 
 		OR p.ProductID		IS NULL
