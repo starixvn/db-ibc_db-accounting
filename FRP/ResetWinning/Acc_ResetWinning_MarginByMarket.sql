@@ -27,6 +27,37 @@ BEGIN
 			AND SubProduct = 'PHAIO'
 	
 	----- End get sport bettype  
+
+	------Get Match ------	
+	CREATE TABLE #Match
+                     (MatchId   INT, 
+                      type      VARCHAR(10)
+                      PRIMARY KEY(MatchId, type)
+                     );
+    INSERT INTO #Match
+               SELECT DISTINCT 
+                      m.MatchId, 
+                      m.type
+               FROM
+               (
+					SELECT MatchId, 
+						  'match' AS type
+					FROM Match WITH(NOLOCK)
+					WHERE EventDate = @WinlostDate
+					UNION ALL
+					SELECT orid,  
+						  'outright' AS type
+					FROM outright o WITH(NOLOCK)
+					INNER JOIN league l WITH (NOLOCK) 
+						ON l.leagueID = o.LeagueId					
+					WHERE o.EventDate = @WinlostDate
+					UNION ALL
+					SELECT 29 AS MatchId,
+						   'Parlay' AS type						
+               ) m              
+			   
+	------End Get Match ------			   
+
 	
 	--------------------------------------------------------------------------------------------------------- 
 		CREATE TABLE #WL 
@@ -58,6 +89,8 @@ BEGIN
 							* actualrate 
 					) AS ExtraWinlost				
 		FROM dbo.bettrans b WITH (NOLOCK)  
+		INNER JOIN #Match AS m 
+				ON 	b.MatchId = m.MatchId
 		INNER JOIN #Bettype s ON s.BetType = b.bettype								  
 		WHERE   b.Winlostdate = @WinlostDate
 			AND b.statusid IN (111, 112, 113)		
@@ -75,6 +108,7 @@ BEGIN
 
 	DROP TABLE #Bettype 
 	DROP TABLE #WL	 
+	DROP TABLE #Match
 		
 END
 GO
