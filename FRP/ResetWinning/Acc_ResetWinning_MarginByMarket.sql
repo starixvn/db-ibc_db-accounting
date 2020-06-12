@@ -1,5 +1,5 @@
 /*<info serverAlias="DBEXT-bodb02" executers="bodbAdminNet" isFunction="0" isNested="1"></info>*/
-ALTER PROCEDURE [dbo].[Acc_ResetWinning_MarginByPH]
+ALTER PROCEDURE [dbo].[Acc_ResetWinning_MarginByMarket]
 	@Winlostdate SMALLDATETIME 
 AS 
  
@@ -24,24 +24,20 @@ BEGIN
 	INSERT INTO #Bettype
 	SELECT  Bettype FROM bodb02.dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', 0)
 	WHERE  ProductID = 1 
-			AND Bettype NOT BETWEEN 801 and 806 
-			AND bettype NOT BETWEEN 901 and 904
-			AND Bettype <> 38 
 			AND SubProduct = 'PHAIO'
 	
-	--CREATE CLUSTERED INDEX CIX_Bettype ON #Bettype (bettype) 
 	----- End get sport bettype  
 	
 	--------------------------------------------------------------------------------------------------------- 
 		CREATE TABLE #WL 
 		(	
-			Sporttype  		VARCHAR(20), 			
+			Market  		VARCHAR(20), 			
 			TurnOver		MONEY,
 			Winlost			MONEY, 		
 			ExtraWinlost	MONEY
 		) 	 
-		INSERT INTO #WL (Sporttype, TurnOver, winlost, ExtraWinlost)
-		SELECT  'PHAIO' AS Sporttype,  	 						
+		INSERT INTO #WL (Market, TurnOver, winlost, ExtraWinlost)
+		SELECT  'PHAIO' AS Market,  	 						
 				---Base currency
 				SUM (   CASE WHEN b.StatusID = 111 THEN 0 ELSE 
 						CASE WHEN ABS(modds) = 0.25 AND b.Bettype <> 29 THEN ABS(Stake) / 2 ELSE  ABS(Stake) END END
@@ -73,7 +69,7 @@ BEGIN
 	
 		-----------------------------------------------------------------------------------------------
 		----- Get Data -----
-		SELECT	w.Sporttype, w.TurnOver, CASE WHEN w.TurnOver = 0 THEN 0 ELSE (w.winlost - ExtraWinlost) / w.TurnOver * 100 END AS Margin , (w.winlost - ExtraWinlost) AS HouseWinlost
+		SELECT	w.Market, w.TurnOver, CASE WHEN w.TurnOver = 0 THEN 0 ELSE (w.winlost - ExtraWinlost) / w.TurnOver * 100 END AS Margin , (w.winlost - ExtraWinlost) AS HouseWinlost
 		FROM 	#WL w 				
 	
 
