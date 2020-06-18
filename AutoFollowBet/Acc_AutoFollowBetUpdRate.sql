@@ -1,11 +1,4 @@
-USE [CustDB]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetUpdRate]    Script Date: 03/26/2015 09:35:01 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.Acc_AutoFollowBetUpdRate    Script Date: 24/03/2015 3:16:15 PM ******/
+/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_AutoFollowBetUpdRate]
     @Username      		VARCHAR(30)
     
@@ -38,10 +31,12 @@ ALTER PROCEDURE [dbo].[Acc_AutoFollowBetUpdRate]
   , @ErrCode       		INT = 0				OUTPUT
   , @ErrMsg        		NVARCHAR(200) = ''	OUTPUT
 AS
+
 /*
 	Created: Viet @ 4-Jul-2012
-	DB: DBTXN.CustDB
-	Revison:
+	DB: DBCUST-CustDB
+	
+	Revisions:
 		- 20131212@Kathy: - Remove @status, add new @param
 						  - Separate Auto follow bet account for Live or Non-Live or All [Redmine:#9144] 
 						  - Write log
@@ -56,13 +51,11 @@ AS
 		- 20150323@Kathy: Support 2 more bettype 1x2 & 1st 1x2 [Redmine:#30394]             
 
 	Param's Explanation:
-	    
 		- For params with values = 2: those will not be updated.
 		* @Rate, @LiveOdds, @NonLiveOdds: for bettypes 1, 3, 7, 8 
 		* @Rate2, @LiveOdds2, @NonLiveOdds2: for bettypes 5, 15
-	    
-
 */
+
 BEGIN
 	SET NOCOUNT ON
 
@@ -524,9 +517,4 @@ BEGIN
 
 	END CATCH
 END
-
-
 GO
-GRANT EXECUTE ON [dbo].[Acc_AutoFollowBetUpdRate] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_AutoFollowBetUpdRate] TO [vnteam] AS [dbo]

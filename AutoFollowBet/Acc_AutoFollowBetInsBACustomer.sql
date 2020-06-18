@@ -1,10 +1,4 @@
-USE [CustDB]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetInsBACustomer]    Script Date: 03/25/2015 09:33:48 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
+/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_AutoFollowBetInsBACustomer]
     @strCustID  VARCHAR(MAX)
 	,@UserID    INT				= 0
@@ -15,12 +9,13 @@ ALTER PROCEDURE [dbo].[Acc_AutoFollowBetInsBACustomer]
 	,@ErrCode   INT				= 0 OUTPUT
 	,@ErrMsg    VARCHAR(1000)	= '' OUTPUT
 AS
-/*  Created: Henry  
-	Date: 2012-07-06
-    Task : Insert BA Customers to Cust_FollowBet
-    DB: DBCUST/bodb02  
+
+/*
+	Created: 20120706@Henry
+	DB: DBCUST-CustDB
+    Task: Insert BA Customers to Cust_FollowBet
    
-    Revisions:  
+    Revisions:
         - 20130201@Daniel: Change link server alias & failover writelog to DBTXN  
 		- 20140106@Kathy: Add new param: @Follower [Redmine:#9144]
 		- 20140428@Kathy: Down minimum rate from 0.3 to 0.01 [Redmine:#15495]
@@ -29,11 +24,8 @@ AS
 		- 20150120@Kathy: Update Original and Nonlive danger level of BA member to 2 [Redmine:#29459]
 		- 20150324@Kathy: Support 2 more bettype 1x2 & 1st 1x2 [Redmine:#30394]  
 		- 20170621@Harper: Apply change request to rules of Bet Follow [Redmine: #78586]
-
-	Param's Explanation:  
-	 
-	  
 */
+
 BEGIN
     SET NOCOUNT ON
 
@@ -204,10 +196,4 @@ BEGIN
 			,@duration = @duration
 	END CATCH
 END
-
-
-
 GO
-GRANT EXECUTE ON [dbo].[Acc_AutoFollowBetInsBACustomer] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_AutoFollowBetInsBACustomer] TO [vnteam] AS [dbo]

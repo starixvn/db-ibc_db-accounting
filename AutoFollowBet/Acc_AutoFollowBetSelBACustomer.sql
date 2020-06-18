@@ -1,33 +1,26 @@
-/*<info serverAlias="DBCUST-CustDB" executers="" viewers="" isFunction="0" isNested="1"></info>*/
-USE [CustDB]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetSelBACustomer]    Script Date: 03/25/2015 09:34:10 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
-ALTER PROCEDURE [dbo].[Acc_AutoFollowBetSelBACustomer] @LicenseeID INT = 0
+/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
+ALTER PROCEDURE [dbo].[Acc_AutoFollowBetSelBACustomer]
+	@LicenseeID INT = 0
 	,@status	INT = 0
 	,@username	NVARCHAR(50) = ''
 AS
-/*  Created: Henry  
-	Date: 2012-07-06
-    Task : Get BA Customer
-    DB: DBCUST-CustDB
-   
-    Revisions:  
-        - 20130123@Daniel:  Change link server alias
-        - 20140805@Logan:   Separate live & non-live setting
+
+/*
+	Created: 20120706@Henry
+	DB: DBCUST-CustDB
+    Task: Get BA Customer
+	
+	Revisions:  
+        - 20130123@Daniel: Change link server alias
+        - 20140805@Logan: Separate live & non-live setting
         - 20150323@Kathy: Support 2 more bettype 1x2 & 1st 1x2 [Redmine:#30394]   
 		- 20180926@Sophia: migrate bodb_Licensee from DB052 to DBCUST - remove linked server DBLIC [redmine: #99855]
-  
-		
+	
 	Param's Explanation:  
 	  + @LicenseID: 0 - All 
 	  +	@status: 0 - All; 1 - Is Followed; 2 - Is Not Followed
-	  
 */
+
 BEGIN
 	SET NOCOUNT ON
 
@@ -110,10 +103,4 @@ BEGIN
 
 	DROP TABLE #TmpResult
 END
-
-
-
 GO
-GRANT EXECUTE ON [dbo].[Acc_AutoFollowBetSelBACustomer] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_AutoFollowBetSelBACustomer] TO [vnteam] AS [dbo]

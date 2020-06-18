@@ -1,11 +1,4 @@
-USE [CustDB]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetInsCustomer]    Script Date: 04/14/2015 09:59:09 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.Acc_AutoFollowBetInsCustomer    Script Date: 08/04/2015 9:36:37 AM ******/
+/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0" isNested="1"></info>*/
 ALTER PROCEDURE [dbo].[Acc_AutoFollowBetInsCustomer]
     @Username       VARCHAR(30)
     ,@Rate          SMALLMONEY
@@ -32,11 +25,12 @@ ALTER PROCEDURE [dbo].[Acc_AutoFollowBetInsCustomer]
     ,@ErrCode       INT = 0 OUTPUT
     ,@ErrMsg        NVARCHAR(200) = '' OUTPUT
 AS
+
 /*
 	Created: Viet @ 4-Jul-2012
-	DB: DBCUST.CustDB
+	DB: DBCUST-CustDB
 
-	Revision:
+	Revisions:
 		- 20131212@Kathy: - Remove @status, add new @param
 						  - Separate Auto follow bet account for Live or Non-Live or All [Redmine:#9144]
 						  - Write log
@@ -57,6 +51,7 @@ AS
 		
 	Param's Explanation:	
 */
+
 BEGIN
 	SET NOCOUNT ON
 
@@ -419,6 +414,3 @@ BEGIN
 	END CATCH
 END
 GO
-GRANT EXECUTE ON [dbo].[Acc_AutoFollowBetInsCustomer] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_AutoFollowBetInsCustomer] TO [vnteam] AS [dbo]

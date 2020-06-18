@@ -1,25 +1,18 @@
-USE [CustDB]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetDelCustomer]    Script Date: 04/14/2015 09:58:56 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.Acc_AutoFollowBetDelCustomer    Script Date: 08/04/2015 9:36:37 AM ******/
+/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0" isNested="1"></info>*/
 ALTER PROCEDURE [dbo].[Acc_AutoFollowBetDelCustomer]	
 	@Username   VARCHAR(30),
 	@Follower	VARCHAR(30),
-	
 	@UserId		INT,
 	@IP			VARCHAR(50),
 	@ErrCode    INT				= 0 OUTPUT,
 	@ErrMsg     NVARCHAR(200)	= '' OUTPUT
 AS
+
 /*
 	Created: Viet @ 4-Jul-2012
-	DB: DBCUST.custDB
+	DB: DBCUST-CustDB
 
-	Revision:
+	Revisions:
 		- 20131212@Kathy: - Remove @status, add new @param
 						  - Separate Auto follow bet account for Live or Non-Live or All [Redmine:#9144] 
 						  - Write log
@@ -32,9 +25,8 @@ AS
 		- 20150323@Kathy: - Support 2 more bettype 1x2 & 1st 1x2 [Redmine:#30394]  
 						  - Update danger, danger2 for downlines
 		- 20170621@Harper: Apply change request to rules of Bet Follow [Redmine: #78586]
-		
-	Param's Explanation:	
 */
+
 BEGIN
 	SET NOCOUNT ON
 	DECLARE @startRun           DATETIME
@@ -251,6 +243,3 @@ BEGIN
 	END CATCH
 END
 GO
-GRANT EXECUTE ON [dbo].[Acc_AutoFollowBetDelCustomer] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_AutoFollowBetDelCustomer] TO [vnteam] AS [dbo]

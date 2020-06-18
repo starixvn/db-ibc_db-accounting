@@ -1,10 +1,4 @@
-USE [CustDB]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_AutoFollowBetSelCustomer]    Script Date: 03/23/2015 09:31:51 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
+/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_AutoFollowBetSelCustomer]
 	@Username	VARCHAR(50) = '%',
 	@Source		VARCHAR(1)	= '%',
@@ -19,19 +13,21 @@ ALTER PROCEDURE [dbo].[Acc_AutoFollowBetSelCustomer]
 	@Follower	VARCHAR(30) = '%',
 	@IsAgent    VARCHAR(1)	= '%'
 AS
+
 /*
-Created: Viet @ 4-Jul-2012
-DB: DBTXN/CustDB
-Revisions:  
-	- 20130201@Daniel: Change link server alias
-	- 20131212@Kathy: - Remove @status, add new @param
-					  - Separate Auto follow bet account for Live or Non-Live or All [Redmine:#9144]
-	- 20140106@Kathy: Add param: @Follower [Redmine:#10329]
-	- 20140227@Kathy: Get more column: Odds [Redmine:#12546]
-	- 20140805@Logan:   1. Separate live and nonlive setting [Redmine: #16578]
-	                    2. Allow following an agent (all members under) [Redmine: #19650]
-	                    3. Code aligning
-	- 20150323@Kathy: Support 2 more bettype 1x2 & 1st 1x2 [Redmine:#30394]
+	Created: Viet @ 4-Jul-2012
+	DB: DBCUST-CustDB
+	
+	Revisions:  
+		- 20130201@Daniel: Change link server alias
+		- 20131212@Kathy: - Remove @status, add new @param
+						  - Separate Auto follow bet account for Live or Non-Live or All [Redmine:#9144]
+		- 20140106@Kathy: Add param: @Follower [Redmine:#10329]
+		- 20140227@Kathy: Get more column: Odds [Redmine:#12546]
+		- 20140805@Logan:   1. Separate live and nonlive setting [Redmine: #16578]
+							2. Allow following an agent (all members under) [Redmine: #19650]
+							3. Code aligning
+		- 20150323@Kathy: Support 2 more bettype 1x2 & 1st 1x2 [Redmine:#30394]
 
 
 	Param's Explanation:  
@@ -44,8 +40,8 @@ Revisions:
 	  + @1stOU:	    0 - Not follow	 1 - Follow 		% - All
 	  + @1x2:		0 - Not follow	 1 - Follow	    	% - All
 	  + @1st1x2	    0 - Not follow	 1 - Follow 		% - All
-
 */
+
 BEGIN
 	SET NOCOUNT ON
 
@@ -110,9 +106,4 @@ INNER JOIN dbo.Customer c WITH(NOLOCK) ON c.custid = f.custid
   ORDER BY c.username, f.FollowLive
 
 END
-
-
 GO
-GRANT EXECUTE ON [dbo].[Acc_AutoFollowBetSelCustomer] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_AutoFollowBetSelCustomer] TO [vnteam] AS [dbo]
