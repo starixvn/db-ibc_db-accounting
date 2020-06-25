@@ -43,7 +43,6 @@ BEGIN
 			ON c.custid = lc.CustID AND c.roleid = 1
 	WHERE 
 		c.username = @LicenseeCode
-		AND lc.StatusID = 1
 
 	---- check not contain licensee name
 	INSERT INTO @tblVerifiedResult
@@ -57,7 +56,7 @@ BEGIN
 	WHERE CHARINDEX(@LicenseeName, t.LicenseeCode) = 0
 
 	---- check licensee code is not existed
-	IF NOT EXISTS (SELECT 1 FROM CustDB.dbo.custInfo c WITH(NOLOCK) WHERE c.username = @LicenseeCode AND c.roleid = 1)
+	IF NOT EXISTS (SELECT TOP 1 1 FROM CustDB.dbo.custInfo c WITH(NOLOCK) WHERE c.username = @LicenseeCode AND c.roleid = 1)
 	BEGIN
 		INSERT INTO @tblVerifiedResult
 		SELECT '201' AS ErrorCode, 'This code does not exist' AS ErrorMessage
@@ -66,14 +65,13 @@ BEGIN
 	---- check licensee already has another active code
 	IF EXISTS 
 		(
-			SELECT 1 
+			SELECT TOP 1 1 
 			FROM LicenseeTransferCode lc WITH(NOLOCK)
 				INNER JOIN CustDB.dbo.custInfo c WITH(NOLOCK)
 					ON c.custid = lc.CustID AND c.roleid = 1
 			WHERE 
 				lc.LicenseeName = @LicenseeName
 				AND lc.StatusID = 1
-				AND c.username <> @LicenseeCode
 		)
 	BEGIN
 		INSERT INTO @tblVerifiedResult

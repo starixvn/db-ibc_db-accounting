@@ -14,9 +14,13 @@ BEGIN
 	
 	SET NOCOUNT ON;
 
-	SELECT l.LicenseeID, l.LicenseeName 
+	SELECT DISTINCT l.LicenseeID, l.LicenseeName
 	FROM dbo.Licensees l WITH(NOLOCK)
-	WHERE l.IsActive = 1
+			INNER JOIN bodb02.dbo.Dep_CustSuper cs WITH(NOLOCK)
+				on cs.[site] = l.LicenseeName
+	WHERE 
+		l.IsActive = 1
+		AND cs.currency <> 20
 	ORDER BY l.LicenseeName
 
 END
