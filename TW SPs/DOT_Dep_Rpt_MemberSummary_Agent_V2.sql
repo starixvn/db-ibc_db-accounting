@@ -50,6 +50,8 @@ Revisions:
 --20200107@Benson: new FG replace old FG, PartnerId 13->18 | bettype 22032,22033 -> 22042,22043
 --20200317@Rong(DB06.bodb02): Add KYGaming Report Data
 --20200331@James(DB06.bodb02): Add Virtual Games(245), Virtual Soccer Champions Cup(196), Virtual Soccer Asian Cup(194)  Report Data
+--20200429@James(DB06.bodb02): Add Table Game(222) Report Data
+--20200629@Rong(DB06.bodb02): Add AE Sexy(243) Report Data
 */
 BEGIN
 	SET NOCOUNT ON
@@ -79,6 +81,8 @@ BEGIN
 		VS2Draw money default(0), VS2TOver money default(0), VS2WL money default(0), --BetRadar Virtual Sports
 		H5Draw money default(0), H5TOver money default(0), H5WL money default(0), --Happy5
 		VGDraw money default(0), VGTOver money default(0), VGWL money default(0), --Virtual Games
+		TGDraw money default(0), TGTOver money default(0), TGWL money default(0), --Table Game
+		AESEXYDraw money default(0), AESEXYTOver money default(0), AESEXYWL money default(0), --AE Sexy
 		Winloss money default(0), ClosingBalance money default(0), Transfer3rd money default(0), DrawGame money default(0),
 		recommend int, mrecommend int, srecommend int, actualrate float, Promotion money, Transfer3rd_Opus money default(0), Transfer3rd_HoGaing money default(0),
 		Transfer3rd_AG money default(0), Transfer3rd_GD money default(0), Transfer3rd_VB money default(0),Transfer3rd_CRYSTAL money default(0),Transfer3rd_LBKeno money default(0),
@@ -106,6 +110,8 @@ BEGIN
 		VS2Draw money default(0), VS2TOver money default(0), VS2WL money default(0), --BetRadar Virtual Sports
 		H5Draw money default(0), H5TOver money default(0), H5WL money default(0), --Happy5
 		VGDraw money default(0), VGTOver money default(0), VGWL money default(0), --Virtual Games
+		TGDraw money default(0), TGTOver money default(0), TGWL money default(0), --Table Game
+		AESEXYDraw money default(0), AESEXYTOver money default(0), AESEXYWL money default(0), --AE Sexy
 		Winloss money default(0), ClosingBalance money default(0), Transfer3rd money default(0), DrawGame money default(0),
 		recommend int, mrecommend int, srecommend int, actualrate float, Promotion money)
 
@@ -137,6 +143,8 @@ BEGIN
 			   ISNULL(p1.VS2Draw, 0) AS VS2Draw, ISNULL(p1.VS2TOver, 0) AS VS2TOver, ISNULL(p1.VS2WL, 0) AS VS2WL, --BetRadar Virtual Sports
 			   ISNULL(p1.H5Draw, 0) AS H5Draw, ISNULL(p1.H5TOver, 0) AS H5TOver, ISNULL(p1.H5WL, 0) AS H5WL, --Happy5
 			   ISNULL(p1.VGDraw, 0) AS VGDraw, ISNULL(p1.VGTOver, 0) AS VGTOver, ISNULL(p1.VGWL, 0) AS VGWL, --Virtual Games
+			   ISNULL(p1.TGDraw, 0) AS TGDraw, ISNULL(p1.TGTOver, 0) AS TGTOver, ISNULL(p1.TGWL, 0) AS TGWL, --Table Game
+			   ISNULL(p1.AESEXYDraw, 0) AS AESEXYDraw, ISNULL(p1.AESEXYTOver, 0) AS AESEXYTOver, ISNULL(p1.AESEXYWL, 0) AS AESEXYWL, --AE Sexy
 			   b.Winloss, b.ClosingBalance, b.Transfer3rd, b.DrawGame,
 			   b.recommend, b.mrecommend, b.srecommend, b.actualrate, b.Promotion
 		FROM bodb_Report.dbo.rptDepWinlost_bk b WITH(NOLOCK)
@@ -195,11 +203,17 @@ BEGIN
 								SUM(CASE WHEN p.sporttype = 164 THEN p.winlost ELSE 0 END) AS H5WL,
 								SUM(CASE WHEN p.sporttype = 245 THEN p.drawTO ELSE 0 END) AS VGDraw,
 								SUM(CASE WHEN p.sporttype = 245 THEN p.turnover ELSE 0 END) AS VGTOver,
-								SUM(CASE WHEN p.sporttype = 245 THEN p.winlost ELSE 0 END) AS VGWL								
+								SUM(CASE WHEN p.sporttype = 245 THEN p.winlost ELSE 0 END) AS VGWL,
+								SUM(CASE WHEN p.sporttype = 222 THEN p.drawTO ELSE 0 END) AS TGDraw,
+								SUM(CASE WHEN p.sporttype = 222 THEN p.turnover ELSE 0 END) AS TGTOver,
+								SUM(CASE WHEN p.sporttype = 222 THEN p.winlost ELSE 0 END) AS TGWL,
+								SUM(CASE WHEN p.sporttype = 243 THEN p.drawTO ELSE 0 END) AS AESEXYDraw,
+								SUM(CASE WHEN p.sporttype = 243 THEN p.turnover ELSE 0 END) AS AESEXYTOver,
+								SUM(CASE WHEN p.sporttype = 243 THEN p.winlost ELSE 0 END) AS AESEXYWL
 
 						FROM bodb_Report.dbo.rptDepWinlostByProduct_BK p WITH(NOLOCK)
 						WHERE winlostdate BETWEEN @fromDate AND @toDate 
-							AND p.sporttype IN (0,151,161,162,180,190,191,192,193,202,203,204,205,210,211,212,219,220,251,208,209,-6,164,194,196,245) 
+							AND p.sporttype IN (0,151,161,162,180,190,191,192,193,202,203,204,205,210,211,212,219,220,251,208,209,-6,164,194,196,245,222,243) 
 							AND p.custid = @CustId 
 						GROUP BY p.winlostdate, p.custid
 					) p1 ON b.winlostdate = p1.winlostdate
@@ -257,6 +271,8 @@ BEGIN
 			   ISNULL(p1.VS2Draw, 0) AS VS2Draw, ISNULL(p1.VS2TOver, 0) AS VS2TOver, ISNULL(p1.VS2WL, 0) AS VS2WL, --BetRadar Virtual Sports
 			   ISNULL(p1.H5Draw, 0) AS H5Draw, ISNULL(p1.H5TOver, 0) AS H5TOver, ISNULL(p1.H5WL, 0) AS H5WL, --Happy5
 			   ISNULL(p1.VGDraw, 0) AS VGDraw, ISNULL(p1.VGTOver, 0) AS VGTOver, ISNULL(p1.VGWL, 0) AS VGWL, --Virtual Games
+			   ISNULL(p1.TGDraw, 0) AS TGDraw, ISNULL(p1.TGTOver, 0) AS TGTOver, ISNULL(p1.TGWL, 0) AS TGWL, --Table Game
+			   ISNULL(p1.AESEXYDraw, 0) AS AESEXYDraw, ISNULL(p1.AESEXYTOver, 0) AS AESEXYTOver, ISNULL(p1.AESEXYWL, 0) AS AESEXYWL, --AE Sexy
 			   b.Winloss, b.ClosingBalance, b.Transfer3rd, b.DrawGame,
 			   b.recommend, b.mrecommend, b.srecommend, b.actualrate, b.Promotion
 		FROM bodb_Report.dbo.rptDepWinlost b WITH(NOLOCK)
@@ -315,10 +331,16 @@ BEGIN
 								SUM(CASE WHEN p.sporttype = 164 THEN p.winlost ELSE 0 END) AS H5WL,
 								SUM(CASE WHEN p.sporttype = 245 THEN p.drawTO ELSE 0 END) AS VGDraw,
 								SUM(CASE WHEN p.sporttype = 245 THEN p.turnover ELSE 0 END) AS VGTOver,
-								SUM(CASE WHEN p.sporttype = 245 THEN p.winlost ELSE 0 END) AS VGWL
+								SUM(CASE WHEN p.sporttype = 245 THEN p.winlost ELSE 0 END) AS VGWL,
+								SUM(CASE WHEN p.sporttype = 222 THEN p.drawTO ELSE 0 END) AS TGDraw,
+								SUM(CASE WHEN p.sporttype = 222 THEN p.turnover ELSE 0 END) AS TGTOver,
+								SUM(CASE WHEN p.sporttype = 222 THEN p.winlost ELSE 0 END) AS TGWL,
+								SUM(CASE WHEN p.sporttype = 243 THEN p.drawTO ELSE 0 END) AS AESEXYDraw,
+								SUM(CASE WHEN p.sporttype = 243 THEN p.turnover ELSE 0 END) AS AESEXYTOver,
+								SUM(CASE WHEN p.sporttype = 243 THEN p.winlost ELSE 0 END) AS AESEXYWL
 						FROM bodb_Report.dbo.rptDepWinlostByProduct p WITH(NOLOCK)
 						WHERE winlostdate BETWEEN @fromDate AND @toDate 
-							AND p.sporttype IN (0,151,161,162,180,190,191,192,193,202,203,204,205,210,211,212,219,220,251,208,209,-6,164,194,196,245) 
+							AND p.sporttype IN (0,151,161,162,180,190,191,192,193,202,203,204,205,210,211,212,219,220,251,208,209,-6,164,194,196,245,222,243) 
 							AND p.custid = @CustId 
 						GROUP BY p.winlostdate, p.custid
 					) p1 ON b.winlostdate = p1.winlostdate
@@ -427,7 +449,9 @@ BEGIN
 			KLDraw = ISNULL(p1.KLDraw,0), KLTOver = ISNULL(p1.KLTOver,0), KLWL = ISNULL(p1.KLWL,0), --KENO Lottery
 			VS2Draw = ISNULL(p1.VS2Draw,0), VS2TOver = ISNULL(p1.VS2TOver,0), VS2WL = ISNULL(p1.VS2WL,0), --BetRadar Virtual Sports
 			H5Draw = ISNULL(p1.H5Draw,0), H5TOver = ISNULL(p1.H5TOver,0), H5WL = ISNULL(p1.H5WL,0), --Happy5
-			VGDraw = ISNULL(p1.VGDraw,0), VGTOver = ISNULL(p1.VGTOver,0), VGWL = ISNULL(p1.VGWL,0)  --Virtual Games
+			VGDraw = ISNULL(p1.VGDraw,0), VGTOver = ISNULL(p1.VGTOver,0), VGWL = ISNULL(p1.VGWL,0),  --Virtual Games
+			TGDraw = ISNULL(p1.TGDraw,0), TGTOver = ISNULL(p1.TGTOver,0), TGWL = ISNULL(p1.TGWL,0),  --Table Game
+			AESEXYDraw = ISNULL(p1.AESEXYDraw,0), AESEXYTOver = ISNULL(p1.AESEXYTOver,0), AESEXYWL = ISNULL(p1.AESEXYWL,0)  --AE SEXY
 		FROM @TodayData d
 			LEFT JOIN (
 						SELECT p.winlostdate, p.custid, 
@@ -485,10 +509,16 @@ BEGIN
 							   SUM(CASE WHEN p.sporttype = 164 THEN p.winlost ELSE 0 END) AS H5WL,
 							   SUM(CASE WHEN p.sporttype = 245 THEN p.drawTO ELSE 0 END) AS VGDraw,
 							   SUM(CASE WHEN p.sporttype = 245 THEN p.turnover ELSE 0 END) AS VGTOver,
-							   SUM(CASE WHEN p.sporttype = 245 THEN p.winlost ELSE 0 END) AS VGWL										   
+							   SUM(CASE WHEN p.sporttype = 245 THEN p.winlost ELSE 0 END) AS VGWL,
+							   SUM(CASE WHEN p.sporttype = 222 THEN p.drawTO ELSE 0 END) AS TGDraw,
+							   SUM(CASE WHEN p.sporttype = 222 THEN p.turnover ELSE 0 END) AS TGTOver,
+							   SUM(CASE WHEN p.sporttype = 222 THEN p.winlost ELSE 0 END) AS TGWL,
+							   SUM(CASE WHEN p.sporttype = 243 THEN p.drawTO ELSE 0 END) AS AESEXYDraw,
+							   SUM(CASE WHEN p.sporttype = 243 THEN p.turnover ELSE 0 END) AS AESEXYTOver,
+							   SUM(CASE WHEN p.sporttype = 243 THEN p.winlost ELSE 0 END) AS AESEXYWL
 						FROM bodb_Report.dbo.rptDepWinlostByProduct p WITH(NOLOCK)
 						WHERE winlostdate = @dbtodaydate
-							AND p.sporttype IN (0,151,161,162,180,190,191,192,193,202,203,204,205,210,211,212,219,220,251,208,209,-6,164,194,196,245)  
+							AND p.sporttype IN (0,151,161,162,180,190,191,192,193,202,203,204,205,210,211,212,219,220,251,208,209,-6,164,194,196,245,222,243)  
 							AND p.custid = @CustId 
 						GROUP BY p.winlostdate, p.custid
 					) p1 ON d.custid = p1.custid
