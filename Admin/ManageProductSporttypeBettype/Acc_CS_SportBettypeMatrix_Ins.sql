@@ -1,5 +1,5 @@
 /*<info serverAlias="DBPRO-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
-CREATE PROCEDURE  dbo.CS_SportBettypeMatrix_Ins
+CREATE PROCEDURE  dbo.Acc_CS_SportBettypeMatrix_Ins
 	@File		NVARCHAR(MAX),
 	@LoginIP	VARCHAR(20)='',
 	@ErrCode	INT = 0 OUTPUT,

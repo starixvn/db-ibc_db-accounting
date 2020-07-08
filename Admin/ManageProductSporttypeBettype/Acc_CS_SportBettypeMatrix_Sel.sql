@@ -1,5 +1,5 @@
 /*<info serverAlias="DBPRO-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
-CREATE PROCEDURE  dbo.CS_SportBettypeMatrix_Sel
+CREATE PROCEDURE  dbo.Acc_CS_SportBettypeMatrix_Sel
     @ProductID      VARCHAR(200) = '', 
 	@SportType      TINYINT = NULL,
 	@BetType        INT = NULL,

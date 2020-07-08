@@ -1,5 +1,5 @@
 /*<info serverAlias="DBPRO-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
-CREATE PROCEDURE  dbo.CS_SportBettypeMatrix_Del
+CREATE PROCEDURE  dbo.Acc_CS_SportBettypeMatrix_Del
 	@SportType   SMALLINT,
 	@BetType     SMALLINT,
 	@Islive      BIT,
