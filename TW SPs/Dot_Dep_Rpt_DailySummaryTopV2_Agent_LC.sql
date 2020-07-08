@@ -46,6 +46,7 @@ Revisions:
 20200331@James(DB06.bodb02): Add Virtual Games(245), Virtual Soccer Champions Cup(196), Virtual Soccer Asian Cup(194)  Report Data
 20200429@James(DB06.bodb02): Add Table Game(222) Report Data
 20200629@Rong(DB06.bodb02): Add AE Sexy(243) Report Data
+20200630@James(DB06.bodb02): Add Moonstone Report Data
 */
 BEGIN
 	CREATE TABLE #SumWinlost(
@@ -281,11 +282,11 @@ BEGIN
 	)
 
 	--Get Transfer 3rd Winlost data
-	DECLARE @WinlostTransfer3rd TABLE(CustId int PRIMARY KEY, Transfer3rd_Opus money, Transfer3rd_AG money, Transfer3rd_GD money, Transfer3rd_VB money, Transfer3rd_Crystal money, Transfer3rd_LBKeno money, Transfer3rd_Opal money, Transfer3rd_BetSoft money, Transfer3rd_iSoftBet money, Transfer3rd_CitiBet money, Transfer3rd_Topaz money, Transfer3rd_IMone money, Transfer3rd_BTi money, Transfer3rd_VRLottery money, Transfer3rd_Sapphire money, Transfer3rd_KYGaming money)
+	DECLARE @WinlostTransfer3rd TABLE(CustId int PRIMARY KEY, Transfer3rd_Opus money, Transfer3rd_AG money, Transfer3rd_GD money, Transfer3rd_VB money, Transfer3rd_Crystal money, Transfer3rd_LBKeno money, Transfer3rd_Opal money, Transfer3rd_BetSoft money, Transfer3rd_iSoftBet money, Transfer3rd_CitiBet money, Transfer3rd_Topaz money, Transfer3rd_IMone money, Transfer3rd_BTi money, Transfer3rd_VRLottery money, Transfer3rd_Sapphire money, Transfer3rd_KYGaming money, Transfer3rd_Moonstone money)
 
-	DECLARE @WinlostTransfer3rd_BeforeCutDate TABLE(CustId int PRIMARY KEY, Transfer3rd_Opus money, Transfer3rd_AG money, Transfer3rd_GD money, Transfer3rd_VB money, Transfer3rd_Crystal money, Transfer3rd_LBKeno money, Transfer3rd_Opal money, Transfer3rd_BetSoft money, Transfer3rd_iSoftBet money, Transfer3rd_CitiBet money, Transfer3rd_Topaz money, Transfer3rd_IMone money, Transfer3rd_BTi money, Transfer3rd_VRLottery money, Transfer3rd_Sapphire money, Transfer3rd_KYGaming money)
+	DECLARE @WinlostTransfer3rd_BeforeCutDate TABLE(CustId int PRIMARY KEY, Transfer3rd_Opus money, Transfer3rd_AG money, Transfer3rd_GD money, Transfer3rd_VB money, Transfer3rd_Crystal money, Transfer3rd_LBKeno money, Transfer3rd_Opal money, Transfer3rd_BetSoft money, Transfer3rd_iSoftBet money, Transfer3rd_CitiBet money, Transfer3rd_Topaz money, Transfer3rd_IMone money, Transfer3rd_BTi money, Transfer3rd_VRLottery money, Transfer3rd_Sapphire money, Transfer3rd_KYGaming money, Transfer3rd_Moonstone money)
 
-	DECLARE @WinlostTransfer3rd_FromCutDate TABLE(CustId int PRIMARY KEY, Transfer3rd_Opus money, Transfer3rd_AG money, Transfer3rd_GD money, Transfer3rd_VB money, Transfer3rd_Crystal money, Transfer3rd_LBKeno money, Transfer3rd_Opal money, Transfer3rd_BetSoft money, Transfer3rd_iSoftBet money, Transfer3rd_CitiBet money, Transfer3rd_Topaz money, Transfer3rd_IMone money, Transfer3rd_BTi money, Transfer3rd_VRLottery money, Transfer3rd_Sapphire money, Transfer3rd_KYGaming money)
+	DECLARE @WinlostTransfer3rd_FromCutDate TABLE(CustId int PRIMARY KEY, Transfer3rd_Opus money, Transfer3rd_AG money, Transfer3rd_GD money, Transfer3rd_VB money, Transfer3rd_Crystal money, Transfer3rd_LBKeno money, Transfer3rd_Opal money, Transfer3rd_BetSoft money, Transfer3rd_iSoftBet money, Transfer3rd_CitiBet money, Transfer3rd_Topaz money, Transfer3rd_IMone money, Transfer3rd_BTi money, Transfer3rd_VRLottery money, Transfer3rd_Sapphire money, Transfer3rd_KYGaming money, Transfer3rd_Moonstone money)
 
 	CREATE TABLE #AgentList (AgentID INT)
 
@@ -444,7 +445,7 @@ BEGIN
 			) p1 ON d.custid = p1.custid
 			   
 					   
-		INSERT INTO @WinlostTransfer3rd_BeforeCutDate (CustId, Transfer3rd_Opus, Transfer3rd_AG, Transfer3rd_GD, Transfer3rd_VB, Transfer3rd_Crystal, Transfer3rd_LBKeno, Transfer3rd_Opal, Transfer3rd_BetSoft, Transfer3rd_iSoftBet, Transfer3rd_CitiBet, Transfer3rd_Topaz, Transfer3rd_IMone, Transfer3rd_BTi, Transfer3rd_VRLottery, Transfer3rd_Sapphire, Transfer3rd_KYGaming)
+		INSERT INTO @WinlostTransfer3rd_BeforeCutDate (CustId, Transfer3rd_Opus, Transfer3rd_AG, Transfer3rd_GD, Transfer3rd_VB, Transfer3rd_Crystal, Transfer3rd_LBKeno, Transfer3rd_Opal, Transfer3rd_BetSoft, Transfer3rd_iSoftBet, Transfer3rd_CitiBet, Transfer3rd_Topaz, Transfer3rd_IMone, Transfer3rd_BTi, Transfer3rd_VRLottery, Transfer3rd_Sapphire, Transfer3rd_KYGaming, Transfer3rd_Moonstone)
 		SELECT custid,  
 			SUM(CASE PartnerId WHEN 2 THEN TransferAmount ELSE 0 END), -- oops
 			SUM(CASE PartnerId WHEN 3 THEN TransferAmount ELSE 0 END), -- AG
@@ -461,7 +462,8 @@ BEGIN
 			SUM(CASE PartnerId WHEN 15 THEN TransferAmount ELSE 0 END), -- BTi
 			SUM(CASE PartnerId WHEN 16 THEN TransferAmount ELSE 0 END), -- VRLottery
 			SUM(CASE PartnerId WHEN 17 THEN TransferAmount ELSE 0 END), -- Sapphire
-			SUM(CASE PartnerId WHEN 19 THEN TransferAmount ELSE 0 END)  -- KYGaming
+			SUM(CASE PartnerId WHEN 19 THEN TransferAmount ELSE 0 END), -- KYGaming
+			SUM(CASE PartnerId WHEN 20 THEN TransferAmount ELSE 0 END)  -- Moonstone
 		FROM bodb_Report.dbo.rptDepWinlost_Transfer3rdOthers_bk b WITH (NOLOCK) 
 		WHERE  (winlostdate >= @fromDate AND winlostdate <= @ToDate_BK) 
 			AND EXISTS (SELECT 1 FROM #tblcust c WHERE c.custid = b.CustId)	 
@@ -596,7 +598,7 @@ BEGIN
 				GROUP BY  p.custid
 			) p1 ON d.custid = p1.custid	
 
-		INSERT INTO @WinlostTransfer3rd_FromCutDate (CustId, Transfer3rd_Opus, Transfer3rd_AG, Transfer3rd_GD, Transfer3rd_VB, Transfer3rd_Crystal, Transfer3rd_LBKeno, Transfer3rd_Opal, Transfer3rd_BetSoft, Transfer3rd_iSoftBet, Transfer3rd_CitiBet, Transfer3rd_Topaz, Transfer3rd_IMone, Transfer3rd_BTi, Transfer3rd_VRLottery, Transfer3rd_Sapphire, Transfer3rd_KYGaming)
+		INSERT INTO @WinlostTransfer3rd_FromCutDate (CustId, Transfer3rd_Opus, Transfer3rd_AG, Transfer3rd_GD, Transfer3rd_VB, Transfer3rd_Crystal, Transfer3rd_LBKeno, Transfer3rd_Opal, Transfer3rd_BetSoft, Transfer3rd_iSoftBet, Transfer3rd_CitiBet, Transfer3rd_Topaz, Transfer3rd_IMone, Transfer3rd_BTi, Transfer3rd_VRLottery, Transfer3rd_Sapphire, Transfer3rd_KYGaming, Transfer3rd_Moonstone)
 		SELECT custid,  
 			SUM(CASE PartnerId WHEN 2 THEN TransferAmount ELSE 0 END),  -- oops
 			SUM(CASE PartnerId WHEN 3 THEN TransferAmount ELSE 0 END),  -- AG
@@ -614,7 +616,8 @@ BEGIN
 			SUM(CASE PartnerId WHEN 15 THEN TransferAmount ELSE 0 END),  -- BTi
 			SUM(CASE PartnerId WHEN 16 THEN TransferAmount ELSE 0 END),  -- VRLottery
 			SUM(CASE PartnerId WHEN 17 THEN TransferAmount ELSE 0 END),  -- Sapphire
-			SUM(CASE PartnerId WHEN 19 THEN TransferAmount ELSE 0 END)   -- KYGaming
+			SUM(CASE PartnerId WHEN 19 THEN TransferAmount ELSE 0 END),  -- KYGaming
+			SUM(CASE PartnerId WHEN 20 THEN TransferAmount ELSE 0 END)   -- Moonstone
 		FROM bodb_Report.dbo.rptDepWinlost_Transfer3rdOthers b WITH (NOLOCK) 
 		WHERE  (winlostdate >= @FromDate_BK AND winlostdate <= @toDate) 
 			AND EXISTS (SELECT 1 FROM #tblcust c WHERE c.custid = b.CustId)
@@ -727,18 +730,18 @@ BEGIN
 		) d
 	GROUP BY custid
 
-	INSERT INTO @WinlostTransfer3rd (CustId, Transfer3rd_Opus, Transfer3rd_AG, Transfer3rd_GD, Transfer3rd_VB, Transfer3rd_Crystal, Transfer3rd_LBKeno, Transfer3rd_Opal, Transfer3rd_BetSoft, Transfer3rd_iSoftBet, Transfer3rd_CitiBet, Transfer3rd_Topaz, Transfer3rd_IMone, Transfer3rd_BTi, Transfer3rd_VRLottery, Transfer3rd_Sapphire, Transfer3rd_KYGaming)
+	INSERT INTO @WinlostTransfer3rd (CustId, Transfer3rd_Opus, Transfer3rd_AG, Transfer3rd_GD, Transfer3rd_VB, Transfer3rd_Crystal, Transfer3rd_LBKeno, Transfer3rd_Opal, Transfer3rd_BetSoft, Transfer3rd_iSoftBet, Transfer3rd_CitiBet, Transfer3rd_Topaz, Transfer3rd_IMone, Transfer3rd_BTi, Transfer3rd_VRLottery, Transfer3rd_Sapphire, Transfer3rd_KYGaming, Transfer3rd_Moonstone)
 	SELECT	custid, SUM(Transfer3rd_Opus), SUM(Transfer3rd_AG), SUM(Transfer3rd_GD), SUM(Transfer3rd_VB),
-			SUM(Transfer3rd_Crystal), SUM(Transfer3rd_LBKeno), SUM(Transfer3rd_Opal), SUM(Transfer3rd_BetSoft), SUM(Transfer3rd_iSoftBet), SUM(Transfer3rd_CitiBet), SUM(Transfer3rd_Topaz), SUM(Transfer3rd_IMone), SUM(Transfer3rd_BTi), SUM(Transfer3rd_VRLottery), SUM(Transfer3rd_Sapphire), SUM(Transfer3rd_KYGaming)
+			SUM(Transfer3rd_Crystal), SUM(Transfer3rd_LBKeno), SUM(Transfer3rd_Opal), SUM(Transfer3rd_BetSoft), SUM(Transfer3rd_iSoftBet), SUM(Transfer3rd_CitiBet), SUM(Transfer3rd_Topaz), SUM(Transfer3rd_IMone), SUM(Transfer3rd_BTi), SUM(Transfer3rd_VRLottery), SUM(Transfer3rd_Sapphire), SUM(Transfer3rd_KYGaming), SUM(Transfer3rd_Moonstone)
 	FROM (
 			SELECT	CustId, Transfer3rd_Opus, Transfer3rd_AG, Transfer3rd_GD, Transfer3rd_VB,
-					Transfer3rd_Crystal, Transfer3rd_LBKeno, Transfer3rd_Opal, Transfer3rd_BetSoft, Transfer3rd_iSoftBet, Transfer3rd_CitiBet, Transfer3rd_Topaz, Transfer3rd_IMone, Transfer3rd_BTi, Transfer3rd_VRLottery, Transfer3rd_Sapphire, Transfer3rd_KYGaming
+					Transfer3rd_Crystal, Transfer3rd_LBKeno, Transfer3rd_Opal, Transfer3rd_BetSoft, Transfer3rd_iSoftBet, Transfer3rd_CitiBet, Transfer3rd_Topaz, Transfer3rd_IMone, Transfer3rd_BTi, Transfer3rd_VRLottery, Transfer3rd_Sapphire, Transfer3rd_KYGaming, Transfer3rd_Moonstone
 			FROM @WinlostTransfer3rd_BeforeCutDate
 
 			UNION ALL
 
 			SELECT	CustId, Transfer3rd_Opus, Transfer3rd_AG, Transfer3rd_GD, Transfer3rd_VB,
-					Transfer3rd_Crystal, Transfer3rd_LBKeno, Transfer3rd_Opal, Transfer3rd_BetSoft, Transfer3rd_iSoftBet, Transfer3rd_CitiBet, Transfer3rd_Topaz, Transfer3rd_IMone, Transfer3rd_BTi, Transfer3rd_VRLottery, Transfer3rd_Sapphire, Transfer3rd_KYGaming
+					Transfer3rd_Crystal, Transfer3rd_LBKeno, Transfer3rd_Opal, Transfer3rd_BetSoft, Transfer3rd_iSoftBet, Transfer3rd_CitiBet, Transfer3rd_Topaz, Transfer3rd_IMone, Transfer3rd_BTi, Transfer3rd_VRLottery, Transfer3rd_Sapphire, Transfer3rd_KYGaming, Transfer3rd_Moonstone
 			FROM @WinlostTransfer3rd_FromCutDate
 		) AS Transfer3rd
 	GROUP BY custid
@@ -752,7 +755,7 @@ BEGIN
 				   ISNULL(o.Transfer3rd_LBKeno, 0) AS Transfer3rd_LBKeno, ISNULL(o.Transfer3rd_Opal, 0) AS Transfer3rd_Opal, ISNULL(o.Transfer3rd_BetSoft, 0) AS Transfer3rd_BetSoft,
 				   ISNULL(o.Transfer3rd_iSoftBet, 0) AS Transfer3rd_iSoftBet, ISNULL(o.Transfer3rd_CitiBet, 0) AS Transfer3rd_CitiBet, ISNULL(o.Transfer3rd_Topaz, 0) AS Transfer3rd_Topaz,
 				   ISNULL(o.Transfer3rd_IMone, 0) AS Transfer3rd_IMone, ISNULL(o.Transfer3rd_BTi, 0) AS Transfer3rd_BTi, ISNULL(o.Transfer3rd_VRLottery, 0) AS Transfer3rd_VRLottery,
-				   ISNULL(o.Transfer3rd_Sapphire, 0) AS Transfer3rd_Sapphire, ISNULL(o.Transfer3rd_KYGaming, 0) AS Transfer3rd_KYGaming
+				   ISNULL(o.Transfer3rd_Sapphire, 0) AS Transfer3rd_Sapphire, ISNULL(o.Transfer3rd_KYGaming, 0) AS Transfer3rd_KYGaming, ISNULL(o.Transfer3rd_Moonstone, 0) AS Transfer3rd_Moonstone
 			FROM 
 			(
 				SELECT rpt.*
@@ -772,7 +775,7 @@ BEGIN
 				   ISNULL(o.Transfer3rd_LBKeno, 0) AS Transfer3rd_LBKeno,ISNULL(o.Transfer3rd_Opal, 0) AS Transfer3rd_Opal, ISNULL(o.Transfer3rd_BetSoft, 0) AS Transfer3rd_BetSoft,
 				   ISNULL(o.Transfer3rd_iSoftBet, 0) AS Transfer3rd_iSoftBet, ISNULL(o.Transfer3rd_CitiBet, 0) AS Transfer3rd_CitiBet, ISNULL(o.Transfer3rd_Topaz, 0) AS Transfer3rd_Topaz,
 				   ISNULL(o.Transfer3rd_IMone, 0) AS Transfer3rd_IMone, ISNULL(o.Transfer3rd_BTi, 0) AS Transfer3rd_BTi, ISNULL(o.Transfer3rd_VRLottery, 0) AS Transfer3rd_VRLottery,
-				   ISNULL(o.Transfer3rd_Sapphire, 0) AS Transfer3rd_Sapphire, ISNULL(o.Transfer3rd_KYGaming, 0) AS Transfer3rd_KYGaming
+				   ISNULL(o.Transfer3rd_Sapphire, 0) AS Transfer3rd_Sapphire, ISNULL(o.Transfer3rd_KYGaming, 0) AS Transfer3rd_KYGaming, ISNULL(o.Transfer3rd_Moonstone, 0) AS Transfer3rd_Moonstone
 			FROM 
 			(
 				SELECT TOP(@topcnt) rpt.*
@@ -794,7 +797,7 @@ BEGIN
 					ISNULL(o.Transfer3rd_LBKeno, 0) AS Transfer3rd_LBKeno, ISNULL(o.Transfer3rd_Opal, 0) AS Transfer3rd_Opal, ISNULL(o.Transfer3rd_BetSoft, 0) AS Transfer3rd_BetSoft,
 					ISNULL(o.Transfer3rd_iSoftBet, 0) AS Transfer3rd_iSoftBet, ISNULL(o.Transfer3rd_CitiBet, 0) AS Transfer3rd_CitiBet, ISNULL(o.Transfer3rd_Topaz, 0) AS Transfer3rd_Topaz,
 					ISNULL(o.Transfer3rd_IMone, 0) AS Transfer3rd_IMone, ISNULL(o.Transfer3rd_BTi, 0) AS Transfer3rd_BTi, ISNULL(o.Transfer3rd_VRLottery, 0) AS Transfer3rd_VRLottery,
-					ISNULL(o.Transfer3rd_Sapphire, 0) AS Transfer3rd_Sapphire, ISNULL(o.Transfer3rd_KYGaming, 0) AS Transfer3rd_KYGaming
+					ISNULL(o.Transfer3rd_Sapphire, 0) AS Transfer3rd_Sapphire, ISNULL(o.Transfer3rd_KYGaming, 0) AS Transfer3rd_KYGaming, ISNULL(o.Transfer3rd_Moonstone, 0) AS Transfer3rd_Moonstone
 			FROM 
 			(
 				SELECT rpt.*
@@ -824,7 +827,7 @@ BEGIN
 					ISNULL(o.Transfer3rd_LBKeno, 0) AS Transfer3rd_LBKeno,ISNULL(o.Transfer3rd_Opal, 0) AS Transfer3rd_Opal, ISNULL(o.Transfer3rd_BetSoft, 0) AS Transfer3rd_BetSoft,
 					ISNULL(o.Transfer3rd_iSoftBet, 0) AS Transfer3rd_iSoftBet, ISNULL(o.Transfer3rd_CitiBet, 0) AS Transfer3rd_CitiBet, ISNULL(o.Transfer3rd_Topaz, 0) AS Transfer3rd_Topaz,
 					ISNULL(o.Transfer3rd_IMone, 0) AS Transfer3rd_IMone, ISNULL(o.Transfer3rd_BTi, 0) AS Transfer3rd_BTi, ISNULL(o.Transfer3rd_VRLottery, 0) AS Transfer3rd_VRLottery,
-					ISNULL(o.Transfer3rd_Sapphire, 0) AS Transfer3rd_Sapphire, ISNULL(o.Transfer3rd_KYGaming, 0) AS Transfer3rd_KYGaming
+					ISNULL(o.Transfer3rd_Sapphire, 0) AS Transfer3rd_Sapphire, ISNULL(o.Transfer3rd_KYGaming, 0) AS Transfer3rd_KYGaming, ISNULL(o.Transfer3rd_Moonstone, 0) AS Transfer3rd_Moonstone
 			FROM 
 			(
 				SELECT TOP(@topcnt) rpt.*
