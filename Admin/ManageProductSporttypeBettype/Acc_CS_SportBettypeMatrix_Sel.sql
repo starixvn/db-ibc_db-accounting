@@ -35,7 +35,7 @@ BEGIN
 		ProductID			INT,
 		SportTypeGroup		SMALLINT,
 		DisplaySport		VARCHAR(100),
-		DisplaySportName	VARCHAR(300)
+		DisplaySportName	NVARCHAR(300)
 	)
 
 	CREATE TABLE #Tmp 
@@ -54,8 +54,8 @@ BEGIN
 		RefTable			TINYINT,
 		SportTypeGroup		SMALLINT,
 		BetTypeGroup		SMALLINT,
-		SportTypeGroupName  VARCHAR(200),
-		BetTypeGroupName    VARCHAR(100),
+		SportTypeGroupName  NVARCHAR(200),
+		BetTypeGroupName    NVARCHAR(128),
 		RowNum				INT
 	)
 
@@ -66,7 +66,7 @@ BEGIN
 		DisplaySport,
 		DisplaySportName
 	)
-	EXEC dbo.CS_SportType_Sel
+	EXEC dbo.Acc_CS_SportGroup_Sel
 
 	INSERT INTO #Tmp
 	(

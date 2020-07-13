@@ -46,7 +46,7 @@ BEGIN
 		DisplaySport,
 		DisplaySportName
 	)
-	EXEC dbo.CS_SportType_Sel
+	EXEC dbo.Acc_CS_SportGroup_Sel
 
 	CREATE TABLE #input 
 	(    
@@ -186,7 +186,7 @@ BEGIN
 			OR EventType	IS  NULL OR EventType		NOT BETWEEN 0 AND 5	
 		    OR RefTable		IS  NULL OR RefTable		NOT BETWEEN 0 AND 3
 			OR BetTypeGroup IS  NULL OR SportTypeGroup	IS NULL
-			
+	ORDER BY ID DESC		
 	IF @ErrCode <> 0
 	   BEGIN
 	     IF @ErrCode = 1007
@@ -235,34 +235,47 @@ BEGIN
 	--Check bettype, Sporttype, Productid, SportTypeGroup, BetTypeGroup
 	
 	SELECT	@MatrixError 	= CONVERT(VARCHAR(5),I.ID),
-			@ErrCode = 1007,
-			@ValueError = CASE WHEN s.SportType		IS NULL THEN i.SportType
-							   WHEN b.typeid		IS NULL THEN i.BetType
-							   WHEN p.ProductID		IS NULL THEN i.ProductID
-							   WHEN bg.typeid		IS NULL THEN i.BetTypeGroup
-						  ELSE i.SportTypeGroup END,
+			@ErrCode    = CASE WHEN p.ProductID		 IS NULL THEN 1007							
+							   WHEN f.SportTypeGroup IS NULL THEN 1007
+							   WHEN g.SportTypeGroup IS NULL THEN 1008
+			              ELSE 1007 END,
+			@ValueError = CASE WHEN p.ProductID		 IS NULL THEN i.ProductID
+							   WHEN f.SportTypeGroup IS NULL THEN i.SportTypeGroup
+							   WHEN g.SportTypeGroup IS NULL THEN i.ProductID
+							   WHEN b.typeid		 IS NULL THEN i.BetType							   
+							   WHEN bg.typeid		 IS NULL THEN i.BetTypeGroup
+						  ELSE s.SportType END,
 
-			@ColumnName = CASE WHEN s.SportType		IS NULL THEN 'Sporttype'
-			                   WHEN b.typeid		IS NULL THEN 'Bettype'
-							   WHEN p.ProductID		IS NULL THEN 'ProductID'
-							   WHEN bg.typeid		IS NULL THEN 'BetTypeGroup'
-						  ELSE 'SportTypeGroup' END
+			@ColumnName = CASE WHEN p.ProductID		  IS NULL THEN 'ProductID'
+							   WHEN f.SportTypeGroup  IS NULL THEN 'SportTypeGroup'
+							   WHEN g.SportTypeGroup  IS NULL THEN 'SportTypeGroup'
+			                   WHEN b.typeid		  IS NULL THEN 'Bettype'
+							   WHEN bg.typeid		  IS NULL THEN 'BetTypeGroup'
+						  ELSE 'SportType' END
 	FROM #input i
 	     LEFT JOIN dbo.Sports s		WITH(NOLOCK) ON s.SportType = i.SportType
 		 LEFT JOIN dbo.Bettype b	WITH(NOLOCK) ON b.typeid = i.BetType
 		 LEFT JOIN dbo.Products p	WITH(NOLOCK) ON p.ProductID = i.ProductID
 		 LEFT JOIN dbo.Bettype bg	WITH(NOLOCK) ON bg.typeid = i.BetTypeGroup
-		 LEFT JOIN @SporttypeGroup f ON f.SportTypeGroup = i.SportTypeGroup AND (i.ProductID <> 1 OR f.ProductID = 1)
+		 LEFT JOIN @SporttypeGroup f ON f.SportTypeGroup = i.SportTypeGroup
+		 LEFT JOIN @SporttypeGroup g ON g.SportTypeGroup = i.SportTypeGroup 
+				AND ISNULL(g.ProductID,0) = CASE WHEN i.ProductID = 1 THEN 1 ELSE 0 END 
 		 
 	WHERE s.SportType		IS NULL 
 		OR b.typeid			IS NULL 
 		OR p.ProductID		IS NULL
 		OR bg.typeid		IS NULL
+		OR g.SportTypeGroup IS NULL
 		OR f.SportTypeGroup IS NULL
+	ORDER BY i.ID DESC
 
 	IF @ErrCode <> 0
 	BEGIN
-		SELECT @ErrMsg = 'Row "' + ISNULL(@MatrixError,'') + '" - ' + @ColumnName + ' = "' + ISNULL(@ValueError,'') + '" does not exist.'
+	    IF @ErrCode = 1007
+			SELECT @ErrMsg = 'Row "' + ISNULL(@MatrixError,'') + '" - ' + @ColumnName + ' = "' + ISNULL(@ValueError,'') + '" does not exist.'
+		IF @ErrCode = 1008
+			SELECT @ErrMsg = 'Row "' + ISNULL(@MatrixError,'') + '" - ' + 'SportTypeGroup doesn''t belong to ProductID which is ' 
+							 + CASE WHEN ISNULL(@ValueError,0) = 1 THEN '1.' ELSE 'different from 1.' END
 		RETURN
 	END
 
@@ -274,9 +287,9 @@ BEGIN
 	FROM #input i
 		INNER JOIN #input p ON i.BetType = p.BetType
 		LEFT JOIN CS_SportBettypeMatrix m WITH(NOLOCK) ON i.BetType = m.BetType
-	WHERE i.ProductID <> p.ProductID OR i.RefTable <> p.RefTable OR i.EventType <> p.EventType 
+	WHERE i.ProductID <> p.ProductID OR i.RefTable <> p.RefTable OR i.EventType <> p.EventType  OR i.SubProduct <> p.SubProduct
 		OR i.BetType >= 19999 OR i.BetTypeGroup >= 19999
-		OR (m.BetType IS NOT NULL AND (i.ProductID <> m.ProductID OR i.RefTable <> m.RefTable OR i.EventType <> m.EventType))	
+		OR (m.BetType IS NOT NULL AND (i.ProductID <> m.ProductID OR i.RefTable <> m.RefTable OR i.EventType <> m.EventType OR i.SubProduct <> m.SubProduct))	
 
 	IF @ErrCode <> 0
 	   BEGIN
@@ -287,7 +300,7 @@ BEGIN
 		 SELECT @ErrMsg = 'BetTypeGroup must be less than 19999 on row "' + @MatrixError + '".'
 
 		 IF @ErrCode = 1011 
-		 SELECT @ErrMsg = 'The ProductID, RefTable, EventType of row "' + @MatrixError +'" must be the same for the same BetType.'	                              
+		 SELECT @ErrMsg = 'The ProductID, RefTable, EventType, SubProduct of row "' + @MatrixError +'" must be the same for the same BetType.'	                              
 	     RETURN
 	   END
 

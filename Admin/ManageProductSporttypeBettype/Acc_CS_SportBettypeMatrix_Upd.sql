@@ -183,14 +183,14 @@ BEGIN
 	FROM #input i
 		INNER JOIN #input p ON i.BetType = p.BetType
 		LEFT JOIN CS_SportBettypeMatrix m WITH(NOLOCK) ON i.BetType = m.BetType
-	WHERE i.ProductID <> p.ProductID OR i.RefTable <> p.RefTable OR i.EventType <> p.EventType 
+	WHERE i.ProductID <> p.ProductID OR i.RefTable <> p.RefTable OR i.EventType <> p.EventType OR i.SubProduct <> p.SubProduct
 		OR (m.BetType IS NOT NULL 
 			AND (m.SportType <> p.SportType OR m.IsLive <> p.IsLive) 
-			AND (i.ProductID <> M.ProductID OR i.RefTable <> m.RefTable OR i.EventType <> m.EventType))	
+			AND (i.ProductID <> M.ProductID OR i.RefTable <> m.RefTable OR i.EventType <> m.EventType OR i.SubProduct <> m.SubProduct))	
 
 	IF @ErrCode <> 0
 	BEGIN
-		SELECT @ErrMsg = 'The ProductID, RefTable, EventType of Rows must be the same for the same BetType.'
+		SELECT @ErrMsg = 'The ProductID, RefTable, EventType, SubProduct of Rows must be the same for the same BetType.'
 		RETURN
 	END
 
