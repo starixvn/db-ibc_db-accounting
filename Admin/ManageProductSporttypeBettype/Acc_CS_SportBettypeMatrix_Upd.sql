@@ -179,8 +179,7 @@ BEGIN
 
 	SELECT TOP(1) @MatrixError 	= CONVERT(VARCHAR(5),I.ID), 
 	              @ValueError 	= i.BetType,
-				  @ErrCode      = CASE WHEN i.BetType >= 19999 THEN 1009								   
-								  ELSE 1010 END
+				  @ErrCode      = 1010
 	FROM #input i
 		INNER JOIN #input p ON i.BetType = p.BetType
 		LEFT JOIN CS_SportBettypeMatrix m WITH(NOLOCK) ON i.BetType = m.BetType

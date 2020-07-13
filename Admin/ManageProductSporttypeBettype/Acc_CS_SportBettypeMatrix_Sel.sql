@@ -1,6 +1,6 @@
 /*<info serverAlias="DBPRO-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE  dbo.Acc_CS_SportBettypeMatrix_Sel
-    @ProductID      VARCHAR(200) = '', 
+    @ProductID      VARCHAR(200), 
 	@SportType      TINYINT = NULL,
 	@BetType        INT = NULL,
 	@EventType      TINYINT  = NULL,
@@ -112,7 +112,7 @@ BEGIN
 		INNER JOIN dbo.bettype bg WITH(NOLOCK) ON bg.typeid = m.BetTypeGroup
 		INNER JOIN #SportTypeGroup sg WITH(NOLOCK) ON sg.SportTypeGroup = m.SportTypeGroup
 
-	WHERE (',' + @ProductID + ',' LIKE '%,' + CONVERT(VARCHAR(4), m.ProductID) + ',%' OR @ProductID = '') 
+	WHERE (',' + @ProductID + ',' LIKE '%,' + CONVERT(VARCHAR(4), m.ProductID) + ',%') 
 		  AND (m.SportType	= @Sporttype	OR @Sporttype IS NULL) 
 		  AND (m.BetType	= @BetType		OR @BetType IS NULL)
 		  AND (m.EventType	= @EventType	OR @EventType IS NULL)

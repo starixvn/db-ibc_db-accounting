@@ -37,6 +37,17 @@ BEGIN
 	DECLARE @iDoc INT, @RowTotal INT = 0, @CurrentRow INT = 0, @MatrixError NVARCHAR(MAX) = '', @ValueError NVARCHAR(MAX) = '', 
 			@LimitValue BIGINT,@ColumnName NVARCHAR(200)
 
+	DECLARE @SporttypeGroup TABLE (ProductID TINYINT, SportTypeGroup SMALLINT,DisplaySport NVARCHAR(MAX), DisplaySportName NVARCHAR(MAX))
+
+	INSERT INTO @SporttypeGroup
+	(
+		ProductID,
+		SportTypeGroup,
+		DisplaySport,
+		DisplaySportName
+	)
+	EXEC dbo.CS_SportType_Sel
+
 	CREATE TABLE #input 
 	(    
 		ID				INT IDENTITY (1,1),
@@ -241,7 +252,7 @@ BEGIN
 		 LEFT JOIN dbo.Bettype b	WITH(NOLOCK) ON b.typeid = i.BetType
 		 LEFT JOIN dbo.Products p	WITH(NOLOCK) ON p.ProductID = i.ProductID
 		 LEFT JOIN dbo.Bettype bg	WITH(NOLOCK) ON bg.typeid = i.BetTypeGroup
-		 LEFT JOIN CS_f_SportTypeGroup_OrderSel(1) f ON f.SportTypeGroup = i.SportTypeGroup
+		 LEFT JOIN @SporttypeGroup f ON f.SportTypeGroup = i.SportTypeGroup AND (i.ProductID <> 1 OR f.ProductID = 1)
 		 
 	WHERE s.SportType		IS NULL 
 		OR b.typeid			IS NULL 
@@ -257,20 +268,25 @@ BEGIN
 
 	SELECT TOP(1) @MatrixError 	= CONVERT(VARCHAR(5),I.ID), 
 	              @ValueError 	= i.BetType,
-				  @ErrCode      = CASE WHEN i.BetType >= 19999 THEN 1009								   
-								  ELSE 1010 END
+				  @ErrCode      = CASE WHEN i.BetType >= 19999		THEN 1009
+									   WHEN i.BetTypeGroup >= 19999 THEN 1010
+								  ELSE 1011 END
 	FROM #input i
 		INNER JOIN #input p ON i.BetType = p.BetType
 		LEFT JOIN CS_SportBettypeMatrix m WITH(NOLOCK) ON i.BetType = m.BetType
-	WHERE i.ProductID <> p.ProductID OR i.RefTable <> p.RefTable OR i.EventType <> p.EventType OR i.BetType >= 19999
-		
+	WHERE i.ProductID <> p.ProductID OR i.RefTable <> p.RefTable OR i.EventType <> p.EventType 
+		OR i.BetType >= 19999 OR i.BetTypeGroup >= 19999
 		OR (m.BetType IS NOT NULL AND (i.ProductID <> m.ProductID OR i.RefTable <> m.RefTable OR i.EventType <> m.EventType))	
 
 	IF @ErrCode <> 0
 	   BEGIN
 	     IF @ErrCode = 1009
 		 SELECT @ErrMsg = 'BetType must be less than 19999 on row "' + @MatrixError + '".'
-		 IF @ErrCode = 1010 
+
+		 IF @ErrCode = 1010
+		 SELECT @ErrMsg = 'BetTypeGroup must be less than 19999 on row "' + @MatrixError + '".'
+
+		 IF @ErrCode = 1011 
 		 SELECT @ErrMsg = 'The ProductID, RefTable, EventType of row "' + @MatrixError +'" must be the same for the same BetType.'	                              
 	     RETURN
 	   END
