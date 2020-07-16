@@ -241,12 +241,10 @@ BEGIN
 		SubProduct				VARCHAR(250), 
 		Winlost					MONEY, 
 		WinlostDueToRNG			MONEY, 
-		WinlostDueToPP			MONEY, 
-		WinlostForExtraPT		MONEY,
+		WinlostDueToPP			MONEY,  
 		RealWinlost				MONEY, 
 		RealWinlostDueToRNG		MONEY, 
-		RealWinlostDueToPP		MONEY, 
-		RealWinlostForExtraPT	MONEY,
+		RealWinlostDueToPP		MONEY,  
 		eWinlost				MONEY,
 		eRealWinlost			MONEY
 	)
@@ -262,14 +260,12 @@ BEGIN
 		Winlost				MONEY, 		
 		ExtraPTWinlost		MONEY,
 		RealWinlost			MONEY, 		
-		RealExtraPTWinlost	MONEY,
-		eWinlost			MONEY,
-		eRealWinlost		MONEY
+		RealExtraPTWinlost	MONEY 
 	) 
 	 
 		INSERT INTO #wl (winlostdate, srecommend, Currency, Sporttype, ProductId, ProductName, SubProduct, 
-						 winlost, WinlostDueToRNG, WinlostDueToPP, WinlostForExtraPT,
-						 Realwinlost, RealWinlostDueToRNG, RealWinlostDueToPP, RealWinlostForExtraPT,
+						 winlost, WinlostDueToRNG, WinlostDueToPP, 
+						 Realwinlost, RealWinlostDueToRNG, RealWinlostDueToPP,
 						 eWinlost, eRealWinlost)
 		SELECT  b.winlostdate,
 				b.srecommend,
@@ -319,18 +315,7 @@ BEGIN
 							END
 						) * CASE WHEN @Istest = 1 AND currency = 20 THEN 1 ELSE b.actualrate END
 					) AS WinlostDueToPP,
-				SUM(
-						(	
-							CASE
-							-- Jackpot
-							WHEN b.bettype IN (2198, 2398, 2998, 4297) THEN
-								CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) END
-							WHEN b.bettype IN (2199, 2399, 2999, 4298) THEN 0
-							ELSE
-								CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
-							END
-						) * CASE WHEN @Istest = 1 AND currency = 20 THEN 1 ELSE b.actualrate END
-					) AS WinlostForExtraPT,
+				
 				
 				---Real currency
 				SUM(
@@ -364,18 +349,7 @@ BEGIN
 							END
 						) 
 					) AS RealWinlostDueToPP,
-				SUM(
-						(	
-							CASE
-								-- Jackpot
-								WHEN b.bettype IN (2198, 2398, 2998, 4297) THEN
-									CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) END
-								WHEN b.bettype IN (2199, 2399, 2999, 4298) THEN 0
-								ELSE
-									CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
-								END
-						)
-					) AS RealWinlostForExtraPT	,			
+		
 				SUM(
 						(	
 							CASE
@@ -425,8 +399,8 @@ BEGIN
 				CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss','Bet Builder') THEN s.SubProduct ELSE '' END
 				 
 
-	INSERT INTO #WLByProduct (Winlostdate, ProductId, ProductName, IsCN88, Currency, Winlost, ExtraPTWinlost, RealWinlost, RealExtraPTWinlost, eWinlost, eRealWinlost) 
-	SELECT Winlostdate, ProductId, ProductName, IsCN88, Currency, SUM(Winlost), SUM(ExtraPTWinlost), SUM(RealWinlost), SUM(RealExtraPTWinlost), SUM(eWinlost), SUM(eRealWinlost)
+	INSERT INTO #WLByProduct (Winlostdate, ProductId, ProductName, IsCN88, Currency, Winlost, ExtraPTWinlost, RealWinlost, RealExtraPTWinlost) 
+	SELECT Winlostdate, ProductId, ProductName, IsCN88, Currency, SUM(Winlost), SUM(ExtraPTWinlost), SUM(RealWinlost), SUM(RealExtraPTWinlost) 
 	FROM (
 			--- WL by product			
 			SELECT  w.Winlostdate, w.ProductId, w.ProductName, 
@@ -437,11 +411,9 @@ BEGIN
 						ELSE 0  ---MBC 
 					END AS Currency,
 					SUM(ISNULL( w.Winlost,0)) as Winlost, 
-					0 as ExtraPTWinlost,
+					SUM(ISNULL( w.eWinlost,0)) as ExtraPTWinlost,
 					SUM(ISNULL( w.RealWinlost,0)) as RealWinlost, 
-					0 as RealExtraPTWinlost,
-					SUM(ISNULL( w.eWinlost,0)) as eWinlost,
-					SUM(ISNULL( w.eRealWinlost,0)) as eRealWinlost
+					SUM(ISNULL( w.eRealWinlost,0)) as RealExtraPTWinlost
 			FROM	#wl w
 			LEFT JOIN CS_CustSuper cs WITH (NOLOCK) 
 				ON cs.CustId = w.srecommend
@@ -466,9 +438,7 @@ BEGIN
 					SUM(ISNULL(w.WinlostDueToRNG, 0)) AS Winlost, 
 					0 AS ExtraPTWinlost, 
 					SUM(ISNULL(w.RealWinlostDueToRNG, 0)) AS RealWinlost, 
-					0 AS RealExtraPTWinlost,
-					0 as eWinlost,
-					0 as eRealWinlost
+					0 AS RealExtraPTWinlost 
 			FROM #wl w
 			LEFT JOIN CS_CustSuper cs WITH (NOLOCK) 
 				ON cs.CustId = w.srecommend
@@ -494,9 +464,7 @@ BEGIN
 					SUM(ISNULL(w.WinlostDueToPP, 0)) AS Winlost, 
 					0 AS ExtraPTWinlost, 
 					SUM(ISNULL(w.RealWinlostDueToPP, 0)) AS RealWinlost, 
-					0 AS RealExtraPTWinlost,
-					0 as eWinlost,
-					0 as eRealWinlost
+					0 AS RealExtraPTWinlost 
 			FROM #wl w
 			LEFT JOIN CS_CustSuper cs WITH (NOLOCK) 
 				ON cs.CustId = w.srecommend
@@ -556,12 +524,7 @@ BEGIN
 		ON e.ProductId = p.ProductId 
 	 
 	---------------------------------------------------------------------------------------------------------
-
-	 
-	UPDATE #WLByProduct
-	SET ExtraPTWinlost = eWinlost,
-		RealExtraPTWinlost = eRealWinlost
-	  
+  
  
     --view report
     IF (@mode = 0)
