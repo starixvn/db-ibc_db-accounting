@@ -242,10 +242,10 @@ BEGIN
 		Winlost					MONEY, 
 		WinlostDueToRNG			MONEY, 
 		WinlostDueToPP			MONEY,  
+		eWinlost				MONEY,
 		RealWinlost				MONEY, 
 		RealWinlostDueToRNG		MONEY, 
-		RealWinlostDueToPP		MONEY,  
-		eWinlost				MONEY,
+		RealWinlostDueToPP		MONEY,  		
 		eRealWinlost			MONEY
 	)
 	
@@ -264,9 +264,8 @@ BEGIN
 	) 
 	 
 		INSERT INTO #wl (winlostdate, srecommend, Currency, Sporttype, ProductId, ProductName, SubProduct, 
-						 winlost, WinlostDueToRNG, WinlostDueToPP, 
-						 Realwinlost, RealWinlostDueToRNG, RealWinlostDueToPP,
-						 eWinlost, eRealWinlost)
+						 winlost, WinlostDueToRNG, WinlostDueToPP, eWinlost,
+						 Realwinlost, RealWinlostDueToRNG, RealWinlostDueToPP, eRealWinlost)
 		SELECT  b.winlostdate,
 				b.srecommend,
 				b.Currency,				
@@ -314,8 +313,18 @@ BEGIN
 							ELSE 0 
 							END
 						) * CASE WHEN @Istest = 1 AND currency = 20 THEN 1 ELSE b.actualrate END
-					) AS WinlostDueToPP,
-				
+					) AS WinlostDueToPP,				SUM(
+						(	
+							CASE
+							-- Jackpot
+							WHEN b.bettype IN (2198, 2398, 2998, 4297) THEN
+								CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) END
+							WHEN b.bettype IN (2199, 2399, 2999, 4298) THEN 0
+							ELSE
+								CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
+							END
+						) * CASE WHEN @Istest = 1 AND currency = 20 THEN 1 ELSE b.actualrate END * ISNULL(epositiontaking, 0)
+					) AS eWinlost,				
 				
 				---Real currency
 				SUM(
@@ -348,20 +357,8 @@ BEGIN
 							ELSE 0 
 							END
 						) 
-					) AS RealWinlostDueToPP,
-		
-				SUM(
-						(	
-							CASE
-							-- Jackpot
-							WHEN b.bettype IN (2198, 2398, 2998, 4297) THEN
-								CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) END
-							WHEN b.bettype IN (2199, 2399, 2999, 4298) THEN 0
-							ELSE
-								CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
-							END
-						) * CASE WHEN @Istest = 1 AND currency = 20 THEN 1 ELSE b.actualrate END * ISNULL(epositiontaking, 0)
-					) AS eWinlost,
+					) AS RealWinlostDueToPP,		
+				
 				SUM(
 						(	
 							CASE
