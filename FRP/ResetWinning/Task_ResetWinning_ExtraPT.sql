@@ -192,16 +192,10 @@ BEGIN
 	GROUP BY b.custid, b.winlostdate, d.GroupID
 
 	---- #125418 Cut-off-Date apply new column epositiontaking on bettrans
-	DECLARE @ExtraPTCutOffDate SMALLDATETIME
-	SELECT  @ExtraPTCutOffDate = bodb02.dbo.f_Get_SystemSettings('CutOffDate_ExtraPT')
 	
-	IF EXISTS (SELECT 1 FROM #winning WHERE winlostdate >= @ExtraPTCutOffDate)
-	BEGIN
-		UPDATE #winning
-		SET NewWinlost = eWinlost
-		WHERE winlostdate >= @ExtraPTCutOffDate
-	END
-
+	UPDATE #winning
+	SET NewWinlost = eWinlost 
+	
 	IF @mode = 0 -- view
 	BEGIN
 		

@@ -64,7 +64,7 @@ AS
 		- 20190826@Sophia: exclude CN88 Headline balance out of total balance [Redmine: #117863]
 		- 20191210@Percy: Set actualrate = 1 of UUS currency (exchangeid = 20) for testing (version xtest) [RedmineID: #124484]
 		- 20191216@Percy: Using new column bettrans.epositiontaking instead of Acc_GroupExtraPTSetting.ExtraPT [RedmineID: #125418]
-		- 2020714@Sophia: Add PP Jackpot [Redmine: #137270]
+		- 2020714@Sophia: Add PP Jackpot & revise code [Redmine: #137270]
 		
 
 	Param Explanation:
@@ -557,11 +557,11 @@ BEGIN
 	 
 	---------------------------------------------------------------------------------------------------------
 
-	/*
-		UPDATE #WLByProduct
-		SET ExtraPTWinlost = eWinlost,
-			RealExtraPTWinlost = eRealWinlost
-	*/
+	 
+	UPDATE #WLByProduct
+	SET ExtraPTWinlost = eWinlost,
+		RealExtraPTWinlost = eRealWinlost
+	  
  
     --view report
     IF (@mode = 0)

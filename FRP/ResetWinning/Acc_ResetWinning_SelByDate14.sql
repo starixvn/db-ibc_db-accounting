@@ -61,6 +61,7 @@ AS
 		- 20190909@Sophia: reset winning on bettrans14 - recover ticket 7 days [redmine: #115377]
 		- 20191210@Percy: Set actualrate = 1 of UUS currency (exchangeid = 20) for testing (version xtest) [RedmineID: #124484]
 		- 20191216@Percy: Using new column bettrans.epositiontaking instead of Acc_GroupExtraPTSetting.ExtraPT [RedmineID: #125418]
+		- 2020714@Sophia: Add PP Jackpot [Redmine: #137270]
 		
 	Explanation's Param:
 	    @mode:  0 _ view report
