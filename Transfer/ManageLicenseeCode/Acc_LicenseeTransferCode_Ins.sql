@@ -18,6 +18,7 @@ AS
 	
 	Revisions:
 		- 20200615@Sol: NAP - Auto Assign Licensee code to the Licensee accordingly [Redmine: #120670]
+		- 20200720@Sol: rename sp verify [Redmine: #120670]
 
 	Param Info:
 		- @LicenseeName: Name of the Licensee 
@@ -42,7 +43,7 @@ BEGIN
 
 	---- check error
 	INSERT INTO @tblVerifiedResult
-	EXEC dbo.Acc_LicenseeUpdVerify
+	EXEC dbo.Acc_LicenseeTransferCode_Verify
 		@LicenseeName = @LicenseeName,
 		@LicenseeCode = @LicenseeCode
 
