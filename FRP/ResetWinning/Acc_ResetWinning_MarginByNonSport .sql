@@ -10,6 +10,7 @@ AS
 	
 	Revision:
 		- 20200321@Sophia: Initial SPs  
+		- 2020714@Sophia: Add PP Jackpot[Redmine: #137270]
 		 
 	Param Explanation:
 		 

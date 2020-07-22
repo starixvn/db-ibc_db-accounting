@@ -14,6 +14,7 @@ AS
 		- 20200213@Sophia: Modify Exchange product [redmine: #128471]
 		- 20200226@Sophia: Using new column bettrans.epositiontaking instead of Acc_GroupExtraPTSetting.ExtraPT [RedmineID: #125418]
 		- 20200303@Sophia: Remove CutOffDate of ExtraPT, use new column [RedmineID: #129653]
+		- 2020714@Sophia: Add PP Jackpot[Redmine: #137270]
 		 
 	Param Explanation:
 		outout: IsDeposit = 0: Credit 

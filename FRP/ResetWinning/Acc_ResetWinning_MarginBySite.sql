@@ -13,6 +13,7 @@ AS
 		- 20200512@Sophia: Margin By Site - break down by Sport / Non Sports [Redmine: #134035]
 		- 20200516@Sophia: add code BARM/8RM; exclude MG-SuperLive/ Bet Builder; parlay /2 [Redmine: #134281]
 		- 20200518@Sophia: add by groupHeadline [Redmine: #134281]
+		- 2020714@Sophia: Add PP Jackpot[Redmine: #137270]
 	Param Explanation:
 		 
 	   
