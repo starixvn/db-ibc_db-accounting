@@ -51,9 +51,20 @@ BEGIN
 			SELECT @CustId, @GroupId, @GroupName, ProductID, Sporttype, SubProduct, ExtraPT,
 				CASE WHEN @EffectiveDate < FromDate THEN FromDate ELSE @EffectiveDate END AS FromDate,
 				CASE WHEN @EndDate < ToDate THEN @EndDate ELSE ToDate END AS ToDate
-			FROM dbo.Acc_GroupExtraPT_Product WITH(NOLOCK)
+			FROM dbo.Acc_GroupExtraPT2_Product WITH(NOLOCK)
 			WHERE GroupId = @GroupId
 				AND @EffectiveDate <= ToDate
+
+			IF @GroupName IN ('ACCTHAI2','ACCTHAI56','ACCTHAI99')
+			BEGIN
+				INSERT INTO dbo.Acc_GroupExtraPT2Setting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate)
+				SELECT @CustId, GroupId, GroupName, ProductID, Sporttype, SubProduct, ExtraPT,
+					CASE WHEN @EffectiveDate < FromDate THEN FromDate ELSE @EffectiveDate END AS FromDate,
+					CASE WHEN @EndDate < ToDate THEN @EndDate ELSE ToDate END AS ToDate
+				FROM dbo.Acc_GroupExtraPT2_Product WITH(NOLOCK)
+				WHERE GroupName = 'BC'
+					AND @EffectiveDate <= ToDate
+			END
 			
 		END
 
@@ -70,6 +81,12 @@ BEGIN
 			DELETE dbo.Acc_GroupExtraPT2Setting WITH(ROWLOCK, UPDLOCK)
 			WHERE SuperId = @CustID AND GroupId = @GroupId AND FromDate > @today
 
+			IF @GroupName IN ('ACCTHAI2','ACCTHAI56','ACCTHAI99')
+			BEGIN
+				DELETE dbo.Acc_GroupExtraPT2Setting WITH(ROWLOCK, UPDLOCK)
+				WHERE SuperId = @CustID AND GroupName = 'BC' AND FromDate > @today
+			END
+
 			IF EXISTS (
 				SELECT TOP 1 1 FROM dbo.Acc_GroupExtraPT2Setting WITH(NOLOCK)
 				WHERE SuperId = @CustID AND @today BETWEEN FromDate AND ToDate
@@ -83,7 +100,7 @@ BEGIN
 				INSERT INTO dbo.Acc_GroupExtraPT2Setting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate)
 				SELECT @CustId, g.GroupId, g.GroupName, g.ProductID, g.Sporttype, g.SubProduct, g.ExtraPT,
 					CASE WHEN s.FromDate < @today THEN s.FromDate ELSE g.FromDate END AS FromDate, g.ToDate
-				FROM dbo.Acc_GroupExtraPT_Product g WITH(NOLOCK)
+				FROM dbo.Acc_GroupExtraPT2_Product g WITH(NOLOCK)
 					INNER JOIN @Setting s ON g.GroupId = s.GroupId
 				WHERE @today >= g.ToDate
 			END
