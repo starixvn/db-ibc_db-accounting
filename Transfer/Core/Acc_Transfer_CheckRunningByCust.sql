@@ -25,18 +25,22 @@ BEGIN
 	DECLARE @Recommend INT, @MRecommend INT, @SRecommend INT, @RoleId INT
 	SELECT @ErrMsg = '', @ErrCode = 0 
 
-	SELECT  @Recommend, @MRecommend, @SRecommend, @RoleId
-	FROM CUSTDB.dbo.customer c WITH(NOLOCK)
-	WHERE CustID = @CustID
+	SELECT 	@CustID = CustID, @Recommend = Recommend, @MRecommend = MRecommend, @SRecommend = SRecommend, @RoleId = RoleId
+	FROM 	CUSTDB.dbo.customer c WITH(NOLOCK)
+	WHERE 	CustID = @CustID
 	
-		 
-				
-				
-				INNER JOIN CUSTDB.dbo.Acc_ClearBalanceList c WITH(NOLOCK) 
-	  
-		  
-	
-	IF @FromTime IS NOT NULL OR @ToTime IS NOT NULL
+	IF EXISTS (
+				SELECT 	TOP 1 1  
+				FROM 	CUSTDB.dbo.Acc_ClearBalanceList s WITH(NOLOCK)
+				WHERE 	--- check upline is transferring or not
+						(
+							(s.CustID = @Recommend AND @RoleID = 1)
+							OR (s.CustID = @MRecommend AND @RoleID = 2)
+							OR (s.CustID = @SRecommend AND @RoleID = 3) 
+							OR (s.CustID = @CustID AND @RoleID = 4)
+						)
+						AND isTransferring = 1	  				
+				)
 	BEGIN
 		SELECT @ErrCode = 90015
 		SELECT @ErrorTemplate = CUSTDB.dbo.f_Get_MsgNamebyMsgID (90015,@Language)
