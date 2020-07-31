@@ -33,6 +33,8 @@ AS
 		- 20160126@Kathy: get balance from bettransRNG + bettransLC [Redmine:#50674]
 		- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
+		- 20200730@Sophia: prevent duplicated transfer [Redmine: #137141]
+		- 20200730@Sophia: Check UM Transfer Function [Redmine: #136992]
 		
 	Param's Explanation:
 */ 
@@ -63,7 +65,31 @@ BEGIN
 		Select @ErrMsg = 'Invalid Agent User Name', @ErrCode = 101  
 		return  
 	 END  
-
+	 
+	---- #1 CHECK UM TRANSFER FUNCTION
+	EXEC dbo.Acc_Transfer_CheckUM  
+		@CustID = @AgentID
+		,@ErrMsg = @ErrMsg OUTPUT 
+		,@ErrCode = @ErrCode OUTPUT
+		 
+	IF @ErrCode <> 0  -- Function Transfer is under UM 
+	BEGIN
+		RAISERROR(@ErrCode,16,1)
+		RETURN		
+	END		
+	
+	---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN SKIP 
+	EXEC dbo.Acc_Transfer_CheckRunningByCust  
+		@CustID = @AgentID
+		,@ErrMsg = @ErrMsg OUTPUT 
+		,@ErrCode = @ErrCode OUTPUT
+		 
+	IF @ErrCode <> 0  -- the auto transfer job is running this custid
+	BEGIN
+		RAISERROR(@ErrCode,16,1)
+		RETURN		
+	END
+	
 	/*--Thien removed on 2009-10-17
 	--Check disable user
 	EXEC DB052.bodb02.dbo.Acc_CustomerSelCheckEnable @username = @AgentName, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
@@ -208,6 +234,20 @@ BEGIN
 	 --  @ReturnErrCode = 1,  
 	 --  @ErrMsg  = @ErrMsg OUTPUT,  
 	 --  @ErrCode = @ErrCode OUTPUT  
+	 
+	 
+		---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN SKIP 
+		EXEC dbo.Acc_Transfer_CheckRunningByCust  
+			@CustID = @recommend
+			,@ErrMsg = @ErrMsg OUTPUT 
+			,@ErrCode = @ErrCode OUTPUT
+			 
+		IF @ErrCode <> 0  -- the auto transfer job is running this custid
+		BEGIN
+			RAISERROR(@ErrCode,16,1)
+			RETURN		
+		END
+	
 	 
 		BEGIN TRANSACTION  
 			UPDATE ref with (rowlock, UPDLOCK)  SET   @grefno=transcode=transcode+1  

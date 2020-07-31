@@ -108,13 +108,13 @@ BEGIN
 		RETURN		
 	END		
 	
-	---- #2 CHECK UM FLAG ISTRANSFERRING = 1 THEN SKIP 
+	---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN SKIP 
 	EXEC dbo.Acc_Transfer_CheckRunningByCust  
 		@CustID = @AgentID
 		,@ErrMsg = @ErrMsg OUTPUT 
 		,@ErrCode = @ErrCode OUTPUT
 		 
-	IF @ErrCode <> 0  -- Job is running this custid
+	IF @ErrCode <> 0  -- the auto transfer job is running this custid
 	BEGIN
 		RAISERROR(@ErrCode,16,1)
 		RETURN		
@@ -330,8 +330,22 @@ BEGIN
 	FROM CS_custid
 	INTO @custid, @recommend, @mrecommend, @srecommend, @currency, @actualrate, @currencyName, @membername, @agentusername, @memberBalance
 
+
+		
 	WHILE @@FETCH_STATUS = 0
-	BEGIN
+	BEGIN		
+		---- CHECK FLAG ISTRANSFERRING = 1 THEN SKIP 
+		EXEC dbo.Acc_Transfer_CheckRunningByCust  
+			@CustID = @recommend
+			,@ErrMsg = @ErrMsg OUTPUT 
+			,@ErrCode = @ErrCode OUTPUT
+			 
+		IF @ErrCode <> 0  -- the auto transfer job is running this custid
+		BEGIN
+			RAISERROR(@ErrCode,16,1)
+			RETURN		
+		END		
+	
 		-- print @agentusername +':'+ 'MEMBER-AGENT-->Member:' + @membername + ' ' + cast(@memberBalance as varchar(30))  
 		UPDATE ref WITH (ROWLOCK, UPDLOCK)
 		SET @grefno = transcode = transcode + 1
@@ -432,7 +446,7 @@ BEGIN
 			DECLARE @isResetYesterdayBalance BIT, @ErrCode_ResetYesterdayBalance BIT, @YesterdayBalance MONEY
 
 			-- reset yesterday balance for live casino         
-									EXEC Acc_BalanceGameResetYesterday @CustID = @CustID, @isResetYesterdayBalance = @isResetYesterdayBalance OUTPUT, @YesterdayBalance = @YesterdayBalance OUTPUT, @ErrCode = @ErrCode_ResetYesterdayBalance OUTPUT
+			EXEC Acc_BalanceGameResetYesterday @CustID = @CustID, @isResetYesterdayBalance = @isResetYesterdayBalance OUTPUT, @YesterdayBalance = @YesterdayBalance OUTPUT, @ErrCode = @ErrCode_ResetYesterdayBalance OUTPUT
 
 			SELECT @LogData = @LogData + CASE 
 					WHEN @isResetYesterdayBalance = 1 THEN CASE 
@@ -576,6 +590,19 @@ BEGIN
 
 		WHILE @@FETCH_STATUS = 0
 		BEGIN
+			
+			---- CHECK FLAG ISTRANSFERRING = 1 THEN SKIP 
+			EXEC dbo.Acc_Transfer_CheckRunningByCust  
+				@CustID = @mrecommend
+				,@ErrMsg = @ErrMsg OUTPUT 
+				,@ErrCode = @ErrCode OUTPUT
+				 
+			IF @ErrCode <> 0  -- the auto transfer job is running this custid
+			BEGIN
+				RAISERROR(@ErrCode,16,1)
+				RETURN		
+			END
+		
 			-- print @agentusername +':'+ 'AGENT-MASTER-->Agent:' + @agentusername+ ' ' + cast(@agentBalance as varchar(30))  
 			UPDATE ref WITH (ROWLOCK, UPDLOCK)
 			SET @grefno = transcode = transcode + 1
@@ -727,6 +754,18 @@ BEGIN
 
 		WHILE @@FETCH_STATUS = 0
 		BEGIN
+			---- CHECK FLAG ISTRANSFERRING = 1 THEN SKIP 
+			EXEC dbo.Acc_Transfer_CheckRunningByCust  
+				@CustID = @srecommend
+				,@ErrMsg = @ErrMsg OUTPUT 
+				,@ErrCode = @ErrCode OUTPUT
+				 
+			IF @ErrCode <> 0  -- the auto transfer job is running this custid
+			BEGIN
+				RAISERROR(@ErrCode,16,1)
+				RETURN		
+			END
+			
 			-- print @agentusername +':'+ 'MASTER-SUPER-->Master:' + @mastername+ ' ' + cast(@masterBalance as varchar(30))  
 			UPDATE ref WITH (ROWLOCK, UPDLOCK)
 			SET @grefno = transcode = transcode + 1
