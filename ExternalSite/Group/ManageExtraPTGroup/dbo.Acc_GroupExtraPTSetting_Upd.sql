@@ -151,8 +151,6 @@ BEGIN
 		END
 
 		---- Mofify new setting in Acc_GroupExtraPT2Setting for ACCYEN789 / ACCYEN889 / ACCUT
-		IF EXISTS (SELECT TOP 1 1 FROM Acc_GroupExtraPT2_Product agepp WHERE agepp.GroupName = @GroupName AND @EffectiveDate <= agepp.ToDate)
-				OR @GroupName = 'No Extra PT'
 		BEGIN
 			EXEC dbo.Acc_GroupExtraPT2Setting_Upd
 					@Custid = @CustID,
@@ -212,7 +210,6 @@ BEGIN
 			END
 
 			---- Mofify new setting in Acc_GroupExtraPT2Setting for ACCYEN789 / ACCYEN889 / ACCUT
-			IF EXISTS (SELECT TOP 1 1 FROM Acc_GroupExtraPT2_Product agepp WHERE agepp.GroupName = @GroupName)
 			BEGIN
 				EXEC dbo.Acc_GroupExtraPT2Setting_Upd
 						@Custid = @CustID,
