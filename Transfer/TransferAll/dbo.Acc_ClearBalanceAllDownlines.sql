@@ -37,6 +37,8 @@ AS
 		- 20160722@Viet: Improve performance [Redmine:#58288]
 		- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
+		- 20200730@Sophia: prevent duplicated transfer [Redmine: #137141]
+		- 20200730@Sophia: Check UM Transfer Function [Redmine: #136992]
 		 				       
 	Param's Explanation:
 		@AgentName: username of agent/master/super to clear his all downlines' balance
@@ -91,7 +93,33 @@ BEGIN
 		SELECT @ErrMsg = @AgentName + ':' + 'Invalid Agent Username', @ErrCode = 101
 
 		RETURN
+	END	
+
+	
+	---- #1 CHECK UM TRANSFER FUNCTION
+	EXEC dbo.Acc_Transfer_CheckUM  
+		@CustID = @AgentID
+		,@ErrMsg = @ErrMsg OUTPUT 
+		,@ErrCode = @ErrCode OUTPUT
+		 
+	IF @ErrCode <> 0  -- Function Transfer is under UM 
+	BEGIN
+		RAISERROR(@ErrCode,16,1)
+		RETURN		
+	END		
+	
+	---- #2 CHECK UM FLAG ISTRANSFERRING = 1 THEN SKIP 
+	EXEC dbo.Acc_Transfer_CheckRunningByCust  
+		@CustID = @AgentID
+		,@ErrMsg = @ErrMsg OUTPUT 
+		,@ErrCode = @ErrCode OUTPUT
+		 
+	IF @ErrCode <> 0  -- Job is running this custid
+	BEGIN
+		RAISERROR(@ErrCode,16,1)
+		RETURN		
 	END
+	
 
 	/*--20091017@Thien: not check this function so that upline can get back the used credit  
 	--Check disable user  
