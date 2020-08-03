@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBTXN-bodb02" selecters="bodbAdminNet,bodbDownlineNet,bodbExtAccNet,bodbDownlineNetView" viewers="" isFunction="1"></info>*/
+﻿/*<info serverAlias="DBTXN-bodb02" selecters="bodbAdminNet,bodbDownlineNet,bodbExtAccNet,bodbDownlineNetView" viewers="" isFunction="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_Transfer_CheckUM] 
 	@CustID INT,
 	@Language VARCHAR(2) = 'E',

@@ -3,6 +3,7 @@ ALTER PROCEDURE [dbo].[Acc_BettransInsTransferAllMembers]
 	@AgentName varchar(50),  
 	@UserID int,  
 	@IP nvarchar(15)='',  
+	@IsJob BIT = 0,
 	@ErrMsg nvarchar(max) = '' OUTPUT,  
 	@ErrCode int = 0 OUTPUT  
 AS  
@@ -78,16 +79,19 @@ BEGIN
 		RETURN		
 	END		
 	
-	---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN SKIP 
-	EXEC dbo.Acc_Transfer_CheckRunningByCust  
-		@CustID = @AgentID
-		,@ErrMsg = @ErrMsg OUTPUT 
-		,@ErrCode = @ErrCode OUTPUT
-		 
-	IF @ErrCode <> 0  -- the auto transfer job is running this custid
-	BEGIN
-		RAISERROR(@ErrCode,16,1)
-		RETURN		
+	---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN SKIP, IF THIS SP IS CALLED BY JOB THEN NO NEED TO CHECK
+	IF @IsJob = 0
+	BEGIN 
+		EXEC dbo.Acc_Transfer_CheckRunningByCust  
+			@CustID = @AgentID
+			,@ErrMsg = @ErrMsg OUTPUT 
+			,@ErrCode = @ErrCode OUTPUT
+			 
+		IF @ErrCode <> 0  -- the auto transfer job is running this custid
+		BEGIN
+			RAISERROR(@ErrCode,16,1)
+			RETURN		
+		END
 	END
 	
 	/*--Thien removed on 2009-10-17
