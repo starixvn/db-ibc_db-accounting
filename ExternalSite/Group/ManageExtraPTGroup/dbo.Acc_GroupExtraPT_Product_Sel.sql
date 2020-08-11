@@ -36,9 +36,9 @@ BEGIN
 
 		DELETE p
 		FROM @Product p
-			LEFT JOIN dbo.Acc_DWLList a WITH(NOLOCK) ON p.ProductId = a.ProductId
-		WHERE a.IsDeleted = 0
-			AND p.ProductId IS NULL
+			LEFT JOIN dbo.Acc_DWLList a WITH(NOLOCK) ON p.ProductId = a.ProductId AND a.IsDeleted = 0
+		WHERE  a.ProductId IS NULL
+				
 	END
 	
 	SELECT p.ProductID, p.ProductName
