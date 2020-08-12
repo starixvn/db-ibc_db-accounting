@@ -14,7 +14,7 @@ AS
 
 	Revisions:
 		- 20170926@Percy: Move table dbo.Acc_GroupExtraPT_Product from DBACC.bodb_ACC to DBCUST.CustDB [RedmineID: #83600]
-
+		= 20200805@Sophia: Edit mode IsExtra = 1, to shwo PP [RedmineID: #138483]
 	Param's Explanation:
 */
 
@@ -36,8 +36,9 @@ BEGIN
 
 		DELETE p
 		FROM @Product p
-			INNER JOIN dbo.Acc_DWLList a WITH(NOLOCK) ON p.ProductId = a.ProductId
-		WHERE a.IsDeleted = 1
+			LEFT JOIN dbo.Acc_DWLList a WITH(NOLOCK) ON p.ProductId = a.ProductId AND a.IsDeleted = 0
+		WHERE  a.ProductId IS NULL
+				
 	END
 	
 	SELECT p.ProductID, p.ProductName
