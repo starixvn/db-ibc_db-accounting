@@ -41,19 +41,17 @@ BEGIN
 			  AND ToDate >= @EffectiveDate		
 			  
 		---- Mofify new setting in Acc_GroupExtraPT2Setting for ACCYEN789 / ACCYEN889 / ACCUT
-		IF EXISTS (SELECT TOP 1 1 FROM Acc_GroupExtraPT2_Product agepp WHERE agepp.GroupName = @GroupName AND @EffectiveDate <= agepp.ToDate)
+		---- Acc_GroupExtraPT2Setting is only have setting for ACCYEN789 / ACCYEN889 / ACCUT
+		IF NOT EXISTS (SELECT 1 FROM dbo.Acc_GroupExtraPT2Setting WITH (NOLOCK) WHERE SuperID = @Custid AND ToDate > = @EffectiveDate)
 		BEGIN
-			IF NOT EXISTS (SELECT 1 FROM dbo.Acc_GroupExtraPT2Setting WITH (NOLOCK) WHERE SuperID = @Custid AND ToDate > = @EffectiveDate)
-			BEGIN
-				INSERT INTO dbo.Acc_GroupExtraPT2Setting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct,
-													ExtraPT, FromDate, ToDate)
-				SELECT @CustId, GroupId, GroupName, ProductID, Sporttype, SubProduct, ExtraPT,
-					CASE WHEN @EffectiveDate < FromDate THEN FromDate ELSE @EffectiveDate END AS FromDate,
-					ToDate
-				FROM Acc_GroupExtraPT2Setting WITH (NOLOCK)
-				WHERE SuperId = @ExistingCustid
-					  AND ToDate >= @EffectiveDate
-			END
+			INSERT INTO dbo.Acc_GroupExtraPT2Setting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct,
+												ExtraPT, FromDate, ToDate)
+			SELECT @CustId, GroupId, GroupName, ProductID, Sporttype, SubProduct, ExtraPT,
+				CASE WHEN @EffectiveDate < FromDate THEN FromDate ELSE @EffectiveDate END AS FromDate,
+				ToDate
+			FROM Acc_GroupExtraPT2Setting WITH (NOLOCK)
+			WHERE SuperId = @ExistingCustid
+					AND ToDate >= @EffectiveDate
 		END
 		---- End
 
