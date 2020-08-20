@@ -418,7 +418,7 @@ BEGIN
 			   SUM(CASE WHEN winlostdate = @dbtodaydate AND bettype < 19999 AND [status] NOT IN ('VOID', 'REJECT', 'Refund') THEN stake ELSE 0 END), -- Turnover
 			   SUM(CASE WHEN winlostdate = @dbtodaydate AND bettype < 19999 AND [status] = 'DRAW' THEN stake ELSE 0 END), -- DrawGame
 			   SUM(CASE WHEN bettype < 19999 AND ruben = 0 THEN actual_stake ELSE 0 END), -- Outstanding
-			   SUM(CASE WHEN winlostdate = @dbtodaydate AND bettype < 19999 AND ruben = 1 THEN winlost-actual_stake+playercomm ELSE 0 END), -- Winloss
+			   SUM(CASE WHEN winlostdate = @dbtodaydate AND bettype < 19999 AND bettype NOT IN (17000,17003) AND ruben = 1 THEN winlost-actual_stake+playercomm ELSE 0 END), -- Winloss
 			   SUM(CASE WHEN winlostdate = @dbtodaydate AND bettype IN (22010,22011) THEN winlost-actual_stake ELSE 0 END), -- Transfer3rd Opus
 			   SUM(CASE WHEN winlostdate = @dbtodaydate AND bettype IN (22008,22009) THEN winlost-actual_stake ELSE 0 END), -- Transfer3rd HoGaming
 			   SUM(CASE WHEN winlostdate = @dbtodaydate AND bettype IN (22014,22015) THEN winlost-actual_stake ELSE 0 END), -- Transfer3rd AG
