@@ -75,7 +75,6 @@ BEGIN
 		 
 	IF @ErrCode <> 0  -- Function Transfer is under UM 
 	BEGIN
-		RAISERROR(@ErrCode,16,1)
 		RETURN		
 	END		
 	
@@ -89,7 +88,6 @@ BEGIN
 			 
 		IF @ErrCode <> 0  -- the auto transfer job is running this custid
 		BEGIN
-			RAISERROR(@ErrCode,16,1)
 			RETURN		
 		END
 	END
