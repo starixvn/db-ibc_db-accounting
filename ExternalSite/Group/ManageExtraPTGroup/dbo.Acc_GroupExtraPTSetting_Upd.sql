@@ -20,6 +20,7 @@ AS
 		- 20180808@Helen: DB05.DBPOLICY migration - [Redmine:99462]
 		- 20191211@Percy: Add UplineId (HeadlineId) [RedmineID: #118962]
 		- 20191216@Percy: Do not allow user to select the current date in Effective Date [RedmineID: #125418]
+		- 20200708@Sol: Add/modify setting for new table - Extra PT - Redmine: [#136320]
 		
 	Param's Explanation:
 		- @EffectiveDate
@@ -71,6 +72,7 @@ BEGIN
 		
 		DECLARE @FromDate DATETIME
 
+		---- validation
 		IF @GroupName = 'No Extra PT'
 		BEGIN
 			IF NOT EXISTS (
@@ -147,6 +149,19 @@ BEGIN
 					AND @EffectiveDate <= ToDate
 			END
 		END
+
+		---- Mofify new setting in Acc_GroupExtraPT2Setting for ACCYEN789 / ACCYEN889 / ACCUT
+		BEGIN
+			EXEC dbo.Acc_GroupExtraPT2Setting_Upd
+					@Custid = @CustID,
+					@GroupId = @GroupId,
+					@GroupName = @GroupName,
+					@EffectiveDate = @EffectiveDate,
+					@Today = @today,
+					@EndDate = @EndDate
+		END
+		---- End
+
 	END
 	ELSE -- remove @CustID from @GroupName
 	BEGIN
@@ -193,6 +208,19 @@ BEGIN
 					INNER JOIN @Setting s ON g.GroupId = s.GroupId
 				WHERE @today >= g.ToDate
 			END
+
+			---- Mofify new setting in Acc_GroupExtraPT2Setting for ACCYEN789 / ACCYEN889 / ACCUT
+			BEGIN
+				EXEC dbo.Acc_GroupExtraPT2Setting_Upd
+						@Custid = @CustID,
+						@GroupId = @GroupId,
+						@GroupName = @GroupName,
+						@EffectiveDate = @EffectiveDate,
+						@Today = @today,
+						@EndDate = @EndDate
+			END
+			---- End
+
 		END
 	END
 END
