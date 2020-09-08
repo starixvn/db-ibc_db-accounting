@@ -161,6 +161,7 @@ BEGIN
 			ON	b.custid = c.custID
 		WHERE	b.refno = @refno AND matchid = 0 AND bettype > 20000
 				AND c.roleid = 1
+				AND b.custid IN (SELECT custid FROM @tblUniqueCustIds)
 		GROUP BY b.CustID
 		
 
@@ -313,6 +314,7 @@ BEGIN
 			ON	b.custid = c.custID
 		WHERE	b.refno = @refno AND matchid = 0 AND bettype > 20000
 				AND c.roleid = 1
+				AND b.custid IN (SELECT custid FROM @tblUniqueCustIds)
 		GROUP BY b.CustID
 
 
