@@ -37,6 +37,7 @@ AS
 		- 20180808@Helen: Get Code from Production  + DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 		- 20181112@Sophia: Add Transfer Collection [redmine: #98621]
 		- 20190812@Bobby: AddDelTXN - Update checking constraint [Redmine:118530]
+		- 20200828@Sol: hotfix - transfer - duplicated transid by page split/nolock [Redmine:140461]
 */
 BEGIN
 
@@ -81,8 +82,15 @@ BEGIN
 								)
 
 		DECLARE @TransIDs AS TABLE (transID BIGINT)
+		DECLARE @tblUniqueCustIds TABLE (CustId INT)
 
-	----insert transfer data into @Reversal
+		----get unique custid to use in where condition of inserting @Reversal for index seek used
+		INSERT INTO @tblUniqueCustIds (custid)
+		SELECT	DISTINCT custid
+		FROM	bettrans WITH (NOLOCK)
+		WHERE	refno = @refno AND matchid = 0 AND bettype > 20000
+
+		----insert transfer data into @Reversal
 		INSERT INTO @Reversal 
 			(	transid, custid, transdate, Username, refno, winlost, actual_stake, winlostdate, transdesc, creator,
 				bettype, matchid, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, ip, status, statusID, ruben, liveindicator, OddsID )
@@ -90,6 +98,7 @@ BEGIN
 				bettype, matchid, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, ip, status, statusID, ruben, liveindicator, OddsID
 		FROM	bettrans WITH (NOLOCK)
 		WHERE	refno = @refno AND matchid = 0 AND bettype > 20000 
+				AND custid IN (SELECT custid FROM @tblUniqueCustIds)
 
 
 		SELECT	top 1 @winlostdate = winlostdate, @liveindicator = liveindicator, @transdesc = transdesc, @IsCollection = OddsID
@@ -152,6 +161,7 @@ BEGIN
 			ON	b.custid = c.custID
 		WHERE	b.refno = @refno AND matchid = 0 AND bettype > 20000
 				AND c.roleid = 1
+				AND b.custid IN (SELECT custid FROM @tblUniqueCustIds)
 		GROUP BY b.CustID
 		
 
@@ -304,6 +314,7 @@ BEGIN
 			ON	b.custid = c.custID
 		WHERE	b.refno = @refno AND matchid = 0 AND bettype > 20000
 				AND c.roleid = 1
+				AND b.custid IN (SELECT custid FROM @tblUniqueCustIds)
 		GROUP BY b.CustID
 
 
