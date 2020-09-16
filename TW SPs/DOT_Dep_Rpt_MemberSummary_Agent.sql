@@ -32,6 +32,7 @@ Revisions:
 --20200107@Benson: new FG replace old FG, PartnerId 13->18 | bettype 22032,22033 -> 22042,22043
 --20200317@Rong(DB06) :Add KYGaming Report Data
 --20200630@James(DB06) :Add Moonstone Report Data
+--20200813@Angus:Add Loyalty Program bet type in the promotion
 */
 DECLARE @dbtodaydate SMALLDATETIME
 SET @dbtodaydate = CONVERT(NVARCHAR(10),CURRENT_TIMESTAMP,120)
@@ -177,7 +178,7 @@ BEGIN
 		   SUM(CASE WHEN winlostdate = @dbtodaydate AND bettype < 19999 AND bettype <> 911 AND [status] NOT IN ('VOID', 'REJECT', 'Refund') THEN stake ELSE 0 END), -- Turnover
 		   SUM(CASE WHEN winlostdate = @dbtodaydate AND bettype < 19999 AND [status] = 'DRAW' THEN stake ELSE 0 END), -- DrawGame
 		   SUM(CASE WHEN bettype < 19999 AND ruben = 0 THEN actual_stake ELSE 0 END), -- Outstanding
-		   SUM(CASE WHEN winlostdate = @dbtodaydate AND bettype < 19999 AND ruben = 1 THEN winlost-actual_stake+playercomm ELSE 0 END), -- Winloss
+		   SUM(CASE WHEN winlostdate = @dbtodaydate AND bettype < 19999 AND bettype NOT IN (17000,17003) AND ruben = 1 THEN winlost-actual_stake+playercomm ELSE 0 END), -- Winloss
 		   SUM(CASE WHEN winlostdate = @dbtodaydate AND bettype IN (22010,22011) THEN winlost-actual_stake ELSE 0 END), -- Transfer3rd Opus
 		   SUM(CASE WHEN winlostdate = @dbtodaydate AND bettype IN (22008,22009) THEN winlost-actual_stake ELSE 0 END),-- Transfer3rd HoGaming
 		   SUM(CASE WHEN winlostdate = @dbtodaydate AND bettype IN (22014,22015) THEN winlost-actual_stake ELSE 0 END),-- Transfer3rd AG
@@ -196,7 +197,7 @@ BEGIN
 		   SUM(CASE WHEN winlostdate = @dbtodaydate AND bettype IN (22040,22041) THEN winlost-actual_stake ELSE 0 END), -- Transfer3rd Sapphire
 		   SUM(CASE WHEN winlostdate = @dbtodaydate AND bettype IN (22044,22045) THEN winlost-actual_stake ELSE 0 END), -- Transfer3rd KYGaming
 		   SUM(CASE WHEN winlostdate = @dbtodaydate AND bettype IN (22046,22047) THEN winlost-actual_stake ELSE 0 END), -- Transfer3rd Moonstone
-		   SUM(CASE WHEN winlostdate = @dbtodaydate AND bettype = 17000 THEN winlost-actual_stake ELSE 0 END)	-- Promotion
+		   SUM(CASE WHEN winlostdate = @dbtodaydate AND bettype IN (17000,17003) THEN winlost-actual_stake ELSE 0 END)	-- Promotion, Royalty Program
 	FROM bodb02.dbo.bettrans b WITH(NOLOCK)
 	WHERE b.custid = @CustId AND b.recommend in (SELECT val FROM strSplit(@agentid,',')) 
 	GROUP BY b.custid, b.currency, b.recommend, b.mrecommend, b.srecommend
