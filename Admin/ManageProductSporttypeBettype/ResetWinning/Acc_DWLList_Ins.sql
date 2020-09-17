@@ -113,18 +113,33 @@ BEGIN
 	              @ValueError   =	CASE	WHEN LEN(Product)	> 50 THEN Product END,
 				  @LimitValue	=	CASE	WHEN LEN(Product)	> 50 THEN 50 END		
 	FROM #inputTmp
-	WHERE LEN(Product)	> 50
-		  
-							
+	WHERE LEN(Product)	> 50 OR  NOT EXISTS (SELECT 1 FROM bodb02.dbo.Customer cus WITH(NOLOCK) WHERE cus.CustID = t.CustID)
 
+
+		  
 	IF @ValueError <> ''
-	   BEGIN
-		 SELECT @ErrCode = 1007, 
-		        @ErrMsg = 'Row "' + @DWLListError + 
-				           '" - The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
-	     RETURN
-	   END
-	   
+		BEGIN
+			SELECT @ErrCode = 1007, 
+				@ErrMsg = 'Row "' + @DWLListError + 
+							'" - The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
+			RETURN
+		END
+	ELSE
+		BEGIN
+			SELECT TOP(1)	@DWLListError = t.ID, 
+							@ValueError   =	t.CustID				
+			FROM #inputTmp t
+			WHERE NOT EXISTS (SELECT 1 FROM bodb02.dbo.Customer cus WITH(NOLOCK) WHERE cus.CustID = t.CustID)
+
+			IF @ValueError <> ''
+			BEGIN
+				SELECT @ErrCode = 1008, 
+				@ErrMsg = 'Row "' + @DWLListError + 
+							'" - CustID "' + @ValueError + '" is does not exist in Customer table.'
+				RETURN
+			END
+		END
+
 	BEGIN TRY
 		INSERT INTO #input
 		(

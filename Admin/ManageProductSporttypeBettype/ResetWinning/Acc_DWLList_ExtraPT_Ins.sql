@@ -114,6 +114,21 @@ BEGIN
 				           '" - The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
 	     RETURN
 	   END
+	ELSE
+		BEGIN
+			SELECT TOP(1)	@DWLListExtraPTError = t.ID, 
+							@ValueError   =	t.CustID				
+			FROM #inputTmp t
+			WHERE NOT EXISTS (SELECT 1 FROM bodb02.dbo.Customer cus WITH(NOLOCK) WHERE cus.CustID = t.CustID)
+
+			IF @ValueError <> ''
+			BEGIN
+				SELECT @ErrCode = 1008, 
+				@ErrMsg = 'Row "' + @DWLListExtraPTError + 
+						  '" - CustID "' + @ValueError + '" is does not exist in Customer table.'
+				RETURN
+			END
+		END
 	   
 	BEGIN TRY
 		INSERT INTO #input
