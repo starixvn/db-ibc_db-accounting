@@ -15,6 +15,7 @@ Original:
 
 	Revisions:
 		- 20200328@Malcolm: NAP Manage Products/Sporttype/Bettype [Redmine: #131241]
+		- 20200917@Danny: NAP Manage Bettype add column LicSpreadBetTypeGroupId [Redmine: #131241]
 		
 */
 
@@ -54,7 +55,8 @@ BEGIN
 		ParentTypeid	INT,
 		typenameMMR		NVARCHAR(128),
 		typenameHI		NVARCHAR(128),
-		DisplayedTypeID INT
+		DisplayedTypeID INT,
+		LicSpreadBetTypeGroupId TINYINT
 		)
 
 		CREATE TABLE #inputTmp
@@ -81,7 +83,8 @@ BEGIN
 		ParentTypeid	NVARCHAR(MAX),
 		typenameMMR		NVARCHAR(MAX),
 		typenameHI		NVARCHAR(MAX),
-		DisplayedTypeID NVARCHAR(MAX)
+		DisplayedTypeID NVARCHAR(MAX),
+		LicSpreadBetTypeGroupId  NVARCHAR(MAX)
 		)
 
 	BEGIN TRY
@@ -109,7 +112,8 @@ BEGIN
 							ParentTypeid,
 							typenameMMR,
 							typenameHI,
-							DisplayedTypeID)
+							DisplayedTypeID,
+							LicSpreadBetTypeGroupId)
 
 			SELECT          typeid ,
 							typenamee,
@@ -133,7 +137,8 @@ BEGIN
 							ParentTypeid,
 							typenameMMR,
 							typenameHI,
-							DisplayedTypeID
+							DisplayedTypeID,
+							LicSpreadBetTypeGroupId
 
 			FROM OPENXML(@iDoc, '/ROOT/File', 1) WITH  (typeid			NVARCHAR(MAX),
 														typenamee		NVARCHAR(MAX),
@@ -157,7 +162,8 @@ BEGIN
 														ParentTypeid	NVARCHAR(MAX),
 														typenameMMR		NVARCHAR(MAX),
 														typenameHI		NVARCHAR(MAX),
-														DisplayedTypeID NVARCHAR(MAX))
+														DisplayedTypeID NVARCHAR(MAX),
+														LicSpreadBetTypeGroupId NVARCHAR(MAX))
 		    
 			EXEC sp_xml_removedocument @iDoc
 	END TRY
@@ -170,9 +176,9 @@ BEGIN
 	UPDATE #inputTmp
 	SET typeid			 = CASE WHEN LEN(typeid)			= 0 THEN  NULL ELSE typeid			END,
 		ParentTypeid     = CASE WHEN LEN(ParentTypeid)		= 0 THEN  NULL ELSE ParentTypeid	END,
-		DisplayedTypeID  = CASE WHEN LEN(DisplayedTypeID)	= 0 THEN  NULL ELSE DisplayedTypeID END
-
-	WHERE LEN(typeid) = 0  OR LEN(ParentTypeid) = 0 OR LEN(DisplayedTypeID) = 0
+		DisplayedTypeID  = CASE WHEN LEN(DisplayedTypeID)	= 0 THEN  NULL ELSE DisplayedTypeID END,
+		LicSpreadBetTypeGroupId = CASE WHEN LEN(LicSpreadBetTypeGroupId)	= 0 THEN  NULL ELSE LicSpreadBetTypeGroupId END
+	WHERE LEN(typeid) = 0  OR LEN(ParentTypeid) = 0 OR LEN(DisplayedTypeID) = 0 OR LEN(LicSpreadBetTypeGroupId)	= 0 
 
 
 	SELECT TOP(1) @BettypeError = typeid, 
@@ -271,7 +277,8 @@ BEGIN
 								'typenamePT="' + COALESCE(CAST(typenamePT  AS NVARCHAR(128)), SPACE(1)) + '" ' +
 								'typenameFR="' + COALESCE(CAST(typenameFR  AS NVARCHAR(128)), SPACE(1)) + '" ' +								
 								'typenameMMR="' + COALESCE(CAST(typenameMMR  AS NVARCHAR(128)), SPACE(1)) + '" ' +
-								'typenameHI="' + COALESCE(CAST(typenameHI  AS NVARCHAR(128)), SPACE(1)) + '" ' +								
+								'typenameHI="' + COALESCE(CAST(typenameHI  AS NVARCHAR(128)), SPACE(1)) + '" ' +
+								'LicSpreadBetTypeGroupId="' + COALESCE(CAST(LicSpreadBetTypeGroupId  AS VARCHAR(15)), SPACE(1)) + '" ' +	
 								'LoginIP="'+ COALESCE(CAST(@LoginIP as NVARCHAR(20)),SPACE(1)) + '" />'
 			FROM bettype WITH(NOLOCK)
 			WHERE typeid = @Bettype
@@ -300,7 +307,8 @@ BEGIN
 				t.ParentTypeid	  = i.ParentTypeid,
 				t.typenameMMR	  = i.typenameMMR,
 				t.typenameHI	  = i.typenameHI,
-				t.DisplayedTypeID = i.DisplayedTypeID
+				t.DisplayedTypeID = i.DisplayedTypeID,
+				t.LicSpreadBetTypeGroupId = i.LicSpreadBetTypeGroupId
 			FROM bettype t
 				INNER JOIN  #input i ON  t.typeid = i.typeid
 			WHERE ID = @CurrentRow
@@ -334,7 +342,8 @@ BEGIN
 								'typenamePT="' + COALESCE(CAST(typenamePT  AS NVARCHAR(128)), SPACE(1)) + '" ' +
 								'typenameFR="' + COALESCE(CAST(typenameFR  AS NVARCHAR(128)), SPACE(1)) + '" ' +							
 								'typenameMMR="' + COALESCE(CAST(typenameMMR  AS NVARCHAR(128)), SPACE(1)) + '" ' +
-								'typenameHI="' + COALESCE(CAST(typenameHI  AS NVARCHAR(128)), SPACE(1)) + '" ' +							
+								'typenameHI="' + COALESCE(CAST(typenameHI  AS NVARCHAR(128)), SPACE(1)) + '" ' +	
+								'LicSpreadBetTypeGroupId="' + COALESCE(CAST(LicSpreadBetTypeGroupId  AS VARCHAR(15)), SPACE(1)) + '" ' +
 								'LoginIP="'+ COALESCE(CAST(@LoginIP as NVARCHAR(20)),SPACE(1)) + '" />'
 			FROM #input
 			WHERE ID = @CurrentRow
