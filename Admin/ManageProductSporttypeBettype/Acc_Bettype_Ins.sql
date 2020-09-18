@@ -233,7 +233,7 @@ BEGIN
 	SET typeid					= CASE WHEN LEN(typeid)			= 0 THEN  NULL ELSE typeid			END,
 		ParentTypeid			= CASE WHEN LEN(ParentTypeid)		= 0 THEN  NULL ELSE ParentTypeid	END,
 		DisplayedTypeID			= CASE WHEN LEN(DisplayedTypeID)	= 0 THEN  NULL ELSE DisplayedTypeID END,
-		LicSpreadBetTypeGroupId = CASE WHEN LEN(LicSpreadBetTypeGroupId)	= 0 THEN  NULL ELSE LicSpreadBetTypeGroupId END
+		LicSpreadBetTypeGroupId = CASE WHEN LEN(LicSpreadBetTypeGroupId)	= 0 THEN  0 ELSE LicSpreadBetTypeGroupId END
 
 	WHERE LEN(typeid)				= 0 
 	      OR LEN(ParentTypeid)		= 0
