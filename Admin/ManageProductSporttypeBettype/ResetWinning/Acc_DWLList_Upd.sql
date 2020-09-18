@@ -102,22 +102,19 @@ BEGIN
 	IF @ValueError <> ''
 		BEGIN
 			SELECT @ErrCode = 1007, 
-				@ErrMsg = 'Row "' + @DWLListError + 
-							'" - The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
+				@ErrMsg = '" - The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
 			RETURN
 		END
 	ELSE
 		BEGIN
-			SELECT TOP(1)	@DWLListError = t.ID, 
-							@ValueError   =	t.CustID				
+			SELECT TOP(1) @ValueError   =	t.CustID				
 			FROM #inputTmp t
 			WHERE NOT EXISTS (SELECT 1 FROM bodb02.dbo.Customer cus WITH(NOLOCK) WHERE cus.CustID = t.CustID)
 
 			IF @ValueError <> ''
 			BEGIN
 				SELECT @ErrCode = 1008, 
-				@ErrMsg = 'Row "' + @DWLListError + 
-						  '" - CustID "' + @ValueError + '" is does not exist in Customer table.'
+				@ErrMsg =  '" - CustID "' + @ValueError + '" is does not exist in Customer table.'
 				RETURN
 			END
 		END

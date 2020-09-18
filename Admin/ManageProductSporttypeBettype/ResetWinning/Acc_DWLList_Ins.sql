@@ -112,11 +112,9 @@ BEGIN
 	SELECT TOP(1) @DWLListError = ID, 
 	              @ValueError   =	CASE	WHEN LEN(Product)	> 50 THEN Product END,
 				  @LimitValue	=	CASE	WHEN LEN(Product)	> 50 THEN 50 END		
-	FROM #inputTmp
-	WHERE LEN(Product)	> 50 OR  NOT EXISTS (SELECT 1 FROM bodb02.dbo.Customer cus WITH(NOLOCK) WHERE cus.CustID = t.CustID)
-
-
-		  
+	FROM #inputTmp t
+	WHERE LEN(Product)	> 50
+ 
 	IF @ValueError <> ''
 		BEGIN
 			SELECT @ErrCode = 1007, 
