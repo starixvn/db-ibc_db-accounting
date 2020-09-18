@@ -14,7 +14,7 @@ DB: DBACC/bodb_ACC
 Original:
 
 	Revisions:
-		- 20200328@Danny: NAP Manage Reset Winning [Redmine: #131241][Task: #141775]
+		- 20200918@Danny: NAP Manage Reset Winning [Redmine: #131241][Task: #141775]
 	Param's Explanation:
 	- @Fie:		
 		<ROOT>
