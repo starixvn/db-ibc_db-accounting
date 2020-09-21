@@ -1,4 +1,4 @@
-/*<info serverAlias="DBACC-bodb_ACC" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBACC-bodb_ACC" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE  dbo.Acc_DWLList_ExtraPT_Upd
 	@File		NVARCHAR(MAX),
 	@LoginIP	VARCHAR(20)='',
@@ -168,7 +168,7 @@ BEGIN
 					t.GroupID = i.GroupID,
 					t.GroupName = i.GroupName,
 					t.IsDisabled = i.IsDisabled
-				FROM Acc_DWLList_ExtraPT t
+				FROM Acc_DWLList_ExtraPT t WITH (ROWLOCK)
 				INNER JOIN  #input i ON  t.CustID = i.CustID 
 				WHERE ID = @CurrentRow
 			END
@@ -181,7 +181,7 @@ BEGIN
 					t.GroupID = i.GroupID,
 					t.GroupName = i.GroupName,
 					t.IsDisabled = i.IsDisabled
-				FROM Acc_DWLList_ExtraPT_xtest t
+				FROM Acc_DWLList_ExtraPT_xtest t WITH (ROWLOCK)
 				INNER JOIN  #input i ON  t.CustID = i.CustID 
 				WHERE ID = @CurrentRow
 			END

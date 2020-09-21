@@ -1,4 +1,4 @@
-/*<info serverAlias="DBACC-bodb_ACC" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBACC-bodb_ACC" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE  dbo.Acc_DWLList_ExtraPT_Sel
 	@CustID			INT = NULL,
 	@UserName		VARCHAR(30) = NULL,

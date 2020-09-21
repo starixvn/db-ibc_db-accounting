@@ -1,4 +1,4 @@
-/*<info serverAlias="DBACC-bodb_ACC" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBACC-bodb_ACC" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE  dbo.Acc_DWLList_ExtraPT_Del
 	@CustID      INT,
 	@ErrCode     INT = 0 OUTPUT,
@@ -29,15 +29,15 @@ BEGIN
 	BEGIN TRY
 		IF @IsTest = 0
 		BEGIN
-			DELETE TOP(1) m
-			FROM dbo.Acc_DWLList_ExtraPT m
+			DELETE m
+			FROM dbo.Acc_DWLList_ExtraPT m WITH (ROWLOCK)
 			WHERE m.CustID = @CustID
 		END
 		
 		IF @IsTest = 1
 		BEGIN
-			DELETE TOP(1) m
-			FROM dbo.Acc_DWLList_ExtraPT_xtest m
+			DELETE m
+			FROM dbo.Acc_DWLList_ExtraPT_xtest m WITH (ROWLOCK)
 			WHERE m.CustID = @CustID
 		END
 	END TRY

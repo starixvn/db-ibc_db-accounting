@@ -1,4 +1,4 @@
-/*<info serverAlias="DBACC-bodb_ACC" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBACC-bodb_ACC" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE  dbo.Acc_DWLList_Upd
 	@File		NVARCHAR(MAX),
 	@LoginIP	VARCHAR(20)='',
@@ -176,7 +176,7 @@ BEGIN
 					t.ProductID = i.ProductID,
 					t.Product = i.Product,
 					t.IsDeleted = i.IsDeleted
-				FROM Acc_DWLList t
+				FROM Acc_DWLList t WITH (ROWLOCK)
 				INNER JOIN  #input i ON  t.CustID = i.CustID and t.Product = i.Product
 				WHERE ID = @CurrentRow
 			END
@@ -190,7 +190,7 @@ BEGIN
 					t.ProductID = i.ProductID,
 					t.Product = i.Product,
 					t.IsDeleted = i.IsDeleted
-				FROM Acc_DWLList_xtest t
+				FROM Acc_DWLList_xtest t WITH (ROWLOCK)
 				INNER JOIN  #input i ON  t.CustID = i.CustID and t.Product = i.Product
 				WHERE ID = @CurrentRow
 			END

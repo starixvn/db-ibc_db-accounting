@@ -1,4 +1,4 @@
-/*<info serverAlias="DBACC-bodb_ACC" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBACC-bodb_ACC" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE  dbo.Acc_DWLList_Del
 	@CustID      INT,
 	@Product     VARCHAR(20),	
@@ -30,15 +30,15 @@ BEGIN
 	BEGIN TRY
 		IF @IsTest = 0
 		BEGIN
-			DELETE TOP(1) m
-			FROM dbo.Acc_DWLList m
+			DELETE m
+			FROM dbo.Acc_DWLList m WITH (ROWLOCK)
 			WHERE m.CustID = @CustID AND m.Product =  @Product
 		END
 		
 		IF @IsTest = 1
 		BEGIN
-			DELETE TOP(1) m
-			FROM dbo.Acc_DWLList_xtest m
+			DELETE m
+			FROM dbo.Acc_DWLList_xtest m WITH (ROWLOCK)
 			WHERE m.CustID = @CustID AND m.Product =  @Product
 		END
 	END TRY
