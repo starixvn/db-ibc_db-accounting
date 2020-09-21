@@ -15,6 +15,7 @@ Original:
 
 	Revisions:
 		- 20200328@Malcolm: NAP Manage Products/Sporttype/Bettype [Redmine: #131241]
+		- 20200917@Danny: NAP Manage Bettype add column LicSpreadBetTypeGroupId [Redmine: #131241]
 		
 */
 BEGIN
@@ -49,6 +50,7 @@ BEGIN
 		typenameMMR		NVARCHAR(128),
 		typenameHI		NVARCHAR(128),
 		DisplayedTypeID INT,
+		LicSpreadBetTypeGroupId TINYINT,
 		RowNum INT)
 
 	INSERT INTO #Tmp(
@@ -75,7 +77,8 @@ BEGIN
 			ParentTypeid,
 			typenameMMR,
 			typenameHI,
-			DisplayedTypeID, 
+			DisplayedTypeID,
+			LicSpreadBetTypeGroupId,
 			RowNum
 	)
     SELECT	typeid,
@@ -102,6 +105,7 @@ BEGIN
 			typenameMMR,
 			typenameHI,
 			DisplayedTypeID, 
+			LicSpreadBetTypeGroupId,
 			ROW_NUMBER() OVER(ORDER BY TypeID) AS RowNum   
 	FROM bettype WITH(NOLOCK)
 	WHERE (typeid = @TypeId OR @TypeId IS NULL) 
@@ -135,6 +139,7 @@ BEGIN
 			typenameFR,				
 			typenameMMR,
 			typenameHI,
+			LicSpreadBetTypeGroupId,
 			RowNum
 	FROM #Tmp
 	WHERE @PageIndex < 0 OR @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd) 
