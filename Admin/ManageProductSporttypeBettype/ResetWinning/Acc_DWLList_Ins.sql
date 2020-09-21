@@ -36,7 +36,7 @@ BEGIN
 			RETURN
 
 
-	DECLARE @iDoc INT, @RowTotal INT = 0, @CurrentRow INT = 0, @DWLListError NVARCHAR(MAX) = '', @ValueError NVARCHAR(MAX) = '', @LimitValue BIGINT
+	DECLARE @iDoc INT, @RowTotal INT = 0, @CurrentRow INT = 0, @DWLListError NVARCHAR(MAX) = '', @ValueError NVARCHAR(MAX) = '', @LimitValue BIGINT, @ColumnName NVARCHAR(200)
 
 	DECLARE @startRun DATETIME, @endRun DATETIME, @duration INT, @LogSPData NVARCHAR(MAX), @LogSPData2 NVARCHAR(MAX)
 
@@ -109,17 +109,32 @@ BEGIN
 		  OR LEN(ProductID)	= 0
 		  OR LEN(IsDeleted)	= 0
 
-	SELECT TOP(1) @DWLListError = ID, 
-	              @ValueError   =	CASE	WHEN LEN(Product)	> 50 THEN Product END,
-				  @LimitValue	=	CASE	WHEN LEN(Product)	> 50 THEN 50 END		
+	SELECT TOP(1) @DWLListError = CONVERT(VARCHAR(5),ID), 
+	              @ValueError   = CASE	WHEN LEN(Product)	> 50 THEN Product END,
+				  @LimitValue	= CASE	WHEN LEN(Product)	> 50 THEN 50 END,
+				  @ErrCode		= CASE	WHEN LEN(Product)	> 50 THEN 1007 ELSE 1008 END,
+				  @ColumnName	= CASE	WHEN IsDeleted IS NULL OR IsDeleted NOT IN (0,1) THEN 'IsDeleted'
+										WHEN Seq IS NULL OR Seq NOT BETWEEN 0 AND 255 THEN 'Seq'
+										WHEN ProductID IS NULL OR ProductID NOT BETWEEN 0 AND 255 THEN 'ProductID'
+								  ELSE NULL END
+ 
 	FROM #inputTmp t
 	WHERE LEN(Product)	> 50
+	OR IsDeleted IS NULL OR IsDeleted NOT IN (0,1)
+	OR Seq IS NULL OR Seq NOT BETWEEN 0 AND 255
+	OR ProductID IS NULL OR ProductID NOT BETWEEN 0 AND 255
  
 	IF @ValueError <> ''
 		BEGIN
-			SELECT @ErrCode = 1007, 
-				@ErrMsg = 'Row "' + @DWLListError + 
+			IF @ErrCode = 1007 
+			SELECT @ErrMsg = 'Row "' + ISNULL(@DWLListError,'') + 
 							'" - The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
+
+			IF @ErrCode = 1008
+			SELECT @ErrMsg = 'Invalid "' + @ColumnName + '" on row "' + @DWLListError + 
+						CASE WHEN @ColumnName = 'IsDeleted'	THEN '"- The values must be IN (0,1)' 
+							 WHEN @ColumnName = 'Seq'		THEN '"- The values must be IN (0,255)' 
+							 WHEN @ColumnName = 'ProductID'	THEN '"- The values must be IN (0,255)' ELSE '' END
 			RETURN
 		END
 	ELSE
@@ -131,10 +146,25 @@ BEGIN
 
 			IF @ValueError <> ''
 			BEGIN
-				SELECT @ErrCode = 1008, 
+				SELECT @ErrCode = 1009, 
 				@ErrMsg = 'Row "' + @DWLListError + 
 							'" - CustID "' + @ValueError + '" is does not exist in Customer table.'
 				RETURN
+			END
+			ELSE
+			BEGIN
+				SELECT TOP(1)	@DWLListError = t.ID, 
+								@ValueError   =	t.ProductID				
+				FROM #inputTmp t
+				WHERE NOT EXISTS (SELECT 1 FROM bodb02.dbo.Products pro WITH(NOLOCK) WHERE pro.ProductID = t.ProductID)
+
+				IF @ValueError <> ''
+				BEGIN
+					SELECT @ErrCode = 1010, 
+					@ErrMsg = 'Row "' + @DWLListError + 
+								'" - ProductID "' + @ValueError + '" is does not exist in Products table.'
+					RETURN
+				END
 			END
 		END
 

@@ -35,7 +35,7 @@ BEGIN
 			RETURN
 
 
-	DECLARE @iDoc INT, @RowTotal INT = 0, @CurrentRow INT = 0, @DWLListExtraPTError NVARCHAR(MAX) = '', @ValueError NVARCHAR(MAX) = '', @LimitValue BIGINT
+	DECLARE @iDoc INT, @RowTotal INT = 0, @CurrentRow INT = 0, @DWLListExtraPTError NVARCHAR(MAX) = '', @ValueError NVARCHAR(MAX) = '', @LimitValue BIGINT, @ColumnName NVARCHAR(200)
 
 	DECLARE @startRun DATETIME, @endRun DATETIME, @duration INT, @LogSPData NVARCHAR(MAX), @LogSPData2 NVARCHAR(MAX)
 
@@ -99,31 +99,38 @@ BEGIN
 	      OR LEN(GroupID)	= 0
 		  OR LEN(IsDisabled)= 0
 
-	SELECT TOP(1) @DWLListExtraPTError = ID, 
+	SELECT TOP(1) @DWLListExtraPTError = CONVERT(VARCHAR(5),ID), 
 	              @ValueError   =	CASE	WHEN LEN(GroupName)	> 50 THEN GroupName END,
-				  @LimitValue	=	CASE	WHEN LEN(GroupName)	> 50 THEN 50 END		
+				  @LimitValue	=	CASE	WHEN LEN(GroupName)	> 50 THEN 50 END,
+				  @ErrCode		=	CASE	WHEN LEN(GroupName)	> 50 THEN 1007 ELSE 1008 END,
+				  @ColumnName	=	CASE	WHEN IsDisabled IS NULL OR IsDisabled NOT IN (0,1) THEN 'IsDisabled'
+								  ELSE NULL END
 	FROM #inputTmp
 	WHERE LEN(GroupName)	> 50
+	OR IsDisabled IS NULL OR IsDisabled NOT IN (0,1)
 		  
 							
 
 	IF @ValueError <> ''
 	   BEGIN
-		 SELECT @ErrCode = 1007, 
-		        @ErrMsg = 'Row "' + @DWLListExtraPTError + 
-				           '" - The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
-	     RETURN
+			IF @ErrCode = 1007
+				SELECT @ErrMsg = 'Row "' + @DWLListExtraPTError + 
+							   '" - The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
+			IF @ErrCode = 1008
+				SELECT @ErrMsg = 'Invalid "' + @ColumnName + '" on row "' + @DWLListExtraPTError + 
+						CASE WHEN @ColumnName = 'IsDisabled'	THEN '"- The values must be IN (0,1)'  ELSE '' END
+			RETURN
 	   END
 	ELSE
 		BEGIN
-			SELECT TOP(1)	@DWLListExtraPTError = t.ID, 
+			SELECT TOP(1)	@DWLListExtraPTError = CONVERT(VARCHAR(5), t.ID), 
 							@ValueError   =	t.CustID				
 			FROM #inputTmp t
 			WHERE NOT EXISTS (SELECT 1 FROM bodb02.dbo.Customer cus WITH(NOLOCK) WHERE cus.CustID = t.CustID)
 
 			IF @ValueError <> ''
 			BEGIN
-				SELECT @ErrCode = 1008, 
+				SELECT @ErrCode = 1009, 
 				@ErrMsg = 'Row "' + @DWLListExtraPTError + 
 						  '" - CustID "' + @ValueError + '" is does not exist in Customer table.'
 				RETURN
