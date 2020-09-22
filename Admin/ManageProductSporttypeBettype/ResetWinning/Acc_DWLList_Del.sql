@@ -1,7 +1,7 @@
 /*<info serverAlias="DBACC-bodb_ACC" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE  dbo.Acc_DWLList_Del
 	@CustID      INT,
-	@Product     VARCHAR(20),	
+	@Product     VARCHAR(50),	
 	@ErrCode     INT = 0 OUTPUT,
 	@ErrMsg      NVARCHAR(MAX) = '' OUTPUT,
 	@UserID      INT,
