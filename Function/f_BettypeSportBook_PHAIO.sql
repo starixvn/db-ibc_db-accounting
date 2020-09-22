@@ -10,7 +10,7 @@ CREATE FUNCTION [dbo].[f_BettypeSportBook_PHAIO]
 	DB: DBEXT.BODB02
 	
 	Revision:
-		- 20200922@Danny: Initial Function
+		- 20200922@Danny: Initial Function list hardcode bettype PHAIO
 		 
 	Param Explanation:
 */

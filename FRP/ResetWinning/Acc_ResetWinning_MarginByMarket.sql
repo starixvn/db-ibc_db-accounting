@@ -10,7 +10,7 @@ AS
 	
 	Revision:
 		- 20200303@Sophia: Initial SPs  
-		- 20200922@Danny:  Adhoc of Reset winning for PHAIO [redmind: #142019]
+		- 20200922@Danny:  Get Sport Bettype from hard-code function replace to Sportbettypematrix  [redmind: #142019]
 	Param Explanation:
 		 
 	   
