@@ -10,7 +10,7 @@ AS
 	
 	Revision:
 		- 20200303@Sophia: Initial SPs  
-		 
+		- 20200922@Danny:  Adhoc of Reset winning for PHAIO [redmind: #142019]
 	Param Explanation:
 		 
 	   
@@ -22,9 +22,8 @@ BEGIN
 	------Get Sport Bettype Matrix------	
 	CREATE TABLE  #Bettype (Bettype INT PRIMARY KEY)
 	INSERT INTO #Bettype
-	SELECT  Bettype FROM bodb02.dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', 0)
-	WHERE  ProductID = 1 
-			AND SubProduct = 'PHAIO'
+	SELECT  Bettype 
+	FROM dbo.f_BettypeSportBook_PHAIO()
 	
 	----- End get sport bettype  
 
