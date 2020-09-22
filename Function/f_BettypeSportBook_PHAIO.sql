@@ -1,4 +1,4 @@
-/*<info serverAlias="DBEXT-bodb02" executers="bodbAdminNet" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBEXT-bodb02" executers="" isFunction="1" isNested="1"></info>*/
 
 CREATE FUNCTION [dbo].[f_BettypeSportBook_PHAIO]
 (
@@ -35,3 +35,5 @@ VALUES (2),(4),(5),(6),(10),(12),(13),(14),(15),(16),(17),(18),(22),
 (472),(473),(474),(475),(476),(477),(478),(479),(481),(482),
 (483),(484),(485),(486),(487),(488),(489),(490),(491),(492),
 (493),(494),(495),(496),(497)) as P (Bettype)
+
+GO
