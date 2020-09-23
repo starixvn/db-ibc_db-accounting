@@ -38,6 +38,8 @@ Revisions:
 	- 20151021@Elodie: Set @IsForce = 1 for updating balance debit [Redmine:#40125]
 	- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 	- 20181112@Sophia: Add Transfer Collection [redmine: #98621]
+	- 20200730@Sophia: prevent duplicated transfer [Redmine: #137141]
+	- 20200730@Sophia: Check UM Transfer Function [Redmine: #136992]
 					   
 Param's Explanation:
 */
@@ -53,6 +55,32 @@ BEGIN
 	Declare @FromMrecommend int, @FromRecommend int, @FromSrecommend int, 
 			@FromCurr int, @FromActualrate float , @FromCurrName nvarchar(10),@FromUsername varchar(30), @FromRoleID tinyint
 	Declare @LogData varchar(200) 
+	
+	
+	---- #1 CHECK UM TRANSFER FUNCTION
+	EXEC dbo.Acc_Transfer_CheckUM  
+		@CustID = @FromCustID
+		,@ErrMsg = @ErrMsg OUTPUT 
+		,@ErrCode = @ErrCode OUTPUT
+		 
+	IF @ErrCode <> 0  -- Function Transfer is under UM 
+	BEGIN
+		RETURN		
+	END		
+	
+	---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN RAISE ERROR, IF THIS SP IS CALLED BY JOB THEN NO NEED TO CHECK  
+	EXEC dbo.Acc_Transfer_CheckRunningByCust  
+		@CustID = @FromCustID
+		,@ErrMsg = @ErrMsg OUTPUT 
+		,@ErrCode = @ErrCode OUTPUT
+		 
+	IF @ErrCode <> 0  -- the auto transfer job is running this custid
+	BEGIN
+		RETURN		
+	END
+	
+	-----------------------------------------------------------
+	
 	
 	DECLARE @TransIDs AS TABLE (transID BIGINT)	
 
@@ -101,14 +129,13 @@ BEGIN
 						end, @ErrCode = 100
 		return
 	END
-
+	
 	---check To account not the same From account 
 	IF @FromCustID = @ToCustID 
 	BEGIN
 		SELECT @ErrMsg = 'You cannot do TRANSFER due to the destination account is the same as the source account.', @ErrCode = 101
 		RETURN
 	END
-
 
 	if not exists (select 1 from CustDB.dbo.Custinfo with (NOLOCK) where custid = @FromCustID)
 	BEGIN
@@ -120,6 +147,28 @@ BEGIN
 							end, @ErrCode = 102	
 		return
 	END
+	
+	---- #3 CHECK UM TRANSFER FUNCTION
+	EXEC dbo.Acc_Transfer_CheckUM  
+		@CustID = @ToCustID
+		,@ErrMsg = @ErrMsg OUTPUT 
+		,@ErrCode = @ErrCode OUTPUT
+		 
+	IF @ErrCode <> 0  -- Function Transfer is under UM 
+	BEGIN
+		RETURN		
+	END		
+	
+	---- #4 CHECK FLAG ISTRANSFERRING = 1 THEN RAISE ERROR, IF THIS SP IS CALLED BY JOB THEN NO NEED TO CHECK  
+	EXEC dbo.Acc_Transfer_CheckRunningByCust  
+		@CustID = @ToCustID
+		,@ErrMsg = @ErrMsg OUTPUT 
+		,@ErrCode = @ErrCode OUTPUT
+		 
+	IF @ErrCode <> 0  -- the auto transfer job is running this custid
+	BEGIN
+		RETURN		
+	END	
 
 
 	/*
