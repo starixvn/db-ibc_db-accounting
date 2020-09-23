@@ -36,7 +36,6 @@ AS
 		- 20151021@Elodie: Set @IsForce = 1 for updating balance debit [Redmine:#40125]
 		- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 		- 20181112@Sophia: Add Transfer Collection [redmine: #98621]
-		- 20200730@Sophia: prevent duplicated transfer [Redmine: #137141]
 		- 20200730@Sophia: Check UM Transfer Function [Redmine: #136992]
 */
 BEGIN
@@ -76,29 +75,7 @@ BEGIN
 		RETURN		
 	END		
 	
-	---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN RAISE ERROR, IF THIS SP IS CALLED BY JOB THEN NO NEED TO CHECK
-  
-	EXEC dbo.Acc_Transfer_CheckRunningByCust  
-		@CustID = @FromCustID
-		,@ErrMsg = @ErrMsg OUTPUT 
-		,@ErrCode = @ErrCode OUTPUT
-		 
-	IF @ErrCode <> 0  -- the auto transfer job is running this custid
-	BEGIN
-		RETURN		
-	END
-		  
-	EXEC dbo.Acc_Transfer_CheckRunningByCust  
-		@CustID = @ToCustID
-		,@ErrMsg = @ErrMsg OUTPUT 
-		,@ErrCode = @ErrCode OUTPUT
-		 
-	IF @ErrCode <> 0  -- the auto transfer job is running this custid
-	BEGIN
-		RETURN		
-	END 
-	
-		
+			
 	DECLARE @refno			BIGINT,
 			@winlostdate	DATETIME, 
 			@transdate		DATETIME,
