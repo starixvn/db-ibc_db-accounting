@@ -33,7 +33,7 @@ BEGIN
 		LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON s.site = cu.site
 		LEFT JOIN bodb02.dbo.site ags WITH(NOLOCK) ON ag.site = ags.site
 		INNER JOIN CUSTDB.dbo.UMConfig c WITH(NOLOCK) ON c.SuperID IN (su.custid,0)
-	WHERE GETDATE() BETWEEN c.BeginTime AND c.EndTime
+	WHERE CONVERT(SMALLDATETIME,GETDATE()) BETWEEN c.BeginTime AND c.EndTime
 		AND c.FunctionType = 101 --- transfer Func 
 		AND c.SiteID IN (ISNULL(s.siteid,ags.siteid),0)
 		AND c.Currency IN (cu.currency,0)
