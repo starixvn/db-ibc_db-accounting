@@ -237,17 +237,21 @@ BEGIN
 	 --  @ErrMsg  = @ErrMsg OUTPUT,  
 	 --  @ErrCode = @ErrCode OUTPUT  
 	 
-	 
-		---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN SKIP 
-		EXEC dbo.Acc_Transfer_CheckRunningByCust  
-			@CustID = @recommend
-			,@ErrMsg = @ErrMsg OUTPUT 
-			,@ErrCode = @ErrCode OUTPUT
-			 
-		IF @ErrCode <> 0  -- the auto transfer job is running this custid
-		BEGIN
-			RETURN		
+ 
+		---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN RAISE ERROR, IF THIS SP IS CALLED BY JOB THEN NO NEED TO CHECK
+		IF @IsJob = 0
+		BEGIN 
+			EXEC dbo.Acc_Transfer_CheckRunningByCust  
+				@CustID = @recommend
+				,@ErrMsg = @ErrMsg OUTPUT 
+				,@ErrCode = @ErrCode OUTPUT
+				 
+			IF @ErrCode <> 0  -- the auto transfer job is running this custid
+			BEGIN
+				RETURN		
+			END
 		END
+	
 	
 	 
 		BEGIN TRANSACTION  
