@@ -246,7 +246,6 @@ BEGIN
 			 
 		IF @ErrCode <> 0  -- the auto transfer job is running this custid
 		BEGIN
-			RAISERROR(@ErrCode,16,1)
 			RETURN		
 		END
 	
