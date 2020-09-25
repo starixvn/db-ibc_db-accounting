@@ -21,7 +21,7 @@ Examples :
 */
 BEGIN 
 	
-	DECLARE @isTest BIT = 0,  
+	DECLARE @isTest BIT = 0 
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
 	
 	DECLARE @ErrorTemplate NVARCHAR(4000)
