@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBCUST-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbExtAccNet,bodbDownlineNetView" isFunction="0"></info>*/
+﻿/*<info serverAlias="DBCUST-CUSTDB" executers="bodbAdminNet,bodbDownlineNet,bodbExtAccNet,bodbDownlineNetView" isFunction="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_Transfer_CheckUM] 
 	@CustID INT,
 	@Language VARCHAR(2) = 'E',
@@ -8,7 +8,7 @@ AS
 /*
 Created: 20200729@Sophia
 Task:  Get UM Transfer Function
-DB: DBCUST.bodb02
+DB: DBCUST.CUSTDB
 Revisions:	
 	- 20200729@Sophia: Get UM Transfer Function [Redmine: #136992]
 
