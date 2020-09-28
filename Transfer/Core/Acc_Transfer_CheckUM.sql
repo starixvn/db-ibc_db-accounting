@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbExtAccNet,bodbDownlineNetView" isFunction="0"></info>*/
+﻿/*<info serverAlias="DBCUST-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbExtAccNet,bodbDownlineNetView" isFunction="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_Transfer_CheckUM] 
 	@CustID INT,
 	@Language VARCHAR(2) = 'E',
@@ -8,7 +8,7 @@ AS
 /*
 Created: 20200729@Sophia
 Task:  Get UM Transfer Function
-DB: DBTXN.bodb02
+DB: DBCUST.bodb02
 Revisions:	
 	- 20200729@Sophia: Get UM Transfer Function [Redmine: #136992]
 
@@ -35,8 +35,8 @@ BEGIN
 		FROM CUSTDB.dbo.customer cu WITH(NOLOCK)
 			INNER JOIN CUSTDB.dbo.customer su WITH(NOLOCK) ON cu.srecommend = su.custid
 			LEFT JOIN CUSTDB.dbo.customer ag WITH(NOLOCK) ON cu.recommend = ag.custid
-			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON s.site = cu.site
-			LEFT JOIN bodb02.dbo.site ags WITH(NOLOCK) ON ag.site = ags.site
+			LEFT JOIN CUSTDB.dbo.site s WITH(NOLOCK) ON s.site = cu.site
+			LEFT JOIN CUSTDB.dbo.site ags WITH(NOLOCK) ON ag.site = ags.site
 			INNER JOIN CUSTDB.dbo.UMConfig c WITH(NOLOCK) ON c.SuperID IN (su.custid,0)
 		WHERE CONVERT(SMALLDATETIME,GETDATE()) BETWEEN c.BeginTime AND c.EndTime
 			AND c.FunctionType = 101 --- transfer Func 
@@ -51,8 +51,8 @@ BEGIN
 		FROM CUSTDB.dbo.customer cu WITH(NOLOCK)
 			INNER JOIN CUSTDB.dbo.customer su WITH(NOLOCK) ON cu.srecommend = su.custid
 			LEFT JOIN CUSTDB.dbo.customer ag WITH(NOLOCK) ON cu.recommend = ag.custid
-			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON s.site = cu.site
-			LEFT JOIN bodb02.dbo.site ags WITH(NOLOCK) ON ag.site = ags.site
+			LEFT JOIN CUSTDB.dbo.site s WITH(NOLOCK) ON s.site = cu.site
+			LEFT JOIN CUSTDB.dbo.site ags WITH(NOLOCK) ON ag.site = ags.site
 			INNER JOIN CUSTDB.dbo.UMConfig_UAT c WITH(NOLOCK) ON c.SuperID IN (su.custid,0)
 		WHERE CONVERT(SMALLDATETIME,GETDATE()) BETWEEN c.BeginTime AND c.EndTime
 			AND c.FunctionType = 101 --- transfer Func 

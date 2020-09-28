@@ -58,7 +58,7 @@ BEGIN
 	
 	
 	---- #1 CHECK UM TRANSFER FUNCTION
-	EXEC dbo.Acc_Transfer_CheckUM  
+	EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckUM  
 		@CustID = @FromCustID
 		,@ErrMsg = @ErrMsg OUTPUT 
 		,@ErrCode = @ErrCode OUTPUT
@@ -69,7 +69,7 @@ BEGIN
 	END		
 	
 	---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN RAISE ERROR, IF THIS SP IS CALLED BY JOB THEN NO NEED TO CHECK  
-	EXEC dbo.Acc_Transfer_CheckRunningByCust  
+	EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckRunningByCust  
 		@CustID = @FromCustID
 		,@Language = @Language
 		,@ErrMsg = @ErrMsg OUTPUT 
@@ -162,7 +162,7 @@ BEGIN
 	END		
 	
 	---- #4 CHECK FLAG ISTRANSFERRING = 1 THEN RAISE ERROR, IF THIS SP IS CALLED BY JOB THEN NO NEED TO CHECK  
-	EXEC dbo.Acc_Transfer_CheckRunningByCust  
+	EXEC DBCUST.CustDB.dbo.Acc_Transfer_CheckRunningByCust  
 		@CustID = @ToCustID
 		,@Language = @Language
 		,@ErrMsg = @ErrMsg OUTPUT 
