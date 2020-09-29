@@ -5,7 +5,7 @@ ALTER PROCEDURE [dbo].[Acc_CustomerInsClearBalance]
 	@UserID int,
 	@ip nvarchar(15)='',
 	@Language varchar(2)= 'E',
-	@ErrMsg nvarchar(max) = '' OUTPUT,
+	@ErrMsg nvarchar(4000) = '' OUTPUT,
 	@ErrCode int = 0 OUTPUT,
 	@CusStatus varchar(50)='All',
 	@system VARCHAR(50) = ''

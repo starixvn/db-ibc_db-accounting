@@ -4,7 +4,7 @@ ALTER PROCEDURE [dbo].[Acc_BettransInsTransferAllMembers]
 	@UserID int,  
 	@IP nvarchar(15)='',  
 	@IsJob BIT = 0,
-	@ErrMsg nvarchar(max) = '' OUTPUT,  
+	@ErrMsg nvarchar(4000) = '' OUTPUT,  
 	@ErrCode int = 0 OUTPUT  
 AS  
  /*
