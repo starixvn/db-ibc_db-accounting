@@ -98,7 +98,7 @@ BEGIN
 
 	
 	---- #1 CHECK UM TRANSFER FUNCTION
-	EXEC dbo.Acc_Transfer_CheckUM  
+	EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckUM  
 		@CustID = @AgentID
 		,@ErrMsg = @ErrMsg OUTPUT 
 		,@ErrCode = @ErrCode OUTPUT
@@ -111,7 +111,7 @@ BEGIN
 	---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN RAISE ERROR, IF THIS SP IS CALLED BY JOB THEN NO NEED TO CHECK
 	IF @IsJob = 0
 	BEGIN 
-		EXEC dbo.Acc_Transfer_CheckRunningByCust  
+		EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckRunningByCust  
 			@CustID = @AgentID
 			,@ErrMsg = @ErrMsg OUTPUT 
 			,@ErrCode = @ErrCode OUTPUT
@@ -340,7 +340,7 @@ BEGIN
 		---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN RAISE ERROR, IF THIS SP IS CALLED BY JOB THEN NO NEED TO CHECK
 		IF @IsJob = 0
 		BEGIN 
-			EXEC dbo.Acc_Transfer_CheckRunningByCust  
+			EXEC DBCUST.CustDB.dbo.Acc_Transfer_CheckRunningByCust  
 				@CustID = @recommend
 				,@ErrMsg = @ErrMsg OUTPUT 
 				,@ErrCode = @ErrCode OUTPUT
@@ -600,7 +600,7 @@ BEGIN
 			---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN RAISE ERROR, IF THIS SP IS CALLED BY JOB THEN NO NEED TO CHECK
 			IF @IsJob = 0
 			BEGIN 
-				EXEC dbo.Acc_Transfer_CheckRunningByCust  
+				EXEC DBCUST.CustDB.dbo.Acc_Transfer_CheckRunningByCust  
 					@CustID = @mrecommend
 					,@ErrMsg = @ErrMsg OUTPUT 
 					,@ErrCode = @ErrCode OUTPUT
@@ -765,7 +765,7 @@ BEGIN
 			---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN RAISE ERROR, IF THIS SP IS CALLED BY JOB THEN NO NEED TO CHECK
 			IF @IsJob = 0
 			BEGIN 
-				EXEC dbo.Acc_Transfer_CheckRunningByCust  
+				EXEC DBCUST.CustDB.dbo.Acc_Transfer_CheckRunningByCust  
 					@CustID = @srecommend
 					,@ErrMsg = @ErrMsg OUTPUT 
 					,@ErrCode = @ErrCode OUTPUT

@@ -113,7 +113,7 @@ BEGIN
 	SELECT @AgentID = @FromCustID
 	
 	---- #1 CHECK UM TRANSFER FUNCTION
-	EXEC dbo.Acc_Transfer_CheckUM  
+	EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckUM  
 		@CustID = @AgentID
 		,@Language = @Language
 		,@ErrMsg = @ErrMsg OUTPUT 
@@ -125,7 +125,7 @@ BEGIN
 	END		
 
 	---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN RAISE ERROR
-	EXEC dbo.Acc_Transfer_CheckRunningByCust  
+	EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckRunningByCust  
 			@CustID = @AgentID
 			,@Language = @Language
 			,@ErrMsg = @ErrMsg OUTPUT 
