@@ -16,6 +16,7 @@ Original:
 	Revisions:
 		- 20200328@Malcolm: NAP Manage Products/Sporttype/Bettype [Redmine: #131241]
 		- 20200917@Danny: NAP Manage Bettype add column LicSpreadBetTypeGroupId [Redmine: #131241]
+		- 20200930@Danny: NAP Manage Bettype add column Is3rdParty [Redmine: #131241]
 		
 */
 
@@ -26,7 +27,7 @@ BEGIN
 			RETURN
  
 
-	DECLARE @iDoc INT, @RowTotal INT = 0, @CurrentRow INT = 0, @Bettype INT, @BettypeError NVARCHAR(MAX) = '', @ValueError NVARCHAR(MAX) = '', @LimitValue BIGINT
+	DECLARE @iDoc INT, @RowTotal INT = 0, @CurrentRow INT = 0, @Bettype INT, @BettypeError NVARCHAR(MAX) = '', @ValueError NVARCHAR(MAX) = '', @LimitValue BIGINT, @ColumnName VARCHAR(100)
 
 	DECLARE @startRun DATETIME, @endRun DATETIME, @duration INT, @LogSPData NVARCHAR(MAX), @LogSPData2 NVARCHAR(MAX)
 
@@ -56,7 +57,8 @@ BEGIN
 		typenameMMR		NVARCHAR(128),
 		typenameHI		NVARCHAR(128),
 		DisplayedTypeID INT,
-		LicSpreadBetTypeGroupId TINYINT
+		LicSpreadBetTypeGroupId TINYINT,
+		Is3rdParty		BIT
 		)
 
 		CREATE TABLE #inputTmp
@@ -84,7 +86,8 @@ BEGIN
 		typenameMMR		NVARCHAR(MAX),
 		typenameHI		NVARCHAR(MAX),
 		DisplayedTypeID NVARCHAR(MAX),
-		LicSpreadBetTypeGroupId  NVARCHAR(MAX)
+		LicSpreadBetTypeGroupId  NVARCHAR(MAX),
+		Is3rdParty		BIT
 		)
 
 	BEGIN TRY
@@ -113,7 +116,8 @@ BEGIN
 							typenameMMR,
 							typenameHI,
 							DisplayedTypeID,
-							LicSpreadBetTypeGroupId)
+							LicSpreadBetTypeGroupId,
+							Is3rdParty)
 
 			SELECT          typeid ,
 							typenamee,
@@ -138,7 +142,8 @@ BEGIN
 							typenameMMR,
 							typenameHI,
 							DisplayedTypeID,
-							LicSpreadBetTypeGroupId
+							LicSpreadBetTypeGroupId,
+							Is3rdParty
 
 			FROM OPENXML(@iDoc, '/ROOT/File', 1) WITH  (typeid			NVARCHAR(MAX),
 														typenamee		NVARCHAR(MAX),
@@ -163,7 +168,8 @@ BEGIN
 														typenameMMR		NVARCHAR(MAX),
 														typenameHI		NVARCHAR(MAX),
 														DisplayedTypeID NVARCHAR(MAX),
-														LicSpreadBetTypeGroupId NVARCHAR(MAX))
+														LicSpreadBetTypeGroupId NVARCHAR(MAX),
+														Is3rdParty		NVARCHAR(MAX))
 		    
 			EXEC sp_xml_removedocument @iDoc
 	END TRY
@@ -177,8 +183,9 @@ BEGIN
 	SET typeid			 = CASE WHEN LEN(typeid)			= 0 THEN  NULL ELSE typeid			END,
 		ParentTypeid     = CASE WHEN LEN(ParentTypeid)		= 0 THEN  NULL ELSE ParentTypeid	END,
 		DisplayedTypeID  = CASE WHEN LEN(DisplayedTypeID)	= 0 THEN  NULL ELSE DisplayedTypeID END,
-		LicSpreadBetTypeGroupId = CASE WHEN LEN(LicSpreadBetTypeGroupId)	= 0 THEN  NULL ELSE LicSpreadBetTypeGroupId END
-	WHERE LEN(typeid) = 0  OR LEN(ParentTypeid) = 0 OR LEN(DisplayedTypeID) = 0 OR LEN(LicSpreadBetTypeGroupId)	= 0 
+		LicSpreadBetTypeGroupId = CASE WHEN LEN(LicSpreadBetTypeGroupId)	= 0 THEN  NULL ELSE LicSpreadBetTypeGroupId END,
+		Is3rdParty		 = CASE WHEN LEN(Is3rdParty)	= 0 THEN  NULL ELSE Is3rdParty END
+	WHERE LEN(typeid) = 0  OR LEN(ParentTypeid) = 0 OR LEN(DisplayedTypeID) = 0 OR LEN(LicSpreadBetTypeGroupId)	= 0 OR LEN(Is3rdParty)	= 0 
 
 
 	SELECT TOP(1) @BettypeError = typeid, 
@@ -202,7 +209,13 @@ BEGIN
 							           WHEN LEN(typenameFR)		> 128 THEN typenameFR
 							           WHEN LEN(typenameMMR)	> 128 THEN typenameMMR
 							           ELSE typenameHI END,
-				@LimitValue = 128
+				@LimitValue = 128,
+				@ErrCode	= CASE WHEN LicSpreadBetTypeGroupId IS NULL
+											  OR LicSpreadBetTypeGroupId NOT BETWEEN 0 AND 255
+											  OR Is3rdParty IS NULL
+											  OR Is3rdParty NOT IN (0,1) THEN 1008 ELSE 1007 END,
+				@ColumnName = CASE WHEN LicSpreadBetTypeGroupId IS NULL OR LicSpreadBetTypeGroupId NOT BETWEEN 0 AND 255 THEN 'LicSpreadBetTypeGroupId'
+								   WHEN Is3rdParty IS NULL OR Is3rdParty NOT IN (0,1) THEN 'Is3rdParty' ELSE NULL END
 	FROM #inputTmp
 		WHERE LEN(typenamee)	  > 128 
 		  OR LEN(typenamec)		  > 128
@@ -224,15 +237,22 @@ BEGIN
 		  OR LEN(typenameFR)	  > 128
 		  OR LEN(typenameMMR)	  > 128
 		  OR LEN(typenameHI)	  > 128
+		  OR LicSpreadBetTypeGroupId IS NULL
+		  OR LicSpreadBetTypeGroupId NOT BETWEEN 0 AND 255
+		  OR Is3rdParty IS NULL
+		  OR Is3rdParty NOT IN (0,1)
 							
 
-	IF @ValueError <> ''
-	   BEGIN
-		 SELECT @ErrCode = 1007, 
-		        @ErrMsg = 'The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
+	IF @ValueError <> 0
+		BEGIN
+			IF @ErrCode = 1007
+				SELECT @ErrMsg = 'Row "' + @BettypeError + 
+								'" - The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
+			IF @ErrCode = 1008
+				SELECT @ErrMsg = 'Invalid "' + @ColumnName + '" on row "' + @BettypeError + '".Please check them again.'
 
-	     RETURN
-	   END
+			RETURN
+		END
 	   
 	BEGIN TRY
 		INSERT INTO #input
@@ -278,7 +298,8 @@ BEGIN
 								'typenameFR="' + COALESCE(CAST(typenameFR  AS NVARCHAR(128)), SPACE(1)) + '" ' +								
 								'typenameMMR="' + COALESCE(CAST(typenameMMR  AS NVARCHAR(128)), SPACE(1)) + '" ' +
 								'typenameHI="' + COALESCE(CAST(typenameHI  AS NVARCHAR(128)), SPACE(1)) + '" ' +
-								'LicSpreadBetTypeGroupId="' + COALESCE(CAST(LicSpreadBetTypeGroupId  AS VARCHAR(15)), SPACE(1)) + '" ' +	
+								'LicSpreadBetTypeGroupId="' + COALESCE(CAST(LicSpreadBetTypeGroupId  AS VARCHAR(15)), SPACE(1)) + '" ' +
+								'Is3rdParty="' + COALESCE(CAST(Is3rdParty  AS VARCHAR(15)), SPACE(1)) + '" ' +
 								'LoginIP="'+ COALESCE(CAST(@LoginIP as NVARCHAR(20)),SPACE(1)) + '" />'
 			FROM bettype WITH(NOLOCK)
 			WHERE typeid = @Bettype
@@ -308,7 +329,8 @@ BEGIN
 				t.typenameMMR	  = i.typenameMMR,
 				t.typenameHI	  = i.typenameHI,
 				t.DisplayedTypeID = i.DisplayedTypeID,
-				t.LicSpreadBetTypeGroupId = i.LicSpreadBetTypeGroupId
+				t.LicSpreadBetTypeGroupId = i.LicSpreadBetTypeGroupId,
+				t.Is3rdParty	  = i.Is3rdParty
 			FROM bettype t
 				INNER JOIN  #input i ON  t.typeid = i.typeid
 			WHERE ID = @CurrentRow
@@ -344,6 +366,7 @@ BEGIN
 								'typenameMMR="' + COALESCE(CAST(typenameMMR  AS NVARCHAR(128)), SPACE(1)) + '" ' +
 								'typenameHI="' + COALESCE(CAST(typenameHI  AS NVARCHAR(128)), SPACE(1)) + '" ' +	
 								'LicSpreadBetTypeGroupId="' + COALESCE(CAST(LicSpreadBetTypeGroupId  AS VARCHAR(15)), SPACE(1)) + '" ' +
+								'Is3rdParty="' + COALESCE(CAST(Is3rdParty  AS VARCHAR(15)), SPACE(1)) + '" ' +
 								'LoginIP="'+ COALESCE(CAST(@LoginIP as NVARCHAR(20)),SPACE(1)) + '" />'
 			FROM #input
 			WHERE ID = @CurrentRow
