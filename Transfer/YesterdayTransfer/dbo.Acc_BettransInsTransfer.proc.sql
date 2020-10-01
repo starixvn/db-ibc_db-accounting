@@ -150,7 +150,7 @@ BEGIN
 	END
 	
 	---- #3 CHECK UM TRANSFER FUNCTION
-	EXEC dbo.Acc_Transfer_CheckUM  
+	EXEC DBCUST.CustDB.dbo.Acc_Transfer_CheckUM  
 		@CustID = @ToCustID
 		,@Language = @Language
 		,@ErrMsg = @ErrMsg OUTPUT 
