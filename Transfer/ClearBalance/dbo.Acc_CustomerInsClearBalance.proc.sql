@@ -5,7 +5,7 @@ ALTER PROCEDURE [dbo].[Acc_CustomerInsClearBalance]
 	@UserID int,
 	@ip nvarchar(15)='',
 	@Language varchar(2)= 'E',
-	@ErrMsg nvarchar(max) = '' OUTPUT,
+	@ErrMsg nvarchar(4000) = '' OUTPUT,
 	@ErrCode int = 0 OUTPUT,
 	@CusStatus varchar(50)='All',
 	@system VARCHAR(50) = ''
@@ -44,6 +44,8 @@ Revisions:
 	- 20150126@Elodie: Include to get balance from bettransRNG + bettransLC [Redmine:#50674]
 	- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 	- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
+	- 20200821@Sophia: prevent duplicated transfer [Redmine: #137141]
+	- 20200821@Sophia: Check UM Transfer Function [Redmine: #136992]
 	
 Param's Explanation:
 */ 
@@ -109,6 +111,32 @@ BEGIN
 					+ ' to [custid, balance] '
 
 	SELECT @AgentID = @FromCustID
+	
+	---- #1 CHECK UM TRANSFER FUNCTION
+	EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckUM  
+		@CustID = @AgentID
+		,@Language = @Language
+		,@ErrMsg = @ErrMsg OUTPUT 
+		,@ErrCode = @ErrCode OUTPUT
+		 
+	IF @ErrCode <> 0  -- Function Transfer is under UM 
+	BEGIN	
+		RETURN		
+	END		
+
+	---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN RAISE ERROR
+	EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckRunningByCust  
+			@CustID = @AgentID
+			,@Language = @Language
+			,@ErrMsg = @ErrMsg OUTPUT 
+			,@ErrCode = @ErrCode OUTPUT
+			 
+	IF @ErrCode <> 0  -- the auto transfer job is running this custid
+	BEGIN
+		RETURN		
+	END
+
+
 	SELECT @currency = c.currency, @actualrate = e.actualrate, @currName = e.currency ,
 		   @agUser = c.username, @MRecommend1 = c.mrecommend ,@Recommend1 = c.recommend,@srecommend1 = c.srecommend
 	FROM CustDB.dbo.customer c with (nolock) 

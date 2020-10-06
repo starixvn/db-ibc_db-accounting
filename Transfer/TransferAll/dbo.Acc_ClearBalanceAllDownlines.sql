@@ -3,7 +3,8 @@ ALTER PROCEDURE [dbo].[Acc_ClearBalanceAllDownlines]
 	@AgentName varchar(50),	-- S99BD
 	@UserID int = 8,
 	@IP nvarchar(15)='', 
-	@ErrMsg nvarchar(max) = '' OUTPUT,
+	@IsJob BIT = 0,
+	@ErrMsg nvarchar(4000) = '' OUTPUT,
 	@ErrCode int = 0 OUTPUT
 AS
 
@@ -37,6 +38,8 @@ AS
 		- 20160722@Viet: Improve performance [Redmine:#58288]
 		- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
+		- 20200730@Sophia: prevent duplicated transfer [Redmine: #137141]
+		- 20200730@Sophia: Check UM Transfer Function [Redmine: #136992]
 		 				       
 	Param's Explanation:
 		@AgentName: username of agent/master/super to clear his all downlines' balance
@@ -91,7 +94,34 @@ BEGIN
 		SELECT @ErrMsg = @AgentName + ':' + 'Invalid Agent Username', @ErrCode = 101
 
 		RETURN
+	END	
+
+	
+	---- #1 CHECK UM TRANSFER FUNCTION
+	EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckUM  
+		@CustID = @AgentID
+		,@ErrMsg = @ErrMsg OUTPUT 
+		,@ErrCode = @ErrCode OUTPUT
+		 
+	IF @ErrCode <> 0  -- Function Transfer is under UM 
+	BEGIN
+		RETURN		
+	END		
+	
+	---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN RAISE ERROR, IF THIS SP IS CALLED BY JOB THEN NO NEED TO CHECK
+	IF @IsJob = 0
+	BEGIN 
+		EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckRunningByCust  
+			@CustID = @AgentID
+			,@ErrMsg = @ErrMsg OUTPUT 
+			,@ErrCode = @ErrCode OUTPUT
+			 
+		IF @ErrCode <> 0  -- the auto transfer job is running this custid
+		BEGIN
+			RETURN		
+		END
 	END
+	
 
 	/*--20091017@Thien: not check this function so that upline can get back the used credit  
 	--Check disable user  
@@ -302,8 +332,26 @@ BEGIN
 	FROM CS_custid
 	INTO @custid, @recommend, @mrecommend, @srecommend, @currency, @actualrate, @currencyName, @membername, @agentusername, @memberBalance
 
+
+		
 	WHILE @@FETCH_STATUS = 0
-	BEGIN
+	BEGIN		
+		
+		---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN RAISE ERROR, IF THIS SP IS CALLED BY JOB THEN NO NEED TO CHECK
+		IF @IsJob = 0
+		BEGIN 
+			EXEC DBCUST.CustDB.dbo.Acc_Transfer_CheckRunningByCust  
+				@CustID = @recommend
+				,@ErrMsg = @ErrMsg OUTPUT 
+				,@ErrCode = @ErrCode OUTPUT
+				 
+			IF @ErrCode <> 0  -- the auto transfer job is running this custid
+			BEGIN
+				RETURN		
+			END
+		END
+	
+	
 		-- print @agentusername +':'+ 'MEMBER-AGENT-->Member:' + @membername + ' ' + cast(@memberBalance as varchar(30))  
 		UPDATE ref WITH (ROWLOCK, UPDLOCK)
 		SET @grefno = transcode = transcode + 1
@@ -404,7 +452,7 @@ BEGIN
 			DECLARE @isResetYesterdayBalance BIT, @ErrCode_ResetYesterdayBalance BIT, @YesterdayBalance MONEY
 
 			-- reset yesterday balance for live casino         
-									EXEC Acc_BalanceGameResetYesterday @CustID = @CustID, @isResetYesterdayBalance = @isResetYesterdayBalance OUTPUT, @YesterdayBalance = @YesterdayBalance OUTPUT, @ErrCode = @ErrCode_ResetYesterdayBalance OUTPUT
+			EXEC Acc_BalanceGameResetYesterday @CustID = @CustID, @isResetYesterdayBalance = @isResetYesterdayBalance OUTPUT, @YesterdayBalance = @YesterdayBalance OUTPUT, @ErrCode = @ErrCode_ResetYesterdayBalance OUTPUT
 
 			SELECT @LogData = @LogData + CASE 
 					WHEN @isResetYesterdayBalance = 1 THEN CASE 
@@ -548,6 +596,21 @@ BEGIN
 
 		WHILE @@FETCH_STATUS = 0
 		BEGIN
+			
+			---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN RAISE ERROR, IF THIS SP IS CALLED BY JOB THEN NO NEED TO CHECK
+			IF @IsJob = 0
+			BEGIN 
+				EXEC DBCUST.CustDB.dbo.Acc_Transfer_CheckRunningByCust  
+					@CustID = @mrecommend
+					,@ErrMsg = @ErrMsg OUTPUT 
+					,@ErrCode = @ErrCode OUTPUT
+					 
+				IF @ErrCode <> 0  -- the auto transfer job is running this custid
+				BEGIN
+					RETURN		
+				END
+			END		
+		
 			-- print @agentusername +':'+ 'AGENT-MASTER-->Agent:' + @agentusername+ ' ' + cast(@agentBalance as varchar(30))  
 			UPDATE ref WITH (ROWLOCK, UPDLOCK)
 			SET @grefno = transcode = transcode + 1
@@ -699,6 +762,20 @@ BEGIN
 
 		WHILE @@FETCH_STATUS = 0
 		BEGIN
+			---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN RAISE ERROR, IF THIS SP IS CALLED BY JOB THEN NO NEED TO CHECK
+			IF @IsJob = 0
+			BEGIN 
+				EXEC DBCUST.CustDB.dbo.Acc_Transfer_CheckRunningByCust  
+					@CustID = @srecommend
+					,@ErrMsg = @ErrMsg OUTPUT 
+					,@ErrCode = @ErrCode OUTPUT
+					 
+				IF @ErrCode <> 0  -- the auto transfer job is running this custid
+				BEGIN
+					RETURN		
+				END
+			END		
+			
 			-- print @agentusername +':'+ 'MASTER-SUPER-->Master:' + @mastername+ ' ' + cast(@masterBalance as varchar(30))  
 			UPDATE ref WITH (ROWLOCK, UPDLOCK)
 			SET @grefno = transcode = transcode + 1

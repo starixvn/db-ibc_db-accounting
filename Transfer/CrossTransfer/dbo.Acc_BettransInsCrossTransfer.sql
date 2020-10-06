@@ -36,6 +36,7 @@ AS
 		- 20151021@Elodie: Set @IsForce = 1 for updating balance debit [Redmine:#40125]
 		- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 		- 20181112@Sophia: Add Transfer Collection [redmine: #98621]
+		- 20200730@Sophia: Check UM Transfer Function [Redmine: #136992]
 */
 BEGIN
 	SET NOCOUNT ON	
@@ -52,6 +53,31 @@ BEGIN
 	If @ErrCode <> 0
 		RETURN
 		
+		
+	---- #1 CHECK UM TRANSFER FUNCTION
+	EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckUM  
+		@CustID = @FromCustID
+		,@Language = @Language
+		,@ErrMsg = @ErrMsg OUTPUT 
+		,@ErrCode = @ErrCode OUTPUT
+		 
+	IF @ErrCode <> 0  -- Function Transfer is under UM 
+	BEGIN
+		RETURN		
+	END		
+	
+	EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckUM  
+		@CustID = @ToCustID
+		,@Language = @Language
+		,@ErrMsg = @ErrMsg OUTPUT 
+		,@ErrCode = @ErrCode OUTPUT
+		 
+	IF @ErrCode <> 0  -- Function Transfer is under UM 
+	BEGIN
+		RETURN		
+	END		
+	
+			
 	DECLARE @refno			BIGINT,
 			@winlostdate	DATETIME, 
 			@transdate		DATETIME,

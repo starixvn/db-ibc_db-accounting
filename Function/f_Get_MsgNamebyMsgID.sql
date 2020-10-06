@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBTXN-bodb02,DBAGE-bodb02,DBCUST-CustDB" executers="bodbAdminNet,bodbExtAccNet,bodbDownlineNet,bodbDownlineNetView" isFunction="1" isNested="1"></info>*/
+﻿/*<info serverAlias="DBTXN-bodb02,DBTXN-CustDB,DBAGE-bodb02,DBCUST-CustDB" executers="bodbAdminNet,bodbExtAccNet,bodbDownlineNet,bodbDownlineNetView" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION [dbo].[f_Get_MsgNamebyMsgID]
 (
 	@MsgID		INT,
@@ -10,10 +10,11 @@ AS
 	Created by: Jamie
 	Date: 2012-11-26
 	Task: Get the content of message from msgID 
-	DB: DBTXN-bodb02,DBAGE-bodb02,DBCUST-CustDB
+	DB: DBTXN-bodb02,DBAGE-bodb02,DBCUST-CustDB, DBTXN-CustDB
 	
 	Revisions:
 		- 20181218@Percy: Add MsgNameCN - New Chinese Simplified [RedmineID: #105338]
+		- 20200729#Sophia: Add deploy at DBTXN-CustDB [Redmine: #136992]
 	
 */
 BEGIN
