@@ -40,6 +40,7 @@ AS
 		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 		- 20200730@Sophia: prevent duplicated transfer [Redmine: #137141]
 		- 20200730@Sophia: Check UM Transfer Function [Redmine: #136992]
+		- 20201006@sophia: Comment SP Server_IsHeavyLoadPermitted due to cannot transfer [Redmine: #136992]
 		 				       
 	Param's Explanation:
 		@AgentName: username of agent/master/super to clear his all downlines' balance
@@ -50,7 +51,7 @@ BEGIN
 	------ 20121109@Viet: do not allow this SP to run once cpu is high --------  
 	DECLARE @ispermit BIT
 
-	EXEC dbo.Server_IsHeavyLoadPermitted @ispermit OUTPUT
+	---EXEC dbo.Server_IsHeavyLoadPermitted @ispermit OUTPUT
 
 	IF @ispermit = 0
 	BEGIN
