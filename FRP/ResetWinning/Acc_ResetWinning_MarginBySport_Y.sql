@@ -10,6 +10,7 @@ AS
 	
 	Revision:
 		- 20200517@Viet: Initial SP
+		- 20201008@Sophia: Separate Saba vs Real Sport [Redmine: #143173]
 		 
 	Param Explanation:
 		 
@@ -45,39 +46,60 @@ BEGIN
 	 
 	----- End get Sporttype  
 	
+	----- Get Saba League ---------
+	CREATE TABLE #SabaVirtualSportsLeague (LeagueId INT)
+
+	INSERT INTO #SabaVirtualSportsLeague
+	SELECT leagueid
+	FROM dbo.League WITH (NOLOCK)
+	WHERE ((sporttype = 1 AND LeagueGroupID IN (42, 74, 108))
+			OR (sporttype = 2 AND LeagueGroupID IN (42))
+			---OR (sporttype = 50 AND LeagueGroupID IN (42))
+			)
+	----- End get Saba League 
+		
 	------Get Match ------	
 	 CREATE TABLE #Match
                      (MatchId   INT, 
                       type      VARCHAR(10), 
-                      SportType INT
+                      SportType INT, 
+					  IsSaba	BIT
                       PRIMARY KEY(MatchId, type)
                      );
         INSERT INTO #Match
                SELECT DISTINCT 
                       m.MatchId, 
                       m.type, 
-                      m.sporttype
+                      m.sporttype,
+					  m.IsSaba
                FROM
                (
 					SELECT MatchId, 
 						  'match' AS type,
-						  Sporttype
-					FROM Match WITH(NOLOCK)
+						  m.Sporttype,
+						  CASE WHEN l.LeagueId IS NULL THEN 0 ELSE 1 END AS IsSaba
+					FROM Match m WITH(NOLOCK)
+					LEFT JOIN #SabaVirtualSportsLeague l 
+						ON l.LeagueId = m.leagueid 
 					WHERE EventDate = @WinlostDate
 						--AND Sporttype IN (1, 2, 5, 43)
 					UNION ALL
 					SELECT orid,  
 						  'outright' AS type,
-						  l.Sporttype
+						  ll.Sporttype,
+						  CASE WHEN l.LeagueId IS NULL THEN 0 ELSE 1 END AS IsSaba
 					FROM outright o WITH(NOLOCK)
-					INNER JOIN league l WITH (NOLOCK) 
-						ON l.leagueID = o.LeagueId					
+					INNER JOIN league ll WITH (NOLOCK) 
+						ON ll.leagueID = o.LeagueId		
+					LEFT JOIN #SabaVirtualSportsLeague l 
+						ON l.LeagueId = o.leagueid 							
 					WHERE o.EventDate = @WinlostDate
 						--AND l.Sporttype IN (1, 2, 5, 43)
 					UNION ALL
 					SELECT 29 AS MatchId,
-						   'Parlay' AS type,
-						   -29 AS Sporttype						
+						   'Parlay' AS type,						   
+						   -29 AS Sporttype,
+							0 AS IsSaba						   
                ) m              
 			   
 	------End Get Match ------			   
@@ -85,13 +107,15 @@ BEGIN
 	--------------------------------------------------------------------------------------------------------- 
 		CREATE TABLE #wl 
 		(	
-			Sporttype  		SMALLINT, 			
+			Sporttype  		SMALLINT, 	
+			IsSaba 			BIT	,			
 			TurnOver		MONEY,
 			Winlost			MONEY, 		
 			ExtraWinlost	MONEY
 		) 	 
-		INSERT INTO #wl (Sporttype, TurnOver, winlost, ExtraWinlost)
-		SELECT  CASE WHEN m.Sporttype IN (1, 2, 5, 43, -29) THEN m.Sporttype ELSE 0 END AS Sporttype,  	 						
+		INSERT INTO #wl (Sporttype, IsSaba, TurnOver, winlost, ExtraWinlost)
+		SELECT  CASE WHEN m.Sporttype IN (1, 2, 5, 43, -29) THEN m.Sporttype ELSE 0 END AS Sporttype,  	 
+				m.IsSaba,		
 				---Base currency
 				SUM (   CASE WHEN b.StatusID = 111 THEN 0 ELSE 
 						CASE WHEN ABS(modds) = 0.25 AND b.Bettype <> 29 THEN ABS(Stake) / 2 ELSE  ABS(Stake) END END
@@ -131,22 +155,23 @@ BEGIN
 					AND c.site IN ('789y')
 					AND c.currency<>20
 			)
-		GROUP BY CASE WHEN m.Sporttype IN (1, 2, 5, 43, -29) THEN m.Sporttype ELSE 0 END 
+		GROUP BY CASE WHEN m.Sporttype IN (1, 2, 5, 43, -29) THEN m.Sporttype ELSE 0 END, m.IsSaba
 				 
 	
 		-----------------------------------------------------------------------------------------------
 		----- Get Data -----
-		SELECt  a.SportName, a.TurnOver, a.Margin, a.HouseWinlost
+		SELECt  a.SportName, a.IsSaba, a.TurnOver, a.Margin, a.HouseWinlost
 		FROM  (
-				SELECT	s.orderId, s.SportName, w.TurnOver, CASE WHEN w.TurnOver = 0 THEN 0 ELSE (w.winlost - ExtraWinlost) / w.TurnOver * 100 END AS Margin , (w.winlost - ExtraWinlost) AS HouseWinlost
+				SELECT	s.orderId, s.SportName, w.IsSaba, w.TurnOver, CASE WHEN w.TurnOver = 0 THEN 0 ELSE (w.winlost - ExtraWinlost) / w.TurnOver * 100 END AS Margin , (w.winlost - ExtraWinlost) AS HouseWinlost
 				FROM 	#wl w 
 				INNER JOIN #Sports s ON s.Sporttype = w.sporttype
 				UNION 
-				SELECT	0 AS orderId, 'All Sports' AS SportName, 
+				SELECT	0 AS orderId, 'All Sports' AS SportName, w.IsSaba, 
 						SUM (w.TurnOver) AS TurnOver, 
 						CASE WHEN SUM (w.TurnOver) = 0 THEN 0 ELSE SUM (w.winlost - ExtraWinlost) / SUM (w.TurnOver) * 100 END AS Margin , 
 						SUM (w.winlost - ExtraWinlost) AS HouseWinlost
 				FROM 	#wl w  
+				GROUP BY w.IsSaba 
 				HAVING  SUM (w.TurnOver) IS NOT NULL 
 				) A
 		ORDER BY A.OrderId
@@ -155,6 +180,7 @@ BEGIN
     DROP TABLE #Sports
 	DROP TABLE #WL	
 	DROP TABLE #Match
+	DROP TABLE #SabaVirtualSportsLeague 
 		
 END
 
