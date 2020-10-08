@@ -1,1 +1,1 @@
-ExternalSite\Group\ManageExtraPTGroup\dbo.Acc_CustGroupUpdPrimaryExtraPTGroup.sql
+Transfer\Core\Acc_Transfer_CheckUM.sql
