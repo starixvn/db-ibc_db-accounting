@@ -11,6 +11,7 @@ Task:  Get UM Transfer Function
 DB: DBCUST.CUSTDB
 Revisions:	
 	- 20200729@Sophia: Get UM Transfer Function [Redmine: #136992]
+	- 20201005@Danny: Remove UMConfig_UAT table  [Redmine: #142511]
 
 Param's Explanation:
 	@CustID: all roleID
@@ -21,46 +22,24 @@ Examples :
 */
 BEGIN 
 	
-	DECLARE @isTest BIT = 0 
-	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
-	
 	DECLARE @ErrorTemplate NVARCHAR(4000)
 	DECLARE @FromTime VARCHAR(30), @ToTime VARCHAR(30) 
 	SELECT @ErrMsg = '', @ErrCode = 0 
 
-	IF @isTest = 0 ---- original SP
-	BEGIN 
-		SELECT  @FromTime = CONVERT(VARCHAR,DATEADD(HOUR, 12, MIN(c.BeginTime)),103) + ' ' + LTRIM(RIGHT(CONVERT(VARCHAR,DATEADD(HOUR, 12, MIN(c.BeginTime)),22),12)),
-				@ToTime = CONVERT(VARCHAR,DATEADD(HOUR, 12, MAX(c.EndTime)),103) + ' ' + LTRIM(RIGHT(CONVERT(VARCHAR,DATEADD(HOUR, 12, MAX(c.EndTime)),22),12))
-		FROM CUSTDB.dbo.customer cu WITH(NOLOCK)
-			INNER JOIN CUSTDB.dbo.customer su WITH(NOLOCK) ON cu.srecommend = su.custid
-			LEFT JOIN CUSTDB.dbo.customer ag WITH(NOLOCK) ON cu.recommend = ag.custid
-			LEFT JOIN CUSTDB.dbo.site s WITH(NOLOCK) ON s.site = cu.site
-			LEFT JOIN CUSTDB.dbo.site ags WITH(NOLOCK) ON ag.site = ags.site
-			INNER JOIN CUSTDB.dbo.UMConfig c WITH(NOLOCK) ON c.SuperID IN (su.custid,0)
-		WHERE CONVERT(SMALLDATETIME,GETDATE()) BETWEEN c.BeginTime AND c.EndTime
-			AND c.FunctionType = 101 --- transfer Func 
-			AND c.SiteID IN (ISNULL(s.siteid,ags.siteid),0)
-			AND c.Currency IN (cu.currency,0)
-			AND cu.custid = @CustID	
-	END
-	ELSE  ------ test version 
-	BEGIN 
-		SELECT  @FromTime = CONVERT(VARCHAR,DATEADD(HOUR, 12, MIN(c.BeginTime)),103) + ' ' + LTRIM(RIGHT(CONVERT(VARCHAR,DATEADD(HOUR, 12, MIN(c.BeginTime)),22),12)),
-				@ToTime = CONVERT(VARCHAR,DATEADD(HOUR, 12, MAX(c.EndTime)),103) + ' ' + LTRIM(RIGHT(CONVERT(VARCHAR,DATEADD(HOUR, 12, MAX(c.EndTime)),22),12))
-		FROM CUSTDB.dbo.customer cu WITH(NOLOCK)
-			INNER JOIN CUSTDB.dbo.customer su WITH(NOLOCK) ON cu.srecommend = su.custid
-			LEFT JOIN CUSTDB.dbo.customer ag WITH(NOLOCK) ON cu.recommend = ag.custid
-			LEFT JOIN CUSTDB.dbo.site s WITH(NOLOCK) ON s.site = cu.site
-			LEFT JOIN CUSTDB.dbo.site ags WITH(NOLOCK) ON ag.site = ags.site
-			INNER JOIN CUSTDB.dbo.UMConfig_UAT c WITH(NOLOCK) ON c.SuperID IN (su.custid,0)
-		WHERE CONVERT(SMALLDATETIME,GETDATE()) BETWEEN c.BeginTime AND c.EndTime
-			AND c.FunctionType = 101 --- transfer Func 
-			AND c.SiteID IN (ISNULL(s.siteid,ags.siteid),0)
-			AND c.Currency IN (cu.currency,0)
-			AND cu.custid = @CustID	
-	END
-		  
+
+	SELECT  @FromTime = CONVERT(VARCHAR,DATEADD(HOUR, 12, MIN(c.BeginTime)),103) + ' ' + LTRIM(RIGHT(CONVERT(VARCHAR,DATEADD(HOUR, 12, MIN(c.BeginTime)),22),12)),
+			@ToTime = CONVERT(VARCHAR,DATEADD(HOUR, 12, MAX(c.EndTime)),103) + ' ' + LTRIM(RIGHT(CONVERT(VARCHAR,DATEADD(HOUR, 12, MAX(c.EndTime)),22),12))
+	FROM CUSTDB.dbo.customer cu WITH(NOLOCK)
+		INNER JOIN CUSTDB.dbo.customer su WITH(NOLOCK) ON cu.srecommend = su.custid
+		LEFT JOIN CUSTDB.dbo.customer ag WITH(NOLOCK) ON cu.recommend = ag.custid
+		LEFT JOIN CUSTDB.dbo.site s WITH(NOLOCK) ON s.site = cu.site
+		LEFT JOIN CUSTDB.dbo.site ags WITH(NOLOCK) ON ag.site = ags.site
+		INNER JOIN CUSTDB.dbo.UMConfig c WITH(NOLOCK) ON c.SuperID IN (su.custid,0)
+	WHERE CONVERT(SMALLDATETIME,GETDATE()) BETWEEN c.BeginTime AND c.EndTime
+		AND c.FunctionType = 101 --- transfer Func 
+		AND c.SiteID IN (ISNULL(s.siteid,ags.siteid),0)
+		AND c.Currency IN (cu.currency,0)
+	
 	
 	IF @FromTime IS NOT NULL OR @ToTime IS NOT NULL
 	BEGIN
