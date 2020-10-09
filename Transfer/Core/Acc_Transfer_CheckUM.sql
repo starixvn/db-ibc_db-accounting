@@ -39,6 +39,7 @@ BEGIN
 		AND c.FunctionType = 101 --- transfer Func 
 		AND c.SiteID IN (ISNULL(s.siteid,ags.siteid),0)
 		AND c.Currency IN (cu.currency,0)
+		AND cu.custid = @CustID
 	
 	
 	IF @FromTime IS NOT NULL OR @ToTime IS NOT NULL
