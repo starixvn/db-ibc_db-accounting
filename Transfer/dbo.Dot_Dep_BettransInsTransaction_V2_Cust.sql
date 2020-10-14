@@ -57,6 +57,7 @@ Revisions:
 	- 20170815@Bobby: 80775 - Update bonus info when depositing cash to join into bonus program
 	- 20190705@Bobby: Add Rebate Bonus [RedmineID: #116358]
 	- 20190710@Jamie: Check Bonus wallet if a member is joining a Bonus campaign [Redmine:#116273]
+	- 20201014@Danny: Convert Ipv6 to dummy IPv4 [Redmine: #143323]
 
 Param's Explanation:
 ? @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction

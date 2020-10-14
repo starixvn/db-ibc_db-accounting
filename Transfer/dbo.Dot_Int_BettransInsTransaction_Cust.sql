@@ -54,6 +54,7 @@ Revisions:
 	- 20160118@Kathy: get balance from bettransRNG & bettransLC [Redmine:#50674]
 	- 20171102:Patrick: Can't make transfer/withdrawal during MB/BU time [Redmine:#82768]
 	- 20180913@Dominic: Add a new bettype (23203) to transfer money for dormant members in deposit archive process [Redmine:#99882]
+	- 20201014@Danny: Convert Ipv6 to dummy IPv4 [Redmine: #143323]
 
 Param's Explanation:
 ‧ @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction
