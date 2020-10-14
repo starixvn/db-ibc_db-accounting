@@ -142,6 +142,8 @@ BEGIN
 		-- Rebate bonus
 		@DBONRTRA smallint,
 		@DBONRADJ smallint
+		
+	select @ip = dbo.f_ConvertIPv6ToDummy(@ip)	
 
 	Select @ErrCode = 0,
 			@ErrMsg = '',

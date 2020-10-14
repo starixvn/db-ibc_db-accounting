@@ -108,6 +108,8 @@ BEGIN
 		
 	SELECT @LogActionID = 2900
 	
+	select @ip = dbo.f_ConvertIPv6ToDummy(@ip)		
+	
 	DECLARE @username			VARCHAR(50),
 		@currency				TINYINT,
 		@currencyName			VARCHAR(5),

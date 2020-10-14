@@ -104,6 +104,7 @@ BEGIN
 		,@Count					INT
 		,@LogMsg				VARCHAR(50)
 		
+	select @ip = dbo.f_ConvertIPv6ToDummy(@ip)		
 	SELECT @StartTime = GETDATE()
 	SELECT @LogActionID = 2900
 	
