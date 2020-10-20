@@ -121,7 +121,7 @@ BEGIN
 							   '" - The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
 			IF @ErrCode = 1008
 				SELECT @ErrMsg = 'Invalid "' + @ColumnName + '" on row "' + @DWLListExtraPTError + 
-						CASE WHEN @ColumnName = 'IsDisabled'	THEN '"- The values must be IN (0,1)'  ELSE 'The values must be not null' END
+						CASE WHEN @ColumnName = 'IsDisabled'	THEN '"- The values must be IN (0,1)'  ELSE '- The values must be not null' END
 			RETURN
 	   END
 	ELSE
