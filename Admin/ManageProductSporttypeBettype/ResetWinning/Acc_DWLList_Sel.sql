@@ -53,7 +53,7 @@ BEGIN
 				AND (cus.Username LIKE '%' + @Username +'%' OR ISNULL(@Username,'') = '')
 				AND (acc.Product LIKE '%' + @Product +'%' OR ISNULL(@Product,'') = '')
 				AND (acc.IsDeleted = @IsDeleted OR @IsDeleted IS NULL)	
-		ORDER BY  acc.CustID
+		ORDER BY  acc.Seq
 	END
 
 	IF @IsTest = 1 
@@ -79,7 +79,7 @@ BEGIN
 				AND (cus.Username LIKE '%' + @Username +'%' OR ISNULL(@Username,'') = '')
 				AND (acc.Product LIKE '%' + @Product +'%' OR ISNULL(@Product,'') = '')
 				AND (acc.IsDeleted = @IsDeleted OR @IsDeleted IS NULL)	
-		ORDER BY  acc.CustID
+		ORDER BY  acc.Seq
 	END
 
 	SELECT  CustID,

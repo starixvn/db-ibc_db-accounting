@@ -51,7 +51,7 @@ BEGIN
 				AND (cus.Username LIKE '%' + @Username +'%' OR ISNULL(@Username,'') = '')
 				AND (acc.GroupName LIKE '%' + @GroupName +'%' OR ISNULL(@GroupName,'') = '')
 				AND (acc.IsDisabled = @IsDisabled OR @IsDisabled IS NULL)	
-		ORDER BY  acc.CustID
+		ORDER BY  acc.GroupID
 	END
 
 	IF @IsTest = 1 
@@ -76,7 +76,7 @@ BEGIN
 				AND (cus.Username LIKE '%' + @Username +'%' OR ISNULL(@Username,'') = '')
 				AND (acc.GroupName LIKE '%' + @GroupName +'%' OR ISNULL(@GroupName,'') = '')
 				AND (acc.IsDisabled = @IsDisabled OR @IsDisabled IS NULL)	
-		ORDER BY  acc.CustID
+		ORDER BY  acc.GroupID
 	END
 
 	SELECT  CustID,
