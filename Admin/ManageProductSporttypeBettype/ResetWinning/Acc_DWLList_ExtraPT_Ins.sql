@@ -104,10 +104,13 @@ BEGIN
 				  @LimitValue	=	CASE	WHEN LEN(GroupName)	> 50 THEN 50 END,
 				  @ErrCode		=	CASE	WHEN LEN(GroupName)	> 50 THEN 1007 ELSE 1008 END,
 				  @ColumnName	=	CASE	WHEN IsDisabled IS NULL OR IsDisabled NOT IN (0,1) THEN 'IsDisabled'
+											WHEN GroupID IS NULL  THEN 'GroupID'
+											WHEN GroupName IS NULL  THEN 'GroupName'
 								  ELSE NULL END
 	FROM #inputTmp
 	WHERE LEN(GroupName)	> 50
 	OR IsDisabled IS NULL OR IsDisabled NOT IN (0,1)
+	OR GroupID IS NULL OR GroupName IS NULL
 		  
 							
 
@@ -118,7 +121,7 @@ BEGIN
 							   '" - The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
 			IF @ErrCode = 1008
 				SELECT @ErrMsg = 'Invalid "' + @ColumnName + '" on row "' + @DWLListExtraPTError + 
-						CASE WHEN @ColumnName = 'IsDisabled'	THEN '"- The values must be IN (0,1)'  ELSE '' END
+						CASE WHEN @ColumnName = 'IsDisabled'	THEN '"- The values must be IN (0,1)'  ELSE 'The values must be not null' END
 			RETURN
 	   END
 	ELSE
