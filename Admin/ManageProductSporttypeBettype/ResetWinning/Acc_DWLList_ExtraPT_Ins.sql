@@ -105,12 +105,12 @@ BEGIN
 				  @ErrCode		=	CASE	WHEN LEN(GroupName)	> 50 THEN 1007 ELSE 1008 END,
 				  @ColumnName	=	CASE	WHEN IsDisabled IS NULL OR IsDisabled NOT IN (0,1) THEN 'IsDisabled'
 											WHEN GroupID IS NULL  THEN 'GroupID'
-											WHEN GroupName IS NULL  THEN 'GroupName'
+											WHEN GroupName IS NULL OR  LEN(GroupName)= 0 THEN 'GroupName'
 								  ELSE NULL END
 	FROM #inputTmp
 	WHERE LEN(GroupName)	> 50
 	OR IsDisabled IS NULL OR IsDisabled NOT IN (0,1)
-	OR GroupID IS NULL OR GroupName IS NULL
+	OR GroupID IS NULL OR GroupName IS NULL OR LEN(GroupName)= 0
 		  
 							
 
