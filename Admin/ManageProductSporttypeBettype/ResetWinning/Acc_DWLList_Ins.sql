@@ -124,7 +124,7 @@ BEGIN
 	OR Seq IS NULL OR Seq NOT BETWEEN 0 AND 255
 	OR ProductID IS NULL OR ProductID NOT BETWEEN 0 AND 255
  
-	IF @ValueError <> ''
+	IF @DWLListError <> ''
 		BEGIN
 			IF @ErrCode = 1007 
 			SELECT @ErrMsg = 'Row "' + ISNULL(@DWLListError,'') + 
@@ -144,7 +144,7 @@ BEGIN
 			FROM #inputTmp t
 			WHERE NOT EXISTS (SELECT 1 FROM bodb02.dbo.Customer cus WITH(NOLOCK) WHERE cus.CustID = t.CustID)
 
-			IF @ValueError <> ''
+			IF @DWLListError <> ''
 			BEGIN
 				SELECT @ErrCode = 1009, 
 				@ErrMsg = 'Row "' + @DWLListError + 
@@ -158,7 +158,7 @@ BEGIN
 				FROM #inputTmp t
 				WHERE NOT EXISTS (SELECT 1 FROM bodb02.dbo.Products pro WITH(NOLOCK) WHERE pro.ProductID = t.ProductID)
 
-				IF @ValueError <> ''
+				IF @DWLListError <> ''
 				BEGIN
 					SELECT @ErrCode = 1010, 
 					@ErrMsg = 'Row "' + @DWLListError + 

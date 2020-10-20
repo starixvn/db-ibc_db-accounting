@@ -111,7 +111,7 @@ BEGIN
 		  
 							
 
-	IF @ValueError <> ''
+	IF @DWLListExtraPTError <> ''
 	   BEGIN
 			IF @ErrCode = 1007
 				SELECT @ErrMsg = 'Row "' + @DWLListExtraPTError + 
@@ -128,7 +128,7 @@ BEGIN
 			FROM #inputTmp t
 			WHERE NOT EXISTS (SELECT 1 FROM bodb02.dbo.Customer cus WITH(NOLOCK) WHERE cus.CustID = t.CustID)
 
-			IF @ValueError <> ''
+			IF @DWLListExtraPTError <> ''
 			BEGIN
 				SELECT @ErrCode = 1009, 
 				@ErrMsg = 'Row "' + @DWLListExtraPTError + 
