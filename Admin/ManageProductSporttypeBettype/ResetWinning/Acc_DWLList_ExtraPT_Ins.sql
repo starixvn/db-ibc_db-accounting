@@ -130,12 +130,13 @@ BEGIN
 							@ValueError   =	t.CustID				
 			FROM #inputTmp t
 			WHERE NOT EXISTS (SELECT 1 FROM bodb02.dbo.Customer cus WITH(NOLOCK) WHERE cus.CustID = t.CustID)
+			OR CustID IS NULL OR LEN(CustID) = 0
 
 			IF @DWLListExtraPTError <> ''
 			BEGIN
 				SELECT @ErrCode = 1009, 
-				@ErrMsg = 'Row "' + @DWLListExtraPTError + 
-						  '" - CustID "' + @ValueError + '" is does not exist in Customer table.'
+				@ErrMsg = CASE WHEN @ValueError IS NULL OR LEN(@ValueError) = 0 THEN 'CustID must be not null'
+								ELSE 'Row "' + @DWLListExtraPTError + '" - CustID "' + @ValueError + '" is does not exist in Customer table.' END
 				RETURN
 			END
 		END
