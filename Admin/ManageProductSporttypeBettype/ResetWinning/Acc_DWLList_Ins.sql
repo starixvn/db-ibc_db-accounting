@@ -116,6 +116,7 @@ BEGIN
 				  @ColumnName	= CASE	WHEN IsDeleted IS NULL OR IsDeleted NOT IN (0,1) THEN 'IsDeleted'
 										WHEN Seq IS NULL OR Seq NOT BETWEEN 0 AND 255 THEN 'Seq'
 										WHEN ProductID IS NULL OR ProductID NOT BETWEEN 0 AND 255 THEN 'ProductID'
+										WHEN Product IS NULL OR  LEN(Product)= 0 THEN 'Product'
 								  ELSE NULL END
  
 	FROM #inputTmp t
@@ -123,6 +124,7 @@ BEGIN
 	OR IsDeleted IS NULL OR IsDeleted NOT IN (0,1)
 	OR Seq IS NULL OR Seq NOT BETWEEN 0 AND 255
 	OR ProductID IS NULL OR ProductID NOT BETWEEN 0 AND 255
+	OR Product IS NULL OR  LEN(Product)= 0
  
 	IF @DWLListError <> ''
 		BEGIN
@@ -134,7 +136,9 @@ BEGIN
 			SELECT @ErrMsg = 'Invalid "' + @ColumnName + '" on row "' + @DWLListError + 
 						CASE WHEN @ColumnName = 'IsDeleted'	THEN '"- The values must be IN (0,1)' 
 							 WHEN @ColumnName = 'Seq'		THEN '"- The values must be IN (0,255)' 
-							 WHEN @ColumnName = 'ProductID'	THEN '"- The values must be IN (0,255)' ELSE '' END
+							 WHEN @ColumnName = 'ProductID'	THEN '"- The values must be IN (0,255)' 
+							 WHEN @ColumnName = 'Product'	THEN '"- The values must be not null' 				 
+							 ELSE '' END
 			RETURN
 		END
 	ELSE
