@@ -62,6 +62,7 @@ AS
 		- 20191210@Percy: Set actualrate = 1 of UUS currency (exchangeid = 20) for testing (version xtest) [RedmineID: #124484]
 		- 20191216@Percy: Using new column bettrans.epositiontaking instead of Acc_GroupExtraPTSetting.ExtraPT [RedmineID: #125418]
 		- 2020714@Sophia: Add PP Jackpot & revise SP [Redmine: #137270]
+		- 20201012@Malcolm :  Change email Starixsoft.com to starixvn.com [RedmineId : #143312]
 		
 	Explanation's Param:
 	    @mode:  0 _ view report
@@ -701,10 +702,10 @@ BEGIN
 										
 				IF @Istest = 0 AND @@SERVERNAME = 'DB061'
 					SELECT	@recipients = 'kudanaga@enpine.com'
-							,@copy_recipients = 'jetyee88@enpine.com;kwongyong@enpine.com;seanlau@enpine.com;byronchia@enpine.com;foo.mv@enpine.com;eric.lu@onelab.tw;tp@enpine.com;it@starixsoft.com;jackyting@enpine.com;vh@enpine.com'
+							,@copy_recipients = 'jetyee88@enpine.com;kwongyong@enpine.com;seanlau@enpine.com;byronchia@enpine.com;foo.mv@enpine.com;eric.lu@onelab.tw;tp@enpine.com;it@starixvn.com;jackyting@enpine.com;vh@enpine.com'
 							,@blind_copy_recipients = 'automail@enpine.com'
 				ELSE
-					SELECT  @recipients = 'sophia.nguyen@starixsoft.com'
+					SELECT  @recipients = 'dba_local@starixvn.com'
 							,@copy_recipients = ''
 							,@blind_copy_recipients = ''
 					
