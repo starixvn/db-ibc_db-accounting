@@ -1,1 +1,2 @@
 Transfer\Core\Acc_Transfer_CheckUM.sql
+Transfer\Dot_Int_BettransInsTransaction_Cust.sql
