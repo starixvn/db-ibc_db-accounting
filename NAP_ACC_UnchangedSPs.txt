@@ -1,2 +1,0 @@
-Transfer\Core\Acc_Transfer_CheckUM.sql
-Transfer\dbo.Dot_Int_BettransInsTransaction_Cust.sql
