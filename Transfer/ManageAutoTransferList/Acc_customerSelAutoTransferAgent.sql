@@ -1,10 +1,11 @@
-﻿/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0"></info>*/
- ALTER PROCEDURE [dbo].[Acc_CustomerSelAutoTransferAgent]
-	@username	VARCHAR(50) = '',
-	@status		VARCHAR(30) = '',
-	@TotalRows	INT = 0 OUTPUT,
-	@PageSize	INT = 50,
-	@PageIndex	INT = 1
+/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
+ALTER PROCEDURE [dbo].[Acc_CustomerSelAutoTransferAgent]
+	@username		VARCHAR(50) = '',
+	@status			VARCHAR(30) = '',
+	@FailureReason VARCHAR(30) = 'All',
+	@TotalRows		INT = 0 OUTPUT,
+	@PageSize		INT = 50,
+	@PageIndex		INT = 1
 AS
 	/*
 		Created: Johnson
@@ -13,6 +14,7 @@ AS
 		DB: DBCUST/CustDB
 		
 		Revisions:
+			20201029@Malcolm : add filter failure reason [RedmineId : #143217]
 		
 		Parameter's Explanation:
 			-@username = '': get all agents
@@ -37,7 +39,8 @@ BEGIN
 		LEFT JOIN customer super WITH(NOLOCK) ON ci.srecommend = super.custid
 		LEFT JOIN customer master WITH(NOLOCK) ON ci.mrecommend = master.custid
 	WHERE ci.username = ISNULL(NULLIF(@username,''),ci.username)
-		AND c.status = ISNULL(NULLIF(@status,''),c.status)
+		AND c.status = ISNULL(NULLIF(@status,''),c.status) 
+		AND (@FailureReason = 'All' OR (@FailureReason = 'By UM' AND c.msg LIKE 'Transfer is under maintenance  from%'))
 	
 	SELECT @TotalRows = @@ROWCOUNT
 	
