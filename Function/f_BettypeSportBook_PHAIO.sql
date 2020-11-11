@@ -1,4 +1,4 @@
-/*<info serverAlias="DBEXT-bodb02" executers="bodbAdminNet" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBEXT-bodb02" selecters="bodbAdminNet" isFunction="1" isNested="1"></info>*/
 
 CREATE FUNCTION [dbo].[f_BettypeSportBook_PHAIO]
 (
