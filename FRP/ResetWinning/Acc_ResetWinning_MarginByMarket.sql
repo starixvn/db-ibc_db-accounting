@@ -10,7 +10,8 @@ AS
 	
 	Revision:
 		- 20200303@Sophia: Initial SPs  
-		- 20200922@Danny:  Get Sport Bettype from hard-code function replace to Sportbettypematrix  [redmind: #142019]
+		- 20200922@Danny: Get Sport Bettype from hard-code function replace to Sportbettypematrix  [redmind: #142019]
+		- 20201116@Sophia: Add Time machine [redmind: #145405] 
 	Param Explanation:
 		 
 	   
@@ -20,10 +21,12 @@ BEGIN
  
 	 
 	------Get Sport Bettype Matrix------	
-	CREATE TABLE  #Bettype (Bettype INT PRIMARY KEY)
-	INSERT INTO #Bettype
-	SELECT  Bettype 
+	CREATE TABLE  #Bettype (Bettype INT PRIMARY KEY, Market VARCHAR(20))
+	INSERT INTO #Bettype (Bettype, Market)
+	SELECT Bettype, 'PHAIO' AS Market
 	FROM dbo.f_BettypeSportBook_PHAIO()
+	UNION ALL
+	SELECT 228 AS Bettype, 'TimeM' AS Market
 	
 	----- End get sport bettype  
 
@@ -67,7 +70,7 @@ BEGIN
 			ExtraWinlost	MONEY
 		) 	 
 		INSERT INTO #WL (Market, TurnOver, winlost, ExtraWinlost)
-		SELECT  'PHAIO' AS Market,  	 						
+		SELECT  s.Market,  	 						
 				---Base currency
 				SUM (   CASE WHEN b.StatusID = 111 THEN 0 ELSE 
 						CASE WHEN ABS(modds) = 0.25 AND b.Bettype <> 29 THEN ABS(Stake) / 2 ELSE  ABS(Stake) END END
@@ -97,7 +100,7 @@ BEGIN
 			AND b.MatchID >= 0
 			AND b.Recommend NOT IN (52466,5707545)  --- Exclude 8RM, BARM
 			AND NOT EXISTS (SELECT 1 FROM CS_CustSuper c WITH (NOLOCK) WHERE c.CustID = b.Srecommend)
-		
+		GROUP BY s.Market
 	
 		-----------------------------------------------------------------------------------------------
 		----- Get Data -----
