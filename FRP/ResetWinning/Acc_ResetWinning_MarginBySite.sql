@@ -14,6 +14,7 @@ AS
 		- 20200516@Sophia: add code BARM/8RM; exclude MG-SuperLive/ Bet Builder; parlay /2 [Redmine: #134281]
 		- 20200518@Sophia: add by groupHeadline [Redmine: #134281]
 		- 2020714@Sophia: Add PP Jackpot[Redmine: #137270]
+		- 20201124@Sophia: Add detail by Myanmar (site 76666b) [Redmine: #145938]
 	Param Explanation:
 		 
 	   
@@ -459,7 +460,7 @@ BEGIN
 						SUM (w.TurnOver) AS TurnOver, 
 						CASE WHEN SUM (w.TurnOver) = 0 THEN 0 ELSE SUM (w.winlost - ExtraWinlost) / SUM (w.TurnOver) * 100 END AS Margin , 
 						SUM (w.winlost - ExtraWinlost) AS HouseWinlost,
-						3 as isDeposit 
+						CASE WHEN c.Site ='76666b' THEN 5 ELSE 3 END AS isDeposit 
 				FROM	#wl w
 				INNER JOIN bodb02.dbo.customer c WITH (NOLOCK) 
 						ON c.CustID = w.srecommend AND c.roleid = 4	 	 
@@ -469,9 +470,10 @@ BEGIN
 						WHERE 	@Winlostdate  BETWEEN FromDate AND ToDate 							
 							) g
 					ON G.SuperId = c.custid  
-				WHERE	c.Site IN ('789y') and Currency <> 20 				
+				WHERE	c.Site IN ('789y', '76666b') and Currency <> 20 				
 				GROUP BY ISNULL(g.GroupName, 'Unassigned'),  
-						w.SB
+						w.SB,
+						CASE WHEN c.Site ='76666b' THEN 5 ELSE 3 END
 
 				) a
 	 
