@@ -109,9 +109,7 @@ BEGIN
 		(	srecommend			INT, 
 			Sporttype  		SMALLINT,  
 			TurnOver		DECIMAL(19,4),
-			Winloss			DECIMAL(19,4),
-			HouseTO			DECIMAL(19,4),
-			HouseIncome		DECIMAL(19,4) 
+			Winloss			DECIMAL(19,4)
 		) 	 
 
 					
@@ -119,13 +117,11 @@ BEGIN
 		(	site			VARCHAR(100),
 			Sporttype  		SMALLINT,  
 			TurnOver		DECIMAL(19,4),
-			Winloss			DECIMAL(19,4),
-			HouseTO			DECIMAL(19,4),
-			HouseIncome		DECIMAL(19,4) 
+			Winloss			DECIMAL(19,4)
 		) 	 	
 
 
-		INSERT INTO #TicketDetail (srecommend, Sporttype, TurnOver, Winloss, HouseTO, HouseIncome)
+		INSERT INTO #TicketDetail (srecommend, Sporttype, TurnOver, Winloss)
 		SELECT b.srecommend,
 				CASE WHEN b.bettype in (9,29) THEN -2 
 				WHEN m.SportType = 1 and m.LeagueGroupID IN (42, 74, 108) then -3  -- Saba soccer
@@ -142,30 +138,7 @@ BEGIN
 			
 				- SUM (
 						(ISNULL(winlost,0)-ISNULL(actual_stake,0)) * actualrate							
-					) AS Winloss,
-
-				---House
-				SUM (   CASE WHEN b.StatusID = 111 THEN 0 ELSE 
-						CASE WHEN ABS(modds) = 0.25 AND b.Bettype <> 29 THEN ABS(Stake) / 2 ELSE  ABS(Stake) END END
-						* (1 - b.tpositiontaking - ISNULL(CAST(b.epositiontaking AS DECIMAL(9, 8)), 0)) 
-						* CASE
-							  WHEN virtualrate > actualrate
-							  THEN virtualrate
-							  ELSE actualrate
-							END
-					)	 AS HouseTO,
-				- ( 
-					SUM (
-							(ISNULL(winlost,0)-ISNULL(actual_stake,0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)) 
-							* actualrate				
-						)  
-					- 
-					SUM(
-							( CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END) 
-								* ISNULL(CAST(b.epositiontaking AS DECIMAL(9, 8)), 0)
-								* actualrate 
-						)
-				) AS HouseIncome				
+					) AS Winloss						
 		FROM dbo.bettrans b WITH (NOLOCK)  
 		INNER JOIN #Match AS m 
 			ON 	b.MatchId = m.MatchId
@@ -191,12 +164,10 @@ BEGIN
 				ELSE m.SportType end
 				
 
-		INSERT INTO #Detail (site, Sporttype,TurnOver,Winloss,HouseTO,HouseIncome) 		   
+		INSERT INTO #Detail (site, Sporttype,TurnOver,Winloss) 		   
 		SELECT	site, Sporttype, 
 				SUM (TurnOver) AS TurnOver, 
-				SUM (Winloss) AS Winloss, 
-				SUM (HouseTO) AS HouseTO, 
-				SUM (HouseIncome) AS HouseIncome 
+				SUM (Winloss) AS Winloss
 		FROM #TicketDetail b
 		CROSS APPLY (SELECT site FROM dbo.Dep_CustSuper d WITH (NOLOCK) WHERE d.custid = b.srecommend) d
 		GROUP BY site, Sporttype
