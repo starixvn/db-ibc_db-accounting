@@ -199,7 +199,7 @@ BEGIN
 				SUM (HouseTO) AS HouseTO,  
 				SUM (HouseIncome) AS HouseIncome
 		FROM #TicketDetail b
-		INNER JOIN dbo.vw_Customer c WITH (NOLOCK) ON c.CustID = b.srecommend AND c.RoleID = 4 		
+		INNER JOIN dbo.Customer c WITH (NOLOCK) ON c.CustID = b.srecommend AND c.RoleID = 4 		
 		LEFT JOIN dbo.Dep_CustSuper d WITH (NOLOCK) ON d.CustID = b.srecommend 
 		GROUP BY c.site,
 				CASE WHEN d.CustID IS NOT NULL THEN 1 ELSE 0 END,

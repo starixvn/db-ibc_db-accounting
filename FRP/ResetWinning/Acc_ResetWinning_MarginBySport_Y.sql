@@ -11,7 +11,8 @@ AS
 	Revision:
 		- 20200517@Viet: Initial SP
 		- 20201008@Sophia: Separate Saba vs Real Sport [Redmine: #143173]
-		 
+		- 20201230@Sophia: add more LeagueGroupID 41, 72 [Redmine: #147907]
+		
 	Param Explanation:
 		 
 	   
