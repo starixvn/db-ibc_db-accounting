@@ -10,7 +10,8 @@ AS
 	
 	Revision:
 		- 20201230@Sophia: Initial SPs [Redmine: #147907]
-		 
+	
+	Original: Acc_Rpt_Letstalk_TopLicenseeMargin 
 	Param Explanation:
 		 
 	   
@@ -188,7 +189,8 @@ BEGIN
 			CASE WHEN SUM(t.Turnover_Parlay) = 0 THEN 0 ELSE SUM(t.Winloss_Parlay)/SUM(t.Turnover_Parlay) END MarginParlay,
 			CASE WHEN SUM(t.Turnover_SabaSoccer) = 0 THEN 0 ELSE SUM(t.Winloss_SabaSoccer)/SUM(t.Turnover_SabaSoccer) END MarginSabaSoccer,
 			CASE WHEN SUM(t.Turnover_SabaBasketball) = 0 THEN 0 ELSE SUM(t.Winloss_SabaBasketball)/SUM(t.Turnover_SabaBasketball) END MarginSabaBasketball,
-			CASE WHEN SUM(t.Turnover_Othersport) = 0 THEN 0 ELSE SUM(t.Winloss_Othersport)/SUM(t.Turnover_Othersport) END MarginOthersport
+			CASE WHEN SUM(t.Turnover_Othersport) = 0 THEN 0 ELSE SUM(t.Winloss_Othersport)/SUM(t.Turnover_Othersport) END MarginOthersport,
+			SUM(t.Turnover_AllSports) as TurnoverAllSport
 		FROM (
 			SELECT 
 				t1.site SITE,
@@ -224,7 +226,6 @@ BEGIN
 		 
   
 
-
 	DROP TABLE #Bettype
     DROP TABLE #Sports
 	DROP TABLE #Match 
@@ -233,4 +234,4 @@ BEGIN
 	DROP TABLE #SabaVirtualSportsLeague
 		
 END
-GO
+
