@@ -79,7 +79,6 @@ BEGIN
 					LEFT JOIN #SabaVirtualSportsLeague l 
 						ON l.LeagueId = m.leagueid 
 					WHERE EventDate = @WinlostDate
-						--AND Sporttype IN (1, 2, 5, 43)
 					UNION ALL
 					SELECT orid,  
 						  'outright' AS type,
@@ -91,7 +90,6 @@ BEGIN
 					LEFT JOIN #SabaVirtualSportsLeague l 
 						ON l.LeagueId = o.leagueid 						
 					WHERE o.EventDate = @WinlostDate
-						--AND l.Sporttype IN (1, 2, 5, 43)
 					UNION ALL
 					SELECT 29 AS MatchId,
 						   'Parlay' AS type,						   
@@ -108,15 +106,27 @@ BEGIN
 
 	--------------------------------------------------------------------------------------------------------- 
 		CREATE TABLE #TicketDetail 
-		(	srecommend		INT, 
+		(	srecommend			INT, 
 			Sporttype  		SMALLINT,  
-			TurnOver		decimal(19,4),
-			Winloss			decimal(19,4),
-			HouseTO			decimal(19,4),
-			HouseIncome		decimal(19,4) 
+			TurnOver		DECIMAL(19,4),
+			Winloss			DECIMAL(19,4),
+			HouseTO			DECIMAL(19,4),
+			HouseIncome		DECIMAL(19,4) 
 		) 	 
+
+					
+		CREATE TABLE #Detail 
+		(	site			VARCHAR(100),
+			Sporttype  		SMALLINT,  
+			TurnOver		DECIMAL(19,4),
+			Winloss			DECIMAL(19,4),
+			HouseTO			DECIMAL(19,4),
+			HouseIncome		DECIMAL(19,4) 
+		) 	 	
+
+
 		INSERT INTO #TicketDetail (srecommend, Sporttype, TurnOver, Winloss, HouseTO, HouseIncome)
-		SELECT  b.srecommend,
+		SELECT b.srecommend,
 				CASE WHEN b.bettype in (9,29) THEN -2 
 				WHEN m.SportType = 1 and m.LeagueGroupID IN (42, 74, 108) then -3  -- Saba soccer
 				WHEN m.SportType = 2 and m.LeagueGroupID = 42 then -4  -- Saba basketball
@@ -163,15 +173,15 @@ BEGIN
 										WHEN 29 THEN 'Parlay'
 										WHEN 999 THEN 'Oddspread'
 										ELSE 'Match'                           
-                         END	
+                         END	 
 		WHERE   b.Winlostdate = @WinlostDate
-			AND b.statusid IN (111, 112, 113)		
-			--AND b.bettype < 19001
-			--AND b.MatchID >= 0
+			AND b.statusid IN (111, 112, 113)	
 			AND b.Recommend NOT IN (52466,5707545)  --- Exclude 8RM, BARM 
 			AND EXISTS (SELECT 1 FROM #Bettype s WHERE b.Bettype = s.Bettype) 
+			AND EXISTS (SELECT 1 FROM dbo.Dep_CustSuper d WITH (NOLOCK) WHERE d.custid = b.srecommend)
+			AND NOT EXISTS (SELECT 1 FROM bodb_Licensee.dbo.LicenseeBATransaction_active ba WITH (NOLOCK) WHERE ba.TransID = b.TransID)
 		GROUP BY 
-			b.srecommend,			
+			b.srecommend,	
 			CASE WHEN b.bettype in (9,29) THEN -2 
 				WHEN m.SportType = 1 and m.LeagueGroupID IN (42, 74, 108) then -3  -- Saba soccer
 				WHEN m.SportType = 2 and m.LeagueGroupID = 42 then -4  -- Saba basketball
@@ -180,194 +190,70 @@ BEGIN
 				WHEN b.bettype = 999 then -7 -- Odds Spread Adjustment
 				ELSE m.SportType end
 				
-				
-		CREATE TABLE #Detail 
-		(	site			VARCHAR(100),
-			isLicensee		BIT,
-			Sporttype  		SMALLINT,  
-			TurnOver		decimal(19,4),
-			Winloss			decimal(19,4),
-			HouseTO			decimal(19,4),
-			HouseIncome		decimal(19,4) 
-		) 	 		  
-		INSERT INTO #Detail  (site, isLicensee, Sporttype, TurnOver, Winloss, HouseTO, HouseIncome)
-		SELECT  c.site, 
-				CASE WHEN d.CustID IS NOT NULL THEN 1 ELSE 0 END AS isLicensee,
-				Sporttype,
-				SUM (TurnOver) AS TurnOver, 
-				SUM (Winloss) AS Winloss,  
-				SUM (HouseTO) AS HouseTO,  
-				SUM (HouseIncome) AS HouseIncome
-		FROM #TicketDetail b
-		INNER JOIN dbo.Customer c WITH (NOLOCK) ON c.CustID = b.srecommend AND c.RoleID = 4 		
-		LEFT JOIN dbo.Dep_CustSuper d WITH (NOLOCK) ON d.CustID = b.srecommend 
-		GROUP BY c.site,
-				CASE WHEN d.CustID IS NOT NULL THEN 1 ELSE 0 END,
-				Sporttype
 
+		INSERT INTO #Detail (site, Sporttype,TurnOver,Winloss,HouseTO,HouseIncome) 		   
+		SELECT	site, Sporttype, 
+				SUM (TurnOver) AS TurnOver, 
+				SUM (Winloss) AS Winloss, 
+				SUM (HouseTO) AS HouseTO, 
+				SUM (HouseIncome) AS HouseIncome 
+		FROM #TicketDetail b
+		CROSS APPLY (SELECT site FROM dbo.Dep_CustSuper d WITH (NOLOCK) WHERE d.custid = b.srecommend) d
+		GROUP BY site, Sporttype
 
 		-----------------------------------------------------------------------------------------------
-		----- Get Data ----------------
-		-----#1 GROUP PERFORMANCE ----------------
-
-			SELECT t.Site as Licensee,
-				CASE WHEN t.HouseTO_AllSports = 0 then 0 else t.HouseIncome_AllSports/t.HouseTO_AllSports end MarginAllSport,
-				CASE WHEN t.HouseTO_Soccer = 0 then 0 else t.HouseIncome_Soccer/t.HouseTO_Soccer end MarginSoccer,
-				CASE WHEN t.HouseTO_Basketball = 0 then 0 else t.HouseIncome_Basketball/t.HouseTO_Basketball end MarginBasketball,
-				CASE WHEN t.HouseTO_Esport = 0 then 0 else t.HouseIncome_Esport/t.HouseTO_Esport end MarginEsport,
-				CASE WHEN t.HouseTO_Tennis = 0 then 0 else t.HouseIncome_Tennis/t.HouseTO_Tennis end MarginTennis,
-				CASE WHEN t.HouseTO_Parlay = 0 then 0 else t.HouseIncome_Parlay/t.HouseTO_Parlay end MarginParlay,
-				CASE WHEN t.HouseTO_SabaSoccer = 0 then 0 else t.HouseIncome_SabaSoccer/t.HouseTO_SabaSoccer end MarginSabaSoccer,
-				CASE WHEN t.HouseTO_SabaBasketball = 0 then 0 else t.HouseIncome_SabaBasketball/t.HouseTO_SabaBasketball end MarginSabaBasketball,
-				CASE WHEN t.HouseTO_Othersport = 0 then 0 else t.HouseIncome_Othersport/t.HouseTO_Othersport end MarginOthersport
-			FROM (
-				SELECT CASE 
-							WHEN t1.isLicensee = 1 THEN 'Licensee'
-							WHEN t1.site = '789Y' THEN '789Y'
-							WHEN t1.site in ( 'XYZBET', 'BEST-ODDS') THEN 'XYZ & Bestodds'
-							WHEN t1.site = '611111' THEN '611 (China)'
-							WHEN t1.site = '733333' THEN '733 (Malaysia)'
-							WHEN t1.site = '755555' THEN '755 (Thailand)'
-							WHEN t1.site = 'INDO' THEN 'Indo'
-							WHEN t1.site = 'IBCIndo' THEN 'IBCIndo'
-							WHEN t1.isLicensee = 0 and t1.site not in ('789Y','XYZBET','BEST-ODDS','611111','733333','755555','INDO','CN88','IBCIndo') THEN 'Other MBC'		
-							WHEN t1.site = 'CN88' THEN 'CN88'		
-						END	SITE,				
-					CASE 
-						WHEN t1.isLicensee = 1 THEN 1
-						WHEN t1.site = '789Y' THEN 2
-						WHEN t1.site in ( 'XYZBET', 'BEST-ODDS') THEN 3
-						WHEN t1.site = '611111' THEN 4
-						WHEN t1.site = '733333' THEN 5
-						WHEN t1.site = '755555' THEN 6
-						WHEN t1.site = 'INDO' THEN 7
-						WHEN t1.site = 'IBCIndo' THEN 8
-						WHEN t1.isLicensee = 0 and t1.site not in ('789Y','XYZBET','BEST-ODDS','611111','733333','755555','INDO','CN88','IBCIndo') THEN 9		
-						WHEN t1.site = 'CN88' THEN 11								
-					END OrderBy,
-					sum(isnull(t1.HouseTO,0)) HouseTO_AllSports,
-					sum(isnull(t1.HouseIncome,0)) HouseIncome_AllSports,
-					sum(case when sporttype = 1 then isnull(t1.HouseTO,0) else 0 end) HouseTO_Soccer,
-					sum(case when sporttype = 1 then isnull(t1.HouseIncome,0) else 0 end) HouseIncome_Soccer,
-					sum(case when sporttype = 2 then isnull(t1.HouseTO,0) else 0 end) HouseTO_Basketball,
-					sum(case when sporttype = 2 then isnull(t1.HouseIncome,0) else 0 end) HouseIncome_Basketball,
-					sum(case when sporttype = 43 then isnull(t1.HouseTO,0) else 0 end) HouseTO_Esport,
-					sum(case when sporttype = 43 then isnull(t1.HouseIncome,0) else 0 end) HouseIncome_Esport,
-					sum(case when sporttype = 5 then isnull(t1.HouseTO,0) else 0 end) HouseTO_Tennis,
-					sum(case when sporttype = 5 then isnull(t1.HouseIncome,0) else 0 end) HouseIncome_Tennis,		
-					sum(case when sporttype = -2 then isnull(t1.HouseTO,0) else 0 end) HouseTO_Parlay,
-					sum(case when sporttype = -2 then isnull(t1.HouseIncome,0) else 0 end) HouseIncome_Parlay,
-					sum(case when sporttype = -3 then isnull(t1.HouseTO,0) else 0 end) HouseTO_SabaSoccer,
-					sum(case when sporttype = -3 then isnull(t1.HouseIncome,0) else 0 end) HouseIncome_SabaSoccer,
-					sum(case when sporttype = -4 then isnull(t1.HouseTO,0) else 0 end) HouseTO_SabaBasketball,
-					sum(case when sporttype = -4 then isnull(t1.HouseIncome,0) else 0 end) HouseIncome_SabaBasketball,
-					sum(case when sporttype not in (1, 2, 5, 43, -2, -3, -4, -5, -6) then isnull(t1.HouseTO,0) else 0 end) HouseTO_Othersport,
-					sum(case when sporttype not in (1, 2, 5, 43, -2, -3, -4, -5, -6) then isnull(t1.HouseIncome,0) else 0 end) HouseIncome_Othersport
-				FROM  #Detail t1
-				GROUP BY  CASE 
-							WHEN t1.isLicensee = 1 THEN 'Licensee'
-							WHEN t1.site = '789Y' THEN '789Y'
-							WHEN t1.site in ( 'XYZBET', 'BEST-ODDS') THEN 'XYZ & Bestodds'
-							WHEN t1.site = '611111' THEN '611 (China)'
-							WHEN t1.site = '733333' THEN '733 (Malaysia)'
-							WHEN t1.site = '755555' THEN '755 (Thailand)'
-							WHEN t1.site = 'INDO' THEN 'Indo'
-							WHEN t1.site = 'IBCIndo' THEN 'IBCIndo'
-							WHEN t1.isLicensee = 0 and t1.site not in ('789Y','XYZBET','BEST-ODDS','611111','733333','755555','INDO','CN88','IBCIndo') THEN 'Other MBC'		
-							WHEN t1.site = 'CN88' THEN 'CN88'		
-						END,
-					CASE 
-						WHEN t1.isLicensee = 1 THEN 1
-						WHEN t1.site = '789Y' THEN 2
-						WHEN t1.site in ( 'XYZBET', 'BEST-ODDS') THEN 3
-						WHEN t1.site = '611111' THEN 4
-						WHEN t1.site = '733333' THEN 5
-						WHEN t1.site = '755555' THEN 6
-						WHEN t1.site = 'INDO' THEN 7
-						WHEN t1.site = 'IBCIndo' THEN 8
-						WHEN t1.isLicensee = 0 and t1.site not in ('789Y','XYZBET','BEST-ODDS','611111','733333','755555','INDO','CN88','IBCIndo') THEN 9		
-						WHEN t1.site = 'CN88' THEN 11								
-					END
-	
-				UNION ALL
-
-				SELECT 	
-					'ALL(w/o CN88)'	Licensee,
-					10 OrderBy,
-					sum(isnull(t1.HouseTO,0)) HouseTO_AllSports,
-					sum(isnull(t1.HouseIncome,0)) HouseIncome_AllSports,
-					sum(case when sporttype = 1 then isnull(t1.HouseTO,0) else 0 end) HouseTO_Soccer,
-					sum(case when sporttype = 1 then isnull(t1.HouseIncome,0) else 0 end) HouseIncome_Soccer,
-					sum(case when sporttype = 2 then isnull(t1.HouseTO,0) else 0 end) HouseTO_Basketball,
-					sum(case when sporttype = 2 then isnull(t1.HouseIncome,0) else 0 end) HouseIncome_Basketball,
-					sum(case when sporttype = 43 then isnull(t1.HouseTO,0) else 0 end) HouseTO_Esport,
-					sum(case when sporttype = 43 then isnull(t1.HouseIncome,0) else 0 end) HouseIncome_Esport,
-					sum(case when sporttype = 5 then isnull(t1.HouseTO,0) else 0 end) HouseTO_Tennis,
-					sum(case when sporttype = 5 then isnull(t1.HouseIncome,0) else 0 end) HouseIncome_Tennis,		
-					sum(case when sporttype = -2 then isnull(t1.HouseTO,0) else 0 end) HouseTO_Parlay,
-					sum(case when sporttype = -2 then isnull(t1.HouseIncome,0) else 0 end) HouseIncome_Parlay,
-					sum(case when sporttype = -3 then isnull(t1.HouseTO,0) else 0 end) HouseTO_SabaSoccer,
-					sum(case when sporttype = -3 then isnull(t1.HouseIncome,0) else 0 end) HouseIncome_SabaSoccer,
-					sum(case when sporttype = -4 then isnull(t1.HouseTO,0) else 0 end) HouseTO_SabaBasketball,
-					sum(case when sporttype = -4 then isnull(t1.HouseIncome,0) else 0 end) HouseIncome_SabaBasketball,
-					sum(case when sporttype not in (1, 2, 5, 43, -2, -3, -4, -5, -6) then isnull(t1.HouseTO,0) else 0 end) HouseTO_Othersport,
-					sum(case when sporttype not in (1, 2, 5, 43, -2, -3, -4, -5, -6) then isnull(t1.HouseIncome,0) else 0 end) HouseIncome_Othersport
-				FROM  #Detail t1
-				where t1.site <> 'CN88'	
-			) T
-			ORDER BY OrderBy
-
----------------------------
-
+		----- Get Data ----------------  
 		
---LICENSEE
-SELECT 
-	CASE WHEN T.RankTO <= 50 THEN t.site 
-			ELSE 'Other Licensees'
-			end  as Licensee,
-	CASE WHEN sum(t.Turnover_AllSports) = 0 then 0 else sum(t.Winloss_AllSports)/sum(t.Turnover_AllSports) end MarginAllSport,
-	CASE WHEN sum(t.Turnover_Soccer) = 0 then 0 else sum(t.Winloss_Soccer)/sum(t.Turnover_Soccer) end MarginSoccer,
-	CASE WHEN sum(t.Turnover_Basketball) = 0 then 0 else sum(t.Winloss_Basketball)/sum(t.Turnover_Basketball) end MarginBasketball,
-	CASE WHEN sum(t.Turnover_Esport) = 0 then 0 else sum(t.Winloss_Esport)/sum(t.Turnover_Esport) end MarginEsport,
-	CASE WHEN sum(t.Turnover_Tennis) = 0 then 0 else sum(t.Winloss_Tennis)/sum(t.Turnover_Tennis) end MarginTennis,	
-	CASE WHEN sum(t.Turnover_Parlay) = 0 then 0 else sum(t.Winloss_Parlay)/sum(t.Turnover_Parlay) end MarginParlay,
-	CASE WHEN sum(t.Turnover_SabaSoccer) = 0 then 0 else sum(t.Winloss_SabaSoccer)/sum(t.Turnover_SabaSoccer) end MarginSabaSoccer,
-	CASE WHEN sum(t.Turnover_SabaBasketball) = 0 then 0 else sum(t.Winloss_SabaBasketball)/sum(t.Turnover_SabaBasketball) end MarginSabaBasketball,
-	CASE WHEN sum(t.Turnover_Othersport) = 0 then 0 else sum(t.Winloss_Othersport)/sum(t.Turnover_Othersport) end MarginOthersport
-FROM (
-	SELECT 
-		t1.site SITE,
-		RANK() OVER (
-			order by 
-				sum(t1.Turnover) desc
-		) RankTO,
-		sum(isnull(t1.Turnover,0)) Turnover_AllSports,
-		sum(isnull(t1.Winloss,0)) Winloss_AllSports,
-		sum(case when t1.sporttype = 1 then isnull(t1.Turnover,0) else 0 end) Turnover_Soccer,
-		sum(case when t1.sporttype = 1 then isnull(t1.Winloss,0) else 0 end) Winloss_Soccer,
-		sum(case when t1.sporttype = 2 then isnull(t1.Turnover,0) else 0 end) Turnover_Basketball,
-		sum(case when t1.sporttype = 2 then isnull(t1.Winloss,0) else 0 end) Winloss_Basketball,
-		sum(case when t1.sporttype = 43 then isnull(t1.Turnover,0) else 0 end) Turnover_Esport,
-		sum(case when t1.sporttype = 43 then isnull(t1.Winloss,0) else 0 end) Winloss_Esport,
-		sum(case when t1.sporttype = 5 then isnull(t1.Turnover,0) else 0 end) Turnover_Tennis,
-		sum(case when t1.sporttype = 5 then isnull(t1.Winloss,0) else 0 end) Winloss_Tennis,		
-		sum(case when sporttype = -2 then isnull(t1.Turnover,0) else 0 end) Turnover_Parlay,
-		sum(case when sporttype = -2 then isnull(t1.Winloss,0) else 0 end) Winloss_Parlay,
-		sum(case when sporttype = -3 then isnull(t1.Turnover,0) else 0 end) Turnover_SabaSoccer,
-		sum(case when sporttype = -3 then isnull(t1.Winloss,0) else 0 end) Winloss_SabaSoccer,
-		sum(case when sporttype = -4 then isnull(t1.Turnover,0) else 0 end) Turnover_SabaBasketball,
-		sum(case when sporttype = -4 then isnull(t1.Winloss,0) else 0 end) Winloss_SabaBasketball,
-		sum(case when t1.sporttype not in (1, 2, 5, 43, -2, -3, -4, -5, -6) then isnull(t1.Turnover,0) else 0 end) Turnover_Othersport,
-		sum(case when t1.sporttype not in (1, 2, 5, 43, -2, -3, -4, -5, -6) then isnull(t1.Winloss,0) else 0 end) Winloss_Othersport
-	FROM #Detail t1
-	WHERE t1.isLicensee = 1
-	GROUP BY t1.site 
-) T
-GROUP BY CASE WHEN T.RankTO <= 50 THEN t.site 
-			ELSE 'Other Licensees'
-			end
-ORDER BY MIN(RankTO)
- 
+		--LICENSEE
+		SELECT 
+			CASE WHEN T.RankTO <= 50 THEN t.site 
+					ELSE 'Other Licensees'
+					END  as Licensee,
+			CASE WHEN SUM(t.Turnover_AllSports) = 0 THEN 0 ELSE SUM(t.Winloss_AllSports)/SUM(t.Turnover_AllSports) END MarginAllSport,
+			CASE WHEN SUM(t.Turnover_Soccer) = 0 THEN 0 ELSE SUM(t.Winloss_Soccer)/SUM(t.Turnover_Soccer) END MarginSoccer,
+			CASE WHEN SUM(t.Turnover_Basketball) = 0 THEN 0 ELSE SUM(t.Winloss_Basketball)/SUM(t.Turnover_Basketball) END MarginBasketball,
+			CASE WHEN SUM(t.Turnover_Esport) = 0 THEN 0 ELSE SUM(t.Winloss_Esport)/SUM(t.Turnover_Esport) END MarginEsport,
+			CASE WHEN SUM(t.Turnover_Tennis) = 0 THEN 0 ELSE SUM(t.Winloss_Tennis)/SUM(t.Turnover_Tennis) END MarginTennis,	
+			CASE WHEN SUM(t.Turnover_Parlay) = 0 THEN 0 ELSE SUM(t.Winloss_Parlay)/SUM(t.Turnover_Parlay) END MarginParlay,
+			CASE WHEN SUM(t.Turnover_SabaSoccer) = 0 THEN 0 ELSE SUM(t.Winloss_SabaSoccer)/SUM(t.Turnover_SabaSoccer) END MarginSabaSoccer,
+			CASE WHEN SUM(t.Turnover_SabaBasketball) = 0 THEN 0 ELSE SUM(t.Winloss_SabaBasketball)/SUM(t.Turnover_SabaBasketball) END MarginSabaBasketball,
+			CASE WHEN SUM(t.Turnover_Othersport) = 0 THEN 0 ELSE SUM(t.Winloss_Othersport)/SUM(t.Turnover_Othersport) END MarginOthersport
+		FROM (
+			SELECT 
+				t1.site SITE,
+				RANK() OVER (
+					order by 
+						SUM(t1.Turnover) desc
+				) RankTO,
+				SUM(isnull(t1.Turnover,0)) Turnover_AllSports,
+				SUM(isnull(t1.Winloss,0)) Winloss_AllSports,
+				SUM(CASE WHEN t1.sporttype = 1 THEN ISNULL(t1.Turnover,0) ELSE 0 END) Turnover_Soccer,
+				SUM(CASE WHEN t1.sporttype = 1 THEN ISNULL(t1.Winloss,0) ELSE 0 END) Winloss_Soccer,
+				SUM(CASE WHEN t1.sporttype = 2 THEN ISNULL(t1.Turnover,0) ELSE 0 END) Turnover_Basketball,
+				SUM(CASE WHEN t1.sporttype = 2 THEN ISNULL(t1.Winloss,0) ELSE 0 END) Winloss_Basketball,
+				SUM(CASE WHEN t1.sporttype = 43 THEN ISNULL(t1.Turnover,0) ELSE 0 END) Turnover_Esport,
+				SUM(CASE WHEN t1.sporttype = 43 THEN ISNULL(t1.Winloss,0) ELSE 0 END) Winloss_Esport,
+				SUM(CASE WHEN t1.sporttype = 5 THEN ISNULL(t1.Turnover,0) ELSE 0 END) Turnover_Tennis,
+				SUM(CASE WHEN t1.sporttype = 5 THEN ISNULL(t1.Winloss,0) ELSE 0 END) Winloss_Tennis,		
+				SUM(CASE WHEN sporttype = -2 THEN ISNULL(t1.Turnover,0) ELSE 0 END) Turnover_Parlay,
+				SUM(CASE WHEN sporttype = -2 THEN ISNULL(t1.Winloss,0) ELSE 0 END) Winloss_Parlay,
+				SUM(CASE WHEN sporttype = -3 THEN ISNULL(t1.Turnover,0) ELSE 0 END) Turnover_SabaSoccer,
+				SUM(CASE WHEN sporttype = -3 THEN ISNULL(t1.Winloss,0) ELSE 0 END) Winloss_SabaSoccer,
+				SUM(CASE WHEN sporttype = -4 THEN ISNULL(t1.Turnover,0) ELSE 0 END) Turnover_SabaBasketball,
+				SUM(CASE WHEN sporttype = -4 THEN ISNULL(t1.Winloss,0) ELSE 0 END) Winloss_SabaBasketball,
+				SUM(CASE WHEN t1.sporttype not in (1, 2, 5, 43, -2, -3, -4, -5, -6) THEN ISNULL(t1.Turnover,0) ELSE 0 END) Turnover_Othersport,
+				SUM(CASE WHEN t1.sporttype not in (1, 2, 5, 43, -2, -3, -4, -5, -6) THEN ISNULL(t1.Winloss,0) ELSE 0 END) Winloss_Othersport
+			FROM #Detail t1 
+			GROUP BY t1.site 
+		) T
+		GROUP BY CASE WHEN T.RankTO <= 50 THEN t.site 
+					ELSE 'Other Licensees'
+					END
+		ORDER BY MIN(RankTO)
+		 
+  
+
+
 	DROP TABLE #Bettype
     DROP TABLE #Sports
 	DROP TABLE #Match 
