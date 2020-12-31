@@ -52,9 +52,8 @@ BEGIN
 	INSERT INTO #SabaVirtualSportsLeague
 	SELECT leagueid
 	FROM dbo.League WITH (NOLOCK)
-	WHERE ((sporttype = 1 AND LeagueGroupID IN (42, 74, 108))
-			OR (sporttype = 2 AND LeagueGroupID IN (42))
-			---OR (sporttype = 50 AND LeagueGroupID IN (42))
+	WHERE ((sporttype = 1 AND LeagueGroupID IN (41, 42, 74, 108))
+			OR (sporttype = 2 AND LeagueGroupID IN (42, 72)) 
 			)
 	----- End get Saba League 
 		
