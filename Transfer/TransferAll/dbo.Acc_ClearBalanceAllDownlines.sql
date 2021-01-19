@@ -190,41 +190,6 @@ BEGIN
 			AND ruben = 1
 			AND bettype NOT IN (21008, 21009)
 		GROUP BY b.custid, b.recommend, b.mrecommend
-		
-		INSERT INTO #tempdata (custid, recommend, mrecommend, winlost, actual_stake, playercomm, awinlost, comm, mwinlost, acomm)
-		SELECT b.custid, b.recommend, b.mrecommend
-			,SUM(winlost) winlost
-			,SUM(actual_stake) actual_stake
-			,SUM(playercomm) playercomm
-			,SUM(awinlost) awinlost
-			,SUM(comm) comm
-			,SUM(mwinlost) mwinlost
-			,SUM(acomm) acomm
-		FROM @masterlist c
-			INNER JOIN dbo.bettransRnG b WITH(NOLOCK) ON c.custid = b.custid
-		WHERE 
-			b.productID IN (SELECT SportType FROM @tblSportTypeRNG)
-			AND IsSum = 0
-			AND statusID NOT IN (0,1)
-			AND winlostdate < @winlostdate
-		GROUP BY b.custid, b.recommend, b.mrecommend
-		
-		INSERT INTO #tempdata (custid, recommend, mrecommend, winlost, actual_stake, playercomm, awinlost, comm, mwinlost, acomm)
-		SELECT b.custid, b.recommend, b.mrecommend
-			,SUM(winlost) winlost
-			,SUM(actual_stake) actual_stake
-			,SUM(playercomm) playercomm
-			,SUM(awinlost) awinlost
-			,SUM(comm) comm
-			,SUM(mwinlost) mwinlost
-			,SUM(acomm) acomm
-		FROM @masterlist c
-			INNER JOIN dbo.bettransLC b WITH(NOLOCK) ON c.custid = b.custid
-		WHERE b.productID IN (SELECT SportType FROM @tblSportTypeLC)
-			AND IsSum = 0
-			AND statusID NOT IN (0,1)
-			AND winlostdate < @winlostdate
-		GROUP BY b.custid, b.recommend, b.mrecommend
 	END
 		
 	-- member & agent data	
