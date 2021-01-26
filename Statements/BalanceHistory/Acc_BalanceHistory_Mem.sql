@@ -1,0 +1,301 @@
+/*<info serverAlias="DBBAH-bodb02" executers="bodbDownlineNet" viewers="" isFunction="0"></info>*/
+CREATE PROCEDURE Acc_BalanceHistory_Mem
+(
+	@FromDate DATETIME,
+	@Todate DATETIME,
+	@UserName VARCHAR(30) = '',
+	@ErrorCode INT = 0 OUTPUT,
+	@ErrorMess VARchar(1000) = '' OUTPUT
+)
+AS
+/*
+	Created: Sol@20210126  
+	Task: 130293 - LAP - Detail Transaction Member
+	DB: DBBAH/bodb02
+	Revisions:  
+		- 20210126@Sol: Initialize sp - [RedmineID: #144546] 
+	
+*/
+BEGIN
+
+	DECLARE 
+		@MoveBetsDay	SMALLDATETIME, 
+		@BalanceUpDay	SMALLDATETIME,
+		@InternalFromDate Datetime,
+		@InternalToDate Datetime,
+		@CustId INT = 0
+
+	SELECT @CustId = custId 
+	FROM dbo.Customer c WITH(NOLOCK)
+	WHERE c.username = @UserName
+
+	--validate user
+	IF (@CustId IS NULL OR @CustId = 0)
+	BEGIN
+		SELECT @ErrorCode = 101, @ErrorMess = 'Invalid member'
+		RETURN
+	END
+
+	DECLARE @tmp TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME) 
+
+	INSERT INTO @tmp(BalanceUpDay, MoveBetsDay)
+	EXEC Age_SelBalanceUpDay
+
+	SELECT @MoveBetsDay = MoveBetsDay, @BalanceUpDay = BalanceUpDay FROM @tmp
+	SELECT @InternalFromDate = @FromDate, @InternalToDate = @Todate
+
+	CREATE TABLE #BalanceRecord(ActionDate DATETIME, winlostdate SMALLDATETIME, refNo BIGINT, actual_stake MONEY, winloss MONEY, playercomm MONEY, BalanceChanged MONEY, NewBalance MONEY, GivenCredit MONEY, BetCredit MONEY, Action VARCHAR(256), custid INT, ActionID TINYINT, rowid BIGINT)
+
+	CREATE TABLE #Transaction(transID BIGINT, custID INT, winlostdate SMALLDATETIME, winloss money, tblName VARCHAR(50), refNo BIGINT)
+
+	--- get infor from userlog_credit
+	SELECT u.ActionID, l.ActionNameEN, u.logid, u.custid, u.logdate, u.OldValue, u.NewValue 
+		INTO #LogCredit 
+	FROM bodb_CustomerLog.dbo.UserLog_Credit u WITH(NOLOCK)
+		INNER JOIN bodb_CustomerLog.dbo.LogAction l WITH(NOLOCK)
+			ON u.ActionID = l.ActionID
+	WHERE 
+		u.custid = @CustId
+		AND u.logdate BETWEEN @InternalFromDate AND @InternalToDate
+
+	--- insert to temp table balance record
+	INSERT INTO #BalanceRecord(ActionDate, winlostdate, refNo, actual_stake, winloss, playercomm, BalanceChanged, NewBalance, GivenCredit, BetCredit, Action, custid, ActionID, rowid)
+	SELECT 
+		ISNULL(ActionDate, l.logdate) ActionDate, 
+		NULL winlostdate, 
+		b.transid AS refNo, 
+		b.actual_stake, 
+		b.winlost,
+		b.playercomm, 
+		b.BalanceChanged, 
+		b.NewBalance,
+		COALESCE(l.NewValue, l.OldValue, lo.NewValue, lo.OldValue, 0) GivenCredit,
+		(b.NewBalance + COALESCE(l.NewValue, l.OldValue, lo.NewValue, lo.OldValue, 0)) AS BetCredit,
+		COALESCE(Action, l.ActionNameEN, '') AS Action, 
+		COALESCE(b.custid, l.custid) AS custid, b.ActionID, b.RowID
+
+	FROM dbo.BalanceRecord b WITH(NOLOCK)
+		FULL JOIN 
+		(
+			SELECT ActionID, ActionNameEN, logid, custid, logdate, OldValue, NewValue 
+			FROM #LogCredit l 
+		) l ON l.logdate = b.ActionDate AND l.ActionID = b.ActionID
+		OUTER APPLY 
+		(
+			SELECT TOP 1 ActionID, ActionNameEN, logid, custid, logdate, OldValue, NewValue 
+			FROM #LogCredit lo
+			WHERE lo.logdate < b.ActionDate
+		) lo 
+	WHERE 
+		b.custid = @CustId
+		AND b.ActionDate BETWEEN @InternalFromDate AND @InternalToDate
+		AND b.Actionid <> 33
+		OR l.custid IS NOT NULL
+	
+	UNION
+	SELECT 
+		ISNULL(ActionDate, l.logdate) ActionDate, 
+		NULL winlostdate, 
+		b.transid AS refNo, 
+		b.actual_stake, 
+		b.winlost,
+		b.playercomm, 
+		b.BalanceChanged, 
+		b.NewBalance,
+		COALESCE(l.NewValue, l.OldValue, lo.NewValue, lo.OldValue, 0) GivenCredit,
+		(b.NewBalance + COALESCE(l.NewValue, l.OldValue, lo.NewValue, lo.OldValue, 0)) AS BetCredit,
+		COALESCE(Action, l.ActionNameEN, '') AS Action, 
+		COALESCE(b.custid, l.custid) AS custid, b.ActionID, b.RowID
+	FROM BalanceRecord.dbo.BalanceRecord_bk b WITH(NOLOCK)
+		FULL JOIN 
+		(
+			SELECT ActionID, ActionNameEN, logid, custid, logdate, OldValue, NewValue 
+			FROM #LogCredit l 
+		) l ON l.logdate = b.ActionDate AND l.ActionID = b.ActionID
+		OUTER APPLY 
+		(
+			SELECT TOP 1 ActionID, ActionNameEN, logid, custid, logdate, OldValue, NewValue 
+			FROM #LogCredit lo
+			WHERE lo.logdate < b.ActionDate
+		) lo
+	WHERE 
+		b.custid = @CustId
+		AND b.ActionDate BETWEEN @InternalFromDate AND @InternalToDate
+		AND b.Actionid <> 33
+		OR l.custid IS NOT NULL
+
+	--###############################################################
+	-- curr data
+	IF (@InternalFromDate > @MoveBetsDay)
+	BEGIN
+		-- bettrans
+		INSERT INTO #Transaction(transID, custID, winlostdate,winloss)
+		SELECT br.refNo, br.custID, b.winlostdate, b.winlost
+		FROM #BalanceRecord br
+			INNER JOIN dbo.bettrans b WITH(NOLOCK)
+				ON br.custid = b.custid AND br.refNo = b.transid
+		WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
+	
+		-- bettransRNG
+		INSERT INTO #Transaction(transID, custID, winlostdate,winloss)
+		SELECT br.refNo, br.custID, b.winlostdate, b.winlost
+		FROM #BalanceRecord br
+			INNER JOIN dbo.bettransRNG b WITH(NOLOCK)
+				ON br.custid = b.custid AND br.refNo = b.transid
+		WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
+
+		-- bettransLC
+		INSERT INTO #Transaction(transID, custID, winlostdate,winloss)
+		SELECT br.refNo, br.custID, b.winlostdate, b.winlost
+		FROM #BalanceRecord br
+			INNER JOIN dbo.bettransLC b WITH(NOLOCK)
+				ON br.custid = b.custid AND br.refNo = b.transid
+		WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
+
+		-- translog
+		INSERT INTO #Transaction(transID, custID, winlostdate,winloss)
+		SELECT br.refNo, br.custID, b.winlostdate, COALESCE(bt.winlost, 0)
+		FROM #BalanceRecord br
+			INNER JOIN dbo.translog b WITH(NOLOCK)
+				ON br.custid = b.custid AND br.refNo = b.translogid
+			INNER JOIN dbo.bettrans bt WITH(NOLOCK)
+				ON b.translogid = bt.refno AND b.custid = bt.custid
+		WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
+	
+
+	END
+	ELSE IF (@InternalFromDate >= @BalanceUpDay AND @InternalToDate <= @MoveBetsDay) -- only bettrans14
+	BEGIN
+	
+		-- bettrans
+		INSERT INTO #Transaction(transID, custID, winlostdate,winloss)
+		SELECT br.refNo, br.custID, b.winlostdate, b.winlost
+		FROM #BalanceRecord br
+			INNER JOIN dbo.bettrans14 b WITH(NOLOCK)
+				ON br.custid = b.custid AND br.refNo = b.transid
+		WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
+	
+		-- bettransRNG
+		INSERT INTO #Transaction(transID, custID, winlostdate,winloss)
+		SELECT br.refNo, br.custID, b.winlostdate, b.winlost
+		FROM #BalanceRecord br
+			INNER JOIN dbo.bettransRNG14 b WITH(NOLOCK)
+				ON br.custid = b.custid AND br.refNo = b.transid
+		WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
+
+		-- bettransLC
+		INSERT INTO #Transaction(transID, custID, winlostdate,winloss)
+		SELECT br.refNo, br.custID, b.winlostdate, b.winlost
+		FROM #BalanceRecord br
+			INNER JOIN dbo.bettransLC14 b WITH(NOLOCK)
+				ON br.custid = b.custid AND br.refNo = b.transid
+		WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
+
+		-- translog
+		INSERT INTO #Transaction(transID, custID, winlostdate,winloss)
+		SELECT br.refNo, br.custID, b.winlostdate, COALESCE(bt.winlost, 0)
+		FROM #BalanceRecord br
+			INNER JOIN dbo.translog14 b WITH(NOLOCK)
+				ON br.custid = b.custid AND br.refNo = b.translogid
+			INNER JOIN dbo.bettrans14 bt WITH(NOLOCK)
+				ON b.translogid = bt.refno AND b.custid = bt.custid
+		WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
+
+	END
+	ELSE IF (@InternalFromDate >= @BalanceUpDay AND @InternalFromDate <= @MoveBetsDay AND @InternalToDate > @MoveBetsDay) -- bettrans14 and bettrans
+	BEGIN
+
+		-- bettrans
+		INSERT INTO #Transaction(transID, custID, winlostdate,winloss)
+		SELECT br.refNo, br.custID, b.winlostdate, b.winlost
+		FROM #BalanceRecord br
+			INNER JOIN dbo.bettrans b WITH(NOLOCK)
+				ON br.custid = b.custid AND br.refNo = b.transid
+		WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
+
+		INSERT INTO #Transaction(transID, custID, winlostdate,winloss)
+		SELECT br.refNo, br.custID, b.winlostdate, b.winlost
+		FROM #BalanceRecord br
+			INNER JOIN dbo.bettrans14 b WITH(NOLOCK)
+				ON br.custid = b.custid AND br.refNo = b.transid
+		WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
+	
+		-- bettransRNG
+		INSERT INTO #Transaction(transID, custID, winlostdate,winloss)
+		SELECT br.refNo, br.custID, b.winlostdate, b.winlost
+		FROM #BalanceRecord br
+			INNER JOIN dbo.bettransRNG b WITH(NOLOCK)
+				ON br.custid = b.custid AND br.refNo = b.transid
+		WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
+
+		INSERT INTO #Transaction(transID, custID, winlostdate,winloss)
+		SELECT br.refNo, br.custID, b.winlostdate, b.winlost
+		FROM #BalanceRecord br
+			INNER JOIN dbo.bettransRNG14 b WITH(NOLOCK)
+				ON br.custid = b.custid AND br.refNo = b.transid
+		WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
+
+		-- bettransLC
+		INSERT INTO #Transaction(transID, custID, winlostdate,winloss)
+		SELECT br.refNo, br.custID, b.winlostdate, b.winlost
+		FROM #BalanceRecord br
+			INNER JOIN dbo.bettransLC b WITH(NOLOCK)
+				ON br.custid = b.custid AND br.refNo = b.transid
+		WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
+
+		INSERT INTO #Transaction(transID, custID, winlostdate,winloss)
+		SELECT br.refNo, br.custID, b.winlostdate, b.winlost
+		FROM #BalanceRecord br
+			INNER JOIN dbo.bettransLC14 b WITH(NOLOCK)
+				ON br.custid = b.custid AND br.refNo = b.transid
+		WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
+
+		-- translog
+		INSERT INTO #Transaction(transID, custID, winlostdate,winloss)
+		SELECT br.refNo, br.custID, b.winlostdate, COALESCE(bt.winlost, 0)
+		FROM #BalanceRecord br
+			INNER JOIN dbo.translog b WITH(NOLOCK)
+				ON br.custid = b.custid AND br.refNo = b.translogid
+			INNER JOIN dbo.bettrans bt WITH(NOLOCK)
+				ON b.translogid = bt.refno AND b.custid = bt.custid
+		WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
+
+		INSERT INTO #Transaction(transID, custID, winlostdate,winloss)
+		SELECT br.refNo, br.custID, b.winlostdate, COALESCE(bt.winlost, 0)
+		FROM #BalanceRecord br
+			INNER JOIN dbo.translog14 b WITH(NOLOCK)
+				ON br.custid = b.custid AND br.refNo = b.translogid
+			INNER JOIN dbo.bettrans14 bt WITH(NOLOCK)
+				ON b.translogid = bt.refno AND b.custid = bt.custid
+		WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
+
+	END
+
+
+	--- update to final result
+	UPDATE b
+		SET b.winlostdate = t.winlostdate
+	FROM #BalanceRecord b
+		INNER JOIN #Transaction t
+			ON b.custid = t.custID AND b.refNo = t.transID
+
+	SELECT 
+		ActionDate, 
+		CASE WHEN b.winlostdate IS NULL THEN '' ELSE CONVERT(VARCHAR(20), b.winlostdate, 120) END winlostdate, 
+		CASE WHEN b.refNo IS NULL THEN '' ELSE CONVERT(VARCHAR(100), b.refNo) END as refNo, 
+		CASE WHEN b.actual_stake IS NULL THEN '' ELSE CONVERT(VARCHAR(50), b.actual_stake) END actual_stake,
+		CASE WHEN b.winloss IS NULL AND b.refNo IS NULL THEN '' ELSE CONVERT(VARCHAR(50), ISNULL(b.winloss, 0)) END winloss,
+		CASE WHEN b.playercomm IS NULL THEN '' ELSE CONVERT(VARCHAR(50), b.playercomm) END AS playercomm, 
+		CASE WHEN b.BalanceChanged IS NULL THEN '' ELSE CONVERT(VARCHAR(50), b.BalanceChanged) END AS BalanceChanged, 
+		CASE WHEN b.NewBalance IS NULL THEN '' ELSE CONVERT(VARCHAR(50), b.NewBalance) END AS NewBalance,
+		GivenCredit,
+		CASE WHEN BetCredit IS NULL THEN '' ELSE CONVERT(VARCHAR(50), b.BetCredit) END AS BetCredit,
+		Action
+	FROM #BalanceRecord b
+	ORDER BY b.rowid
+
+	DROP TABLE #Transaction
+	DROP TABLE #BalanceRecord
+	DROP TABLE #LogCredit
+
+END
