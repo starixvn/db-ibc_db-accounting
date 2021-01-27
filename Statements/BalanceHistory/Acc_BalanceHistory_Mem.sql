@@ -97,7 +97,7 @@ BEGIN
 	)
 	INSERT INTO #BalanceRecord(ActionDate, winlostdate, refNo, actual_stake, winloss, playercomm, BalanceChanged, NewBalance, GivenCredit, BetCredit, Action, custid, ActionID, rowid)
 	SELECT 
-		ISNULL(ActionDate, l.logdate) ActionDate, 
+		COALESCE(ActionDate, l.logdate) ActionDate, 
 		NULL winlostdate, 
 		b.refNo, 
 		b.actual_stake, 
@@ -107,7 +107,7 @@ BEGIN
 		b.NewBalance,
 		COALESCE(l.NewValue, l.OldValue, lo.NewValue, lo.OldValue, 0) GivenCredit,
 		(b.NewBalance + COALESCE(l.NewValue, l.OldValue, lo.NewValue, lo.OldValue, 0)) AS BetCredit,
-		COALESCE(Action, l.ActionNameEN, '') AS Action, 
+		COALESCE(Action, l.ActionNameEN) AS Action, 
 		COALESCE(b.custid, l.custid) AS custid, b.ActionID, b.RowID
 	FROM rs b WITH(NOLOCK)
 		FULL JOIN 
@@ -278,17 +278,17 @@ BEGIN
 			ON b.custid = t.custID AND b.refNo = t.transID
 
 	SELECT 
-		ActionDate, 
-		CASE WHEN b.winlostdate IS NULL THEN '' ELSE CONVERT(VARCHAR(20), b.winlostdate, 120) END winlostdate, 
-		CASE WHEN b.refNo IS NULL THEN '' ELSE CONVERT(VARCHAR(100), b.refNo) END as refNo, 
-		CASE WHEN b.actual_stake IS NULL THEN '' ELSE CONVERT(VARCHAR(50), b.actual_stake) END actual_stake,
-		CASE WHEN b.winloss IS NULL AND b.refNo IS NULL THEN '' ELSE CONVERT(VARCHAR(50), ISNULL(b.winloss, 0)) END winloss,
-		CASE WHEN b.playercomm IS NULL THEN '' ELSE CONVERT(VARCHAR(50), b.playercomm) END AS playercomm, 
-		CASE WHEN b.BalanceChanged IS NULL THEN '' ELSE CONVERT(VARCHAR(50), b.BalanceChanged) END AS BalanceChanged, 
-		CASE WHEN b.NewBalance IS NULL THEN '' ELSE CONVERT(VARCHAR(50), b.NewBalance) END AS NewBalance,
-		GivenCredit,
-		CASE WHEN BetCredit IS NULL THEN '' ELSE CONVERT(VARCHAR(50), b.BetCredit) END AS BetCredit,
-		Action
+		b.ActionDate, 
+		b.winlostdate, 
+		b.refNo, 
+		b.actual_stake,
+		b.winloss,
+		b.playercomm, 
+		b.BalanceChanged, 
+		b.NewBalance,
+		b.GivenCredit,
+		b.BetCredit,
+		b.Action
 	FROM #BalanceRecord b
 	ORDER BY b.rowid
 
