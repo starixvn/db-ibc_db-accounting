@@ -16,6 +16,7 @@ Original:
 	Revisions:
 		- 20200328@Malcolm: NAP Manage Products/Sporttype/Bettype [Redmine: #131241]
 		- 20200917@Danny: NAP Manage Bettype add column LicSpreadBetTypeGroupId [Redmine: #131241]
+		- 20200930@Danny: NAP Manage Bettype add column Is3rdParty [Redmine: #131241]
 		
 */
 BEGIN
@@ -51,6 +52,7 @@ BEGIN
 		typenameHI		NVARCHAR(128),
 		DisplayedTypeID INT,
 		LicSpreadBetTypeGroupId TINYINT,
+		Is3rdParty		BIT,
 		RowNum INT)
 
 	INSERT INTO #Tmp(
@@ -79,6 +81,7 @@ BEGIN
 			typenameHI,
 			DisplayedTypeID,
 			LicSpreadBetTypeGroupId,
+			Is3rdParty,
 			RowNum
 	)
     SELECT	typeid,
@@ -106,6 +109,7 @@ BEGIN
 			typenameHI,
 			DisplayedTypeID, 
 			LicSpreadBetTypeGroupId,
+			Is3rdParty,
 			ROW_NUMBER() OVER(ORDER BY TypeID) AS RowNum   
 	FROM bettype WITH(NOLOCK)
 	WHERE (typeid = @TypeId OR @TypeId IS NULL) 
@@ -140,6 +144,7 @@ BEGIN
 			typenameMMR,
 			typenameHI,
 			LicSpreadBetTypeGroupId,
+			Is3rdParty,
 			RowNum
 	FROM #Tmp
 	WHERE @PageIndex < 0 OR @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd) 
