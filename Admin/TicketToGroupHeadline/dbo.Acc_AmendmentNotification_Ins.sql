@@ -1,4 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBEXT-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 CREATE PROC dbo.Acc_AmendmentNotification_Ins
 	@XmlEvent	XML
 	,@XmlTicket XML
@@ -9,7 +9,7 @@ CREATE PROC dbo.Acc_AmendmentNotification_Ins
 AS
 /*
 	Created: 20200127@Malcolm
-	DB: DBTXN-bodb02
+	DB: DBEXT-bodb02
 	Task: Result Amendment - Insert event and ticket to notify headlines
 
 	Revisions:
@@ -30,7 +30,7 @@ BEGIN
 
 	CREATE TABLE #TicketRefNo (RowAt INT, CustId INT, Username VARCHAR(30), TicketRefNo BIGINT, RefTable TINYINT, Bettype SMALLINT)
 
-	DECLARE @TicketTemp TABLE (TicketRefNo BIGINT)
+	DECLARE @EventTmp TABLE (EventId INT)
 
 	DECLARE @EventId BIGINT = NULL, @NoRows INT= 0
 
@@ -86,29 +86,30 @@ BEGIN
 		FROM #EventInfo
 
 		SET @EventId = SCOPE_IDENTITY()
-	
-		WHILE 1 = 1
-		BEGIN
-			INSERT INTO dbo.TicketRefNo (CustId, TicketRefNo, EventId, RefTable, Bettype)
-				OUTPUT inserted.TicketRefNo INTO @TicketTemp
-			SELECT TOP(500) CustId, TicketRefNo, @EventId, RefTable, Bettype
-			FROM #TicketRefNo
-			ORDER BY CustId ASC
 
-			IF @@ROWCOUNT = 0
-				BREAK
-
-			DELETE t FROM #TicketRefNo t WHERE EXISTS(SELECT TOP 1 1 FROM @TicketTemp m WHERE m.TicketRefNo = t.TicketRefNo)
-			DELETE @TicketTemp
-		END		
+		INSERT INTO dbo.TicketRefNo (CustId, TicketRefNo, EventId, RefTable, Bettype)
+		SELECT CustId, TicketRefNo, @EventId, RefTable, Bettype
+		FROM #TicketRefNo
+		ORDER BY CustId ASC
 	END TRY
 	BEGIN CATCH
 		IF @EventId IS NOT NULL
 		BEGIN
 			DELETE dbo.AmendmentEventInfo WITH(ROWLOCK, UPDLOCK) WHERE EventId = @EventId
-			DELETE dbo.TicketRefNo WITH(ROWLOCK, UPDLOCK) WHERE EventId = @EventId
+			RETURN
 		END
 	END CATCH
+
+	-- Delete ticket after 2 month
+	DELETE dbo.AmendmentEventInfo WITH(ROWLOCK, UPDLOCK)
+	WHERE CreatedDate < DATEADD(MONTH, -2, GETDATE())
+
+	IF @@ROWCOUNT <> 0
+	BEGIN
+		DELETE e
+		FROM dbo.TicketRefNo e WITH(ROWLOCK, UPDLOCK)
+		WHERE EXISTS(SELECT TOP 1 1 FROM @EventTmp t WHERE t.EventId = e.EventId)
+	END
 
 	DROP TABLE #EventInfo
 	DROP TABLE #TicketRefNo
