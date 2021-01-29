@@ -30,6 +30,8 @@ BEGIN
 
 	CREATE TABLE #TicketRefNo (RowAt INT, CustId INT, Username VARCHAR(30), TicketRefNo BIGINT, RefTable TINYINT, Bettype SMALLINT)
 
+	DECLARE @TicketTemp TABLE (TicketRefNo BIGINT)
+
 	DECLARE @EventId BIGINT = NULL, @NoRows INT= 0
 
 	INSERT INTO #EventInfo (Sporttype, MatchId, MatchCode, EventType, EventDate, ActualResult, WrongResult)
@@ -84,16 +86,27 @@ BEGIN
 		FROM #EventInfo
 
 		SET @EventId = SCOPE_IDENTITY()
+	
+		WHILE 1 = 1
+		BEGIN
+			INSERT INTO dbo.TicketRefNo (CustId, TicketRefNo, EventId, RefTable, Bettype)
+				OUTPUT inserted.TicketRefNo INTO @TicketTemp
+			SELECT TOP(500) CustId, TicketRefNo, @EventId, RefTable, Bettype
+			FROM #TicketRefNo
+			ORDER BY CustId ASC
 
-		INSERT INTO dbo.TicketRefNo (CustId, TicketRefNo, EventId, RefTable, Bettype)
-		SELECT CustId, TicketRefNo, @EventId, RefTable, Bettype
-		FROM #TicketRefNo
-		ORDER BY CustId ASC
+			IF @@ROWCOUNT = 0
+				BREAK
+
+			DELETE t FROM #TicketRefNo t WHERE EXISTS(SELECT TOP 1 1 FROM @TicketTemp m WHERE m.TicketRefNo = t.TicketRefNo)
+			DELETE @TicketTemp
+		END		
 	END TRY
 	BEGIN CATCH
 		IF @EventId IS NOT NULL
 		BEGIN
 			DELETE dbo.AmendmentEventInfo WITH(ROWLOCK, UPDLOCK) WHERE EventId = @EventId
+			DELETE dbo.TicketRefNo WITH(ROWLOCK, UPDLOCK) WHERE EventId = @EventId
 		END
 	END CATCH
 
