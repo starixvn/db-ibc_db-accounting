@@ -1,5 +1,5 @@
-/*<info serverAlias="DBCRM-bodb_CRM" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
-CREATE PROC dbo.Acc_CRM_ChatBot_AmendmentNotification_Ins
+/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+CREATE PROC dbo.Acc_AmendmentNotification_Ins
 	@XmlEvent	XML
 	,@XmlTicket XML
 	,@IsCheck	BIT
@@ -9,15 +9,15 @@ CREATE PROC dbo.Acc_CRM_ChatBot_AmendmentNotification_Ins
 AS
 /*
 	Created: 20200127@Malcolm
-	DB: DBCRM-bodb_CRM
-	Task: CRM - Result Amendment - Insert event and ticket to notify headlines
+	DB: DBTXN-bodb02
+	Task: Result Amendment - Insert event and ticket to notify headlines
 
 	Revisions:
 		- 20200127@Malcolm: Initialize SP [RedmineID: #147470]
 
 	Param's Explanation:
 		.@XmlEvent = '<root><r SportType="" MatchId="" MatchCode="" EventType="" EventDate="" ActualResult="" WrongResult=""/></root>'
-		.@XmlTicket = '<root><r RowAt="" CustId="" Username="" TicketRefNo="" RefTable=""/></root>'
+		.@XmlTicket = '<root><r RowAt="" CustId="" Username="" TicketRefNo="" RefTable="" Bettype=""/></root>'
 		.@IsCheck = 0, Insert and Check
 				  = 1, Only check data
 */
@@ -28,7 +28,7 @@ BEGIN
 	
 	CREATE TABLE #EventInfo (Sporttype SMALLINT, MatchId INT, MatchCode NVARCHAR(100), EventType TINYINT, EventDate SMALLDATETIME, ActualResult NVARCHAR(MAX), WrongResult NVARCHAR(MAX))
 
-	CREATE TABLE #TicketRefNo (RowAt INT, CustId INT, Username VARCHAR(30), TicketRefNo VARCHAR(50), RefTable TINYINT)
+	CREATE TABLE #TicketRefNo (RowAt INT, CustId INT, Username VARCHAR(30), TicketRefNo BIGINT, RefTable TINYINT, Bettype SMALLINT)
 
 	DECLARE @EventId BIGINT = NULL, @NoRows INT= 0
 
@@ -43,13 +43,14 @@ BEGIN
 		,T.c.value('@WrongResult', 'NVARCHAR(MAX)')
 	FROM @XmlEvent.nodes('/root/r') AS T(c)
 
-	INSERT INTO #TicketRefNo (RowAt, CustId, Username, TicketRefNo, RefTable)
+	INSERT INTO #TicketRefNo (RowAt, CustId, Username, TicketRefNo, RefTable, Bettype)
 	SELECT
 		T.c.value('@RowAt', 'INT')
 		,T.c.value('@CustId','INT')
 		,T.c.value('@Username', 'VARCHAR(30)')
-		,T.c.value('@TicketRefNo', 'VARCHAR(50)')
+		,T.c.value('@TicketRefNo', 'BIGINT')
 		,T.c.value ('@RefTable', 'TINYINT')
+		,T.c.value ('@Bettype', 'SMALLINT')
 	FROM @XmlTicket.nodes('/root/r') T(c)
 
 	--Check Data	
@@ -58,8 +59,8 @@ BEGIN
 		INNER JOIN #EventInfo e ON 1 = 1
 	WHERE EXISTS(
 		SELECT TOP(1) 1
-		FROM dbo.crmTicketRefNo t WITH(NOLOCK)
-			INNER JOIN dbo.crmEventInfo ev WITH(NOLOCK) ON ev.EventId = t.EventId
+		FROM dbo.TicketRefNo t WITH(NOLOCK)
+			INNER JOIN dbo.AmendmentEventInfo ev WITH(NOLOCK) ON ev.EventId = t.EventId
 		WHERE t.CustId = r.CustId
 			AND t.TicketRefNo = r.TicketRefNo
 			AND ev.ActualResult = e.ActualResult
@@ -78,20 +79,21 @@ BEGIN
 
 	--Insert Event and Ticket
 	BEGIN TRY
-		INSERT INTO dbo.crmEventInfo (Sporttype, MatchId, MatchCode, EventType, EventDate, ActualResult, WrongResult)
+		INSERT INTO dbo.AmendmentEventInfo (Sporttype, MatchId, MatchCode, EventType, EventDate, ActualResult, WrongResult)
 		SELECT Sporttype, MatchId, MatchCode, EventType, EventDate, ActualResult, WrongResult
 		FROM #EventInfo
 
 		SET @EventId = SCOPE_IDENTITY()
 
-		INSERT INTO dbo.crmTicketRefNo (CustId, TicketRefNo, EventId, RefTable)
-		SELECT CustId, TicketRefNo, @EventId, RefTable
+		INSERT INTO dbo.TicketRefNo (CustId, TicketRefNo, EventId, RefTable, Bettype)
+		SELECT CustId, TicketRefNo, @EventId, RefTable, Bettype
 		FROM #TicketRefNo
+		ORDER BY CustId ASC
 	END TRY
 	BEGIN CATCH
 		IF @EventId IS NOT NULL
 		BEGIN
-			DELETE dbo.crmEventInfo WITH(ROWLOCK, UPDLOCK) WHERE EventId = @EventId
+			DELETE dbo.AmendmentEventInfo WITH(ROWLOCK, UPDLOCK) WHERE EventId = @EventId
 		END
 	END CATCH
 
