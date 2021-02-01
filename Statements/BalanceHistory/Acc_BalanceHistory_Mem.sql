@@ -21,9 +21,10 @@ BEGIN
 	DECLARE 
 		@MoveBetsDay	SMALLDATETIME, 
 		@BalanceUpDay	SMALLDATETIME,
-		@InternalFromDate Datetime,
-		@InternalToDate Datetime,
-		@CustId INT = 0
+		@InternalFromDate DATETIME,
+		@InternalToDate DATETIME,
+		@CustId INT = 0,
+		@OldCreditFirstTimes MONEY
 
 	SELECT @CustId = custId 
 	FROM dbo.Customer c WITH(NOLOCK)
@@ -42,7 +43,7 @@ BEGIN
 	EXEC Age_SelBalanceUpDay
 
 	SELECT @MoveBetsDay = MoveBetsDay, @BalanceUpDay = BalanceUpDay FROM @tmp
-	SELECT @InternalFromDate = @FromDate, @InternalToDate = @Todate
+	SELECT @InternalFromDate = @FromDate, @InternalToDate = DATEADD(DAY, 1, @Todate)
 
 	CREATE TABLE #BalanceRecord(ActionDate DATETIME, winlostdate SMALLDATETIME, refNo BIGINT, actual_stake MONEY, winloss MONEY, playercomm MONEY, BalanceChanged MONEY, NewBalance MONEY, GivenCredit MONEY, BetCredit MONEY, Action VARCHAR(256), custid INT, ActionID TINYINT, rowid BIGINT)
 
@@ -56,7 +57,20 @@ BEGIN
 			ON u.ActionID = l.ActionID
 	WHERE 
 		u.custid = @CustId
-		AND u.logdate BETWEEN @InternalFromDate AND @InternalToDate
+		AND u.logdate >= @InternalFromDate
+
+	IF NOT EXISTS (SELECT TOP 1 1 FROM #LogCredit)
+	BEGIN
+		SELECT @OldCreditFirstTimes = c.credit 
+		FROM dbo.custInfo c WITH(NOLOCK) 
+		WHERE c.custid = @CustId AND c.roleid = 1
+	END
+	ELSE 
+	BEGIN
+		SELECT TOP 1 @OldCreditFirstTimes = l.OldValue 
+		FROM #LogCredit l
+		ORDER BY logdate
+	END
 
 	--- insert to temp table balance record
 	;WITH rs AS
@@ -105,8 +119,8 @@ BEGIN
 		b.playercomm, 
 		b.BalanceChanged, 
 		b.NewBalance,
-		COALESCE(l.NewValue, l.OldValue, lo.NewValue, lo.OldValue, 0) GivenCredit,
-		(b.NewBalance + COALESCE(l.NewValue, l.OldValue, lo.NewValue, lo.OldValue, 0)) AS BetCredit,
+		COALESCE(l.NewValue, lo.NewValue, @OldCreditFirstTimes, 0) GivenCredit,
+		(b.NewBalance + COALESCE(l.NewValue, lo.NewValue, @OldCreditFirstTimes, 0)) AS BetCredit,
 		COALESCE(Action, l.ActionNameEN) AS Action, 
 		COALESCE(b.custid, l.custid) AS custid, b.ActionID, b.RowID
 	FROM rs b WITH(NOLOCK)
@@ -120,6 +134,7 @@ BEGIN
 			SELECT TOP 1 ActionID, ActionNameEN, logid, custid, logdate, OldValue, NewValue 
 			FROM #LogCredit lo
 			WHERE lo.logdate < b.ActionDate AND lo.custid = b.custid
+			ORDER BY lo.logdate DESC
 		) lo 
 
 	--###############################################################
@@ -278,19 +293,39 @@ BEGIN
 			ON b.custid = t.custID AND b.refNo = t.transID
 
 	SELECT 
-		b.ActionDate, 
-		b.winlostdate, 
-		b.refNo, 
-		b.actual_stake,
-		b.winloss,
-		b.playercomm, 
-		b.BalanceChanged, 
-		b.NewBalance,
-		b.GivenCredit,
-		b.BetCredit,
-		b.Action
-	FROM #BalanceRecord b
-	ORDER BY b.rowid
+		t.ActionDate, t.winlostdate, t.refNo, t.actual_stake, t.winloss, t.playercomm, t.BalanceChanged, t.NewBalance, t.GivenCredit, t.BetCredit, t.Action
+	FROM 
+	(
+		SELECT 
+			@InternalFromDate ActionDate,
+			NULL AS winlostdate, 
+			NULL AS refNo, 
+			NULL AS actual_stake, 
+			NULL AS winloss, 
+			NULL AS playercomm, 
+			NULL AS BalanceChanged, 
+			NULL AS NewBalance, 
+			@OldCreditFirstTimes AS GivenCredit, 
+			NULL AS BetCredit, 
+			'Opening Credit' AS Action,
+			NULL AS rowid
+		UNION
+		SELECT 
+			b.ActionDate, 
+			b.winlostdate, 
+			b.refNo, 
+			b.actual_stake,
+			b.winloss,
+			b.playercomm, 
+			b.BalanceChanged, 
+			b.NewBalance,
+			b.GivenCredit,
+			b.BetCredit,
+			b.Action,
+			b.rowid
+		FROM #BalanceRecord b
+	) t
+	ORDER BY ActionDate, rowid
 
 	DROP TABLE #Transaction
 	DROP TABLE #BalanceRecord
