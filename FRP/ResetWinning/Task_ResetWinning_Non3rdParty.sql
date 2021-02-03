@@ -323,7 +323,7 @@ BEGIN
 								WHEN b.bettype IN (1699) THEN ISNULL(b.Winlost, 0) - ISNULL(b.actual_stake, 0)
 							ELSE 0
 							END 
-						) * CASE WHEN @isTest = 1 AND currency = 20 THEN 1 ELSE b.actual_stake END
+						) * CASE WHEN @isTest = 1 AND currency = 20 THEN 1 ELSE b.actualrate END
 					) AS WinlostDueToSaba,
 				SUM(
 						(	
@@ -512,7 +512,7 @@ BEGIN
 			FROM #wl w
 			LEFT JOIN CS_CustSuper cs WITH (NOLOCK) 
 				ON cs.CustId = w.srecommend
-			WHERE w.WinlostDueToPP <> 0
+			WHERE w.WinlostDueToSaba <> 0
 				AND (cs.CustId IS NULL OR w.Currency <> 20) -- exclude currency 20 for CN88 customer
 			GROUP BY Winlostdate, 
 					CASE WHEN ISNULL(cs.CustID, '') <> '' THEN 1 --- CN88
