@@ -47,7 +47,7 @@ BEGIN
 	SELECT @InternalFromDate = @FromDate, @InternalToDate = DATEADD(DAY, 1, @Todate)
 
 	CREATE TABLE #BalanceRecord(ActionDate DATETIME, winlostdate SMALLDATETIME, refNo BIGINT, actual_stake MONEY, winloss MONEY, playercomm MONEY, BalanceChanged MONEY, NewBalance MONEY, GivenCredit MONEY, BetCredit MONEY, Action VARCHAR(256), custid INT, ActionID TINYINT, rowid BIGINT)
-	CREATE TABLE #Transaction(transID BIGINT, custID INT, winlostdate SMALLDATETIME)
+	CREATE TABLE #Transaction(transID BIGINT, custID INT, winlostdate SMALLDATETIME, refNo BIGINT)
 
 	IF EXISTS (SELECT top 1 1 from dbo.Customer c WITH(NOLOCK) WHERE c.creatdate > @InternalToDate AND c.custid = @CustId AND c.roleid = 1)
 	BEGIN
@@ -157,72 +157,66 @@ BEGIN
 		-- curr data
 		IF (@InternalFromDate > @MoveBetsDay)
 		BEGIN
-			-- bettrans
-			INSERT INTO #Transaction(transID, custID, winlostdate)
-			SELECT br.refNo, br.custID, b.winlostdate
-			FROM #BalanceRecord br
-				INNER JOIN dbo.bettrans b WITH(NOLOCK)
-					ON br.custid = b.custid AND br.refNo = b.transid
-			WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
 	
 			-- bettransRNG
-			INSERT INTO #Transaction(transID, custID, winlostdate)
-			SELECT br.refNo, br.custID, b.winlostdate
+			INSERT INTO #Transaction(transID, custID, winlostdate, refNo)
+			SELECT br.refNo, br.custID, b.winlostdate, b.RefNo
 			FROM #BalanceRecord br
 				INNER JOIN dbo.bettransRNG b WITH(NOLOCK)
 					ON br.custid = b.custid AND br.refNo = b.transid
 			WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
 
 			-- bettransLC
-			INSERT INTO #Transaction(transID, custID, winlostdate)
-			SELECT br.refNo, br.custID, b.winlostdate
+			INSERT INTO #Transaction(transID, custID, winlostdate, refNo)
+			SELECT br.refNo, br.custID, b.winlostdate, b.RefNo
 			FROM #BalanceRecord br
 				INNER JOIN dbo.bettransLC b WITH(NOLOCK)
 					ON br.custid = b.custid AND br.refNo = b.transid
 			WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
 
 			-- translog
-			INSERT INTO #Transaction(transID, custID, winlostdate)
-			SELECT br.refNo, br.custID, b.winlostdate
+			INSERT INTO #Transaction(transID, custID, winlostdate, refNo)
+			SELECT br.refNo, br.custID, b.winlostdate, NULL
 			FROM #BalanceRecord br
 				INNER JOIN dbo.translog b WITH(NOLOCK)
 					ON br.custid = b.custid AND br.refNo = b.translogid
 				INNER JOIN dbo.bettrans bt WITH(NOLOCK)
 					ON b.translogid = bt.refno AND b.custid = bt.custid
 			WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
+
+			-- bettrans
+			INSERT INTO #Transaction(transID, custID, winlostdate, refNo)
+			SELECT br.refNo, br.custID, b.winlostdate, b.RefNo
+			FROM #BalanceRecord br
+				INNER JOIN dbo.bettrans b WITH(NOLOCK)
+					ON br.custid = b.custid AND br.refNo = b.transid
+			WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
+				AND NOT EXISTS (SELECT TOP 1 1 FROM #Transaction t WHERE t.refno = b.transid )
 	
 
 		END
 		ELSE IF (@InternalFromDate >= @BalanceUpDay AND @InternalToDate <= @MoveBetsDay) -- only bettrans14
 		BEGIN
 	
-			-- bettrans
-			INSERT INTO #Transaction(transID, custID, winlostdate)
-			SELECT br.refNo, br.custID, b.winlostdate
-			FROM #BalanceRecord br
-				INNER JOIN dbo.bettrans14 b WITH(NOLOCK)
-					ON br.custid = b.custid AND br.refNo = b.transid
-			WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
-	
 			-- bettransRNG
-			INSERT INTO #Transaction(transID, custID, winlostdate)
-			SELECT br.refNo, br.custID, b.winlostdate
+			INSERT INTO #Transaction(transID, custID, winlostdate, refNo)
+			SELECT br.refNo, br.custID, b.winlostdate, b.RefNo
 			FROM #BalanceRecord br
 				INNER JOIN dbo.bettransRNG14 b WITH(NOLOCK)
 					ON br.custid = b.custid AND br.refNo = b.transid
 			WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
 
 			-- bettransLC
-			INSERT INTO #Transaction(transID, custID, winlostdate)
-			SELECT br.refNo, br.custID, b.winlostdate
+			INSERT INTO #Transaction(transID, custID, winlostdate, refNo)
+			SELECT br.refNo, br.custID, b.winlostdate, b.RefNo
 			FROM #BalanceRecord br
 				INNER JOIN dbo.bettransLC14 b WITH(NOLOCK)
 					ON br.custid = b.custid AND br.refNo = b.transid
 			WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
 
 			-- translog
-			INSERT INTO #Transaction(transID, custID, winlostdate)
-			SELECT br.refNo, br.custID, b.winlostdate
+			INSERT INTO #Transaction(transID, custID, winlostdate, refNo)
+			SELECT br.refNo, br.custID, b.winlostdate, NULL
 			FROM #BalanceRecord br
 				INNER JOIN dbo.translog14 b WITH(NOLOCK)
 					ON br.custid = b.custid AND br.refNo = b.translogid
@@ -230,58 +224,52 @@ BEGIN
 					ON b.translogid = bt.refno AND b.custid = bt.custid
 			WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
 
-		END
-		ELSE IF (@InternalFromDate >= @BalanceUpDay AND @InternalFromDate <= @MoveBetsDay AND @InternalToDate > @MoveBetsDay) -- bettrans14 and bettrans
-		BEGIN
-
 			-- bettrans
-			INSERT INTO #Transaction(transID, custID, winlostdate)
-			SELECT br.refNo, br.custID, b.winlostdate
-			FROM #BalanceRecord br
-				INNER JOIN dbo.bettrans b WITH(NOLOCK)
-					ON br.custid = b.custid AND br.refNo = b.transid
-			WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
-
-			INSERT INTO #Transaction(transID, custID, winlostdate)
-			SELECT br.refNo, br.custID, b.winlostdate
+			INSERT INTO #Transaction(transID, custID, winlostdate, refNo)
+			SELECT br.refNo, br.custID, b.winlostdate, b.RefNo
 			FROM #BalanceRecord br
 				INNER JOIN dbo.bettrans14 b WITH(NOLOCK)
 					ON br.custid = b.custid AND br.refNo = b.transid
 			WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
+				AND NOT EXISTS (SELECT TOP 1 1 FROM #Transaction t WHERE t.refno = b.transid )
+
+		END
+		ELSE IF (@InternalFromDate >= @BalanceUpDay AND @InternalFromDate <= @MoveBetsDay AND @InternalToDate > @MoveBetsDay) -- bettrans14 and bettrans
+		BEGIN
 	
 			-- bettransRNG
-			INSERT INTO #Transaction(transID, custID, winlostdate)
-			SELECT br.refNo, br.custID, b.winlostdate
+			INSERT INTO #Transaction(transID, custID, winlostdate, refNo)
+			SELECT br.refNo, br.custID, b.winlostdate, b.RefNo
 			FROM #BalanceRecord br
 				INNER JOIN dbo.bettransRNG b WITH(NOLOCK)
 					ON br.custid = b.custid AND br.refNo = b.transid
 			WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
 
-			INSERT INTO #Transaction(transID, custID, winlostdate)
-			SELECT br.refNo, br.custID, b.winlostdate
+			INSERT INTO #Transaction(transID, custID, winlostdate, refNo)
+			SELECT br.refNo, br.custID, b.winlostdate, b.RefNo
 			FROM #BalanceRecord br
 				INNER JOIN dbo.bettransRNG14 b WITH(NOLOCK)
 					ON br.custid = b.custid AND br.refNo = b.transid
 			WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
 
 			-- bettransLC
-			INSERT INTO #Transaction(transID, custID, winlostdate)
-			SELECT br.refNo, br.custID, b.winlostdate
+			INSERT INTO #Transaction(transID, custID, winlostdate, refNo)
+			SELECT br.refNo, br.custID, b.winlostdate, b.RefNo
 			FROM #BalanceRecord br
 				INNER JOIN dbo.bettransLC b WITH(NOLOCK)
 					ON br.custid = b.custid AND br.refNo = b.transid
 			WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
 
-			INSERT INTO #Transaction(transID, custID, winlostdate)
-			SELECT br.refNo, br.custID, b.winlostdate
+			INSERT INTO #Transaction(transID, custID, winlostdate, refNo)
+			SELECT br.refNo, br.custID, b.winlostdate, b.RefNo
 			FROM #BalanceRecord br
 				INNER JOIN dbo.bettransLC14 b WITH(NOLOCK)
 					ON br.custid = b.custid AND br.refNo = b.transid
 			WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
 
 			-- translog
-			INSERT INTO #Transaction(transID, custID, winlostdate)
-			SELECT br.refNo, br.custID, b.winlostdate
+			INSERT INTO #Transaction(transID, custID, winlostdate, refNo)
+			SELECT br.refNo, br.custID, b.winlostdate, NULL
 			FROM #BalanceRecord br
 				INNER JOIN dbo.translog b WITH(NOLOCK)
 					ON br.custid = b.custid AND br.refNo = b.translogid
@@ -289,8 +277,8 @@ BEGIN
 					ON b.translogid = bt.refno AND b.custid = bt.custid
 			WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
 
-			INSERT INTO #Transaction(transID, custID, winlostdate)
-			SELECT br.refNo, br.custID, b.winlostdate
+			INSERT INTO #Transaction(transID, custID, winlostdate, refNo)
+			SELECT br.refNo, br.custID, b.winlostdate, NULL
 			FROM #BalanceRecord br
 				INNER JOIN dbo.translog14 b WITH(NOLOCK)
 					ON br.custid = b.custid AND br.refNo = b.translogid
@@ -298,8 +286,24 @@ BEGIN
 					ON b.translogid = bt.refno AND b.custid = bt.custid
 			WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
 
-		END
+			-- bettrans
+			INSERT INTO #Transaction(transID, custID, winlostdate, refNo)
+			SELECT br.refNo, br.custID, b.winlostdate, b.RefNo
+			FROM #BalanceRecord br
+				INNER JOIN dbo.bettrans b WITH(NOLOCK)
+					ON br.custid = b.custid AND br.refNo = b.transid
+			WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
+				AND NOT EXISTS (SELECT TOP 1 1 FROM #Transaction t WHERE t.refno = b.transid )
 
+			INSERT INTO #Transaction(transID, custID, winlostdate, refNo)
+			SELECT br.refNo, br.custID, b.winlostdate, b.RefNo
+			FROM #BalanceRecord br
+				INNER JOIN dbo.bettrans14 b WITH(NOLOCK)
+					ON br.custid = b.custid AND br.refNo = b.transid
+			WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
+				AND NOT EXISTS (SELECT TOP 1 1 FROM #Transaction t WHERE t.refno = b.transid )
+
+		END
 
 		--- update to final result
 		UPDATE b
@@ -340,6 +344,8 @@ BEGIN
 				b.Action,
 				b.rowid
 			FROM #BalanceRecord b
+			WHERE b.winlostdate IS NOT NULL
+				OR b.refNo IS NULL
 		) t
 		ORDER BY ActionDate, rowid
 
