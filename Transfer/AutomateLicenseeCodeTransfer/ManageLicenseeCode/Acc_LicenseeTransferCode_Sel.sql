@@ -4,6 +4,7 @@ ALTER PROCEDURE Acc_LicenseeTransferCode_Sel
 	@MoveBetsDay SMALLDATETIME,
 	@LicenseeIds VARCHAR(MAX) = '',
 	@StatusIds VARCHAR(MAX) = '',
+	@ForEmail BIT = 0,
 	@PageIndex INT = 0,
 	@PageSize INT = 0,
 	@TotalRows INT = 0 OUTPUT
@@ -16,11 +17,13 @@ AS
 	
 	Revisions:
 		- 20200615@Sol: NAP - Auto Assign Licensee code to the Licensee accordingly [Redmine: #120670]
+		- 20210204@Sol: NAP - email notification for last month only - [Redmine: #150060]
 
 	Param Info:
 		- @MoveBetsDay: movebet get from sp [age_SelBalanceUpDay]
 		- @LicenseeIds: List licensee id in integer
 		- @StatusIds: List status id in integer
+		- @ForEmail: get data only from last month to send email notification
 	
 */
 BEGIN
@@ -44,7 +47,7 @@ BEGIN
 	SELECT 
 		@currentDate = GETDATE()
 		,@startDate	= CAST(CONVERT(VARCHAR(7), DATEADD(MONTH, -1, @currentDate), 111) + '/01' AS DATE)
-		,@endDate = CAST(@currentDate AS DATE)
+		,@endDate = CASE WHEN @ForEmail = 1 THEN DATEADD(DAY, -1, DATEADD(MONTH, 1, @startDate)) ELSE CAST(@currentDate AS DATE) END
 		,@MoveBetsDay = CAST(@MoveBetsDay AS DATE)
 
 	---- get list licensee code
