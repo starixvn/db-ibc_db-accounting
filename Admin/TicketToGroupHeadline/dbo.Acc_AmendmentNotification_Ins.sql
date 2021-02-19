@@ -46,7 +46,7 @@ BEGIN
 		,T.c.value('@WrongResult', 'NVARCHAR(MAX)')
 	FROM @XmlEvent.nodes('/root/r') AS T(c)
 
-	INSERT INTO #TicketRefNo (RowAt, CustId, Username, RefNo, RefTable, Bettype)
+	INSERT INTO #TicketRefNo (RowAt, CustId, Username, RefNo, RefTable, Bettype, HeadlineId)
 	SELECT
 		T.c.value('@RowAt', 'INT')
 		,T.c.value('@CustId','INT')
@@ -54,6 +54,7 @@ BEGIN
 		,T.c.value('@RefNo', 'BIGINT')
 		,T.c.value ('@RefTable', 'TINYINT')
 		,T.c.value ('@Bettype', 'SMALLINT')
+		,NULLIF(T.c.value('@HeadlineId','INT'), 0)
 	FROM @XmlTicket.nodes('/root/r') T(c)
 
 	--Check Data	
