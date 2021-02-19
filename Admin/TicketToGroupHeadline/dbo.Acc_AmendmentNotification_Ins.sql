@@ -17,7 +17,7 @@ AS
 
 	Param's Explanation:
 		.@XmlEvent = '<root><r ProductId="" SportType="" MatchId="" MatchCode="" EventType="" EventDate="" ActualResult="" WrongResult=""/></root>'
-		.@XmlTicket = '<root><r RowAt="" CustId="" Username="" RefNo="" RefTable="" Bettype=""/></root>'
+		.@XmlTicket = '<root><r RowAt="" CustId="" Username="" RefNo="" RefTable="" Bettype="" HeadlineId=""/></root>'
 		.@IsCheck = 0, Insert and Check
 				  = 1, Only check data
 */
@@ -28,7 +28,7 @@ BEGIN
 	
 	CREATE TABLE #EventInfo (ProductId TINYINT, Sporttype SMALLINT, MatchId INT, MatchCode NVARCHAR(100), EventType TINYINT, EventDate SMALLDATETIME, ActualResult NVARCHAR(MAX), WrongResult NVARCHAR(MAX))
 
-	CREATE TABLE #TicketRefNo (RowAt INT, CustId INT, Username VARCHAR(30), RefNo BIGINT, RefTable TINYINT, Bettype SMALLINT)
+	CREATE TABLE #TicketRefNo (RowAt INT, CustId INT, Username VARCHAR(30), RefNo BIGINT, RefTable TINYINT, Bettype SMALLINT, HeadlineId INT)
 
 	DECLARE @EventTmp TABLE (EventId INT)
 
@@ -91,7 +91,7 @@ BEGIN
 		INSERT INTO dbo.TicketAmendment_Detail  (CustId, RefNo, AEventId, RefTable, Bettype)
 		SELECT CustId, RefNo, @EventId, RefTable, Bettype
 		FROM #TicketRefNo
-		ORDER BY CustId ASC
+		ORDER BY HeadlineId ASC, CustId ASC
 	END TRY
 	BEGIN CATCH
 		IF @EventId IS NOT NULL
