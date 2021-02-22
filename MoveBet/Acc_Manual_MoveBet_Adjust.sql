@@ -248,7 +248,7 @@ BEGIN
 
 		IF @ErrCode <> 0
 		BEGIN
-				SELECT @ErrMsg = 'Duplicate MBDate on "' + @ValueError + ' .Please check them again.'
+				SELECT @ErrCode = 1003, @ErrMsg = 'Duplicate MBDate on "' + @ValueError + ' .Please check them again.'
 				RETURN
 		END
 
