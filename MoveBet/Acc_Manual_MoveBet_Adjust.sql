@@ -146,9 +146,9 @@ BEGIN
 		  OR Isbackday6 NOT IN (0,1)
 		  OR Isbackday7 NOT IN (0,1)
 		 
-	IF @ErrCode <> 0
+	IF @MBDateError <> 0
 	BEGIN
-		IF @ErrCode = 1001
+		IF @ErrCode = 1002
 			SELECT @ErrMsg = 'Invalid "' + @ColumnName + '" on row "' + @MBDateError + '".Please check them again.'
 
 		RETURN
@@ -197,6 +197,8 @@ BEGIN
 			Isbackday7 BIT,   
 		)
 
+		CREATE TABLE #MBDetail (RunningDate SMALLDATETIME, MBDate SMALLDATETIME)
+
 		INSERT INTO #DefaultMovebetConfig (_weekDay,Isbackday1,Isbackday2,Isbackday3,Isbackday4,Isbackday5,Isbackday6,Isbackday7 )
 		EXEC dbo.Acc_Manual_MoveBet_Sel @IsDefault = 1
 
@@ -214,7 +216,6 @@ BEGIN
 		select  winlostdate, DATEPART(WEEKDAY, winlostdate) from CTE_Winlostdate
 		OPTION (MAXRECURSION 0)
 
-
 		select		t.scheduleDate  
 					,t.weekday_  
 					,Isbackday1 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.Isbackday1 ELSE dc.Isbackday1 END
@@ -229,6 +230,30 @@ BEGIN
 		left join	#DefaultMovebetConfig dc ON dc._weekDay = t.weekday_
 		left join	#input mc ON t.scheduleDate = mc.MBDate
 
+		---------------
+		INSERT INTO #MBDetail (RunningDate,MBDate) SELECT scheduleDate, DATEADD(day, -1, scheduleDate) FROM #check_MB_duplicate where  Isbackday1 = 1
+		INSERT INTO #MBDetail (RunningDate,MBDate) SELECT scheduleDate, DATEADD(day, -2, scheduleDate) FROM #check_MB_duplicate where  Isbackday2 = 1
+		INSERT INTO #MBDetail (RunningDate,MBDate) SELECT scheduleDate, DATEADD(day, -3, scheduleDate) FROM #check_MB_duplicate where  Isbackday3 = 1
+		INSERT INTO #MBDetail (RunningDate,MBDate) SELECT scheduleDate, DATEADD(day, -4, scheduleDate) FROM #check_MB_duplicate where  Isbackday4 = 1
+		INSERT INTO #MBDetail (RunningDate,MBDate) SELECT scheduleDate, DATEADD(day, -5, scheduleDate) FROM #check_MB_duplicate where  Isbackday5 = 1
+		INSERT INTO #MBDetail (RunningDate,MBDate) SELECT scheduleDate, DATEADD(day, -6, scheduleDate) FROM #check_MB_duplicate where  Isbackday6 = 1
+		INSERT INTO #MBDetail (RunningDate,MBDate) SELECT scheduleDate, DATEADD(day, -7, scheduleDate) FROM #check_MB_duplicate where  Isbackday7 = 1
+		---------------
+
+
+		SELECT TOP(1) @ErrCode = 1003, @ValueError = CAST(MBDate as NVARCHAR(50))  
+		FROM #MBDetail
+		GROUP BY MBDate
+		HAVING COUNT(1) > 1
+
+		IF @ErrCode <> 0
+		BEGIN
+				SELECT @ErrMsg = 'Duplicate MBDate on "' + @ValueError + ' .Please check them again.'
+				RETURN
+		END
+
+		
+		DROP TABLE #MBDetail
 		DROP TABLE #check_MB_duplicate
 		DROP TABLE #DefaultMovebetConfig
 		
@@ -240,65 +265,31 @@ BEGIN
 	END CATCH
 
 
-	SELECT  @RowTotal = COUNT(*) FROM #input
+	SELECT  @RowTotal = COUNT(1) FROM #input
 	WHILE @CurrentRow <> @RowTotal
 	BEGIN
 		SELECT @CurrentRow= @CurrentRow + 1, @startRun = GETDATE();
 
 		BEGIN TRY
-			INSERT INTO dbo.bettype(typeid,
-									creator,
-									typenamee,
-									typenamec,
-									typedesc,
-									typenamec_uni,
-									typenamej,
-									typenamcn,
-								    typenamecn,
-									typenameth,
-									typenameit,
-									typenameko,
-									typenameES,
-									typenameVN,
-									typenameEL,
-									typenamee_Eu,
-								    typenameRU,
-									typenameID,
-									typenamePT,
-									typenameFR,
-									ParentTypeid,
-									typenameMMR,
-									typenameHI,
-									DisplayedTypeID,
-									LicSpreadBetTypeGroupId,
-									Is3rdParty)
+			INSERT INTO dbo.Acc_ManualMovebetConfig(
+									MBDate
+									,Isbackday1   
+									,Isbackday2 
+									,Isbackday3 
+									,Isbackday4 
+									,Isbackday5 
+									,Isbackday6 
+									,Isbackday7 
+									)
 
-			SELECT					typeid,
-									@UserID,
-									typenamee,
-									typenamec,
-									typedesc,
-									typenamec_uni,
-									typenamej,
-									typenamcn,
-									typenamecn,
-									typenameth,
-									typenameit,
-									typenameko,
-									typenameES,
-									typenameVN,
-									typenameEL,
-									typenamee_Eu,
-									typenameRU,
-									typenameID,
-									typenamePT,
-									typenameFR,
-									ParentTypeid,
-									typenameMMR,
-									typenameHI,
-									DisplayedTypeID,
-									LicSpreadBetTypeGroupId,
-									Is3rdParty
+			SELECT					MBDate
+									,Isbackday1   
+									,Isbackday2 
+									,Isbackday3 
+									,Isbackday4 
+									,Isbackday5 
+									,Isbackday6 
+									,Isbackday7 
 			FROM #input
 			WHERE ID = @CurrentRow
 		END TRY
@@ -309,43 +300,26 @@ BEGIN
 		END CATCH 
 		
 
-		SELECT @LogSPData =   '<R typeid="'+ COALESCE(CAST(typeid AS VARCHAR(15)), SPACE(1)) + '" ' +
-								'DisplayedTypeID="' + COALESCE(CAST(DisplayedTypeID  AS VARCHAR(15)), SPACE(1)) + '" ' +
-								'ParentTypeid="' + COALESCE(CAST(ParentTypeid  AS VARCHAR(15)), SPACE(1)) + '" ' +
-								'typenamee="' + COALESCE(CAST(typenamee  AS NVARCHAR(128)), SPACE(1)) + '" ' +
-								'typenamec="' + COALESCE(CAST(typenamec  AS NVARCHAR(128)), SPACE(1)) + '" ' +
-								'typedesc="' + COALESCE(CAST(typedesc  AS NVARCHAR(128)), SPACE(1)) + '" ' +								
-								'typenamec_uni="' + COALESCE(CAST(typenamec_uni  AS NVARCHAR(128)), SPACE(1)) + '" ' +
-								'typenamej="' + COALESCE(CAST(typenamej  AS NVARCHAR(128)), SPACE(1)) + '" ' +
-								'typenamcn="' + COALESCE(CAST(typenamcn  AS NVARCHAR(128)), SPACE(1)) + '" ' +
-								'typenamecn="' + COALESCE(CAST(typenamecn  AS NVARCHAR(128)), SPACE(1)) + '" ' +
-								'typenameth="' + COALESCE(CAST(typenameth  AS NVARCHAR(128)), SPACE(1)) + '" ' +
-								'typenameit="' + COALESCE(CAST(typenameit  AS NVARCHAR(128)), SPACE(1)) + '" ' +
-								'typenameko="' + COALESCE(CAST(typenameko  AS NVARCHAR(128)), SPACE(1)) + '" ' +
-								'typenameES="' + COALESCE(CAST(typenameES  AS NVARCHAR(128)), SPACE(1)) + '" ' +
-								'typenameVN="' + COALESCE(CAST(typenameVN  AS NVARCHAR(128)), SPACE(1)) + '" ' +
-								'typenameEL="' + COALESCE(CAST(typenameEL  AS NVARCHAR(128)), SPACE(1)) + '" ' +
-								'typenamee_Eu="' + COALESCE(CAST(typenamee_Eu  AS NVARCHAR(128)), SPACE(1)) + '" ' +
-								'typenameRU="' + COALESCE(CAST(typenameRU  AS NVARCHAR(128)), SPACE(1)) + '" ' +
-								'typenameID="' + COALESCE(CAST(typenameID  AS NVARCHAR(128)), SPACE(1)) + '" ' +
-								'typenamePT="' + COALESCE(CAST(typenamePT  AS NVARCHAR(128)), SPACE(1)) + '" ' +
-								'typenameFR="' + COALESCE(CAST(typenameFR  AS NVARCHAR(128)), SPACE(1)) + '" ' +							
-								'typenameMMR="' + COALESCE(CAST(typenameMMR  AS NVARCHAR(128)), SPACE(1)) + '" ' +
-								'typenameHI="' + COALESCE(CAST(typenameHI  AS NVARCHAR(128)), SPACE(1)) + '" ' +
-								'LicSpreadBetTypeGroupId="' + COALESCE(CAST(LicSpreadBetTypeGroupId  AS VARCHAR(15)), SPACE(1)) + '" ' +
-								'Is3rdParty="' + COALESCE(CAST(Is3rdParty  AS VARCHAR(15)), SPACE(1)) + '" ' +
+		SELECT @LogSPData =   '<R MBDate="'+ COALESCE(CAST(MBDate AS VARCHAR(15)), SPACE(1)) + '" ' +
+								'Isbackday1="' + COALESCE(CAST(Isbackday1  AS NVARCHAR(5)), SPACE(1)) + '" ' +
+								'Isbackday2="' + COALESCE(CAST(Isbackday2  AS NVARCHAR(5)), SPACE(1)) + '" ' +
+								'Isbackday3="' + COALESCE(CAST(Isbackday3  AS NVARCHAR(5)), SPACE(1)) + '" ' +
+								'Isbackday4="' + COALESCE(CAST(Isbackday4  AS NVARCHAR(5)), SPACE(1)) + '" ' +
+								'Isbackday5="' + COALESCE(CAST(Isbackday5  AS NVARCHAR(5)), SPACE(1)) + '" ' +								
+								'Isbackday6="' + COALESCE(CAST(Isbackday6  AS NVARCHAR(5)), SPACE(1)) + '" ' +
+								'Isbackday7="' + COALESCE(CAST(Isbackday7  AS NVARCHAR(5)), SPACE(1)) + '" ' +
 								'LoginIP="'+ COALESCE(CAST(@LoginIP as VARCHAR(20)),SPACE(1)) + '" />'
-			FROM #input
-			WHERE ID = @CurrentRow
+		FROM #input
+		WHERE ID = @CurrentRow
 
-			SET @endRun = GETDATE()
-			SET @duration = DATEDIFF (MILLISECOND,@startRun,@endRun)
+		SET @endRun = GETDATE()
+		SET @duration = DATEDIFF (MILLISECOND,@startRun,@endRun)
 
-			EXEC  DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
-					@UserID = @UserID,
-					@ActionID = 95005,
-					@TrackingValue = @LogSPData,
-					@duration = @duration
+		EXEC  DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
+				@UserID = @UserID,
+				@ActionID = 99999,
+				@TrackingValue = @LogSPData,
+				@duration = @duration
 	END
 	
 	DROP TABLE #input
