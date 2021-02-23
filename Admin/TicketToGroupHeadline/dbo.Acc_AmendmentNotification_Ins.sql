@@ -58,7 +58,7 @@ BEGIN
 	FROM @XmlTicket.nodes('/root/r') T(c)
 
 	--Check Data	
-	SELECT @ErrMsg = COALESCE(@ErrMsg, '') + CONVERT(VARCHAR(30), r.RowAt) + ','
+	SELECT @ErrMsg = COALESCE(@ErrMsg, '') + CONVERT(VARCHAR(30), r.RowAt) + ', '
 	FROM #TicketRefNo r
 		INNER JOIN #EventInfo e ON 1 = 1
 	WHERE EXISTS(
