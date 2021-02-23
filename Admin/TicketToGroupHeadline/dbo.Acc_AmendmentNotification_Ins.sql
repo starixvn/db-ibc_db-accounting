@@ -32,7 +32,7 @@ BEGIN
 
 	DECLARE @EventTmp TABLE (EventId INT)
 
-	DECLARE @EventId BIGINT = NULL, @NoRows INT= 0
+	DECLARE @EventId BIGINT = NULL, @NoRows INT= 0, @ActualResult NVARCHAR(MAX), @WrongResult NVARCHAR(MAX)
 
 	INSERT INTO #EventInfo (ProductId, Sporttype, MatchId, MatchCode, EventType, EventDate, ActualResult, WrongResult)
 	SELECT 
@@ -57,18 +57,22 @@ BEGIN
 		,NULLIF(T.c.value('@HeadlineId','INT'), 0)
 	FROM @XmlTicket.nodes('/root/r') T(c)
 
+	SELECT @ActualResult = e.ActualResult, @WrongResult = e.WrongResult FROM #EventInfo e
+
 	--Check Data	
 	SELECT @ErrMsg = COALESCE(@ErrMsg, '') + CONVERT(VARCHAR(30), r.RowAt) + ', '
 	FROM #TicketRefNo r
-		INNER JOIN #EventInfo e ON 1 = 1
 	WHERE EXISTS(
 		SELECT TOP(1) 1
-		FROM dbo.TicketAmendment_Detail  t WITH(NOLOCK)
-			INNER JOIN dbo.TicketAmendment_Event ev WITH(NOLOCK) ON ev.AEventId = t.AEventId
+		FROM dbo.TicketAmendment_Detail t WITH(NOLOCK)
+		CROSS APPLY
+		(
+			SELECT TOP 1 1 
+			FROM dbo.TicketAmendment_Event e WITH(NOLOCK) 
+			WHERE e.AEventId = t.AEventId AND e.ActualResult = @ActualResult AND e.WrongResult = @WrongResult
+		) AS Ev(m)		
 		WHERE t.CustId = r.CustId
 			AND t.RefNo = r.RefNo
-			AND ev.ActualResult = e.ActualResult
-			AND ev.WrongResult = e.WrongResult
 	)
 	ORDER BY r.RowAt ASC
 
@@ -104,6 +108,8 @@ BEGIN
 
 	-- Delete ticket after 2 month
 	DELETE dbo.TicketAmendment_Event WITH(ROWLOCK, UPDLOCK)
+	OUTPUT deleted.AEventId
+		INTO @EventTmp
 	WHERE CreatedDate < DATEADD(MONTH, -2, GETDATE())
 
 	IF @@ROWCOUNT <> 0
