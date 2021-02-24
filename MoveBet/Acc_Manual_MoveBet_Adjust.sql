@@ -1,5 +1,5 @@
 /*<info serverAlias="DBPRO-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
-CREATE PROCEDURE  dbo.Acc_Manual_MoveBet_Adjust
+ALTER PROCEDURE  dbo.Acc_Manual_MoveBet_Adjust
 	@File	    NVARCHAR(MAX),
 	@LoginIP	VARCHAR(20)='',
 	@FromDate	SMALLDATETIME,
@@ -18,7 +18,7 @@ Original:
 		- 20210204@Danny: Initialize SP [Redmine: #150053]
 		
 	Param's Explanation:
-	- @Fie:		
+	- @File:		
 		<ROOT>
 				<File 
 						MB="YYYY-MM-DD"
@@ -240,7 +240,7 @@ BEGIN
 		INSERT INTO #MBDetail (RunningDate,MBDate) SELECT scheduleDate, DATEADD(day, -7, scheduleDate) FROM #check_MB_duplicate where  Isbackday7 = 1
 		---------------
 
-
+		---- Duplicate MB checking
 		SELECT TOP(1) @ErrCode = 1003, @ValueError = CAST(MBDate as NVARCHAR(50))  
 		FROM #MBDetail
 		GROUP BY MBDate
@@ -248,12 +248,56 @@ BEGIN
 
 		IF @ErrCode <> 0
 		BEGIN
-				SELECT @ErrCode = 1003, @ErrMsg = 'Duplicate MBDate on "' + @ValueError + ' .Please check them again.'
+				SELECT @ErrCode = 1003, @ErrMsg = 'Duplicate MoveBet on "' + @ValueError + ' .Please check them again.'
 				RETURN
 		END
 
+		---- Missing MB checking
+		DECLARE @FromMissingDate SMALLDATETIME
+		DECLARE @ToMissingDate SMALLDATETIME
+
+		CREATE TABLE #MB_Missing_check( RunningDate SMALLDATETIME, MBDate SMALLDATETIME, RN INT)
+		INSERT INTO #MB_Missing_check(RunningDate, MBDate, RN)
+		SELECT RunningDate, MBDate, ROW_NUMBER() OVER (ORDER BY MBDate asc ) AS RN   FROM #MBDetail 
+
+		CREATE CLUSTERED INDEX cix_#MB_Missing_check ON #MB_Missing_check(RN)
+
+		SELECT TOP(1) @ErrCode = 1004, @FromMissingDate = f.MBDate, @ToMissingDate = t.MBDate
+		FROM #MB_Missing_check f
+		INNER JOIN #MB_Missing_check t ON F.RN = t.RN + 1
+		WHERE DATEDIFF(DAY, f.MBDate, t.MBDate) > 1
+
+		IF @ErrCode <> 0
+		BEGIN
+				SELECT @ErrCode = 1004, @ErrMsg = 'Missing MoveBet beetween ' + CAST (@FromMissingDate AS NVARCHAR(20)) + ' AND '+  CAST (@ToMissingDate AS NVARCHAR(20))  + ' .Please check them again.'
+				RETURN
+		END
+
+		----Failure logic MB checking
+
+		CREATE TABLE #MB_Logical_check( RunningDate SMALLDATETIME, MBDate SMALLDATETIME, RN INT)
+		INSERT INTO #MB_Logical_check(RunningDate, MBDate, RN)
+		SELECT RunningDate, MBDate, ROW_NUMBER() OVER (ORDER BY RunningDate asc, MBDate asc) AS RN   FROM #MBDetail 
+
+		CREATE CLUSTERED INDEX cix_#MB_Logical_check ON #MB_Logical_check(RN)
+
+		DECLARE @FromLogicalDate SMALLDATETIME
+		DECLARE @ToLogicalDate SMALLDATETIME
+
+		SELECT TOP(1) @ErrCode = 1005, @FromLogicalDate = f.MBDate, @ToLogicalDate = t.MBDate
+		FROM #MB_Logical_check f
+		INNER JOIN #MB_Logical_check t ON F.RN < t.RN 
+		WHERE  f.MBDate >= t.MBDate
+
+		IF @ErrCode <> 0
+		BEGIN
+				SELECT @ErrCode = 1005, @ErrMsg = 'Failure!! MoveBet on ' + CAST (@FromLogicalDate AS NVARCHAR(20)) + ' will happen before '+  CAST (@ToLogicalDate AS NVARCHAR(20))  + ' .Please check them again.'
+				RETURN
+		END
 		
 		DROP TABLE #MBDetail
+		DROP TABLE #MB_Missing_check
+		DROP TABLE #MB_Logical_check
 		DROP TABLE #check_MB_duplicate
 		DROP TABLE #DefaultMovebetConfig
 		
@@ -315,11 +359,11 @@ BEGIN
 		SET @endRun = GETDATE()
 		SET @duration = DATEDIFF (MILLISECOND,@startRun,@endRun)
 
-		EXEC  DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
-				@UserID = @UserID,
-				@ActionID = 99999,
-				@TrackingValue = @LogSPData,
-				@duration = @duration
+		--EXEC  DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
+		--		@UserID = @UserID,
+		--		@ActionID = 99999,
+		--		@TrackingValue = @LogSPData,
+		--		@duration = @duration
 	END
 	
 	DROP TABLE #input
