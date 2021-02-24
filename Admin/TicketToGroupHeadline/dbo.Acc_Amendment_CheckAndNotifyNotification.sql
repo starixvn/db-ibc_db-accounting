@@ -1,5 +1,5 @@
 /*<info serverAlias="DBEXT-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
-CREATE PROC dbo.Acc_AmendmentNotification
+CREATE PROC dbo.Acc_Amendment_CheckAndNotifyNotification
 	@XmlEvent	XML
 	,@XmlTicket XML
 	,@IsNotify	BIT = 0
