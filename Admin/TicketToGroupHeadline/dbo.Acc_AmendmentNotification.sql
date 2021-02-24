@@ -1,8 +1,8 @@
 /*<info serverAlias="DBEXT-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
-CREATE PROC dbo.Acc_AmendmentNotification_Ins
+CREATE PROC dbo.Acc_AmendmentNotification
 	@XmlEvent	XML
 	,@XmlTicket XML
-	,@IsCheck	BIT
+	,@IsNotify	BIT = 0
 	,@ErrCode	INT= 0 OUTPUT
 	,@ErrMsg	NVARCHAR(MAX)='' OUTPUT
 
@@ -78,7 +78,7 @@ BEGIN
 
 	SET @NoRows = @@ROWCOUNT
 
-	IF @IsCheck = 1 OR @NoRows <> 0
+	IF @IsNotify = 0 OR @NoRows <> 0
 	BEGIN
 		IF @NoRows <> 0 
 			SELECT @ErrCode = 100, @ErrMsg = 'These tickets have been uploaded to notify headline, please check at row: ' + SUBSTRING(@ErrMsg, 1, LEN(@ErrMsg) - 1)
