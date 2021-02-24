@@ -218,17 +218,18 @@ BEGIN
 
 		select		t.scheduleDate  
 					,t.weekday_  
-					,Isbackday1 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.Isbackday1 ELSE dc.Isbackday1 END
-					,Isbackday2 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.Isbackday2 ELSE dc.Isbackday2 END
-					,Isbackday3 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.Isbackday3 ELSE dc.Isbackday3 END
-					,Isbackday4 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.Isbackday4 ELSE dc.Isbackday4 END
-					,Isbackday5 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.Isbackday5 ELSE dc.Isbackday5 END
-					,Isbackday6 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.Isbackday6 ELSE dc.Isbackday6 END
-					,Isbackday7 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.Isbackday7 ELSE dc.Isbackday7 END
+					,Isbackday1 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.Isbackday1 ELSE CASE WHEN mmc.Isbackday1 IS NOT NULL THEN mmc.Isbackday1 ELSE dc.Isbackday1 END END
+					,Isbackday2 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.Isbackday2 ELSE CASE WHEN mmc.Isbackday2 IS NOT NULL THEN mmc.Isbackday2 ELSE dc.Isbackday2 END END
+					,Isbackday3 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.Isbackday3 ELSE CASE WHEN mmc.Isbackday3 IS NOT NULL THEN mmc.Isbackday3 ELSE dc.Isbackday3 END END
+					,Isbackday4 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.Isbackday4 ELSE CASE WHEN mmc.Isbackday4 IS NOT NULL THEN mmc.Isbackday4 ELSE dc.Isbackday4 END END
+					,Isbackday5 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.Isbackday5 ELSE CASE WHEN mmc.Isbackday5 IS NOT NULL THEN mmc.Isbackday5 ELSE dc.Isbackday5 END END
+					,Isbackday6 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.Isbackday6 ELSE CASE WHEN mmc.Isbackday6 IS NOT NULL THEN mmc.Isbackday6 ELSE dc.Isbackday6 END END
+					,Isbackday7 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.Isbackday7 ELSE CASE WHEN mmc.Isbackday7 IS NOT NULL THEN mmc.Isbackday7 ELSE dc.Isbackday7 END END
 		INTO		#check_MB_duplicate
 		from		@calendarTable t
 		left join	#DefaultMovebetConfig dc ON dc._weekDay = t.weekday_
 		left join	#input mc ON t.scheduleDate = mc.MBDate
+		left join	dbo.Acc_ManualMovebetConfig mmc ON mmc.MBDate = t.scheduleDate
 
 		---------------
 		INSERT INTO #MBDetail (RunningDate,MBDate) SELECT scheduleDate, DATEADD(day, -1, scheduleDate) FROM #check_MB_duplicate where  Isbackday1 = 1
