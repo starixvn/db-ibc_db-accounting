@@ -21,7 +21,7 @@ Original:
 	- @File:		
 		<ROOT>
 				<File 
-						MB="YYYY-MM-DD"
+						MBDate="YYYY-MM-DD"
 						Isbackday1="0"
 						Isbackday2="0"
 						Isbackday3="1"
@@ -116,7 +116,7 @@ BEGIN
 		RETURN
 	END CATCH
 
-	SELECT TOP(1) @MBDateError = ID, 
+	SELECT TOP(1) @ErrCode = 1002, 
 	              @ValueError   = CASE WHEN ISDATE(MBDate) = 0 THEN MBDate
 									   WHEN Isbackday1 NOT IN (0,1) THEN Isbackday1
 									   WHEN Isbackday2 NOT IN (0,1) THEN Isbackday2
@@ -137,7 +137,7 @@ BEGIN
 									   WHEN Isbackday7 NOT IN (0,1) THEN 'Isbackday7'
 									END
 	FROM #inputTmp
-	WHERE ISDATE(MBDate) = 0 
+	WHERE ISDATE(MBDate) = 0 OR MBDate IS NULL OR MBDate = '' 
 		  OR Isbackday1 NOT IN (0,1)
 		  OR Isbackday2 NOT IN (0,1)
 		  OR Isbackday3 NOT IN (0,1)
@@ -146,10 +146,9 @@ BEGIN
 		  OR Isbackday6 NOT IN (0,1)
 		  OR Isbackday7 NOT IN (0,1)
 		 
-	IF @MBDateError <> 0
+	IF @ErrCode = 1002
 	BEGIN
-		IF @ErrCode = 1002
-			SELECT @ErrMsg = 'Invalid "' + @ColumnName + '" on row "' + @MBDateError + '".Please check them again.'
+			SELECT @ErrCode = 1002, @ErrMsg = 'Invalid "' + @ColumnName + '" with value "' + ISNULL(@ValueError,' ') + '".Please check them again.'
 
 		RETURN
 	END
@@ -265,7 +264,7 @@ BEGIN
 
 		SELECT TOP(1) @ErrCode = 1004, @FromMissingDate = f.MBDate, @ToMissingDate = t.MBDate
 		FROM #MB_Missing_check f
-		INNER JOIN #MB_Missing_check t ON F.RN = t.RN + 1
+		INNER JOIN #MB_Missing_check t ON F.RN = t.RN - 1
 		WHERE DATEDIFF(DAY, f.MBDate, t.MBDate) > 1
 
 		IF @ErrCode <> 0
@@ -360,11 +359,11 @@ BEGIN
 		SET @endRun = GETDATE()
 		SET @duration = DATEDIFF (MILLISECOND,@startRun,@endRun)
 
-		--EXEC  DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
-		--		@UserID = @UserID,
-		--		@ActionID = 99999,
-		--		@TrackingValue = @LogSPData,
-		--		@duration = @duration
+		EXEC  DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
+				@UserID = @UserID,
+				@ActionID = 99999,
+				@TrackingValue = @LogSPData,
+				@duration = @duration
 	END
 	
 	DROP TABLE #input
