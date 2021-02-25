@@ -81,7 +81,7 @@ BEGIN
 	IF @IsNotify = 0 OR @NoRows <> 0
 	BEGIN
 		IF @NoRows <> 0 
-			SELECT @ErrCode = 100, @ErrMsg = 'These tickets have been uploaded to notify headline, please check at row: ' + SUBSTRING(@ErrMsg, 1, LEN(@ErrMsg) - 1)
+			SELECT @ErrCode = 200, @ErrMsg = 'These tickets have been uploaded to notify headline, please check at row: ' + SUBSTRING(@ErrMsg, 1, LEN(@ErrMsg) - 1)
 		RETURN
 	END
 
