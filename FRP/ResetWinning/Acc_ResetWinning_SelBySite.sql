@@ -15,6 +15,7 @@ AS
 		- 20200226@Sophia: Using new column bettrans.epositiontaking instead of Acc_GroupExtraPTSetting.ExtraPT [RedmineID: #125418]
 		- 20200303@Sophia: Remove CutOffDate of ExtraPT, use new column [RedmineID: #129653]
 		- 2020714@Sophia: Add PP Jackpot[Redmine: #137270]
+		- 20210226@Sophia: Exclude Saba.club (Amount due to Jackpot Pool)[RedmineId: #149409] 
 		 
 	Param Explanation:
 		outout: IsDeposit = 0: Credit 
@@ -49,12 +50,12 @@ BEGIN
 				b.srecommend,			 			
 				---Base currency
 				SUM(
-						CASE WHEN b.bettype IN (2199, 2399, 2999, 4298) THEN 0
+						CASE WHEN b.bettype IN (1699, 2199, 2399, 2999, 4298) THEN 0
 							ELSE
 								(ISNULL(winlost,0)-ISNULL(actual_stake,0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)
 									+ CASE
 										-- Jackpot
-										WHEN b.bettype IN (2198, 2398, 2998, 4297) THEN ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000),0)
+										WHEN b.bettype IN (1698, 2198, 2398, 2998, 4297) THEN ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000),0)
 										ELSE 0 END
 								) * b.actualrate
 							END
@@ -63,8 +64,8 @@ BEGIN
 						(	
 							CASE
 								-- Jackpot
-								WHEN b.bettype IN (2198, 2398, 2998, 4297) THEN -ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0)
-								WHEN b.bettype IN (2199, 2399, 2999, 4298) THEN ISNULL(b.Winlost, 0) - ISNULL(b.actual_stake, 0)
+								WHEN b.bettype IN (1698, 2198, 2398, 2998, 4297) THEN -ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0)
+								WHEN b.bettype IN (1699, 2199, 2399, 2999, 4298) THEN ISNULL(b.Winlost, 0) - ISNULL(b.actual_stake, 0)
 							ELSE 0 
 							END
 						) * b.actualrate
@@ -73,9 +74,9 @@ BEGIN
 						(	
 							CASE
 							-- Jackpot
-							WHEN b.bettype IN (2198, 2398, 2998, 4297) THEN
+							WHEN b.bettype IN (1698, 2198, 2398, 2998, 4297) THEN
 								CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) END
-							WHEN b.bettype IN (2199, 2399, 2999, 4298) THEN 0
+							WHEN b.bettype IN (1699, 2199, 2399, 2999, 4298) THEN 0
 							ELSE
 								CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
 							END
