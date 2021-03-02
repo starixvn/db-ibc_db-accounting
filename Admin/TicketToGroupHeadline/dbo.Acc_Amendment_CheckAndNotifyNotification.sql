@@ -69,7 +69,7 @@ BEGIN
 		(
 			SELECT TOP 1 1 
 			FROM dbo.TicketAmendment_Event e WITH(NOLOCK) 
-			WHERE e.AEventId = t.AEventId AND e.ActualResult = @ActualResult AND e.WrongResult = @WrongResult
+			WHERE e.TicketEventId = t.TicketEventId AND e.ActualResult = @ActualResult AND e.WrongResult = @WrongResult
 		) AS Ev(m)		
 		WHERE t.CustId = r.CustId
 			AND t.RefNo = r.RefNo
@@ -93,7 +93,7 @@ BEGIN
 
 		SET @EventId = SCOPE_IDENTITY()
 
-		INSERT INTO dbo.TicketAmendment_Detail  (CustId, RefNo, AEventId, RefTable, Bettype)
+		INSERT INTO dbo.TicketAmendment_Detail  (CustId, RefNo, TicketEventId, RefTable, Bettype)
 		SELECT CustId, RefNo, @EventId, RefTable, Bettype
 		FROM #TicketRefNo
 		ORDER BY HeadlineId ASC, CustId ASC
@@ -101,14 +101,14 @@ BEGIN
 	BEGIN CATCH
 		IF @EventId IS NOT NULL
 		BEGIN
-			DELETE dbo.TicketAmendment_Event WITH(ROWLOCK, UPDLOCK) WHERE AEventId = @EventId
+			DELETE dbo.TicketAmendment_Event WITH(ROWLOCK, UPDLOCK) WHERE TicketEventId = @EventId
 			RETURN
 		END
 	END CATCH
 
 	-- Delete ticket after 2 month
 	DELETE dbo.TicketAmendment_Event WITH(ROWLOCK, UPDLOCK)
-	OUTPUT deleted.AEventId
+	OUTPUT deleted.TicketEventId
 		INTO @EventTmp
 	WHERE CreatedDate < DATEADD(MONTH, -2, GETDATE())
 
@@ -116,7 +116,7 @@ BEGIN
 	BEGIN
 		DELETE e
 		FROM dbo.TicketAmendment_Detail  e WITH(ROWLOCK, UPDLOCK)
-		WHERE EXISTS(SELECT TOP 1 1 FROM @EventTmp t WHERE t.EventId = e.AEventId)
+		WHERE EXISTS(SELECT TOP 1 1 FROM @EventTmp t WHERE t.EventId = e.TicketEventId)
 	END
 
 	DROP TABLE #EventInfo
