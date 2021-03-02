@@ -28,6 +28,7 @@ AS
 		- 20190826@Sophia: CN88 Headline balance - Exclude reset winning for CN88 group [Redmine: #117863]
 		- 20191216@Percy: Using new column bettrans.epositiontaking instead of Acc_GroupExtraPTSetting.ExtraPT [RedmineID: #125418]
 		- 2020714@Sophia: Add PP Jackpot & Revise SP [Redmine: #137270]
+		- 20210203@Malcolm : Add Saba.club (Amount due to Jackpot Pool) into reset winning [RedmineId : #149409]
 
 	Param's explain:
 		@mode:  0 _ view report
@@ -103,9 +104,9 @@ BEGIN
 				SUM((
 					CASE
 						-- Jackpot
-						WHEN b.bettype IN (2198, 2398, 2998, 4297) THEN
+						WHEN b.bettype IN (1698, 2198, 2398, 2998, 4297) THEN
 							CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) END
-						WHEN b.bettype IN (2199, 2399, 2999, 4298) THEN 0
+						WHEN b.bettype IN (1699, 2199, 2399, 2999, 4298) THEN 0
 						ELSE
 							CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
 						END) * b.actualrate * ISNULL(b.epositiontaking, 0)) AS eWinlost,
