@@ -28,7 +28,7 @@ BEGIN
 	
 	CREATE TABLE #EventInfo (ProductId TINYINT, Sporttype SMALLINT, MatchId INT, MatchCode NVARCHAR(100), EventType TINYINT, EventDate SMALLDATETIME, ActualResult NVARCHAR(MAX), WrongResult NVARCHAR(MAX))
 
-	CREATE TABLE #TicketRefNo (RowAt INT, CustId INT, Username VARCHAR(30), RefNo BIGINT, RefTable TINYINT, Bettype SMALLINT, HeadlineId INT)
+	CREATE TABLE #TicketRefNo (ID INT, RowAt INT, CustId INT, Username VARCHAR(30), RefNo BIGINT, RefTable TINYINT, Bettype SMALLINT, HeadlineId INT)
 
 	DECLARE @EventTmp TABLE (EventId INT)
 
@@ -85,6 +85,15 @@ BEGIN
 		RETURN
 	END
 
+	UPDATE x
+	SET x.ID = x.RowNum
+	FROM
+	(
+		SELECT t.ID,  
+			   ROW_NUMBER() OVER(ORDER BY t.HeadlineId ASC, t.CustId ASC) AS RowNum
+		FROM #TicketRefNo t
+	) x
+
 	--Insert Event and Ticket
 	BEGIN TRY
 		INSERT INTO dbo.TicketAmendment_Event (ProductId, Sporttype, MatchId, MatchCode, EventType, EventDate, ActualResult, WrongResult)
@@ -93,10 +102,24 @@ BEGIN
 
 		SET @EventId = SCOPE_IDENTITY()
 
-		INSERT INTO dbo.TicketAmendment_Detail  (CustId, RefNo, TicketEventId, RefTable, Bettype)
-		SELECT CustId, RefNo, @EventId, RefTable, Bettype
-		FROM #TicketRefNo
-		ORDER BY HeadlineId ASC, CustId ASC
+		DECLARE @ID INT = 2000
+
+		WHILE 1 = 1
+		BEGIN 
+			INSERT INTO dbo.TicketAmendment_Detail (CustId, RefNo, TicketEventId, RefTable, Bettype)
+			SELECT t.CustId, t.RefNo, @EventId, t.RefTable, t.Bettype 
+			FROM #TicketRefNo t 
+			WHERE t.ID < @ID 
+			ORDER BY t.ID
+
+			IF @@ROWCOUNT = 0
+				BREAK
+
+			DELETE t FROM #TicketRefNo t WHERE t.ID < @ID 
+
+			SET @ID += 2000
+		END
+		
 	END TRY
 	BEGIN CATCH
 		IF @EventId IS NOT NULL
