@@ -18,6 +18,8 @@ Original:
 		- 20210204@Danny: Initialize SP [Redmine: #150053]
 		
 	Param's Explanation:
+	- @FromDate	: User input in UI
+	- @ToDate	: User input in UI
 	- @File:		
 		<ROOT>
 				<File 
