@@ -1,4 +1,4 @@
-/*<info serverAlias="DBPRO-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  dbo.Acc_Manual_MoveBet_Adjust
 	@File	    NVARCHAR(MAX),
 	@LoginIP	VARCHAR(20)='',
@@ -11,7 +11,7 @@ AS
 /*
 Created: 20210204@Danny
 Task :  NAP Manage MoveBet Insert
-DB: DBPRO/bodb02
+DB: DBTXN-bodb02
 Original:
 
 	Revisions:
