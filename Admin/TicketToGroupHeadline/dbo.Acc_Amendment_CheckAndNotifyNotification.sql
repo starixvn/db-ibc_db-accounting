@@ -1,7 +1,7 @@
 /*<info serverAlias="DBEXT-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 CREATE PROC dbo.Acc_Amendment_CheckAndNotifyNotification
-	@XmlEvent	XML
-	,@XmlTicket XML
+	@XmlEvent	NVARCHAR(MAX)
+	,@XmlTicket NVARCHAR(MAX)
 	,@IsNotify	BIT = 0
 	,@ErrCode	INT= 0 OUTPUT
 	,@ErrMsg	NVARCHAR(MAX)='' OUTPUT
@@ -32,7 +32,9 @@ BEGIN
 
 	DECLARE @EventTmp TABLE (EventId INT)
 
-	DECLARE @EventId BIGINT = NULL, @NoRows INT= 0, @ActualResult NVARCHAR(MAX), @WrongResult NVARCHAR(MAX)
+	DECLARE @EventId BIGINT = NULL, @NoRows INT= 0, @ActualResult NVARCHAR(MAX), @WrongResult NVARCHAR(MAX), @_XmlEvent XML, @_XmlTicket XML
+
+	SELECT @_XmlEvent = CONVERT(XML, @XmlEvent), @_XmlTicket = CONVERT(XML, @XmlTicket)
 
 	INSERT INTO #EventInfo (ProductId, MatchId, MatchCode, EventType, EventDate, ActualResult, WrongResult)
 	SELECT 
@@ -43,7 +45,7 @@ BEGIN
 		,T.c.value('@EventDate', 'SMALLDATETIME')
 		,T.c.value('@ActualResult', 'NVARCHAR(MAX)')
 		,T.c.value('@WrongResult', 'NVARCHAR(MAX)')
-	FROM @XmlEvent.nodes('/root/r') AS T(c)
+	FROM @_XmlEvent.nodes('/root/r') AS T(c)
 
 	INSERT INTO #TicketRefNo (RowAt, CustId, Username, RefNo, RefTable, Bettype, HeadlineId)
 	SELECT
@@ -54,7 +56,7 @@ BEGIN
 		,T.c.value ('@RefTable', 'TINYINT')
 		,T.c.value ('@Bettype', 'SMALLINT')
 		,NULLIF(T.c.value('@HeadlineId','INT'), 0)
-	FROM @XmlTicket.nodes('/root/r') T(c)
+	FROM @_XmlTicket.nodes('/root/r') T(c)
 
 	SELECT @ActualResult = e.ActualResult, @WrongResult = e.WrongResult FROM #EventInfo e
 
