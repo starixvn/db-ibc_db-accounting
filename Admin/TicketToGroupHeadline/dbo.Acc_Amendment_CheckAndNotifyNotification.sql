@@ -95,8 +95,8 @@ BEGIN
 
 	--Insert Event and Ticket
 	BEGIN TRY
-		INSERT INTO dbo.TicketAmendment_Event (ProductId, MatchId, MatchCode, EventType, EventDate, ActualResult, WrongResult)
-		SELECT ProductId, MatchId, MatchCode, EventType, EventDate, ActualResult, WrongResult
+		INSERT INTO dbo.TicketAmendment_Event (ProductId, MatchId, MatchCode, EventType, EventDate, ActualResult, WrongResult, Status)
+		SELECT ProductId, MatchId, MatchCode, EventType, EventDate, ActualResult, WrongResult, NULL
 		FROM #EventInfo
 
 		SET @EventId = SCOPE_IDENTITY()
@@ -118,6 +118,10 @@ BEGIN
 
 			SET @ID += 2000
 		END
+
+		UPDATE TicketAmendment_Event WITH(ROWLOCK)
+			SET Status = 'Completed'
+		WHERE TicketEventId = @EventId
 		
 	END TRY
 	BEGIN CATCH
