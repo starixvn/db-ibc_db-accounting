@@ -41,6 +41,7 @@ AS
 		- 20200730@Sophia: prevent duplicated transfer [Redmine: #137141]
 		- 20200730@Sophia: Check UM Transfer Function [Redmine: #136992]
 		- 20201006@sophia: Comment SP Server_IsHeavyLoadPermitted due to cannot transfer [Redmine: #136992]
+		- 20201217@Sol: Optimize - mofidied code to get index seek on IX_ProductID_Issum_StatuaID [RedmineID: #147335]
 		 				       
 	Param's Explanation:
 		@AgentName: username of agent/master/super to clear his all downlines' balance
@@ -134,6 +135,15 @@ BEGIN
 	--==========================================================  
 	DECLARE @agList as table (custid int primary key, username varchar(50))
 	CREATE TABLE #tempdata (custid int, recommend int, mrecommend int, winlost money, actual_stake money, playercomm money, awinlost money, comm money, mwinlost money, acomm money)
+
+	DECLARE @tblSportTypeRNG AS TABLE (SportType SMALLINT)
+	DECLARE @tblSportTypeLC AS TABLE (SportType SMALLINT)
+
+	INSERT INTO @tblSportTypeRNG(SportType)
+	SELECT DISTINCT SportType FROM SportBettypeMatrix WITH(NOLOCK) WHERE RefTable = 1
+
+	INSERT INTO @tblSportTypeLC(SportType)
+	SELECT DISTINCT SportType FROM SportBettypeMatrix WITH(NOLOCK) WHERE RefTable = 2
 	
 	IF @roleid = 2
 	BEGIN
@@ -180,38 +190,6 @@ BEGIN
 			AND ruben = 1
 			AND bettype NOT IN (21008, 21009)
 		GROUP BY b.custid, b.recommend, b.mrecommend
-		
-		INSERT INTO #tempdata (custid, recommend, mrecommend, winlost, actual_stake, playercomm, awinlost, comm, mwinlost, acomm)
-		SELECT b.custid, b.recommend, b.mrecommend
-			,SUM(winlost) winlost
-			,SUM(actual_stake) actual_stake
-			,SUM(playercomm) playercomm
-			,SUM(awinlost) awinlost
-			,SUM(comm) comm
-			,SUM(mwinlost) mwinlost
-			,SUM(acomm) acomm
-		FROM @masterlist c
-			INNER JOIN dbo.bettransRnG b WITH(NOLOCK) ON c.custid = b.custid
-		WHERE IsSum = 0
-			AND statusID NOT IN (0,1)
-			AND winlostdate < @winlostdate
-		GROUP BY b.custid, b.recommend, b.mrecommend
-		
-		INSERT INTO #tempdata (custid, recommend, mrecommend, winlost, actual_stake, playercomm, awinlost, comm, mwinlost, acomm)
-		SELECT b.custid, b.recommend, b.mrecommend
-			,SUM(winlost) winlost
-			,SUM(actual_stake) actual_stake
-			,SUM(playercomm) playercomm
-			,SUM(awinlost) awinlost
-			,SUM(comm) comm
-			,SUM(mwinlost) mwinlost
-			,SUM(acomm) acomm
-		FROM @masterlist c
-			INNER JOIN dbo.bettransLC b WITH(NOLOCK) ON c.custid = b.custid
-		WHERE IsSum = 0
-			AND statusID NOT IN (0,1)
-			AND winlostdate < @winlostdate
-		GROUP BY b.custid, b.recommend, b.mrecommend
 	END
 		
 	-- member & agent data	
@@ -242,7 +220,8 @@ BEGIN
 		,SUM(acomm) acomm
 	FROM @agList ag
 		INNER JOIN dbo.bettransRnG b WITH(NOLOCK) ON ag.custid = b.recommend
-	WHERE IsSum = 0
+	WHERE b.productID IN (SELECT SportType FROM @tblSportTypeRNG)
+		AND IsSum = 0
 		AND statusID NOT IN (0,1)
 		AND winlostdate < @winlostdate
 	GROUP BY b.custid, b.recommend, b.mrecommend
@@ -258,7 +237,8 @@ BEGIN
 		,SUM(acomm) acomm
 	FROM @agList ag
 		INNER JOIN dbo.bettransLC b WITH(NOLOCK) ON ag.custid = b.recommend
-	WHERE IsSum = 0
+	WHERE b.productID IN (SELECT SportType FROM @tblSportTypeLC)
+		AND IsSum = 0
 		AND statusID NOT IN (0,1)
 		AND winlostdate < @winlostdate
 	GROUP BY b.custid, b.recommend, b.mrecommend
