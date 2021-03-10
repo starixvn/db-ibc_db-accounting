@@ -281,11 +281,15 @@ BEGIN
 			
 			IF (@amount > 0 and @SkipTransfer = 0)
 			BEGIN
+				
+				DECLARE @TotalCash MONEY 
+				EXEC Acc_CustomerSelTotalCash @custid = @recommend, @TotalCash  = @TotalCash OUTPUT
+
 				INSERT INTO bettrans 
 					(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
-					status, ruben, winlostdate, currency, actualrate,currencyName, recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID)
+					status, ruben, winlostdate, currency, actualrate,currencyName, recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID,balance)
 				VALUES (0, @Userid, @recommend, @agName, @refno, CURRENT_TIMESTAMP, 21004, 'From Customer :: ' + @memberName, @amount, 0, 
-					'Completed', 1, @WinlostDate, @currency, @actualrate, @currName, @recommend, @MRecommend, @srecommend, 0, 0,@ip,131)
+					'Completed', 1, @WinlostDate, @currency, @actualrate, @currName, @recommend, @MRecommend, @srecommend, 0, 0,@ip,131,@TotalCash)
 				if @@Error <> 0
 				BEGIN
 					SELECT @ErrMsg = 'Insert Failed', @ErrCode = 102  
@@ -315,11 +319,14 @@ BEGIN
 					return
 				END
 
+				DECLARE @TotalCash1 MONEY 
+				EXEC Acc_CustomerSelTotalCash @custid = @custid, @TotalCash  = @TotalCash1 OUTPUT
+
 				INSERT INTO bettrans
 					(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
-					status, ruben, winlostdate, currency,actualrate,currencyName, recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID)
+					status, ruben, winlostdate, currency,actualrate,currencyName, recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID, balance)
 				VALUES (0, @Userid , @custid, @memberName, @refno, CURRENT_TIMESTAMP, 21004, 'To Customer :: ' + @agName, 0, @amount,
-					'Completed', 1, @WinlostDate, @currency,@actualrate,@currName, @recommend, @MRecommend, @srecommend, 0, 0,@ip,131)
+					'Completed', 1, @WinlostDate, @currency,@actualrate,@currName, @recommend, @MRecommend, @srecommend, 0, 0,@ip,131, @TotalCash1)
 				if @@Error <> 0
 				BEGIN
 					SELECT @ErrMsg = 'Insert Failed', @ErrCode = 103
@@ -342,14 +349,18 @@ BEGIN
 			END
 			ELSE if (@amount<0 and @SkipTransfer = 0)
 			BEGIN
+
+				DECLARE @TotalCash2 MONEY 
+				EXEC Acc_CustomerSelTotalCash @custid = @recommend, @TotalCash  = @TotalCash2 OUTPUT
+
 				--SET @amount = abs(@amount) 			
 				INSERT INTO bettrans 
 				   (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 					status, ruben, winlostdate, currency,actualrate, currencyName,recommend, mrecommend, srecommend, 
-					scomm, swinlost,ip,statusID)
+					scomm, swinlost,ip,statusID,balance)
 				VALUES (0, @Userid, @recommend, @agName, @refno, CURRENT_TIMESTAMP, 21004, 'To Customer :: ' + @memberName, 0, abs(@amount),
 					'Completed', 1, @WinlostDate, @currency,@actualrate,@currName, @recommend, @MRecommend, @srecommend, 
-					0, 0,@ip,131)
+					0, 0,@ip,131, @TotalCash2)
 				if @@Error <> 0
 				BEGIN
 					SELECT @ErrMsg = 'Insert Failed', @ErrCode = 104
@@ -362,13 +373,17 @@ BEGIN
 						
 					return
 				END
+
+				DECLARE @TotalCash3 MONEY 
+				EXEC Acc_CustomerSelTotalCash @custid = @custid, @TotalCash  = @TotalCash3 OUTPUT
+
 				INSERT INTO bettrans
 				   (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 					status, ruben, winlostdate, currency,actualrate,currencyName, recommend, mrecommend, srecommend, 
-					scomm, swinlost,ip,statusID)
+					scomm, swinlost,ip,statusID, balance)
 				VALUES (0, @Userid, @custid, @memberName, @refno, CURRENT_TIMESTAMP, 21004, 'From Customer :: ' + @agName, abs(@amount), 0,
 					'Completed', 1,@WinlostDate, @currency,@actualrate,@currName, @recommend, @MRecommend, @srecommend, 
-					0, 0,@ip,131)
+					0, 0,@ip,131, @TotalCash3)
 				if @@Error <> 0
 				BEGIN
 					SELECT @ErrMsg = 'Insert Failed', @ErrCode = 105

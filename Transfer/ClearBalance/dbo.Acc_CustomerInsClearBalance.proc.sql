@@ -47,6 +47,7 @@ Revisions:
 	- 20200821@Sophia: prevent duplicated transfer [Redmine: #137141]
 	- 20200821@Sophia: Check UM Transfer Function [Redmine: #136992]
 	- 20201005@Danny: Convert Ipv6 to dummy IPv4 [Redmine: #142511]
+	- 20210310@Danny: Capture total cash before transfering  [Redmine: #146038]
 	
 Param's Explanation:
 */ 
@@ -293,14 +294,17 @@ BEGIN
 		
 		IF (@amount > 0 and @SkipTransfer = 0)
 		BEGIN
+			
+			DECLARE @TotalCash MONEY 
+			EXEC Acc_CustomerSelTotalCash @custid = @agentid, @TotalCash  = @TotalCash OUTPUT
 
 			INSERT INTO bettrans 
 				(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 				status, ruben, winlostdate, currency,actualrate,currencyName, recommend, mrecommend, 
-				srecommend, scomm, swinlost,ip,statusID)
+				srecommend, scomm, swinlost,ip,statusID,balance)
 			VALUES (0, @UserID, @agentid, @agUser, @refno, CURRENT_TIMESTAMP, 21004, 'To Customer via Multiple: ' + @User, @amount, 0, 
 				'Completed', 1, @WinlostDate, @currency,@actualrate, @currName,@agentid, @MRecommend1, 
-				@srecommend1, 0, 0,@ip,131)
+				@srecommend1, 0, 0,@ip,131,@TotalCash)
 			if @@Error <> 0
 			BEGIN
 				Select @ErrMsg = case @Language 
@@ -340,13 +344,16 @@ BEGIN
 				return
 			END			
 
+			DECLARE @TotalCash1 MONEY 
+			EXEC Acc_CustomerSelTotalCash @custid = @custid, @TotalCash  = @TotalCash1 OUTPUT
+
 			INSERT INTO bettrans
 				(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 				status, ruben, winlostdate, currency,actualrate,currencyName, recommend, mrecommend, srecommend, 
-				scomm, swinlost,ip,statusID)
+				scomm, swinlost,ip,statusID,balance)
 			VALUES (0, @UserID, @custid, @User, @refno, CURRENT_TIMESTAMP, 21004, 'To Customer via Multiple: ' + @agUser, 0, @amount,
 				'Completed', 1, @WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend1,
-				 0, 0,@ip,131)
+				 0, 0,@ip,131,@TotalCash1)
 			if @@Error <> 0
 			BEGIN
 				Select @ErrMsg = case @Language 
@@ -378,14 +385,17 @@ BEGIN
 		ELSE if (@amount<0 and @SkipTransfer = 0)
 		BEGIN
 			--SET @amount = abs(@amount)
-		
+			
+			DECLARE @TotalCash2 MONEY 
+			EXEC Acc_CustomerSelTotalCash @custid = @agentid, @TotalCash  = @TotalCash2 OUTPUT
+
 			INSERT INTO bettrans 
 				(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 				status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend,
-				scomm, swinlost,ip,statusID)
+				scomm, swinlost,ip,statusID,balance)
 			VALUES (0, @UserID, @agentid, @agUser, @refno, CURRENT_TIMESTAMP, 21004, 'To Customer via Multiple: ' + @User, 0, abs(@amount),
 				'Completed', 1,@WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend1,
-				0, 0, @ip,131)
+				0, 0, @ip,131,@TotalCash2)
 			if @@Error <> 0
 			BEGIN
 				Select @ErrMsg = case @Language 
@@ -404,13 +414,16 @@ BEGIN
 				return
 			END
 
+			DECLARE @TotalCash3 MONEY 
+			EXEC Acc_CustomerSelTotalCash @custid = @custid, @TotalCash  = @TotalCash3 OUTPUT
+
 			INSERT INTO bettrans
 				(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 				status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
-				scomm, swinlost,ip,statusID)
+				scomm, swinlost,ip,statusID,balance)
 			VALUES (0, @UserID, @custid, @User, @refno, CURRENT_TIMESTAMP, 21004, 'To Customer via Multiple: ' + @agUser, abs(@amount), 0,
 				'Completed', 1,@WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend1, 
-				0, 0, @ip,131)
+				0, 0, @ip,131,@TotalCash3)
 			if @@Error <> 0
 			BEGIN
 				Select @ErrMsg = case @Language 

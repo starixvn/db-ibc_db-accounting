@@ -40,6 +40,7 @@ Revisions:
 	- 20181112@Sophia: Add Transfer Collection [redmine: #98621]
 	- 20200730@Sophia: prevent duplicated transfer [Redmine: #137141]
 	- 20200730@Sophia: Check UM Transfer Function [Redmine: #136992]
+	- 20210310@Danny: Capture total cash before transfering  [Redmine: #146038]
 					   
 Param's Explanation:
 */
@@ -212,14 +213,17 @@ BEGIN
 			---Insert into Bettrans
 			DELETE @TransIDs
 			
+			DECLARE @TotalCash MONEY 
+			EXEC Acc_CustomerSelTotalCash @custid = @FromCustID, @TotalCash  = @TotalCash OUTPUT
+
 			INSERT INTO bettrans 
 				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 				 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
-				 scomm, swinlost,ip,statusID, OddsId)
+				 scomm, swinlost,ip,statusID, OddsId, balance)
 			OUTPUT INSERTED.TransID INTO @TransIDs
 			VALUES (@UserID, @FromCustID, @FromUsername, @refno, @Transdate, 0, 21003, 'To Customer: ' + @ToUserName + '('+ @Remark +')' + @RemarkToCurr, @amount, 0, 
 				 'Completed', 1, @winlostdate, @FromCurr, @FromActualrate, @FromCurrName, @FromRecommend, @FromMrecommend, @FromSrecommend, 
-				 0, 0,@ip,131, @IsCollection)
+				 0, 0,@ip,131, @IsCollection, @TotalCash)
 								
 			if @@Error <> 0
 			BEGIN
@@ -327,15 +331,18 @@ BEGIN
 			
 			--- Inseret into bettrans
 			DELETE @TransIDs
+
+			DECLARE @TotalCash1 MONEY 
+			EXEC Acc_CustomerSelTotalCash @custid = @ToCustID, @TotalCash  = @TotalCash1 OUTPUT
 			
 			INSERT INTO bettrans 
 				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 				 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
-				 scomm, swinlost,ip,statusID, OddsId)
+				 scomm, swinlost,ip,statusID, OddsId, balance)
 			OUTPUT INSERTED.TransID INTO @TransIDs
 			VALUES (@UserID, @ToCustID, @ToUsername, @refno, @Transdate, 0, 21003, 'From Customer: ' + @FromUserName + '('+ @Remark +')' + @RemarkFromCurr, 0, @amount * @ExchangeRate, 
 				 'Completed', 1, @winlostdate, @ToCurr, @ToActualrate, @ToCurrName, @ToRecommend, @ToMrecommend, @ToSrecommend, 
-				 0, 0,@ip,131, @IsCollection)
+				 0, 0,@ip,131, @IsCollection, @TotalCash1)
 				 
 				 
 			if @@Error <> 0
@@ -437,15 +444,18 @@ BEGIN
 			END
 			
 			DELETE @TransIDs
+
+			DECLARE @TotalCash2 MONEY 
+			EXEC Acc_CustomerSelTotalCash @custid = @FromCustID, @TotalCash  = @TotalCash2 OUTPUT
 			
 			INSERT INTO bettrans 
 				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 				 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
-				 scomm, swinlost,ip,statusID, OddsId)
+				 scomm, swinlost,ip,statusID, OddsId, balance)
 			OUTPUT INSERTED.TransID INTO @TransIDs
 			VALUES (@UserID, @FromCustID, @FromUsername, @refno, @Transdate, 0, 21003, 'To Customer: ' + @ToUserName + '('+ @Remark +')'+@RemarkToCurr, 0, @amount, 
 				 'Completed', 1, @winlostdate, @FromCurr, @FromActualrate, @FromCurrName, @FromRecommend, @FromMrecommend, @FromSrecommend, 
-				 0, 0,@ip,131,@IsCollection)
+				 0, 0,@ip,131,@IsCollection, @TotalCash2)
 			
 			if @@Error <> 0
 			BEGIN
@@ -516,14 +526,17 @@ BEGIN
 			--------------------------------------------------------------
 			DELETE @TransIDs
 			
+			DECLARE @TotalCash3 MONEY 
+			EXEC Acc_CustomerSelTotalCash @custid = @ToCustID, @TotalCash  = @TotalCash3 OUTPUT
+
 			INSERT INTO bettrans 
 				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 				 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
-				 scomm, swinlost,ip,statusID, OddsId)
+				 scomm, swinlost,ip,statusID, OddsId, balance)
 			OUTPUT INSERTED.TransID INTO @TransIDs
 			VALUES (@UserID, @ToCustID, @ToUsername, @refno, @Transdate, 0, 21003, 'From Customer: ' + @FromUserName + '('+ @Remark +')' + @RemarkFromCurr, @amount * @ExchangeRate, 0, 
 				 'Completed', 1, @winlostdate, @ToCurr, @ToActualrate, @ToCurrName, @ToRecommend, @ToMrecommend, @ToSrecommend, 
-				 0, 0,@ip,131, @IsCollection)
+				 0, 0,@ip,131, @IsCollection, @TotalCash3)
 						
 			if @@Error <> 0
 			BEGIN
