@@ -36,6 +36,7 @@ AS
 		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 		- 20200730@Sophia: prevent duplicated transfer [Redmine: #137141]
 		- 20200730@Sophia: Check UM Transfer Function [Redmine: #136992]
+		- 20210310@Danny: Capture total cash before transfering  [Redmine: #146038]
 		
 	Param's Explanation:
 */ 
