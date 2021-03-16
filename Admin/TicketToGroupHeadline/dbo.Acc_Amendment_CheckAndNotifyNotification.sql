@@ -82,7 +82,9 @@ BEGIN
 	IF @IsNotify = 0 OR @NoRows <> 0
 	BEGIN
 		IF @NoRows <> 0 
-			SELECT @ErrCode = 200, @ErrMsg = 'These tickets have been uploaded to notify headline, please check at row: ' + SUBSTRING(@ErrMsg, 1, LEN(@ErrMsg) - 1)
+			SELECT @ErrCode = 200,
+				   @ErrMsg = 'These tickets have been uploaded to notify headline, please check at row: ' + SUBSTRING(@ErrMsg, 1, LEN(@ErrMsg) - 1)
+							 + CHAR(13) + CHAR(10) + 'Please remove them and upload the file again!'
 		RETURN
 	END
 
