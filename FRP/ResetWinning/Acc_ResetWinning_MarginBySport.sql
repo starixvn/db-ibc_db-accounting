@@ -13,6 +13,7 @@ AS
 		- 20200305@Sophia: Exclude 8RM and BARM
 		- 20201008@Sophia: Separate Saba vs Real Sport [Redmine: #143173]
 		- 20201230@Sophia: add more LeagueGroupID 41, 72 [Redmine: #147907]
+		- 20210315@Sophia: add Live and Non-Live [Redmine: #151656]
 		 
 	Param Explanation:
 		 
@@ -109,13 +110,15 @@ BEGIN
 		CREATE TABLE #wl 
 		(	
 			Sporttype  		SMALLINT, 
+			LiveIndicator	BIT,
 			IsSaba 			BIT	,
 			TurnOver		MONEY,
 			Winlost			MONEY, 		
 			ExtraWinlost	MONEY
 		) 	 
-		INSERT INTO #wl (Sporttype, IsSaba, TurnOver, winlost, ExtraWinlost)
+		INSERT INTO #wl (Sporttype, LiveIndicator, IsSaba, TurnOver, winlost, ExtraWinlost)
 		SELECT  CASE WHEN m.Sporttype IN (1, 2, 5, 43, -29) THEN m.Sporttype ELSE 0 END AS Sporttype,  	 
+				b.LiveIndicator,
 				m.IsSaba,
 				---Base currency
 				SUM (   CASE WHEN b.StatusID = 111 THEN 0 ELSE 
@@ -150,18 +153,18 @@ BEGIN
 			AND b.MatchID >= 0
 			AND b.Recommend NOT IN (52466,5707545)  --- Exclude 8RM, BARM
 			AND NOT EXISTS (SELECT 1 FROM CS_CustSuper c WITH (NOLOCK) WHERE c.CustID = b.Srecommend)
-		GROUP BY CASE WHEN m.Sporttype IN (1, 2, 5, 43, -29) THEN m.Sporttype ELSE 0 END, m.IsSaba
+		GROUP BY CASE WHEN m.Sporttype IN (1, 2, 5, 43, -29) THEN m.Sporttype ELSE 0 END, b.LiveIndicator, m.IsSaba
 				 
 	
 		-----------------------------------------------------------------------------------------------
 		----- Get Data -----
-		SELECt  a.SportName, a.IsSaba, a.TurnOver, a.Margin, a.HouseWinlost
+		SELECt  a.SportName, a.LiveIndicator, a.IsSaba, a.TurnOver, a.Margin, a.HouseWinlost
 		FROM  (
-				SELECT	s.orderId, s.SportName, w.IsSaba, w.TurnOver, CASE WHEN w.TurnOver = 0 THEN 0 ELSE (w.winlost - ExtraWinlost) / w.TurnOver * 100 END AS Margin , (w.winlost - ExtraWinlost) AS HouseWinlost
+				SELECT	s.orderId, s.SportName, w.LiveIndicator, w.IsSaba, w.TurnOver, CASE WHEN w.TurnOver = 0 THEN 0 ELSE (w.winlost - ExtraWinlost) / w.TurnOver * 100 END AS Margin , (w.winlost - ExtraWinlost) AS HouseWinlost
 				FROM 	#wl w 
 				INNER JOIN #Sports s ON s.Sporttype = w.sporttype
 				UNION 
-				SELECT	0 AS orderId, 'All Sports' AS SportName, w.IsSaba,
+				SELECT	0 AS orderId, 'All Sports' AS SportName, 2 AS LiveIndicator, w.IsSaba,
 						SUM (w.TurnOver) AS TurnOver, 
 						CASE WHEN SUM (w.TurnOver) = 0 THEN 0 ELSE SUM (w.winlost - ExtraWinlost) / SUM (w.TurnOver) * 100 END AS Margin , 
 						SUM (w.winlost - ExtraWinlost) AS HouseWinlost
