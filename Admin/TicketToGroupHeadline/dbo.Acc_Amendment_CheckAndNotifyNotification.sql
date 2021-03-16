@@ -16,7 +16,7 @@ AS
 		- 20200127@Malcolm: Initialize SP [RedmineID: #147470]
 
 	Param's Explanation:
-		.@XmlEvent = '<root><r ProductId="" MatchId="" MatchCode="" EventType="" EventDate="" ActualResult="" WrongResult=""/></root>'
+		.@XmlEvent = '<root><r ProductId="" MatchId="" MatchCode="" EventType="" EventDate="" ActualResult="" WrongResult="" Type=""/></root>'
 		.@XmlTicket = '<root><r RowAt="" CustId="" Username="" RefNo="" RefTable="" Bettype="" HeadlineId=""/></root>'
 		.@IsCheck = 0, Insert and Check
 				  = 1, Only check data
@@ -26,7 +26,7 @@ BEGIN
 	
 	SET NOCOUNT ON
 	
-	CREATE TABLE #EventInfo (ProductId TINYINT, MatchId INT, MatchCode NVARCHAR(100), EventType TINYINT, EventDate SMALLDATETIME, ActualResult NVARCHAR(MAX), WrongResult NVARCHAR(MAX))
+	CREATE TABLE #EventInfo (ProductId TINYINT, MatchId INT, MatchCode NVARCHAR(100), EventType TINYINT, EventDate SMALLDATETIME, Type TINYINT,ActualResult NVARCHAR(MAX), WrongResult NVARCHAR(MAX))
 
 	CREATE TABLE #TicketRefNo (ID INT, RowAt INT, CustId INT, Username VARCHAR(30), RefNo BIGINT, RefTable TINYINT, Bettype SMALLINT, HeadlineId INT)
 
@@ -36,7 +36,7 @@ BEGIN
 
 	SELECT @_XmlEvent = CONVERT(XML, @XmlEvent), @_XmlTicket = CONVERT(XML, @XmlTicket)
 
-	INSERT INTO #EventInfo (ProductId, MatchId, MatchCode, EventType, EventDate, ActualResult, WrongResult)
+	INSERT INTO #EventInfo (ProductId, MatchId, MatchCode, EventType, EventDate, ActualResult, WrongResult, Type)
 	SELECT 
 		T.c.value('@ProductId', 'TINYINT')
 		,NULLIF(T.c.value('@MatchId', 'INT'),0)
@@ -45,6 +45,7 @@ BEGIN
 		,T.c.value('@EventDate', 'SMALLDATETIME')
 		,T.c.value('@ActualResult', 'NVARCHAR(MAX)')
 		,T.c.value('@WrongResult', 'NVARCHAR(MAX)')
+		,NULLIF(T.c.value('@Type','TINYINT'),0)
 	FROM @_XmlEvent.nodes('/root/r') AS T(c)
 
 	INSERT INTO #TicketRefNo (RowAt, CustId, Username, RefNo, RefTable, Bettype, HeadlineId)
@@ -99,8 +100,8 @@ BEGIN
 
 	--Insert Event and Ticket
 	BEGIN TRY
-		INSERT INTO dbo.TicketAmendment_Event (ProductId, MatchId, MatchCode, EventType, EventDate, ActualResult, WrongResult, Status)
-		SELECT ProductId, MatchId, MatchCode, EventType, EventDate, ActualResult, WrongResult, NULL
+		INSERT INTO dbo.TicketAmendment_Event (ProductId, MatchId, MatchCode, EventType, EventDate, ActualResult, WrongResult, Status, Type)
+		SELECT ProductId, MatchId, MatchCode, EventType, EventDate, ActualResult, WrongResult, NULL, Type
 		FROM #EventInfo
 
 		SET @EventId = SCOPE_IDENTITY()
