@@ -12,6 +12,7 @@ AS
 	
 	Revisions:
 		- 20200615@Sol: NAP - Auto Assign Licensee code to the Licensee accordingly [Redmine: #120670]
+		- 20210315@Sol: NAP - Enhance Manage Licensee Code to support change base currency of licensees - [Redmine: #151607]
 
 	Param Info:
 		- @LicenseeName: Name of the Licensee 
@@ -43,6 +44,7 @@ BEGIN
 			ON c.custid = lc.CustID AND c.roleid = 1
 	WHERE 
 		c.username = @LicenseeCode
+		AND lc.LicenseeName <> @LicenseeName
 
 	---- check not contain licensee name
 	INSERT INTO @tblVerifiedResult

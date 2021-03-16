@@ -35,8 +35,10 @@ BEGIN
 		@currentDate SMALLDATETIME
 		,@startDate SMALLDATETIME
 		,@endDate SMALLDATETIME
+		,@endDateLastMonth SMALLDATETIME
 		,@RowStart INT
 		,@RowEnd INT
+		,@IsTransfered BIT = 1
 
 	DECLARE @tblLicenseeList TABLE (LicenseeId INT, LicenseeName VARCHAR(50), CustSuperId INT)
 	DECLARE @tblLicenseeListAgent TABLE (LicenseeId INT, LicenseeName VARCHAR(50), CustAgentId INT)
@@ -49,8 +51,14 @@ BEGIN
 		@currentDate = GETDATE()
 		,@startDate	= CAST(CONVERT(VARCHAR(7), DATEADD(MONTH, -1, @currentDate), 111) + '/01' AS DATE)
 		,@endDate = CASE WHEN @ForEmail = 1 THEN DATEADD(DAY, -1, DATEADD(MONTH, 1, @startDate)) ELSE CAST(@currentDate AS DATE) END
+		,@endDateLastMonth = DATEADD(DAY, -1, DATEADD(MONTH, 1, @startDate))
 		,@MoveBetsDay = CAST(@MoveBetsDay AS DATE)
 
+	IF NOT EXISTS (SELECT TOP 1 1 FROM DBTXN.bodb02.dbo.LicenseeTransferPool t WITH(NOLOCK) WHERE t.MonthDate = @endDateLastMonth)
+	BEGIN
+		SET @IsTransfered = 0
+	END
+	
 	---- get list licensee code
 	INSERT INTO @tblLicenseeTransferCode(CustId , LicenseeName , StatusID, FromDate, ToDate)
 	SELECT CustId , LicenseeName , StatusID, FromDate, ToDate
@@ -132,8 +140,8 @@ BEGIN
 	INSERT INTO #LicenseeCode(LicenseeId, LicenseeName, LicenseeCode, LicenseeStatusId,FromDate, ToDate)
 	SELECT l.LicenseeID, l.LicenseeName, ci.username AS LicenseeCode, 
 		CASE 
-			WHEN lt.StatusID = 1 THEN 1  
-			WHEN lt.StatusID = 0 THEN 2
+			WHEN (@currentDate BETWEEN lt.FromDate AND lt.ToDate) OR (@endDateLastMonth BETWEEN lt.FromDate AND lt.ToDate AND @IsTransfered = 0) THEN 1  
+			ELSE 2
 		END AS LicenseeStatusId,
 		FromDate, ToDate
 	FROM Licensees l WITH(NOLOCK)

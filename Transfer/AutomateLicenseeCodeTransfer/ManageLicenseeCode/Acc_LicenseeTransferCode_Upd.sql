@@ -60,7 +60,7 @@ BEGIN
 	END
 
 	SELECT @custId = custId FROM CustDB.dbo.custInfo c WITH(NOLOCK) WHERE c.username = @LicenseeCode AND c.roleid = 1
-	SELECT @CodeStatus_Old = StatusID FROM dbo.LicenseeTransferCode lc WITH (NOLOCK) WHERE lc.LicenseeName = @LicenseeName AND lc.CustID = @custId AND lc.FromDate = @FromDate
+	SELECT @CodeStatus_Old = StatusID FROM dbo.LicenseeTransferCode lc WITH (NOLOCK) WHERE lc.LicenseeName = @LicenseeName AND lc.CustID = @custId 
 
 	BEGIN TRY
 		
@@ -86,7 +86,7 @@ BEGIN
 	DECLARE @LogSPData VARCHAR(MAX),  
 			@LogSPData_Old VARCHAR(2000) 
 
-	Select @LogSPData = '<Acc_LicenseeUpdNewLicenseeCode ' +
+	Select @LogSPData = '<Acc_LicenseeTransferCode_Upd ' +
 		  'LicenseeName="'+ coalesce(cast(@LicenseeName as varchar(50)),space(1)) + '" '+  
 		  'LicenseeCode="'+ coalesce(cast(@LicenseeCode as varchar(50)),space(1)) + '" '+  	
 		  'CodeStatus="'+ coalesce(cast(@CodeStatus as varchar(2)),space(1))+'" '+  
@@ -101,7 +101,7 @@ BEGIN
 	SELECT @LogSPData_Old = 
 							CASE 
 								WHEN @CodeStatus_Old IS NULL THEN '' 
-								ELSE  '<Acc_LicenseeUpdNewLicenseeCode ' +
+								ELSE  '<Acc_LicenseeTransferCode_Upd ' +
 									  'LicenseeName="'+ coalesce(cast(@LicenseeName as varchar(50)),space(1)) + '" '+  
 									  'LicenseeCode="'+ coalesce(cast(@LicenseeCode as varchar(50)),space(1)) + '" '+  	
 									  'CodeStatus="'+ coalesce(cast(@CodeStatus_Old as varchar(2)),space(1))+'" '+  

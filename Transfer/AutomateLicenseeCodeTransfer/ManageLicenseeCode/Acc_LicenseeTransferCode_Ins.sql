@@ -79,7 +79,7 @@ BEGIN
 
 	DECLARE @LogSPData VARCHAR(MAX)
 
-	SELECT @LogSPData = '<Acc_LicenseeUpdNewLicenseeCode ' +
+	SELECT @LogSPData = '<Acc_LicenseeTransferCode_Ins ' +
 		  'LicenseeName="'+ coalesce(cast(@LicenseeName as varchar(50)),space(1)) + '" '+  
 		  'LicenseeCode="'+ coalesce(cast(@LicenseeCode as varchar(50)),space(1)) + '" '+  	
 		  'CodeStatus="'+ coalesce(cast(@CodeStatus as varchar(2)),space(1))+'" '+  
