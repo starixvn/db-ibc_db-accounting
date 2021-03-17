@@ -2,7 +2,11 @@
 ALTER PROCEDURE Acc_LicenseeTransferCode_Verify
 (
 	@LicenseeName VARCHAR(50),
-	@LicenseeCode NVARCHAR(50)
+	@LicenseeCode NVARCHAR(50),
+	@FromDateOld DATE = NULL,
+	@ToDateOld DATE = NULL,
+	@FromDate DATE,
+	@ToDate DATE
 )
 AS
 /*
@@ -65,7 +69,10 @@ BEGIN
 	END
 
 	---- check licensee already has another active code
-	IF EXISTS 
+	IF @FromDateOld IS NOT NULL --- case update
+	BEGIN
+
+		IF EXISTS 
 		(
 			SELECT TOP 1 1 
 			FROM LicenseeTransferCode lc WITH(NOLOCK)
@@ -73,12 +80,46 @@ BEGIN
 					ON c.custid = lc.CustID AND c.roleid = 1
 			WHERE 
 				lc.LicenseeName = @LicenseeName
-				AND lc.StatusID = 1
+				AND c.username = @LicenseeCode
+				AND lc.FromDate <> @FromDateOld
+				AND lc.ToDate <> @ToDateOld
+				AND 
+				(
+					@FromDate BETWEEN lc.FromDate AND lc.ToDate
+					OR @ToDate BETWEEN lc.FromDate AND lc.ToDate
+				)
 		)
-	BEGIN
-		INSERT INTO @tblVerifiedResult
-		SELECT '202' AS ErrorCode, 'The Licensee already has another ON licensee code' AS ErrorMessage
+		BEGIN
+			INSERT INTO @tblVerifiedResult
+			SELECT '202' AS ErrorCode, 'The Licensee already has time-range overlaped' AS ErrorMessage
+		END
+
 	END
+	ELSE
+	BEGIN
+
+		IF EXISTS 
+		(
+			SELECT TOP 1 1 
+			FROM LicenseeTransferCode lc WITH(NOLOCK)
+				INNER JOIN CustDB.dbo.custInfo c WITH(NOLOCK)
+					ON c.custid = lc.CustID AND c.roleid = 1
+			WHERE 
+				lc.LicenseeName = @LicenseeName
+				AND c.username = @LicenseeCode
+				AND 
+				(
+					@FromDate BETWEEN lc.FromDate AND lc.ToDate
+					OR @ToDate BETWEEN lc.FromDate AND lc.ToDate
+				)
+		)
+		BEGIN
+			INSERT INTO @tblVerifiedResult
+			SELECT '202' AS ErrorCode, 'The Licensee already has time-range overlaped' AS ErrorMessage
+		END
+
+	END
+		
 	
 	SELECT t.ErrorId, t.ErrorMessage
 	FROM @tblVerifiedResult t

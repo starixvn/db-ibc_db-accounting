@@ -7,6 +7,7 @@ ALTER PROCEDURE Acc_LicenseeTransferCode_Sel
 	@ForEmail BIT = 0,
 	@PageIndex INT = 0,
 	@PageSize INT = 0,
+	@CurrentBillingMonth DATE = NULL OUTPUT,
 	@TotalRows INT = 0 OUTPUT
 )
 AS
@@ -38,12 +39,12 @@ BEGIN
 		,@endDateLastMonth SMALLDATETIME
 		,@RowStart INT
 		,@RowEnd INT
-		,@IsTransfered BIT = 1
+		--,@IsTransfered BIT = 1
 
 	DECLARE @tblLicenseeList TABLE (LicenseeId INT, LicenseeName VARCHAR(50), CustSuperId INT)
 	DECLARE @tblLicenseeListAgent TABLE (LicenseeId INT, LicenseeName VARCHAR(50), CustAgentId INT)
 	DECLARE @tblLicenseeWithStatus TABLE(LicenseeId INT, LicenseeName VARCHAR(50), LicenseeStatus TINYINT)
-	DECLARE @tblLicenseeTransferCode TABLE(CustId INT, LicenseeName VARCHAR(50), StatusID TINYINT, FromDate DATE, ToDate DATE)
+	DECLARE @tblLicenseeTransferCode TABLE(CustId INT, LicenseeName VARCHAR(50), StatusID TINYINT, FromDate DATE, ToDate DATE, LastMonthDate SMALLDATETIME)
 
 	SELECT @PageIndex = @PageIndex - 1, @RowStart =  @PageIndex * @PageSize + 1, @RowEnd = @RowStart + @PageSize - 1
 
@@ -56,12 +57,14 @@ BEGIN
 
 	IF NOT EXISTS (SELECT TOP 1 1 FROM DBTXN.bodb02.dbo.LicenseeTransferPool t WITH(NOLOCK) WHERE t.MonthDate = @endDateLastMonth)
 	BEGIN
-		SET @IsTransfered = 0
+		--SET @IsTransfered = 0
+		SET @CurrentBillingMonth = @endDateLastMonth
 	END
+	ELSE SET @CurrentBillingMonth = DATEADD(DAY, -1, DATEADD(MONTH, 2, @startDate))
 	
 	---- get list licensee code
-	INSERT INTO @tblLicenseeTransferCode(CustId , LicenseeName , StatusID, FromDate, ToDate)
-	SELECT CustId , LicenseeName , StatusID, FromDate, ToDate
+	INSERT INTO @tblLicenseeTransferCode(CustId , LicenseeName , StatusID, FromDate, ToDate, LastMonthDate)
+	SELECT CustId , LicenseeName , StatusID, FromDate, ToDate, LastMonthDate
 	FROM DBCUST.bodb_licensee.dbo.LicenseeTransferCode WITH(NOLOCK)
 
 	---- run only when the filter include "code needed", "n/a"
@@ -140,7 +143,7 @@ BEGIN
 	INSERT INTO #LicenseeCode(LicenseeId, LicenseeName, LicenseeCode, LicenseeStatusId,FromDate, ToDate)
 	SELECT l.LicenseeID, l.LicenseeName, ci.username AS LicenseeCode, 
 		CASE 
-			WHEN (@currentDate BETWEEN lt.FromDate AND lt.ToDate) OR (@endDateLastMonth BETWEEN lt.FromDate AND lt.ToDate AND @IsTransfered = 0) THEN 1  
+			WHEN (@currentDate BETWEEN lt.FromDate AND lt.ToDate) OR (@endDateLastMonth BETWEEN lt.FromDate AND lt.ToDate AND @endDateLastMonth > lt.LastMonthDate) THEN 1 --@IsTransfered = 0) THEN 1  
 			ELSE 2
 		END AS LicenseeStatusId,
 		FromDate, ToDate

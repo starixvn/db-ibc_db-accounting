@@ -48,7 +48,9 @@ BEGIN
 	INSERT INTO @tblVerifiedResult
 	EXEC dbo.Acc_LicenseeTransferCode_Verify
 		@LicenseeName = @LicenseeName,
-		@LicenseeCode = @LicenseeCode
+		@LicenseeCode = @LicenseeCode,
+		@FromDate = @FromDate,
+		@ToDate = @ToDate
 
 	IF EXISTS (SELECT 1 FROM @tblVerifiedResult WHERE ErrorId IN (201, 202))
 	BEGIN
@@ -67,6 +69,11 @@ BEGIN
 		BEGIN
 			INSERT INTO LicenseeTransferCode (LicenseeName, CustID, StatusID, FromDate, ToDate)
 			SELECT @LicenseeName, @custId, @CodeStatus, @FromDate, @ToDate
+		END
+		ELSE
+		BEGIN
+			SELECT @ErrorCode = '405', @ErrorMessage = 'Update failed! Duplicated licensee code or time-range'
+			RETURN
 		END
 		
 	END TRY
