@@ -184,6 +184,7 @@ BEGIN
 	SELECT lf.RowNumber, lf.LicenseeName, lf.LicenseeCode, lf.LicenseeStatus, lf.FromDate, lf.ToDate
 	FROM #LicenseeCodeFinal lf
 	WHERE @PageIndex < 0 OR @PageSize <= 0 OR (RowNumber BETWEEN @RowStart AND @RowEnd) 
+	ORDER BY lf.RowNumber, lf.LicenseeName
 
 	---- drop temp table
 	DROP TABLE #LicenseeCode

@@ -80,7 +80,7 @@ BEGIN
 					ON c.custid = lc.CustID AND c.roleid = 1
 			WHERE 
 				lc.LicenseeName = @LicenseeName
-				AND c.username = @LicenseeCode
+				AND c.username <> @LicenseeCode
 				AND lc.FromDate <> @FromDateOld
 				AND lc.ToDate <> @ToDateOld
 				AND 
@@ -91,7 +91,7 @@ BEGIN
 		)
 		BEGIN
 			INSERT INTO @tblVerifiedResult
-			SELECT '202' AS ErrorCode, 'The Licensee already has time-range overlaped' AS ErrorMessage
+			SELECT '202' AS ErrorCode, 'Cannot save the setting, please check From date/To date!' AS ErrorMessage
 		END
 
 	END
@@ -106,7 +106,6 @@ BEGIN
 					ON c.custid = lc.CustID AND c.roleid = 1
 			WHERE 
 				lc.LicenseeName = @LicenseeName
-				AND c.username = @LicenseeCode
 				AND 
 				(
 					@FromDate BETWEEN lc.FromDate AND lc.ToDate
@@ -115,9 +114,15 @@ BEGIN
 		)
 		BEGIN
 			INSERT INTO @tblVerifiedResult
-			SELECT '202' AS ErrorCode, 'The Licensee already has time-range overlaped' AS ErrorMessage
+			SELECT '202' AS ErrorCode, 'Cannot save the setting, please check From date/To date! ' AS ErrorMessage
 		END
 
+	END
+
+	IF (@FromDate >= @ToDate) OR (@FromDateOld IS NOT NULL AND @ToDateOld IS NOT NULL AND @FromDateOld >= @ToDateOld)
+	BEGIN
+		INSERT INTO @tblVerifiedResult
+		SELECT '203' AS ErrorCode, 'From Date could not be later than To Date' AS ErrorMessage
 	END
 		
 	
