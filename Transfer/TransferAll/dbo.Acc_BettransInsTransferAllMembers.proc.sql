@@ -284,7 +284,7 @@ BEGIN
 			BEGIN
 				
 				DECLARE @TotalCash MONEY 
-				EXEC Acc_CustomerSelTotalCash @custid = @recommend, @TotalCash  = @TotalCash OUTPUT
+				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @recommend, @TotalCash  = @TotalCash OUTPUT
 
 				INSERT INTO bettrans 
 					(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
@@ -321,7 +321,7 @@ BEGIN
 				END
 
 				DECLARE @TotalCash1 MONEY 
-				EXEC Acc_CustomerSelTotalCash @custid = @custid, @TotalCash  = @TotalCash1 OUTPUT
+				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @custid, @TotalCash  = @TotalCash1 OUTPUT
 
 				INSERT INTO bettrans
 					(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
@@ -352,7 +352,7 @@ BEGIN
 			BEGIN
 
 				DECLARE @TotalCash2 MONEY 
-				EXEC Acc_CustomerSelTotalCash @custid = @recommend, @TotalCash  = @TotalCash2 OUTPUT
+				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @recommend, @TotalCash  = @TotalCash2 OUTPUT
 
 				--SET @amount = abs(@amount) 			
 				INSERT INTO bettrans 
@@ -376,7 +376,7 @@ BEGIN
 				END
 
 				DECLARE @TotalCash3 MONEY 
-				EXEC Acc_CustomerSelTotalCash @custid = @custid, @TotalCash  = @TotalCash3 OUTPUT
+				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @custid, @TotalCash  = @TotalCash3 OUTPUT
 
 				INSERT INTO bettrans
 				   (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 

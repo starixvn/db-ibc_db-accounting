@@ -214,7 +214,7 @@ BEGIN
 			DELETE @TransIDs
 			
 			DECLARE @TotalCash MONEY 
-			EXEC Acc_CustomerSelTotalCash @custid = @FromCustID, @TotalCash  = @TotalCash OUTPUT
+			EXEC Acc_CustomerSelCash_CaptureBalance @custid = @FromCustID, @TotalCash  = @TotalCash OUTPUT
 
 			INSERT INTO bettrans 
 				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
@@ -333,7 +333,7 @@ BEGIN
 			DELETE @TransIDs
 
 			DECLARE @TotalCash1 MONEY 
-			EXEC Acc_CustomerSelTotalCash @custid = @ToCustID, @TotalCash  = @TotalCash1 OUTPUT
+			EXEC Acc_CustomerSelCash_CaptureBalance @custid = @ToCustID, @TotalCash  = @TotalCash1 OUTPUT
 			
 			INSERT INTO bettrans 
 				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
@@ -446,7 +446,7 @@ BEGIN
 			DELETE @TransIDs
 
 			DECLARE @TotalCash2 MONEY 
-			EXEC Acc_CustomerSelTotalCash @custid = @FromCustID, @TotalCash  = @TotalCash2 OUTPUT
+			EXEC Acc_CustomerSelCash_CaptureBalance @custid = @FromCustID, @TotalCash  = @TotalCash2 OUTPUT
 			
 			INSERT INTO bettrans 
 				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
@@ -527,7 +527,7 @@ BEGIN
 			DELETE @TransIDs
 			
 			DECLARE @TotalCash3 MONEY 
-			EXEC Acc_CustomerSelTotalCash @custid = @ToCustID, @TotalCash  = @TotalCash3 OUTPUT
+			EXEC Acc_CustomerSelCash_CaptureBalance @custid = @ToCustID, @TotalCash  = @TotalCash3 OUTPUT
 
 			INSERT INTO bettrans 
 				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
