@@ -198,23 +198,22 @@ BEGIN
 	-- get custID will be captured balance
 	DECLARE @IsCaptureDownline BIT = 0
 	DECLARE @CustIDCapture INT = 0
-	IF ABS(@FromRoleID - @ToRoleID) = 1
+	
+	IF @FromRoleID > @ToRoleID 
 	BEGIN
-		IF @FromRoleID > @ToRoleID 
-		BEGIN
-			SELECT @CustIDCapture =  CASE	WHEN @ToRoleID = 1 AND  @ToRecommend = @FromCustID THEN @ToCustID
-											WHEN @ToRoleID = 2 AND  @ToMrecommend = @FromCustID THEN @ToCustID
-											WHEN @ToRoleID = 3 AND  @ToSrecommend = @FromCustID THEN @ToCustID END
-		END
-
-
-		IF @ToRoleID > @FromRoleID 
-		BEGIN
-			SELECT @CustIDCapture =  CASE	WHEN @FromRoleID = 1 AND  @FromRecommend = @ToCustID THEN @FromCustID
-											WHEN @FromRoleID = 2 AND  @FromMrecommend = @ToCustID THEN @FromCustID
-											WHEN @FromRoleID = 3 AND  @FromSrecommend = @ToCustID THEN @FromCustID END
-		END
+		SELECT @CustIDCapture =  CASE	WHEN @ToRoleID = 1 AND  @ToRecommend = @FromCustID THEN @ToCustID
+										WHEN @ToRoleID = 2 AND  @ToMrecommend = @FromCustID THEN @ToCustID
+										WHEN @ToRoleID = 3 AND  @ToSrecommend = @FromCustID THEN @ToCustID END
 	END
+
+
+	IF @ToRoleID > @FromRoleID 
+	BEGIN
+		SELECT @CustIDCapture =  CASE	WHEN @FromRoleID = 1 AND  @FromRecommend = @ToCustID THEN @FromCustID
+										WHEN @FromRoleID = 2 AND  @FromMrecommend = @ToCustID THEN @FromCustID
+										WHEN @FromRoleID = 3 AND  @FromSrecommend = @ToCustID THEN @FromCustID END
+	END
+	
 
 	IF @ExchangeRate <> 1 
 	BEGIN
