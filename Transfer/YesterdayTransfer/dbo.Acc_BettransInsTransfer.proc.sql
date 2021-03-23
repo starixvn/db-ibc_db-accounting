@@ -119,8 +119,7 @@ BEGIN
 		INNER JOIN CustDB.dbo.Exchange e with (NOLOCK) ON c.currency = e.exchangeid 
 	where c.username = @ToUserName
 
-
-
+	
 	if @ToCustID is NULL or @ToCustID = 0
 	BEGIN
 		Select @ErrMsg = case @Language 
@@ -196,6 +195,27 @@ BEGIN
 		return
 	END
 
+	-- get custID will be captured balance
+	DECLARE @IsCaptureDownline BIT = 0
+	DECLARE @CustIDCapture INT = 0
+	IF ABS(@FromRoleID - @ToRoleID) = 1
+	BEGIN
+		IF @FromRoleID > @ToRoleID 
+		BEGIN
+			SELECT @CustIDCapture =  CASE	WHEN @ToRoleID = 1 AND  @ToRecommend = @FromCustID THEN @ToCustID
+											WHEN @ToRoleID = 2 AND  @ToMrecommend = @FromCustID THEN @ToCustID
+											WHEN @ToRoleID = 3 AND  @ToSrecommend = @FromCustID THEN @ToCustID END
+		END
+
+
+		IF @ToRoleID > @FromRoleID 
+		BEGIN
+			SELECT @CustIDCapture =  CASE	WHEN @FromRoleID = 1 AND  @FromRecommend = @ToCustID THEN @FromCustID
+											WHEN @FromRoleID = 2 AND  @FromMrecommend = @ToCustID THEN @FromCustID
+											WHEN @FromRoleID = 3 AND  @FromSrecommend = @ToCustID THEN @FromCustID END
+		END
+	END
+
 	IF @ExchangeRate <> 1 
 	BEGIN
 		SELECT @RemarkFromCurr =   ' - ' +@FromCurrName + ' '+ convert(nvarchar(50),@Amount)
@@ -213,8 +233,11 @@ BEGIN
 			---Insert into Bettrans
 			DELETE @TransIDs
 			
-			DECLARE @TotalCash MONEY 
-			EXEC Acc_CustomerSelCash_CaptureBalance @custid = @FromCustID, @TotalCash  = @TotalCash OUTPUT
+			DECLARE @TotalCash MONEY = NULL
+			IF @CustIDCapture = @FromCustID
+			BEGIN
+				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @FromCustID, @TotalCash  = @TotalCash OUTPUT
+			END
 
 			INSERT INTO bettrans 
 				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
@@ -332,9 +355,12 @@ BEGIN
 			--- Inseret into bettrans
 			DELETE @TransIDs
 
-			DECLARE @TotalCash1 MONEY 
-			EXEC Acc_CustomerSelCash_CaptureBalance @custid = @ToCustID, @TotalCash  = @TotalCash1 OUTPUT
-			
+			DECLARE @TotalCash1 MONEY = NULL
+			IF @CustIDCapture = @ToCustID
+			BEGIN
+				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @ToCustID, @TotalCash  = @TotalCash1 OUTPUT
+			END
+
 			INSERT INTO bettrans 
 				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 				 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
@@ -445,9 +471,13 @@ BEGIN
 			
 			DELETE @TransIDs
 
-			DECLARE @TotalCash2 MONEY 
-			EXEC Acc_CustomerSelCash_CaptureBalance @custid = @FromCustID, @TotalCash  = @TotalCash2 OUTPUT
-			
+			DECLARE @TotalCash2 MONEY = NULL
+
+			IF @CustIDCapture = @FromCustID
+			BEGIN
+				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @FromCustID, @TotalCash  = @TotalCash2 OUTPUT
+			END
+
 			INSERT INTO bettrans 
 				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 				 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
@@ -526,8 +556,12 @@ BEGIN
 			--------------------------------------------------------------
 			DELETE @TransIDs
 			
-			DECLARE @TotalCash3 MONEY 
-			EXEC Acc_CustomerSelCash_CaptureBalance @custid = @ToCustID, @TotalCash  = @TotalCash3 OUTPUT
+			DECLARE @TotalCash3 MONEY = NULL
+
+			IF @CustIDCapture = @ToCustID
+			BEGIN
+				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @ToCustID, @TotalCash  = @TotalCash3 OUTPUT
+			END
 
 			INSERT INTO bettrans 
 				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 

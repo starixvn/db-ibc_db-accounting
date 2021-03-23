@@ -294,17 +294,14 @@ BEGIN
 		
 		IF (@amount > 0 and @SkipTransfer = 0)
 		BEGIN
-			
-			DECLARE @TotalCash MONEY 
-			EXEC Acc_CustomerSelCash_CaptureBalance @custid = @agentid, @TotalCash  = @TotalCash OUTPUT
-
+		
 			INSERT INTO bettrans 
 				(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 				status, ruben, winlostdate, currency,actualrate,currencyName, recommend, mrecommend, 
-				srecommend, scomm, swinlost,ip,statusID,balance)
+				srecommend, scomm, swinlost,ip,statusID)
 			VALUES (0, @UserID, @agentid, @agUser, @refno, CURRENT_TIMESTAMP, 21004, 'To Customer via Multiple: ' + @User, @amount, 0, 
 				'Completed', 1, @WinlostDate, @currency,@actualrate, @currName,@agentid, @MRecommend1, 
-				@srecommend1, 0, 0,@ip,131,@TotalCash)
+				@srecommend1, 0, 0,@ip,131)
 			if @@Error <> 0
 			BEGIN
 				Select @ErrMsg = case @Language 
@@ -385,17 +382,13 @@ BEGIN
 		ELSE if (@amount<0 and @SkipTransfer = 0)
 		BEGIN
 			--SET @amount = abs(@amount)
-			
-			DECLARE @TotalCash2 MONEY 
-			EXEC Acc_CustomerSelCash_CaptureBalance @custid = @agentid, @TotalCash  = @TotalCash2 OUTPUT
-
 			INSERT INTO bettrans 
 				(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 				status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend,
-				scomm, swinlost,ip,statusID,balance)
+				scomm, swinlost,ip,statusID)
 			VALUES (0, @UserID, @agentid, @agUser, @refno, CURRENT_TIMESTAMP, 21004, 'To Customer via Multiple: ' + @User, 0, abs(@amount),
 				'Completed', 1,@WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend1,
-				0, 0, @ip,131,@TotalCash2)
+				0, 0, @ip,131)
 			if @@Error <> 0
 			BEGIN
 				Select @ErrMsg = case @Language 
