@@ -2,7 +2,11 @@
 ALTER PROCEDURE Acc_LicenseeTransferCode_Verify
 (
 	@LicenseeName VARCHAR(50),
-	@LicenseeCode NVARCHAR(50)
+	@LicenseeCode NVARCHAR(50),
+	@FromDateOld DATE = NULL,
+	@ToDateOld DATE = NULL,
+	@FromDate DATE,
+	@ToDate DATE
 )
 AS
 /*
@@ -12,6 +16,7 @@ AS
 	
 	Revisions:
 		- 20200615@Sol: NAP - Auto Assign Licensee code to the Licensee accordingly [Redmine: #120670]
+		- 20210315@Sol: NAP - Enhance Manage Licensee Code to support change base currency of licensees - [Redmine: #151607]
 
 	Param Info:
 		- @LicenseeName: Name of the Licensee 
@@ -43,6 +48,7 @@ BEGIN
 			ON c.custid = lc.CustID AND c.roleid = 1
 	WHERE 
 		c.username = @LicenseeCode
+		AND lc.LicenseeName <> @LicenseeName
 
 	---- check not contain licensee name
 	INSERT INTO @tblVerifiedResult
@@ -63,7 +69,10 @@ BEGIN
 	END
 
 	---- check licensee already has another active code
-	IF EXISTS 
+	IF @FromDateOld IS NOT NULL --- case update
+	BEGIN
+
+		IF EXISTS 
 		(
 			SELECT TOP 1 1 
 			FROM LicenseeTransferCode lc WITH(NOLOCK)
@@ -71,12 +80,55 @@ BEGIN
 					ON c.custid = lc.CustID AND c.roleid = 1
 			WHERE 
 				lc.LicenseeName = @LicenseeName
-				AND lc.StatusID = 1
+				AND c.username <> @LicenseeCode
+				AND lc.FromDate <> @FromDateOld
+				AND lc.ToDate <> @ToDateOld
+				AND 
+				(
+					@FromDate BETWEEN lc.FromDate AND lc.ToDate
+					OR @ToDate BETWEEN lc.FromDate AND lc.ToDate
+					OR lc.FromDate BETWEEN @FromDate AND @ToDate
+					OR lc.ToDate BETWEEN @FromDate AND @ToDate
+				)
 		)
+		BEGIN
+			INSERT INTO @tblVerifiedResult
+			SELECT '202' AS ErrorCode, 'Cannot save the setting, please check From date/To date!' AS ErrorMessage
+		END
+
+	END
+	ELSE
+	BEGIN
+
+		IF EXISTS 
+		(
+			SELECT TOP 1 1 
+			FROM LicenseeTransferCode lc WITH(NOLOCK)
+				INNER JOIN CustDB.dbo.custInfo c WITH(NOLOCK)
+					ON c.custid = lc.CustID AND c.roleid = 1
+			WHERE 
+				lc.LicenseeName = @LicenseeName
+				AND 
+				(
+					@FromDate BETWEEN lc.FromDate AND lc.ToDate
+					OR @ToDate BETWEEN lc.FromDate AND lc.ToDate
+					OR lc.FromDate BETWEEN @FromDate AND @ToDate
+					OR lc.ToDate BETWEEN @FromDate AND @ToDate
+				)
+		)
+		BEGIN
+			INSERT INTO @tblVerifiedResult
+			SELECT '202' AS ErrorCode, 'Cannot save the setting, please check From date/To date! ' AS ErrorMessage
+		END
+
+	END
+
+	IF (@FromDate >= @ToDate) OR (@FromDateOld IS NOT NULL AND @ToDateOld IS NOT NULL AND @FromDateOld >= @ToDateOld)
 	BEGIN
 		INSERT INTO @tblVerifiedResult
-		SELECT '202' AS ErrorCode, 'The Licensee already has another ON licensee code' AS ErrorMessage
+		SELECT '203' AS ErrorCode, 'From Date could not be later than To Date' AS ErrorMessage
 	END
+		
 	
 	SELECT t.ErrorId, t.ErrorMessage
 	FROM @tblVerifiedResult t

@@ -7,6 +7,7 @@ ALTER PROCEDURE Acc_LicenseeTransferCode_Sel
 	@ForEmail BIT = 0,
 	@PageIndex INT = 0,
 	@PageSize INT = 0,
+	@CurrentBillingMonth DATE = NULL OUTPUT,
 	@TotalRows INT = 0 OUTPUT
 )
 AS
@@ -18,6 +19,7 @@ AS
 	Revisions:
 		- 20200615@Sol: NAP - Auto Assign Licensee code to the Licensee accordingly [Redmine: #120670]
 		- 20210204@Sol: NAP - email notification for last month only - [Redmine: #150060]
+		- 20210315@Sol: NAP - show from date - to date cols - [Redmine: #151607]
 
 	Param Info:
 		- @MoveBetsDay: movebet get from sp [age_SelBalanceUpDay]
@@ -34,13 +36,15 @@ BEGIN
 		@currentDate SMALLDATETIME
 		,@startDate SMALLDATETIME
 		,@endDate SMALLDATETIME
+		,@endDateLastMonth SMALLDATETIME
 		,@RowStart INT
 		,@RowEnd INT
+		--,@IsTransfered BIT = 1
 
 	DECLARE @tblLicenseeList TABLE (LicenseeId INT, LicenseeName VARCHAR(50), CustSuperId INT)
 	DECLARE @tblLicenseeListAgent TABLE (LicenseeId INT, LicenseeName VARCHAR(50), CustAgentId INT)
 	DECLARE @tblLicenseeWithStatus TABLE(LicenseeId INT, LicenseeName VARCHAR(50), LicenseeStatus TINYINT)
-	DECLARE @tblLicenseeTransferCode TABLE(CustId INT, LicenseeName VARCHAR(50), StatusID TINYINT)
+	DECLARE @tblLicenseeTransferCode TABLE(CustId INT, LicenseeName VARCHAR(50), StatusID TINYINT, FromDate DATE, ToDate DATE, LastMonthDate SMALLDATETIME)
 
 	SELECT @PageIndex = @PageIndex - 1, @RowStart =  @PageIndex * @PageSize + 1, @RowEnd = @RowStart + @PageSize - 1
 
@@ -48,11 +52,19 @@ BEGIN
 		@currentDate = GETDATE()
 		,@startDate	= CAST(CONVERT(VARCHAR(7), DATEADD(MONTH, -1, @currentDate), 111) + '/01' AS DATE)
 		,@endDate = CASE WHEN @ForEmail = 1 THEN DATEADD(DAY, -1, DATEADD(MONTH, 1, @startDate)) ELSE CAST(@currentDate AS DATE) END
+		,@endDateLastMonth = DATEADD(DAY, -1, DATEADD(MONTH, 1, @startDate))
 		,@MoveBetsDay = CAST(@MoveBetsDay AS DATE)
 
+	IF NOT EXISTS (SELECT TOP 1 1 FROM DBTXN.bodb02.dbo.LicenseeTransferPool t WITH(NOLOCK) WHERE t.MonthDate = @endDateLastMonth)
+	BEGIN
+		--SET @IsTransfered = 0
+		SET @CurrentBillingMonth = @endDateLastMonth
+	END
+	ELSE SET @CurrentBillingMonth = DATEADD(DAY, -1, DATEADD(MONTH, 2, @startDate))
+	
 	---- get list licensee code
-	INSERT INTO @tblLicenseeTransferCode(CustId , LicenseeName , StatusID )
-	SELECT CustId , LicenseeName , StatusID
+	INSERT INTO @tblLicenseeTransferCode(CustId , LicenseeName , StatusID, FromDate, ToDate, LastMonthDate)
+	SELECT CustId , LicenseeName , StatusID, FromDate, ToDate, LastMonthDate
 	FROM DBCUST.bodb_licensee.dbo.LicenseeTransferCode WITH(NOLOCK)
 
 	---- run only when the filter include "code needed", "n/a"
@@ -125,15 +137,16 @@ BEGIN
 
 	END
 	---- final result
-	CREATE TABLE #LicenseeCode (LicenseeId INT, LicenseeName VARCHAR(50), LicenseeCode NVARCHAR(50), LicenseeStatusId TINYINT)
-	CREATE TABLE #LicenseeCodeFinal (RowNumber INT, LicenseeName VARCHAR(50), LicenseeCode NVARCHAR(50), LicenseeStatus VARCHAR(50))
+	CREATE TABLE #LicenseeCode (LicenseeId INT, LicenseeName VARCHAR(50), LicenseeCode NVARCHAR(50), LicenseeStatusId TINYINT, FromDate DATE, ToDate DATE)
+	CREATE TABLE #LicenseeCodeFinal (RowNumber INT, LicenseeName VARCHAR(50), LicenseeCode NVARCHAR(50), LicenseeStatus VARCHAR(50), FromDate DATE, ToDate DATE)
 
-	INSERT INTO #LicenseeCode(LicenseeId, LicenseeName, LicenseeCode, LicenseeStatusId)
+	INSERT INTO #LicenseeCode(LicenseeId, LicenseeName, LicenseeCode, LicenseeStatusId,FromDate, ToDate)
 	SELECT l.LicenseeID, l.LicenseeName, ci.username AS LicenseeCode, 
 		CASE 
-			WHEN lt.StatusID = 1 THEN 1  
-			WHEN lt.StatusID = 0 THEN 2
-		END AS LicenseeStatusId
+			WHEN (@currentDate BETWEEN lt.FromDate AND lt.ToDate) OR (@endDateLastMonth BETWEEN lt.FromDate AND lt.ToDate AND @endDateLastMonth > lt.LastMonthDate) THEN 1 --@IsTransfered = 0) THEN 1  
+			ELSE 2
+		END AS LicenseeStatusId,
+		FromDate, ToDate
 	FROM Licensees l WITH(NOLOCK)
 		INNER JOIN @tblLicenseeTransferCode lt
 			ON l.LicenseeName = lt.LicenseeName
@@ -141,11 +154,11 @@ BEGIN
 			ON lt.CustID = ci.custid AND ci.roleid = 1
 	WHERE l.IsActive = 1
 	UNION ALL
-	SELECT lt.LicenseeId, lt.LicenseeName, NULL, lt.LicenseeStatus 
+	SELECT lt.LicenseeId, lt.LicenseeName, NULL, lt.LicenseeStatus, NULL, NULL
 	FROM @tblLicenseeWithStatus lt
 
 	---- final result with filter 
-	INSERT INTO #LicenseeCodeFinal(RowNumber, LicenseeName, LicenseeCode, LicenseeStatus)
+	INSERT INTO #LicenseeCodeFinal(RowNumber, LicenseeName, LicenseeCode, LicenseeStatus, FromDate, ToDate)
 	SELECT 
 		ROW_NUMBER() OVER(ORDER BY lc.LicenseeName) AS RowNumber,
 		lc.LicenseeName, lc.LicenseeCode, 
@@ -154,7 +167,8 @@ BEGIN
 			WHEN lc.LicenseeStatusId = 2 THEN 'OFF'
 			WHEN lc.LicenseeStatusId = 3 THEN 'Code Needed'
 			WHEN lc.LicenseeStatusId = 4 THEN 'N/A'
-		END AS LicenseeStatus
+		END AS LicenseeStatus,
+		lc.FromDate, lc.ToDate
 	FROM #LicenseeCode lc
 	WHERE 
 		lc.LicenseeStatusId IN (SELECT val FROM dbo.strSplit(@StatusIds,',') t)
@@ -167,9 +181,10 @@ BEGIN
 	--return data
 	SELECT @TotalRows = MAX(RowNumber) FROM #LicenseeCodeFinal
 
-	SELECT lf.RowNumber, lf.LicenseeName, lf.LicenseeCode, lf.LicenseeStatus
+	SELECT lf.RowNumber, lf.LicenseeName, lf.LicenseeCode, lf.LicenseeStatus, lf.FromDate, lf.ToDate
 	FROM #LicenseeCodeFinal lf
 	WHERE @PageIndex < 0 OR @PageSize <= 0 OR (RowNumber BETWEEN @RowStart AND @RowEnd) 
+	ORDER BY lf.RowNumber, lf.LicenseeName
 
 	---- drop temp table
 	DROP TABLE #LicenseeCode

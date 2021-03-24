@@ -4,6 +4,8 @@ ALTER PROCEDURE Acc_LicenseeTransferCode_Ins
 	@LicenseeName VARCHAR(50),
 	@LicenseeCode NVARCHAR(50),
 	@CodeStatus TINYINT,
+	@FromDate DATE,
+	@ToDate DATE,
 	@UserId INT = 0,
 	@IP VARCHAR(50) = '',
 	@Language VARCHAR(20) = 'E',
@@ -19,6 +21,7 @@ AS
 	Revisions:
 		- 20200615@Sol: NAP - Auto Assign Licensee code to the Licensee accordingly [Redmine: #120670]
 		- 20200720@Sol: rename sp verify [Redmine: #120670]
+		- 20210315@Sol: NAP - Enhance Manage Licensee Code to support change base currency of licensees - [Redmine: #151607]
 
 	Param Info:
 		- @LicenseeName: Name of the Licensee 
@@ -45,7 +48,9 @@ BEGIN
 	INSERT INTO @tblVerifiedResult
 	EXEC dbo.Acc_LicenseeTransferCode_Verify
 		@LicenseeName = @LicenseeName,
-		@LicenseeCode = @LicenseeCode
+		@LicenseeCode = @LicenseeCode,
+		@FromDate = @FromDate,
+		@ToDate = @ToDate
 
 	IF EXISTS (SELECT 1 FROM @tblVerifiedResult WHERE ErrorId IN (201, 202))
 	BEGIN
@@ -60,10 +65,15 @@ BEGIN
 
 	BEGIN TRY
 		
-		IF NOT EXISTS (SELECT TOP 1 1 FROM dbo.LicenseeTransferCode lc WITH (NOLOCK) WHERE lc.LicenseeName = @LicenseeName AND lc.CustID = @custId)
+		IF NOT EXISTS (SELECT TOP 1 1 FROM dbo.LicenseeTransferCode lc WITH (NOLOCK) WHERE lc.LicenseeName = @LicenseeName AND lc.CustID = @custId AND lc.FromDate = @FromDate)
 		BEGIN
-			INSERT INTO LicenseeTransferCode (LicenseeName, CustID, StatusID)
-			SELECT @LicenseeName, @custId, @CodeStatus
+			INSERT INTO LicenseeTransferCode (LicenseeName, CustID, StatusID, FromDate, ToDate)
+			SELECT @LicenseeName, @custId, @CodeStatus, @FromDate, @ToDate
+		END
+		ELSE
+		BEGIN
+			SELECT @ErrorCode = '405', @ErrorMessage = 'Update failed! Duplicated licensee code or time-range'
+			RETURN
 		END
 		
 	END TRY
@@ -76,10 +86,12 @@ BEGIN
 
 	DECLARE @LogSPData VARCHAR(MAX)
 
-	SELECT @LogSPData = '<Acc_LicenseeUpdNewLicenseeCode ' +
+	SELECT @LogSPData = '<Acc_LicenseeTransferCode_Ins ' +
 		  'LicenseeName="'+ coalesce(cast(@LicenseeName as varchar(50)),space(1)) + '" '+  
 		  'LicenseeCode="'+ coalesce(cast(@LicenseeCode as varchar(50)),space(1)) + '" '+  	
 		  'CodeStatus="'+ coalesce(cast(@CodeStatus as varchar(2)),space(1))+'" '+  
+		  'FromDate="'+ coalesce(cast(@FromDate as varchar(10)),space(1))+'" '+  
+		  'ToDate="'+ coalesce(cast(@ToDate as varchar(10)),space(1))+'" '+  
 		  'ErrorCode="'+ coalesce(cast(@ErrorCode as varchar(50)),space(1)) + '" '+  
 		  'ErrorMessage="'+ coalesce(cast(@ErrorMessage as varchar(400)),space(1))+'" '+  
 		  'UserID="'+ coalesce(cast(@UserID as varchar(50)),space(1)) + '" '+  	
