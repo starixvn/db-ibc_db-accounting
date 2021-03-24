@@ -1,6 +1,6 @@
 /*<info serverAlias="DBCUST-bodb_Licensee" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE dbo.Acc_LicenseeTransfer_Update
-	@LicenseeInfo		VARCHAR(MAX)
+	@LicenseeInfo		VARCHAR(8000)
 	,@LastMonthDate		SMALLDATETIME
 	,@LastTransferDate	DATETIME
 	,@ErrCode			INT = 0 OUTPUT
@@ -13,14 +13,13 @@ AS
 
 	Revisions:
 		- 20190806@Bobby: Update Licensee last month transfer information [redmine: #118247]
-		- 20210315@Sol: NAP - Enhance Manage Licensee Code to support change base currency of licensees - [Redmine: #151607]
 		 
 */
 BEGIN
 	SET NOCOUNT ON
 
 	DECLARE @xmlLicenseeInfo	XML
-	DECLARE @tempLicenseeInfo	TABLE (LicenseeName VARCHAR(50), CustId INT, FromDate DATE)
+	DECLARE @tempLicenseeInfo	TABLE (LicenseeName VARCHAR(50))
 	
 	SELECT @ErrCode		= 0
 		,@ErrMsg		= ''
@@ -28,13 +27,10 @@ BEGIN
 	BEGIN TRY
 		SELECT @xmlLicenseeInfo	= CONVERT(XML, @LicenseeInfo)	
 	
-		INSERT INTO @tempLicenseeInfo (LicenseeName, CustId, FromDate)
-		SELECT LicenseeName, CustId, FromDate
+		INSERT INTO @tempLicenseeInfo (LicenseeName)
+		SELECT LicenseeName
 		FROM (
-			SELECT 
-				T.C.value('./@l', 'VARCHAR(50)') AS LicenseeName,
-				T.C.value('./@c', 'VARCHAR(50)') AS CustId,
-				T.C.value('./@fd', 'VARCHAR(50)') AS FromDate
+			SELECT T.C.value('./@l', 'VARCHAR(50)') AS LicenseeName
 			FROM @xmlLicenseeInfo.nodes('/root/r') AS T(C)
 		) AS lic
 
@@ -43,7 +39,7 @@ BEGIN
 			,LastTransferDate = @LastTransferDate
 		FROM bodb_licensee.dbo.LicenseeTransferCode code WITH(ROWLOCK, UPDLOCK)
 		INNER JOIN @tempLicenseeInfo AS pol
-			ON code.LicenseeName = pol.LicenseeName AND pol.CustId = code.CustID AND pol.FromDate = code.FromDate
+			ON code.LicenseeName = pol.LicenseeName
 	END TRY
 	BEGIN CATCH 
 		SELECT @ErrCode	= 999
