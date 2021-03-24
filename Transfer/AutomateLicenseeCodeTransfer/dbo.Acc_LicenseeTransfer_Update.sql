@@ -1,6 +1,6 @@
 /*<info serverAlias="DBCUST-bodb_Licensee" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE dbo.Acc_LicenseeTransfer_Update
-	@LicenseeInfo		VARCHAR(8000)
+	@LicenseeInfo		VARCHAR(MAX)
 	,@LastMonthDate		SMALLDATETIME
 	,@LastTransferDate	DATETIME
 	,@ErrCode			INT = 0 OUTPUT

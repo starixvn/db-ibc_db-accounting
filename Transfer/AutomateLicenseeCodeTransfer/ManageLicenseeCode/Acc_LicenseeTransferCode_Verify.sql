@@ -87,6 +87,8 @@ BEGIN
 				(
 					@FromDate BETWEEN lc.FromDate AND lc.ToDate
 					OR @ToDate BETWEEN lc.FromDate AND lc.ToDate
+					OR lc.FromDate BETWEEN @FromDate AND @ToDate
+					OR lc.ToDate BETWEEN @FromDate AND @ToDate
 				)
 		)
 		BEGIN
@@ -110,6 +112,8 @@ BEGIN
 				(
 					@FromDate BETWEEN lc.FromDate AND lc.ToDate
 					OR @ToDate BETWEEN lc.FromDate AND lc.ToDate
+					OR lc.FromDate BETWEEN @FromDate AND @ToDate
+					OR lc.ToDate BETWEEN @FromDate AND @ToDate
 				)
 		)
 		BEGIN
