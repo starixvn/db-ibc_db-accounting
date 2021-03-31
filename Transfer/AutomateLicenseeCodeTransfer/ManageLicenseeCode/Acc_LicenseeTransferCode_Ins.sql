@@ -3,7 +3,6 @@ ALTER PROCEDURE Acc_LicenseeTransferCode_Ins
 (
 	@LicenseeName VARCHAR(50),
 	@LicenseeCode NVARCHAR(50),
-	@CodeStatus TINYINT,
 	@FromDate DATE,
 	@ToDate DATE,
 	@UserId INT = 0,
@@ -22,11 +21,11 @@ AS
 		- 20200615@Sol: NAP - Auto Assign Licensee code to the Licensee accordingly [Redmine: #120670]
 		- 20200720@Sol: rename sp verify [Redmine: #120670]
 		- 20210315@Sol: NAP - Enhance Manage Licensee Code to support change base currency of licensees - [Redmine: #151607]
+		- 20210330@Sol: NAP - Enhance Manage Licensee Code to support change base currency of licensees - Phase 2 - [Redmine: #152056]
 
 	Param Info:
 		- @LicenseeName: Name of the Licensee 
 		- @LicenseeCode: code need to mapping (username of member)
-		- @CodeStatus: status of the mapping (active/inactive)
 	
 */
 BEGIN
@@ -68,7 +67,7 @@ BEGIN
 		IF NOT EXISTS (SELECT TOP 1 1 FROM dbo.LicenseeTransferCode lc WITH (NOLOCK) WHERE lc.LicenseeName = @LicenseeName AND lc.CustID = @custId AND lc.FromDate = @FromDate)
 		BEGIN
 			INSERT INTO LicenseeTransferCode (LicenseeName, CustID, StatusID, FromDate, ToDate)
-			SELECT @LicenseeName, @custId, @CodeStatus, @FromDate, @ToDate
+			SELECT @LicenseeName, @custId, 1, @FromDate, @ToDate
 		END
 		ELSE
 		BEGIN
@@ -89,7 +88,7 @@ BEGIN
 	SELECT @LogSPData = '<Acc_LicenseeTransferCode_Ins ' +
 		  'LicenseeName="'+ coalesce(cast(@LicenseeName as varchar(50)),space(1)) + '" '+  
 		  'LicenseeCode="'+ coalesce(cast(@LicenseeCode as varchar(50)),space(1)) + '" '+  	
-		  'CodeStatus="'+ coalesce(cast(@CodeStatus as varchar(2)),space(1))+'" '+  
+		  'CodeStatus="'+ coalesce(cast(1 as varchar(2)),space(1))+'" '+  
 		  'FromDate="'+ coalesce(cast(@FromDate as varchar(10)),space(1))+'" '+  
 		  'ToDate="'+ coalesce(cast(@ToDate as varchar(10)),space(1))+'" '+  
 		  'ErrorCode="'+ coalesce(cast(@ErrorCode as varchar(50)),space(1)) + '" '+  
