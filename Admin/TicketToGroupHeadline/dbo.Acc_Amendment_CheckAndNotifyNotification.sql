@@ -16,7 +16,7 @@ AS
 		- 20200127@Malcolm: Initialize SP [RedmineID: #147470]
 
 	Param's Explanation:
-		.@XmlEvent = '<root><r ProductId="" MatchId="" MatchCode="" EventType="" EventDate="" ActualResult="" WrongResult="" Type=""/></root>'
+		.@XmlEvent = '<root><r ProductId="" MatchId="" MatchCode="" EventType="" EventDate="" ActualResult="" WrongResult="" Type="" MessageId=""/></root>'
 		.@XmlTicket = '<root><r RowAt="" CustId="" Username="" RefNo="" RefTable="" Bettype="" HeadlineId=""/></root>'
 		.@IsCheck = 0, Insert and Check
 				  = 1, Only check data
