@@ -73,7 +73,7 @@ BEGIN
 		(
 			SELECT TOP 1 1 
 			FROM dbo.TicketAmendment_Event e WITH(NOLOCK) 
-			WHERE e.TicketEventId = t.TicketEventId AND e.ActualResult = @ActualResult AND e.WrongResult = @WrongResult AND e.MessageId = @MessageId
+			WHERE e.TicketEventId = t.TicketEventId AND e.ActualResult = @ActualResult AND e.WrongResult = @WrongResult AND (e.MessageId = @MessageId OR @MessageId IS NULL)
 		) AS Ev(m)		
 		WHERE t.CustId = r.CustId
 			AND t.RefNo = r.RefNo
