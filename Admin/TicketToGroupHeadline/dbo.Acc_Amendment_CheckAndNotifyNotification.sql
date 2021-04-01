@@ -26,17 +26,17 @@ BEGIN
 	
 	SET NOCOUNT ON
 	
-	CREATE TABLE #EventInfo (ProductId TINYINT, MatchId INT, MatchCode NVARCHAR(100), EventType TINYINT, EventDate SMALLDATETIME, Type TINYINT,ActualResult NVARCHAR(MAX), WrongResult NVARCHAR(MAX))
+	CREATE TABLE #EventInfo (ProductId TINYINT, MatchId INT, MatchCode NVARCHAR(100), EventType TINYINT, EventDate SMALLDATETIME, MessageId INT,ActualResult NVARCHAR(MAX), WrongResult NVARCHAR(MAX))
 
 	CREATE TABLE #TicketRefNo (ID INT, RowAt INT, CustId INT, Username VARCHAR(30), RefNo BIGINT, RefTable TINYINT, Bettype SMALLINT, HeadlineId INT)
 
 	DECLARE @EventTmp TABLE (EventId INT)
 
-	DECLARE @EventId BIGINT = NULL, @NoRows INT= 0, @ActualResult NVARCHAR(MAX), @WrongResult NVARCHAR(MAX), @_XmlEvent XML, @_XmlTicket XML
+	DECLARE @EventId BIGINT = NULL, @NoRows INT= 0, @ActualResult NVARCHAR(MAX), @WrongResult NVARCHAR(MAX), @MessageId INT, @_XmlEvent XML, @_XmlTicket XML
 
 	SELECT @_XmlEvent = CONVERT(XML, @XmlEvent), @_XmlTicket = CONVERT(XML, @XmlTicket)
 
-	INSERT INTO #EventInfo (ProductId, MatchId, MatchCode, EventType, EventDate, ActualResult, WrongResult, Type)
+	INSERT INTO #EventInfo (ProductId, MatchId, MatchCode, EventType, EventDate, ActualResult, WrongResult, MessageId)
 	SELECT 
 		T.c.value('@ProductId', 'TINYINT')
 		,NULLIF(T.c.value('@MatchId', 'INT'),0)
@@ -45,8 +45,9 @@ BEGIN
 		,T.c.value('@EventDate', 'SMALLDATETIME')
 		,T.c.value('@ActualResult', 'NVARCHAR(MAX)')
 		,T.c.value('@WrongResult', 'NVARCHAR(MAX)')
-		,NULLIF(T.c.value('@Type','TINYINT'),0)
+		,NULLIF(T.c.value('@MessageId','TINYINT'),0)
 	FROM @_XmlEvent.nodes('/root/r') AS T(c)
+	OPTION(OPTIMIZE FOR (@_XmlEvent = NULL))
 
 	INSERT INTO #TicketRefNo (RowAt, CustId, Username, RefNo, RefTable, Bettype, HeadlineId)
 	SELECT
@@ -58,6 +59,7 @@ BEGIN
 		,T.c.value ('@Bettype', 'SMALLINT')
 		,NULLIF(T.c.value('@HeadlineId','INT'), 0)
 	FROM @_XmlTicket.nodes('/root/r') T(c)
+	OPTION(OPTIMIZE FOR (@_XmlTicket = NULL))
 
 	SELECT @ActualResult = e.ActualResult, @WrongResult = e.WrongResult FROM #EventInfo e
 
@@ -71,7 +73,7 @@ BEGIN
 		(
 			SELECT TOP 1 1 
 			FROM dbo.TicketAmendment_Event e WITH(NOLOCK) 
-			WHERE e.TicketEventId = t.TicketEventId AND e.ActualResult = @ActualResult AND e.WrongResult = @WrongResult
+			WHERE e.TicketEventId = t.TicketEventId AND e.ActualResult = @ActualResult AND e.WrongResult = @WrongResult AND e.MessageId = @MessageId
 		) AS Ev(m)		
 		WHERE t.CustId = r.CustId
 			AND t.RefNo = r.RefNo
@@ -100,8 +102,8 @@ BEGIN
 
 	--Insert Event and Ticket
 	BEGIN TRY
-		INSERT INTO dbo.TicketAmendment_Event (ProductId, MatchId, MatchCode, EventType, EventDate, ActualResult, WrongResult, Status, Type)
-		SELECT ProductId, MatchId, MatchCode, EventType, EventDate, ActualResult, WrongResult, NULL, Type
+		INSERT INTO dbo.TicketAmendment_Event (ProductId, MatchId, MatchCode, EventType, EventDate, ActualResult, WrongResult, Status, MessageId)
+		SELECT ProductId, MatchId, MatchCode, EventType, EventDate, ActualResult, WrongResult, NULL, MessageId
 		FROM #EventInfo
 
 		SET @EventId = SCOPE_IDENTITY()
