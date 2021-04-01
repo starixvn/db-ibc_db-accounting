@@ -16,7 +16,7 @@ AS
 		- 20200127@Malcolm: Initialize SP [RedmineID: #147470]
 
 	Param's Explanation:
-		.@XmlEvent = '<root><r ProductId="" MatchId="" MatchCode="" EventType="" EventDate="" ActualResult="" WrongResult="" Type="" MessageId=""/></root>'
+		.@XmlEvent = '<root><r ProductId="" MatchId="" MatchCode="" EventType="" EventDate="" ActualResult="" WrongResult="" MessageId=""/></root>'
 		.@XmlTicket = '<root><r RowAt="" CustId="" Username="" RefNo="" RefTable="" Bettype="" HeadlineId=""/></root>'
 		.@IsCheck = 0, Insert and Check
 				  = 1, Only check data
@@ -45,7 +45,7 @@ BEGIN
 		,T.c.value('@EventDate', 'SMALLDATETIME')
 		,T.c.value('@ActualResult', 'NVARCHAR(MAX)')
 		,T.c.value('@WrongResult', 'NVARCHAR(MAX)')
-		,NULLIF(T.c.value('@MessageId','TINYINT'),0)
+		,NULLIF(T.c.value('@MessageId','INT'),0)
 	FROM @_XmlEvent.nodes('/root/r') AS T(c)
 	OPTION(OPTIMIZE FOR (@_XmlEvent = NULL))
 
