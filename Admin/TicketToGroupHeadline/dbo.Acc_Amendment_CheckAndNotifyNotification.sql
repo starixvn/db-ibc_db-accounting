@@ -69,11 +69,13 @@ BEGIN
 	WHERE EXISTS(
 		SELECT TOP(1) 1
 		FROM dbo.TicketAmendment_Detail t WITH(NOLOCK)
-		CROSS APPLY
-		(
+		CROSS APPLY(
 			SELECT TOP 1 1 
 			FROM dbo.TicketAmendment_Event e WITH(NOLOCK) 
-			WHERE e.TicketEventId = t.TicketEventId AND e.ActualResult = @ActualResult AND e.WrongResult = @WrongResult AND (e.MessageId = @MessageId OR @MessageId IS NULL)
+			WHERE e.TicketEventId = t.TicketEventId 
+				AND (e.ActualResult = @ActualResult OR @ActualResult = '') 
+				AND (e.WrongResult = @WrongResult OR @WrongResult = '')
+				AND (e.MessageId = @MessageId OR @MessageId IS NULL)
 		) AS Ev(m)		
 		WHERE t.CustId = r.CustId
 			AND t.RefNo = r.RefNo
