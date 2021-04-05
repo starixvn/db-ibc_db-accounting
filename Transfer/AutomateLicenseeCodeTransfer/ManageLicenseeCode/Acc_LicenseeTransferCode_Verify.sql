@@ -96,9 +96,9 @@ BEGIN
 					(
 						@FromDateOld > lc.ToDate 
 						OR @ToDateOld < lc.FromDate 
-						OR (@FromDate > @FromDateOld AND @ToDate < @ToDateOld)
-						OR (@FromDate = @FromDateOld AND @ToDate < @ToDateOld)
-						OR (@FromDate > @FromDateOld AND @ToDate = @ToDateOld)
+						OR (@FromDate > @FromDateOld AND @ToDate < @ToDateOld AND @ToDateOld < lc.MaxToDate AND @FromDateOld > lc.MinFromDate)
+						OR (@FromDate = @FromDateOld AND @ToDate < @ToDateOld AND @ToDateOld < lc.MaxToDate AND @FromDateOld > lc.MinFromDate)
+						OR (@FromDate > @FromDateOld AND @ToDate = @ToDateOld AND @ToDateOld < lc.MaxToDate AND @FromDateOld > lc.MinFromDate)
 					)
 					AND 
 					(
@@ -158,8 +158,8 @@ BEGIN
 					lc.LicenseeName = @LicenseeName
 					AND 
 					(
-						@ToDate < lc.MinFromDate
-						OR @FromDate > lc.MaxToDate
+						@ToDate = DATEADD(DAY, -1, lc.MinFromDate)
+						OR @FromDate = DATEADD(DAY, 1, lc.MaxToDate)
 					)
 			)
 			BEGIN
