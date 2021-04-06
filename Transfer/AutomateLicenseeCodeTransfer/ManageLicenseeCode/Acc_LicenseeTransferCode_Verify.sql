@@ -17,6 +17,7 @@ AS
 	Revisions:
 		- 20200615@Sol: NAP - Auto Assign Licensee code to the Licensee accordingly [Redmine: #120670]
 		- 20210315@Sol: NAP - Enhance Manage Licensee Code to support change base currency of licensees - [Redmine: #151607]
+		- 20210330@Sol: NAP - Enhance Manage Licensee Code to support change base currency of licensees - Phase 2 - [Redmine: #152056]
 
 	Param Info:
 		- @LicenseeName: Name of the Licensee 
@@ -29,6 +30,18 @@ BEGIN
 	SET NOCOUNT ON;
 
 	DECLARE @tblVerifiedResult TABLE (ErrorId INT, ErrorMessage VARCHAR(200))
+	DECLARE @tblLicensee TABLE (LicenseeName VARCHAR(50), CustID INT, FromDate DATE,ToDate DATE, MinFromDate DATE, MaxToDate DATE)
+
+	INSERT INTO @tblLicensee(LicenseeName, CustID, FromDate, ToDate, MinFromDate, MaxToDate)
+	SELECT lc.LicenseeName, lc.CustID, lc.FromDate, lc.ToDate, t.MinFromDate, t.MaxToDate
+	FROM dbo.LicenseeTransferCode lc WITH(NOLOCK)
+		CROSS APPLY
+		(
+			SELECT MIN(lc.FromDate) AS MinFromDate, MAX(lc.ToDate) AS MaxToDate 
+			FROM dbo.LicenseeTransferCode lc WITH(NOLOCK)
+			WHERE lc.LicenseeName = @LicenseeName	
+		) t
+	WHERE lc.LicenseeName = @LicenseeName
 
 	---- check code used
 	INSERT INTO @tblVerifiedResult
@@ -69,58 +82,91 @@ BEGIN
 	END
 
 	---- check licensee already has another active code
-	IF @FromDateOld IS NOT NULL --- case update
+	IF EXISTS (SELECT TOP 1 1 FROM @tblLicensee lc WHERE lc.LicenseeName = @LicenseeName)
 	BEGIN
-
-		IF EXISTS 
-		(
-			SELECT TOP 1 1 
-			FROM LicenseeTransferCode lc WITH(NOLOCK)
-				INNER JOIN CustDB.dbo.custInfo c WITH(NOLOCK)
-					ON c.custid = lc.CustID AND c.roleid = 1
-			WHERE 
-				lc.LicenseeName = @LicenseeName
-				AND c.username <> @LicenseeCode
-				AND lc.FromDate <> @FromDateOld
-				AND lc.ToDate <> @ToDateOld
-				AND 
-				(
-					@FromDate BETWEEN lc.FromDate AND lc.ToDate
-					OR @ToDate BETWEEN lc.FromDate AND lc.ToDate
-					OR lc.FromDate BETWEEN @FromDate AND @ToDate
-					OR lc.ToDate BETWEEN @FromDate AND @ToDate
-				)
-		)
+		IF @FromDateOld IS NOT NULL --- case update
 		BEGIN
-			INSERT INTO @tblVerifiedResult
-			SELECT '202' AS ErrorCode, 'Cannot save the setting, please check From date/To date!' AS ErrorMessage
+			IF EXISTS 
+			(
+				SELECT TOP 1 1 
+				FROM @tblLicensee lc
+				WHERE 
+					lc.LicenseeName = @LicenseeName
+					AND 
+					(
+						@FromDateOld > lc.ToDate 
+						OR @ToDateOld < lc.FromDate 
+						OR (@FromDate > @FromDateOld AND @ToDate < @ToDateOld AND @ToDateOld < lc.MaxToDate AND @FromDateOld > lc.MinFromDate)
+						OR (@FromDate = @FromDateOld AND @ToDate < @ToDateOld AND @ToDateOld < lc.MaxToDate AND @FromDateOld > lc.MinFromDate)
+						OR (@FromDate > @FromDateOld AND @ToDate = @ToDateOld AND @ToDateOld < lc.MaxToDate AND @FromDateOld > lc.MinFromDate)
+					)
+					AND 
+					(
+						@FromDate BETWEEN lc.FromDate AND lc.ToDate
+						OR @ToDate BETWEEN lc.FromDate AND lc.ToDate
+						OR lc.FromDate BETWEEN @FromDate AND @ToDate
+						OR lc.ToDate BETWEEN @FromDate AND @ToDate
+					)
+			)
+			OR EXISTS
+			(
+				SELECT TOP 1 1 
+				FROM @tblLicensee lc
+				WHERE 
+					lc.LicenseeName = @LicenseeName
+					AND 
+					(
+						(@FromDateOld > lc.ToDate AND @ToDateOld = lc.MaxToDate) 
+						OR (@ToDateOld < lc.FromDate AND @FromDateOld = lc.MinFromDate) 
+					)
+					AND 
+					(
+						@FromDate BETWEEN lc.FromDate AND lc.ToDate
+						OR @ToDate BETWEEN lc.FromDate AND lc.ToDate
+						OR @FromDate > @FromDateOld AND @ToDateOld = lc.MaxToDate
+						OR @ToDate < @ToDateOld AND @FromDateOld = lc.MinFromDate
+					)
+			)
+			BEGIN
+				INSERT INTO @tblVerifiedResult
+				SELECT '202' AS ErrorCode, 'Cannot save the setting, please check From date/To date!' AS ErrorMessage
+			END
 		END
-
-	END
-	ELSE
-	BEGIN
-
-		IF EXISTS 
-		(
-			SELECT TOP 1 1 
-			FROM LicenseeTransferCode lc WITH(NOLOCK)
-				INNER JOIN CustDB.dbo.custInfo c WITH(NOLOCK)
-					ON c.custid = lc.CustID AND c.roleid = 1
-			WHERE 
-				lc.LicenseeName = @LicenseeName
-				AND 
-				(
-					@FromDate BETWEEN lc.FromDate AND lc.ToDate
-					OR @ToDate BETWEEN lc.FromDate AND lc.ToDate
-					OR lc.FromDate BETWEEN @FromDate AND @ToDate
-					OR lc.ToDate BETWEEN @FromDate AND @ToDate
-				)
-		)
+		ELSE 
 		BEGIN
-			INSERT INTO @tblVerifiedResult
-			SELECT '202' AS ErrorCode, 'Cannot save the setting, please check From date/To date! ' AS ErrorMessage
+			IF 
+			EXISTS --overlapped
+			(
+				SELECT TOP 1 1 
+				FROM @tblLicensee lc
+				WHERE 
+					lc.LicenseeName = @LicenseeName
+					AND 
+					(
+						@FromDate BETWEEN lc.FromDate AND lc.ToDate
+						OR @ToDate BETWEEN lc.FromDate AND lc.ToDate
+						OR lc.FromDate BETWEEN @FromDate AND @ToDate
+						OR lc.ToDate BETWEEN @FromDate AND @ToDate
+					)
+			)
+			OR 
+			NOT EXISTS --time range must be continued
+			(
+				SELECT TOP 1 1 
+				FROM @tblLicensee lc
+				WHERE 
+					lc.LicenseeName = @LicenseeName
+					AND 
+					(
+						@ToDate = DATEADD(DAY, -1, lc.MinFromDate)
+						OR @FromDate = DATEADD(DAY, 1, lc.MaxToDate)
+					)
+			)
+			BEGIN
+				INSERT INTO @tblVerifiedResult
+				SELECT '202' AS ErrorCode, 'Cannot save the setting, please check From date/To date! ' AS ErrorMessage
+			END
 		END
-
 	END
 
 	IF (@FromDate >= @ToDate) OR (@FromDateOld IS NOT NULL AND @ToDateOld IS NOT NULL AND @FromDateOld >= @ToDateOld)

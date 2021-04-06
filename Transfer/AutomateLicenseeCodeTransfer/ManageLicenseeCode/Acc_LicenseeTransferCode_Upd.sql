@@ -2,8 +2,8 @@
 ALTER PROCEDURE Acc_LicenseeTransferCode_Upd
 (
 	@LicenseeName VARCHAR(50),
+	@LicenseeCodeOld NVARCHAR(50),
 	@LicenseeCode NVARCHAR(50),
-	@CodeStatus TINYINT,
 	@FromDateOld DATE,
 	@ToDateOld DATE,
 	@FromDate DATE,
@@ -24,6 +24,7 @@ AS
 		- 20200615@Sol: NAP - Auto Assign Licensee code to the Licensee accordingly [Redmine: #120670]
 		- 20200720@Sol: rename sp verify [Redmine: #120670]
 		- 20210315@Sol: NAP - Enhance Manage Licensee Code to support change base currency of licensees - [Redmine: #151607]
+		- 20210330@Sol: NAP - Enhance Manage Licensee Code to support change base currency of licensees - Phase 2 - [Redmine: #152056]
 
 	Param Info:
 		- @LicenseeName: Name of the Licensee 
@@ -42,7 +43,7 @@ BEGIN
 	DECLARE @CodeStatus_Old TINYINT = NULL
 
 	DECLARE @tblVerifiedResult TABLE (ErrorId INT, ErrorMessage VARCHAR(200))
-	DECLARE @custId INT
+	DECLARE @custIdOld INT,	@custId INT
 
 	SELECT @startRun = GETDATE(), @ErrorCode = 0, @ErrorMessage = ''
 
@@ -65,19 +66,20 @@ BEGIN
 
 	END
 
+	SELECT @custIdOld = custId FROM CustDB.dbo.custInfo c WITH(NOLOCK) WHERE c.username = @LicenseeCodeOld AND c.roleid = 1
 	SELECT @custId = custId FROM CustDB.dbo.custInfo c WITH(NOLOCK) WHERE c.username = @LicenseeCode AND c.roleid = 1
-	SELECT @CodeStatus_Old = StatusID FROM dbo.LicenseeTransferCode lc WITH (NOLOCK) WHERE lc.LicenseeName = @LicenseeName AND lc.CustID = @custId AND lc.FromDate = @FromDateOld
+	SELECT @CodeStatus_Old = StatusID FROM dbo.LicenseeTransferCode lc WITH (NOLOCK) WHERE lc.LicenseeName = @LicenseeName AND lc.CustID = @custIdOld AND lc.FromDate = @FromDateOld
 
 	BEGIN TRY
 		
-		IF @CodeStatus_Old IS NOT NULL
+		IF EXISTS (SELECT TOP 1 1 FROM dbo.LicenseeTransferCode lc WITH (NOLOCK) WHERE lc.LicenseeName = @LicenseeName AND lc.CustID = @custIdOld AND lc.FromDate = @FromDateOld)
 		BEGIN
 
 			UPDATE dbo.LicenseeTransferCode WITH(UPDLOCK)
-				SET StatusID = @CodeStatus,
+				SET CustID = @custId,
 					FromDate = @FromDate,
 					ToDate = @ToDate
-			WHERE LicenseeName = @LicenseeName AND CustID = @custId AND FromDate = @FromDateOld
+			WHERE LicenseeName = @LicenseeName AND CustID = @custIdOld AND FromDate = @FromDateOld
 
 		END
 		
@@ -95,7 +97,6 @@ BEGIN
 	Select @LogSPData = '<Acc_LicenseeTransferCode_Upd ' +
 		  'LicenseeName="'+ coalesce(cast(@LicenseeName as varchar(50)),space(1)) + '" '+  
 		  'LicenseeCode="'+ coalesce(cast(@LicenseeCode as varchar(50)),space(1)) + '" '+  	
-		  'CodeStatus="'+ coalesce(cast(@CodeStatus as varchar(2)),space(1))+'" '+  
 		  'FromDate="'+ coalesce(cast(@FromDate as varchar(10)),space(1))+'" '+  
 		  'ToDate="'+ coalesce(cast(@ToDate as varchar(10)),space(1))+'" '+  
 		  'ErrorCode="'+ coalesce(cast(@ErrorCode as varchar(50)),space(1)) + '" '+  
@@ -109,8 +110,7 @@ BEGIN
 								WHEN @CodeStatus_Old IS NULL THEN '' 
 								ELSE  '<Acc_LicenseeTransferCode_Upd ' +
 									  'LicenseeName="'+ coalesce(cast(@LicenseeName as varchar(50)),space(1)) + '" '+  
-									  'LicenseeCode="'+ coalesce(cast(@LicenseeCode as varchar(50)),space(1)) + '" '+  	
-									  'CodeStatus="'+ coalesce(cast(@CodeStatus_Old as varchar(2)),space(1))+'" '+  
+									  'LicenseeCode="'+ coalesce(cast(@LicenseeCodeOld as varchar(50)),space(1)) + '" '+  	
 									  'FromDate="'+ coalesce(cast(@FromDateOld as varchar(10)),space(1))+'" '+  
 									  'ToDate="'+ coalesce(cast(@ToDateOld as varchar(10)),space(1))+'" '+  
 									  'ErrorCode="'+ coalesce(cast(@ErrorCode as varchar(50)),space(1)) + '" '+  
