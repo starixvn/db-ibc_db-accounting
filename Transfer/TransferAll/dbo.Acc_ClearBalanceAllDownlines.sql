@@ -42,6 +42,7 @@ AS
 		- 20200730@Sophia: Check UM Transfer Function [Redmine: #136992]
 		- 20201006@sophia: Comment SP Server_IsHeavyLoadPermitted due to cannot transfer [Redmine: #136992]
 		- 20201217@Sol: Optimize - mofidied code to get index seek on IX_ProductID_Issum_StatuaID [RedmineID: #147335]
+		- 20210310@Danny: Capture total cash before transfering  [Redmine: #146038]
 		 				       
 	Param's Explanation:
 		@AgentName: username of agent/master/super to clear his all downlines' balance
@@ -377,6 +378,7 @@ BEGIN
 				AND @SkipTransfer = 0
 				)
 		BEGIN
+
 			INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
 			VALUES (0, @UserID, @recommend, @agentusername, @refno, @Now, 21004, 'From Customer::' + @membername, @memberBalance, 0, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @MRecommend, @srecommend, 0, 0, @IP, 131)
 
@@ -409,8 +411,11 @@ BEGIN
 				RETURN
 			END
 
-			INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
-			VALUES (0, @UserID, @custid, @membername, @refno, @Now, 21004, 'To Customer::' + @agentusername, 0, @memberBalance, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @MRecommend, @srecommend, 0, 0, @IP, 131)
+			DECLARE @TotalCash1 MONEY 
+			EXEC Acc_CustomerSelCash_CaptureBalance @custid = @custid, @TotalCash  = @TotalCash1 OUTPUT
+
+			INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance)
+			VALUES (0, @UserID, @custid, @membername, @refno, @Now, 21004, 'To Customer::' + @agentusername, 0, @memberBalance, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @MRecommend, @srecommend, 0, 0, @IP, 131, @TotalCash1)
 
 			IF @@Error <> 0
 			BEGIN
@@ -465,6 +470,7 @@ BEGIN
 				AND @SkipTransfer = 0
 				)
 		BEGIN
+
 			--SET @memberBalance = abs(@memberBalance)      
 			INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
 			VALUES (0, @UserID, @recommend, @agentusername, @refno, CURRENT_TIMESTAMP, 21004, 'To Customer::' + @membername, 0, abs(@memberBalance), 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @MRecommend, @srecommend, 0, 0, @IP, 131)
@@ -482,8 +488,11 @@ BEGIN
 				RETURN
 			END
 
-			INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
-			VALUES (0, @UserID, @custid, @membername, @refno, CURRENT_TIMESTAMP, 21004, 'From Customer::' + @agentusername, abs(@memberBalance), 0, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @MRecommend, @srecommend, 0, 0, @IP, 131)
+			DECLARE @TotalCash3 MONEY 
+			EXEC Acc_CustomerSelCash_CaptureBalance @custid = @custid, @TotalCash  = @TotalCash3 OUTPUT
+
+			INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance)
+			VALUES (0, @UserID, @custid, @membername, @refno, CURRENT_TIMESTAMP, 21004, 'From Customer::' + @agentusername, abs(@memberBalance), 0, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @MRecommend, @srecommend, 0, 0, @IP, 131, @TotalCash3)
 
 			IF @@Error <> 0
 			BEGIN
@@ -608,6 +617,7 @@ BEGIN
 
 			IF @agentBalance > 0
 			BEGIN
+
 				INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
 				VALUES (0, @UserID, @mrecommend, @mastername, @refno, @Now, 21003, 'From Customer::' + @agentusername, @agentBalance, 0, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @mrecommend, @srecommend, 0, 0, @IP, 131)
 
@@ -624,8 +634,11 @@ BEGIN
 					RETURN
 				END
 
-				INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
-				VALUES (0, @UserID, @recommend, @agentusername, @refno, @Now, 21003, 'To Customer::' + @mastername, 0, @agentBalance, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @mrecommend, @srecommend, 0, 0, @IP, 131)
+				DECLARE @TotalCash5 MONEY 
+				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @recommend, @TotalCash  = @TotalCash5 OUTPUT
+
+				INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance)
+				VALUES (0, @UserID, @recommend, @agentusername, @refno, @Now, 21003, 'To Customer::' + @mastername, 0, @agentBalance, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @mrecommend, @srecommend, 0, 0, @IP, 131, @TotalCash5)
 
 				IF @@Error <> 0
 				BEGIN
@@ -678,8 +691,11 @@ BEGIN
 					RETURN
 				END
 
-				INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
-				VALUES (0, @UserID, @recommend, @agentusername, @refno, @Now, 21003, 'From Customer::' + @mastername, abs(@agentBalance), 0, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @mrecommend, @srecommend, 0, 0, @IP, 131)
+				DECLARE @TotalCash7 MONEY 
+				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @recommend, @TotalCash  = @TotalCash7 OUTPUT
+
+				INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance)
+				VALUES (0, @UserID, @recommend, @agentusername, @refno, @Now, 21003, 'From Customer::' + @mastername, abs(@agentBalance), 0, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @mrecommend, @srecommend, 0, 0, @IP, 131, @TotalCash7)
 
 				IF @@Error <> 0
 				BEGIN
@@ -773,6 +789,7 @@ BEGIN
 
 			IF @masterBalance > 0
 			BEGIN
+
 				INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID)
 				VALUES (0, @UserID, @srecommend, @supername, @refno, @Now, 21003, 'From Customer::' + @mastername, @masterBalance, 0, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @srecommend, 0, 0, 0, @ip, 131)
 
@@ -789,8 +806,11 @@ BEGIN
 					RETURN
 				END
 
-				INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID)
-				VALUES (0, @UserID, @mrecommend, @mastername, @refno, @Now, 21003, 'To Customer::' + @supername, 0, @masterBalance, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @mrecommend, @srecommend, 0, 0, 0, @ip, 131)
+				DECLARE @TotalCash9 MONEY 
+				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @mrecommend, @TotalCash  = @TotalCash9 OUTPUT
+
+				INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID, balance)
+				VALUES (0, @UserID, @mrecommend, @mastername, @refno, @Now, 21003, 'To Customer::' + @supername, 0, @masterBalance, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @mrecommend, @srecommend, 0, 0, 0, @ip, 131, @TotalCash9)
 
 				IF @@Error <> 0
 				BEGIN
@@ -843,8 +863,11 @@ BEGIN
 					RETURN
 				END
 
-				INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID)
-				VALUES (0, @UserID, @mrecommend, @mastername, @refno, CURRENT_TIMESTAMP, 21003, 'From Customer::' + @supername, abs(@masterBalance), 0, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @mrecommend, @srecommend, 0, 0, 0, @ip, 131)
+				DECLARE @TotalCash11 MONEY 
+				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @mrecommend, @TotalCash  = @TotalCash11 OUTPUT
+
+				INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID, balance)
+				VALUES (0, @UserID, @mrecommend, @mastername, @refno, CURRENT_TIMESTAMP, 21003, 'From Customer::' + @supername, abs(@masterBalance), 0, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @mrecommend, @srecommend, 0, 0, 0, @ip, 131, @TotalCash11)
 
 				IF @@Error <> 0
 				BEGIN

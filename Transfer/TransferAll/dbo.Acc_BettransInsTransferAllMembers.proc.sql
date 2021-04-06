@@ -36,6 +36,7 @@ AS
 		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 		- 20200730@Sophia: prevent duplicated transfer [Redmine: #137141]
 		- 20200730@Sophia: Check UM Transfer Function [Redmine: #136992]
+		- 20210310@Danny: Capture total cash before transfering  [Redmine: #146038]
 		
 	Param's Explanation:
 */ 
@@ -281,6 +282,7 @@ BEGIN
 			
 			IF (@amount > 0 and @SkipTransfer = 0)
 			BEGIN
+				
 				INSERT INTO bettrans 
 					(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 					status, ruben, winlostdate, currency, actualrate,currencyName, recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID)
@@ -315,11 +317,14 @@ BEGIN
 					return
 				END
 
+				DECLARE @TotalCash1 MONEY 
+				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @custid, @TotalCash  = @TotalCash1 OUTPUT
+
 				INSERT INTO bettrans
 					(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
-					status, ruben, winlostdate, currency,actualrate,currencyName, recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID)
+					status, ruben, winlostdate, currency,actualrate,currencyName, recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID, balance)
 				VALUES (0, @Userid , @custid, @memberName, @refno, CURRENT_TIMESTAMP, 21004, 'To Customer :: ' + @agName, 0, @amount,
-					'Completed', 1, @WinlostDate, @currency,@actualrate,@currName, @recommend, @MRecommend, @srecommend, 0, 0,@ip,131)
+					'Completed', 1, @WinlostDate, @currency,@actualrate,@currName, @recommend, @MRecommend, @srecommend, 0, 0,@ip,131, @TotalCash1)
 				if @@Error <> 0
 				BEGIN
 					SELECT @ErrMsg = 'Insert Failed', @ErrCode = 103
@@ -342,6 +347,7 @@ BEGIN
 			END
 			ELSE if (@amount<0 and @SkipTransfer = 0)
 			BEGIN
+
 				--SET @amount = abs(@amount) 			
 				INSERT INTO bettrans 
 				   (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
@@ -362,13 +368,17 @@ BEGIN
 						
 					return
 				END
+
+				DECLARE @TotalCash3 MONEY 
+				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @custid, @TotalCash  = @TotalCash3 OUTPUT
+
 				INSERT INTO bettrans
 				   (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 					status, ruben, winlostdate, currency,actualrate,currencyName, recommend, mrecommend, srecommend, 
-					scomm, swinlost,ip,statusID)
+					scomm, swinlost,ip,statusID, balance)
 				VALUES (0, @Userid, @custid, @memberName, @refno, CURRENT_TIMESTAMP, 21004, 'From Customer :: ' + @agName, abs(@amount), 0,
 					'Completed', 1,@WinlostDate, @currency,@actualrate,@currName, @recommend, @MRecommend, @srecommend, 
-					0, 0,@ip,131)
+					0, 0,@ip,131, @TotalCash3)
 				if @@Error <> 0
 				BEGIN
 					SELECT @ErrMsg = 'Insert Failed', @ErrCode = 105

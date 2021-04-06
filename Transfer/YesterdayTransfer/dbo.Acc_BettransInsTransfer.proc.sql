@@ -40,6 +40,7 @@ Revisions:
 	- 20181112@Sophia: Add Transfer Collection [redmine: #98621]
 	- 20200730@Sophia: prevent duplicated transfer [Redmine: #137141]
 	- 20200730@Sophia: Check UM Transfer Function [Redmine: #136992]
+	- 20210310@Danny: Capture total cash before transfering  [Redmine: #146038]
 					   
 Param's Explanation:
 */
@@ -118,8 +119,7 @@ BEGIN
 		INNER JOIN CustDB.dbo.Exchange e with (NOLOCK) ON c.currency = e.exchangeid 
 	where c.username = @ToUserName
 
-
-
+	
 	if @ToCustID is NULL or @ToCustID = 0
 	BEGIN
 		Select @ErrMsg = case @Language 
@@ -195,6 +195,26 @@ BEGIN
 		return
 	END
 
+	-- get custID will be captured balance
+	DECLARE @IsCaptureDownline BIT = 0
+	DECLARE @CustIDCapture INT = 0
+	
+	IF @FromRoleID > @ToRoleID 
+	BEGIN
+		SELECT @CustIDCapture =  CASE	WHEN @ToRoleID = 1 AND  @ToRecommend = @FromCustID THEN @ToCustID
+										WHEN @ToRoleID = 2 AND  @ToMrecommend = @FromCustID THEN @ToCustID
+										WHEN @ToRoleID = 3 AND  @ToSrecommend = @FromCustID THEN @ToCustID END
+	END
+
+
+	IF @ToRoleID > @FromRoleID 
+	BEGIN
+		SELECT @CustIDCapture =  CASE	WHEN @FromRoleID = 1 AND  @FromRecommend = @ToCustID THEN @FromCustID
+										WHEN @FromRoleID = 2 AND  @FromMrecommend = @ToCustID THEN @FromCustID
+										WHEN @FromRoleID = 3 AND  @FromSrecommend = @ToCustID THEN @FromCustID END
+	END
+	
+
 	IF @ExchangeRate <> 1 
 	BEGIN
 		SELECT @RemarkFromCurr =   ' - ' +@FromCurrName + ' '+ convert(nvarchar(50),@Amount)
@@ -212,14 +232,20 @@ BEGIN
 			---Insert into Bettrans
 			DELETE @TransIDs
 			
+			DECLARE @TotalCash MONEY = NULL
+			IF @CustIDCapture = @FromCustID
+			BEGIN
+				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @FromCustID, @TotalCash  = @TotalCash OUTPUT
+			END
+
 			INSERT INTO bettrans 
 				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 				 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
-				 scomm, swinlost,ip,statusID, OddsId)
+				 scomm, swinlost,ip,statusID, OddsId, balance)
 			OUTPUT INSERTED.TransID INTO @TransIDs
 			VALUES (@UserID, @FromCustID, @FromUsername, @refno, @Transdate, 0, 21003, 'To Customer: ' + @ToUserName + '('+ @Remark +')' + @RemarkToCurr, @amount, 0, 
 				 'Completed', 1, @winlostdate, @FromCurr, @FromActualrate, @FromCurrName, @FromRecommend, @FromMrecommend, @FromSrecommend, 
-				 0, 0,@ip,131, @IsCollection)
+				 0, 0,@ip,131, @IsCollection, @TotalCash)
 								
 			if @@Error <> 0
 			BEGIN
@@ -327,15 +353,21 @@ BEGIN
 			
 			--- Inseret into bettrans
 			DELETE @TransIDs
-			
+
+			DECLARE @TotalCash1 MONEY = NULL
+			IF @CustIDCapture = @ToCustID
+			BEGIN
+				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @ToCustID, @TotalCash  = @TotalCash1 OUTPUT
+			END
+
 			INSERT INTO bettrans 
 				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 				 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
-				 scomm, swinlost,ip,statusID, OddsId)
+				 scomm, swinlost,ip,statusID, OddsId, balance)
 			OUTPUT INSERTED.TransID INTO @TransIDs
 			VALUES (@UserID, @ToCustID, @ToUsername, @refno, @Transdate, 0, 21003, 'From Customer: ' + @FromUserName + '('+ @Remark +')' + @RemarkFromCurr, 0, @amount * @ExchangeRate, 
 				 'Completed', 1, @winlostdate, @ToCurr, @ToActualrate, @ToCurrName, @ToRecommend, @ToMrecommend, @ToSrecommend, 
-				 0, 0,@ip,131, @IsCollection)
+				 0, 0,@ip,131, @IsCollection, @TotalCash1)
 				 
 				 
 			if @@Error <> 0
@@ -437,15 +469,22 @@ BEGIN
 			END
 			
 			DELETE @TransIDs
-			
+
+			DECLARE @TotalCash2 MONEY = NULL
+
+			IF @CustIDCapture = @FromCustID
+			BEGIN
+				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @FromCustID, @TotalCash  = @TotalCash2 OUTPUT
+			END
+
 			INSERT INTO bettrans 
 				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 				 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
-				 scomm, swinlost,ip,statusID, OddsId)
+				 scomm, swinlost,ip,statusID, OddsId, balance)
 			OUTPUT INSERTED.TransID INTO @TransIDs
 			VALUES (@UserID, @FromCustID, @FromUsername, @refno, @Transdate, 0, 21003, 'To Customer: ' + @ToUserName + '('+ @Remark +')'+@RemarkToCurr, 0, @amount, 
 				 'Completed', 1, @winlostdate, @FromCurr, @FromActualrate, @FromCurrName, @FromRecommend, @FromMrecommend, @FromSrecommend, 
-				 0, 0,@ip,131,@IsCollection)
+				 0, 0,@ip,131,@IsCollection, @TotalCash2)
 			
 			if @@Error <> 0
 			BEGIN
@@ -516,14 +555,21 @@ BEGIN
 			--------------------------------------------------------------
 			DELETE @TransIDs
 			
+			DECLARE @TotalCash3 MONEY = NULL
+
+			IF @CustIDCapture = @ToCustID
+			BEGIN
+				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @ToCustID, @TotalCash  = @TotalCash3 OUTPUT
+			END
+
 			INSERT INTO bettrans 
 				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
 				 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
-				 scomm, swinlost,ip,statusID, OddsId)
+				 scomm, swinlost,ip,statusID, OddsId, balance)
 			OUTPUT INSERTED.TransID INTO @TransIDs
 			VALUES (@UserID, @ToCustID, @ToUsername, @refno, @Transdate, 0, 21003, 'From Customer: ' + @FromUserName + '('+ @Remark +')' + @RemarkFromCurr, @amount * @ExchangeRate, 0, 
 				 'Completed', 1, @winlostdate, @ToCurr, @ToActualrate, @ToCurrName, @ToRecommend, @ToMrecommend, @ToSrecommend, 
-				 0, 0,@ip,131, @IsCollection)
+				 0, 0,@ip,131, @IsCollection, @TotalCash3)
 						
 			if @@Error <> 0
 			BEGIN
