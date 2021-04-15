@@ -61,7 +61,7 @@ BEGIN
 	FROM @_XmlTicket.nodes('/root/r') T(c)
 	OPTION(OPTIMIZE FOR (@_XmlTicket = NULL))
 
-	SELECT @ActualResult = e.ActualResult, @WrongResult = e.WrongResult FROM #EventInfo e
+	SELECT @ActualResult = e.ActualResult, @WrongResult = e.WrongResult, @MessageId = MessageId FROM #EventInfo e
 
 	--Check Data	
 	SELECT @ErrMsg = COALESCE(@ErrMsg, '') + CONVERT(VARCHAR(30), r.RowAt) + ', '
