@@ -19,16 +19,16 @@ BEGIN
 	SET NOCOUNT ON
 
 	DECLARE @MinTransID_RNG BIGINT,  @MinTransID_LC BIGINT, @MaxTransID_RNG BIGINT,  @MaxTransID_LC BIGINT
+	DECLARE @WLdate SMALLDATETIME = @Winlostdate
 
 	SELECT  @MinTransID_RNG = MIN (TransID) , @MaxTransID_RNG = MAX(TransID) 
 	FROM	dbo.BettransRNG WITH (NOLOCK)
-	WHERE	@winlostdate = @Winlostdate
+	WHERE	winlostdate = @WLdate
 
 
 	SELECT  @MinTransID_LC = MIN (TransID), @MaxTransID_LC = MAX(TransID) 
 	FROM	dbo.BettransLC WITH (NOLOCK)
-	WHERE	@winlostdate = @Winlostdate
-
+	WHERE	winlostdate = @WLdate
 
 	------Get Sport Bettype Matrix------
 	
@@ -106,7 +106,7 @@ BEGIN
 					
 		FROM dbo.bettrans b WITH (NOLOCK, index = CIX_matchid_bettype)  
 		INNER JOIN #SportBettype s ON s.BetType = b.bettype 		
-		WHERE   b.Winlostdate = @WinlostDate
+		WHERE   b.Winlostdate = @WLdate
 			AND b.statusid IN (111, 112, 113)		
 			AND b.bettype < 19001
 			AND b.MatchID >= 0
@@ -148,7 +148,7 @@ BEGIN
 					) AS ExtraWinlost				
 		FROM dbo.bettransRNG b WITH (NOLOCK, index = PK_bettransRnG)  
 		INNER JOIN #SportBettype s ON s.BetType = b.gameID		
-		WHERE   b.Winlostdate = @WinlostDate
+		WHERE   b.Winlostdate = @WLdate
 			AND b.statusid IN (111, 112, 113)
 			AND s.RefTable = 1	
 			AND b.transID BETWEEN @MinTransID_RNG AND @MaxTransID_RNG
@@ -180,7 +180,7 @@ BEGIN
 					) AS ExtraWinlost	
 		FROM dbo.bettransLC b WITH (NOLOCK, index = PK_bettransLC)		
 		INNER JOIN #SportBettype s ON s.BetType = b.gameID 								  
-		WHERE   b.Winlostdate = @WinlostDate
+		WHERE   b.Winlostdate = @WLdate
 			AND b.statusid IN (111, 112, 113)
 			AND s.RefTable = 2			
 			AND b.srecommend IN (SELECT custid FROM #Supers)
