@@ -14,6 +14,7 @@ AS
 		- 20201008@Sophia: Separate Saba vs Real Sport [Redmine: #143173]
 		- 20201230@Sophia: add more LeagueGroupID 41, 72 [Redmine: #147907]
 		- 20210315@Sophia: add Live and Non-Live [Redmine: #151656]
+		- 20210422@Sophia: Add Cricket [Redmind: #153777]		
 		 
 	Param Explanation:
 		 
@@ -40,7 +41,7 @@ BEGIN
 	INSERT INTO #Sports (Sporttype, SportName)	
 	SELECT 	Sporttype, SportName
 	FROM 	bodb02.dbo.Sports WITH (NOLOCK)
-    WHERE 	Sporttype IN (1, 2, 5, 43)	
+    WHERE 	Sporttype IN (1, 2, 5, 43, 50)	
 	
 	INSERT INTO #Sports (Sporttype, SportName)	
 	SELECT 	0 AS Sporttype, 'Other Sports' AS SportName	 
@@ -83,8 +84,7 @@ BEGIN
 					FROM Match m WITH(NOLOCK)
 					LEFT JOIN #SabaVirtualSportsLeague l 
 						ON l.LeagueId = m.leagueid 
-					WHERE EventDate = @WinlostDate
-						--AND Sporttype IN (1, 2, 5, 43)
+					WHERE EventDate = @WinlostDate						 
 					UNION ALL
 					SELECT orid,  
 						  'outright' AS type,
@@ -96,7 +96,6 @@ BEGIN
 					LEFT JOIN #SabaVirtualSportsLeague l 
 						ON l.LeagueId = o.leagueid 						
 					WHERE o.EventDate = @WinlostDate
-						--AND l.Sporttype IN (1, 2, 5, 43)
 					UNION ALL
 					SELECT 29 AS MatchId,
 						   'Parlay' AS type,						   
@@ -117,7 +116,7 @@ BEGIN
 			ExtraWinlost	MONEY
 		) 	 
 		INSERT INTO #wl (Sporttype, LiveIndicator, IsSaba, TurnOver, winlost, ExtraWinlost)
-		SELECT  CASE WHEN m.Sporttype IN (1, 2, 5, 43, -29) THEN m.Sporttype ELSE 0 END AS Sporttype,  	 
+		SELECT  CASE WHEN m.Sporttype IN (1, 2, 5, 43, 50, -29) THEN m.Sporttype ELSE 0 END AS Sporttype,  	 
 				b.LiveIndicator,
 				m.IsSaba,
 				---Base currency
@@ -153,7 +152,7 @@ BEGIN
 			AND b.MatchID >= 0
 			AND b.Recommend NOT IN (52466,5707545)  --- Exclude 8RM, BARM
 			AND NOT EXISTS (SELECT 1 FROM CS_CustSuper c WITH (NOLOCK) WHERE c.CustID = b.Srecommend)
-		GROUP BY CASE WHEN m.Sporttype IN (1, 2, 5, 43, -29) THEN m.Sporttype ELSE 0 END, b.LiveIndicator, m.IsSaba
+		GROUP BY CASE WHEN m.Sporttype IN (1, 2, 5, 43, 50, -29) THEN m.Sporttype ELSE 0 END, b.LiveIndicator, m.IsSaba
 				 
 	
 		-----------------------------------------------------------------------------------------------
