@@ -12,12 +12,13 @@ Revisions:
 -- 20121029@Cooper(DB06):performance tuning assing index = IX_custid  
 -- 20130103@Cooper(DB06):performance tuning about rptDepWinlost_bk table query
 -- 20191218@Benson: Add select promotion column
+-- 20210422@Sol: enhance performance - [Redmine: #153015]
 */
 DECLARE @CutDate datetime
 SELECT @CutDate =  min(winlostdate) from bodb_report.dbo.rptdepwinlost with(nolock) 
 
-declare @customers as table (custid int PRIMARY KEY )
-insert into @customers (custid)
+CREATE TABLE #customers (custid int PRIMARY KEY )
+insert into #customers (custid)
 select c.custid
 from customer a with(nolock)
 	inner join customer c with(nolock) on a.custid = c.recommend
@@ -46,7 +47,7 @@ BEGIN
 						Withdrawal, Bonus, Adjustment, Turnover, Outstanding, Winloss, ClosingBalance, Promotion
 				from bodb_Report.dbo.rptDepWinlost_bk  with(nolock,index = CIX_rptDepWinlost_bk)
 				where winlostdate between @fromDate and @toDate
-						and custid in (select custid from @customers) 
+						and custid in (select custid from #customers) 
 				) b
 				inner join exchange e with(nolock) on b.currency = e.exchangeid 	
 		group by winlostdate, e.currency, e.exchangeid
@@ -73,7 +74,7 @@ BEGIN
 							Withdrawal, Bonus, Adjustment, Turnover, Outstanding, Winloss, ClosingBalance, Promotion
 					from bodb_Report.dbo.rptDepWinlost_bk  with(nolock,index = CIX_rptDepWinlost_bk)
 					where winlostdate between @fromDate and @toDate
-							and custid in (select custid from @customers) 
+							and custid in (select custid from #customers) 
 					) b
 					inner join exchange e with(nolock) on b.currency = e.exchangeid 			
 			 UNION ALL 
@@ -82,7 +83,7 @@ BEGIN
 			 FROM bodb_Report.dbo.rptDepWinlost b with (nolock)
 				inner join exchange e with(nolock) on b.currency = e.exchangeid
 			 where winlostdate between @fromDate and @toDate
-				and b.custid in (select custid from @customers) 
+				and b.custid in (select custid from #customers) 
 			) AS DB 
 		group by winlostdate, currency, exchangeid
 		order by winlostdate	
@@ -105,7 +106,7 @@ BEGIN
 	from bodb_Report.dbo.rptDepWinlost b with(nolock)
 		inner join exchange e with(nolock) on b.currency = e.exchangeid
 	where winlostdate between @fromDate and @toDate
-		and b.custid in (select custid from @customers) 
+		and b.custid in (select custid from #customers) 
 	group by winlostdate, e.currency, e.exchangeid
 	order by winlostdate
 END
