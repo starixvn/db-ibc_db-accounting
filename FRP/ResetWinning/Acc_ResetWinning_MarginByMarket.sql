@@ -11,7 +11,8 @@ AS
 	Revision:
 		- 20200303@Sophia: Initial SPs  
 		- 20200922@Danny: Get Sport Bettype from hard-code function replace to Sportbettypematrix  [redmind: #142019]
-		- 20201116@Sophia: Add Time machine [redmind: #145405] 
+		- 20201116@Sophia: Add Time machine [redmind: #145405]
+		- 20210422@Sophia: Add new bettype 229 Saba Time machine [Redmind: #153777]		
 	Param Explanation:
 		 
 	   
@@ -27,6 +28,8 @@ BEGIN
 	FROM dbo.f_BettypeSportBook_PHAIO()
 	UNION ALL
 	SELECT 228 AS Bettype, 'TimeM' AS Market
+	UNION ALL
+	SELECT 229 AS Bettype, 'TimeM' AS Market
 	
 	----- End get sport bettype  
 

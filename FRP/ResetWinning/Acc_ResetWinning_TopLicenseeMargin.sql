@@ -10,6 +10,7 @@ AS
 	
 	Revision:
 		- 20201230@Sophia: Initial SPs [Redmine: #147907]
+		- 20210422@Sophia: Exclude Saba789 out of Licensee [Redmind: #153777]
 	
 	Original: Acc_Rpt_Letstalk_TopLicenseeMargin 
 	Param Explanation:
@@ -152,7 +153,7 @@ BEGIN
 			AND b.statusid IN (111, 112, 113)	
 			AND b.Recommend NOT IN (52466,5707545)  --- Exclude 8RM, BARM 
 			AND EXISTS (SELECT 1 FROM #Bettype s WHERE b.Bettype = s.Bettype) 
-			AND EXISTS (SELECT 1 FROM dbo.Dep_CustSuper d WITH (NOLOCK) WHERE d.custid = b.srecommend)
+			AND EXISTS (SELECT 1 FROM dbo.Dep_CustSuper d WITH (NOLOCK) WHERE d.custid = b.srecommend AND Site <> 'Saba789')
 			AND NOT EXISTS (SELECT 1 FROM bodb_Licensee.dbo.LicenseeBATransaction_active ba WITH (NOLOCK) WHERE ba.TransID = b.TransID)
 		GROUP BY 
 			b.srecommend,	
@@ -170,7 +171,7 @@ BEGIN
 				SUM (TurnOver) AS TurnOver, 
 				SUM (Winloss) AS Winloss
 		FROM #TicketDetail b
-		CROSS APPLY (SELECT site FROM dbo.Dep_CustSuper d WITH (NOLOCK) WHERE d.custid = b.srecommend) d
+		CROSS APPLY (SELECT site FROM dbo.Dep_CustSuper d WITH (NOLOCK) WHERE d.custid = b.srecommend AND Site <> 'Saba789') d
 		GROUP BY site, Sporttype
 
 		-----------------------------------------------------------------------------------------------
