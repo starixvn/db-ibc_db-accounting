@@ -17,6 +17,9 @@ Revisions:
 DECLARE @CutDate datetime
 SELECT @CutDate =  min(winlostdate) from bodb_report.dbo.rptdepwinlost with(nolock) 
 
+DECLARE @FDate SMALLDATETIME, @TDate SMALLDATETIME
+SELECT @FDate = @fromDate, @TDate = @toDate
+
 CREATE TABLE #customers (custid int PRIMARY KEY )
 insert into #customers (custid)
 select c.custid
@@ -46,7 +49,7 @@ BEGIN
 		 from (	select currency ,winlostdate, OpeningBalance, Deposit, Aff2MemTransfer,
 						Withdrawal, Bonus, Adjustment, Turnover, Outstanding, Winloss, ClosingBalance, Promotion
 				from bodb_Report.dbo.rptDepWinlost_bk  with(nolock,index = CIX_rptDepWinlost_bk)
-				where winlostdate between @fromDate and @toDate
+				where winlostdate between @FDate and @TDate
 						and custid in (select custid from #customers) 
 				) b
 				inner join exchange e with(nolock) on b.currency = e.exchangeid 	
@@ -73,7 +76,7 @@ BEGIN
 			 from (	select currency ,winlostdate, OpeningBalance, Deposit, Aff2MemTransfer,
 							Withdrawal, Bonus, Adjustment, Turnover, Outstanding, Winloss, ClosingBalance, Promotion
 					from bodb_Report.dbo.rptDepWinlost_bk  with(nolock,index = CIX_rptDepWinlost_bk)
-					where winlostdate between @fromDate and @toDate
+					where winlostdate between @FDate and @TDate
 							and custid in (select custid from #customers) 
 					) b
 					inner join exchange e with(nolock) on b.currency = e.exchangeid 			
@@ -82,7 +85,7 @@ BEGIN
 				    Withdrawal, Bonus, Adjustment, Turnover, Outstanding, Winloss, ClosingBalance, Promotion
 			 FROM bodb_Report.dbo.rptDepWinlost b with (nolock)
 				inner join exchange e with(nolock) on b.currency = e.exchangeid
-			 where winlostdate between @fromDate and @toDate
+			 where winlostdate between @FDate and @TDate
 				and b.custid in (select custid from #customers) 
 			) AS DB 
 		group by winlostdate, currency, exchangeid
@@ -105,7 +108,7 @@ BEGIN
 		sum(Promotion) as Promotion
 	from bodb_Report.dbo.rptDepWinlost b with(nolock)
 		inner join exchange e with(nolock) on b.currency = e.exchangeid
-	where winlostdate between @fromDate and @toDate
+	where winlostdate between @FDate and @TDate
 		and b.custid in (select custid from #customers) 
 	group by winlostdate, e.currency, e.exchangeid
 	order by winlostdate
