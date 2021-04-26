@@ -25,6 +25,7 @@ Revisions:
 	- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo by link database)
 	- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 	- 20181112@Sophia: Add @IsCollection [redmine: #98621]
+	- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
 	
 */
 BEGIN
@@ -62,7 +63,7 @@ BEGIN
             a.Description,
 			seq,
 			IsCollection
-    FROM DBACC.bodb_acc.dbo.Acc_CustFinanceTransfer a with(nolock)
+    FROM DBCUST.CustDB.dbo.Acc_CustFinanceTransfer a with(nolock)
 		left join CustDB.dbo.CustInfo c with(nolock) on a.FromCust = c.Username
     WHERE UserId = @UserId    
 

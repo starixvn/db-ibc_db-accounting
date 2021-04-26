@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_FinanceTransferMulInsTmpExcel]	
 	@UserID INT,
 	@ListTransfer XML,	
@@ -8,7 +8,7 @@ AS
 /*
 	Created: 
 	Task : Insert new multi transactions into Acc_CustFinanceTransfer
-	DB: DBACC/bodb02
+	DB: DBACC/bodb02 -> DBCUST.CustDB
 	Original: 
 
 	Revisions:		
@@ -21,6 +21,7 @@ AS
 		- 20130521@Elodie: Get more fields such as MinActualrate, MaxActualRate, MultipliedBy... to verify more new specific cases
 		- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 		- 20181112@Sophia: Add @IsCollection [redmine: #98621]
+		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
 */
 BEGIN
 SET NOCOUNT ON
@@ -129,7 +130,7 @@ SET NOCOUNT ON
 			
 			
 	--Insert data to temp table Acc_CustFinanceTransfer to transer after clicking "Update Now" button
-	INSERT INTO bodb_acc.dbo.Acc_CustFinanceTransfer(UserId, FromCust, ToCust, Amount, ExRate, Description, Seq, IsCollection)
+	INSERT INTO dbo.Acc_CustFinanceTransfer(UserId, FromCust, ToCust, Amount, ExRate, Description, Seq, IsCollection)
 	SELECT	@UserId,
 			FromCust, 
 			ToCust ,	
@@ -155,6 +156,3 @@ END
 GO
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_FinanceTransferMulInsTmpExcel] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_FinanceTransferMulInsTmpExcel] TO [vnteam]

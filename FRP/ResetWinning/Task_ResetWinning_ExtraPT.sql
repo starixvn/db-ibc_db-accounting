@@ -29,6 +29,7 @@ AS
 		- 20191216@Percy: Using new column bettrans.epositiontaking instead of Acc_GroupExtraPTSetting.ExtraPT [RedmineID: #125418]
 		- 2020714@Sophia: Add PP Jackpot & Revise SP [Redmine: #137270]
 		- 20210203@Malcolm : Add Saba.club (Amount due to Jackpot Pool) into reset winning [RedmineId : #149409]
+		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
 
 	Param's explain:
 		@mode:  0 _ view report
@@ -79,7 +80,7 @@ BEGIN
 	BEGIN
 		INSERT INTO @dummy (CustID, GroupID, GroupName, Winlostdate)	
 		SELECT  DISTINCT e.CustID, e.GroupID, e.GroupName, d.WLDate
-		FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT_xtest e WITH (NOLOCK)		
+		FROM dbo.Acc_DWLList_ExtraPT_xtest e WITH (NOLOCK)		
 		CROSS JOIN @Date d
 		WHERE e.IsDisabled = 0
 	END
@@ -87,7 +88,7 @@ BEGIN
 	BEGIN
 		INSERT INTO @dummy (CustID, GroupID, GroupName, Winlostdate)	
 		SELECT  DISTINCT e.CustID, e.GroupID, e.GroupName, d.WLDate
-		FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT e WITH (NOLOCK)
+		FROM dbo.Acc_DWLList_ExtraPT e WITH (NOLOCK)
 		CROSS JOIN @Date d
 		WHERE e.IsDisabled = 0
 		

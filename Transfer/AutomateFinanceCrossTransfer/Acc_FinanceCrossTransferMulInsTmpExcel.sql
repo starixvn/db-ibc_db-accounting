@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_FinanceCrossTransferMulInsTmpExcel]	
 	@UserID INT,
 	@arrFromCust VARCHAR(4000),
@@ -13,7 +13,7 @@ AS
 /*
 	Created: 20111003@Lukas
 	Task : Insert new multi cross-currency transactions into Acc_CustFinanceTransfer
-	DB: DBACC/bodb02
+	DB: DBACC/bodb02 -> DBCUST.CustDB
 	Original: 
 		
 	Revisions:		
@@ -23,6 +23,7 @@ AS
 		- 20130418@Lukas: hot fix modify condition of checking valid amount	  
 		- 20180808@Helen: Get code from PRO + DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 		- 20181112@Sophia: Add Transfer Collection [redmine: #98621]
+		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
 */
 BEGIN
 SET NOCOUNT ON
@@ -141,7 +142,7 @@ SET NOCOUNT ON
 			
 
 	--Insert data to temp table Acc_CustFinanceTransfer to transer after clicking "Update Now" button
-	INSERT INTO bodb_acc.dbo.Acc_CustFinanceTransfer(UserId, FromCust, ToCust, Amount, ToAmount, Description, ExRate, IsCollection)
+	INSERT INTO dbo.Acc_CustFinanceTransfer(UserId, FromCust, ToCust, Amount, ToAmount, Description, ExRate, IsCollection)
 	SELECT	@UserId,
 			FromCust, 
 			ToCust ,	

@@ -26,6 +26,7 @@ AS
 		- 20190214@Percy: Fix issue setting of supers is not updated when change extra PT amount [RedmineID: #108875]
 		- 20191211@Percy: Remove Bettrade [RedmineID: #118962]
 		- 20191216@Percy: Do not allow user to select the current date in Effective Date [RedmineID: #125418]
+		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
 		
 	Param's Explanation:
 */
@@ -84,7 +85,7 @@ BEGIN
 	SELECT  @startRun = GETDATE()
 
 	DECLARE @GroupName VARCHAR(30), @ProductName VARCHAR(30)
-	SELECT  @GroupName = GroupName FROM DBACC.bodb_ACC.dbo.Acc_DWLList_ExtraPT WITH(NOLOCK) WHERE GroupId = @GroupId
+	SELECT  @GroupName = GroupName FROM dbo.Acc_DWLList_ExtraPT WITH(NOLOCK) WHERE GroupId = @GroupId
 	SELECT  @ProductName = ProductName FROM DBTXN.bodb02.dbo.Products WITH(NOLOCK) WHERE ProductID = @ProductID
 
 	IF ISNULL(@GroupName, '') = '' OR @GroupName IN ('ACCTHAI2', 'ACCTHAI56', 'ACCTHAI99')
@@ -101,7 +102,7 @@ BEGIN
 		RETURN
 	END
 
-	IF NOT EXISTS (SELECT 1 FROM DBACC.bodb_ACC.dbo.Acc_DWLList WITH(NOLOCK) WHERE ProductId = @ProductId)
+	IF NOT EXISTS (SELECT 1 FROM dbo.Acc_DWLList WITH(NOLOCK) WHERE ProductId = @ProductId)
 	BEGIN
 		SELECT @ErrCode = 105, @ErrMsg = 'This product is not offers'
 		

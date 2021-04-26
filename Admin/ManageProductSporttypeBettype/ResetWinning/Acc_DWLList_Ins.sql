@@ -1,4 +1,4 @@
-/*<info serverAlias="DBACC-bodb_ACC" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE  dbo.Acc_DWLList_Ins
 	@File	    NVARCHAR(MAX),
 	@LoginIP	VARCHAR(20)='',
@@ -10,11 +10,12 @@ AS
 /*
 Created: 20200916@Danny
 Task :  NAP Manage Reset Winning
-DB: DBACC/bodb_ACC
+DB: DBACC/bodb_ACC -> DBCUST.CustDB
 Original:
 
 	Revisions:
 		- 20200917@Danny: NAP Manage Reset Winning [Redmine: #131241][Task: #141775]
+		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
 	Param's Explanation:
 	- @Fie:		
 		<ROOT>
@@ -146,7 +147,7 @@ BEGIN
 			SELECT TOP(1)	@DWLListError = t.ID, 
 							@ValueError   =	t.CustID				
 			FROM #inputTmp t
-			WHERE NOT EXISTS (SELECT 1 FROM bodb02.dbo.Customer cus WITH(NOLOCK) WHERE cus.CustID = t.CustID)
+			WHERE NOT EXISTS (SELECT 1 FROM dbo.Customer cus WITH(NOLOCK) WHERE cus.CustID = t.CustID)
 			OR CustID IS NULL OR LEN(CustID) = 0
 
 			IF @DWLListError <> ''
@@ -161,7 +162,7 @@ BEGIN
 				SELECT TOP(1)	@DWLListError = t.ID, 
 								@ValueError   =	t.ProductID				
 				FROM #inputTmp t
-				WHERE NOT EXISTS (SELECT 1 FROM bodb02.dbo.Products pro WITH(NOLOCK) WHERE pro.ProductID = t.ProductID)
+				WHERE NOT EXISTS (SELECT 1 FROM DB02.bodb02.dbo.Products pro WITH(NOLOCK) WHERE pro.ProductID = t.ProductID)
 
 				IF @DWLListError <> ''
 				BEGIN

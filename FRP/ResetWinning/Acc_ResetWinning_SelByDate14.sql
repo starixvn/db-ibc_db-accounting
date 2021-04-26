@@ -64,6 +64,7 @@ AS
 		- 2020714@Sophia: Add PP Jackpot & revise SP [Redmine: #137270]
 		- 20201012@Malcolm :  Change email Starixsoft.com to starixvn.com [RedmineId : #143312]
 		- 20210203@Malcolm : Add Saba.club (Amount due to Jackpot Pool) into Reset winning [RedmineId : #149409]
+		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
 		
 	Explanation's Param:
 	    @mode:  0 _ view report
@@ -111,14 +112,14 @@ BEGIN
 		INSERT INTO @dummyBalance ( seq, CustId, Product, currency)
 		SELECT  CASE WHEN L.seq = 0 THEN 999 ELSE l.seq END  AS seq, l.Custid, l.product,
 				CASE WHEN l.Product LIKE 'CN88%' THEN ISNULL(c.Currency,0) ELSE 0 END AS Currency
-		FROM bodb_ACC.dbo.Acc_DWLList l WITH (NOLOCK)
+		FROM dbo.Acc_DWLList l WITH (NOLOCK)
 		LEFT JOIN dbo.CustInfo c WITH (NOLOCK) ON c.CustID = l.CustID		
 		WHERE l.IsDeleted = 0	
 	
 			
 		INSERT INTO @dummyExtraPT (CustID)
 		SELECT CustID
-		FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT l WITH (NOLOCK)
+		FROM dbo.Acc_DWLList_ExtraPT l WITH (NOLOCK)
 						
 	END 
 	ELSE
@@ -126,13 +127,13 @@ BEGIN
 		INSERT INTO @dummyBalance ( seq, CustId, Product, currency)
 		SELECT  CASE WHEN L.seq = 0 THEN 999 ELSE l.seq END  AS seq, l.Custid, l.product,
 				CASE WHEN l.Product LIKE 'CN88%' THEN ISNULL(c.Currency,0) ELSE 0 END AS Currency
-		FROM bodb_ACC.dbo.Acc_DWLList_xtest l WITH (NOLOCK)
+		FROM dbo.Acc_DWLList_xtest l WITH (NOLOCK)
 		LEFT JOIN dbo.CustInfo c WITH (NOLOCK) ON c.CustID = l.CustID		
 		WHERE l.IsDeleted = 0
 		
 		INSERT INTO @DummyExtraPT (CustID)
 		SELECT CustID
-		FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT_xtest l WITH (NOLOCK)
+		FROM dbo.Acc_DWLList_ExtraPT_xtest l WITH (NOLOCK)
 	END 
 
 	

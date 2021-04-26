@@ -1,4 +1,4 @@
-/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet" viewers="" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBACC-bodb02" executers="" viewers="" isFunction="1" isNested="1"></info>*/
 USE [bodb02]
 GO
 
@@ -15,6 +15,7 @@ ALTER FUNCTION [dbo].[f_GetAllGroupExtraPTByCustId]
 
 	Revisions:
 		- 20170926@Percy: Move this function from DBACC.bodb_ACC to DBACC.bodb02 [RedmineID: #83600]
+		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
 */
 
 RETURNS @CustExtraPTGroup TABLE (GroupId INT, GroupName VARCHAR(50), EffectiveDate DATETIME, [Primary] TINYINT, OrderId TINYINT)
@@ -22,7 +23,7 @@ AS
 BEGIN
 	INSERT INTO @CustExtraPTGroup (GroupId, GroupName, EffectiveDate, [Primary], OrderId)
 	SELECT d.GroupId, d.GroupName, s.EffectiveDate, CASE WHEN s.EffectiveDate IS NULL THEN 0 ELSE CASE WHEN s.EffectiveDate <= CONVERT(DATE, GETDATE()) THEN 1 ELSE 2 END END, 10
-	FROM bodb_ACC.dbo.Acc_DWLList_ExtraPT d WITH(NOLOCK)
+	FROM dbo.Acc_DWLList_ExtraPT d WITH(NOLOCK)
 		LEFT JOIN
 		(
 			SELECT GroupName, MIN(FromDate) AS EffectiveDate
