@@ -13,6 +13,8 @@ AS
 		- 20200922@Danny: Get Sport Bettype from hard-code function replace to Sportbettypematrix  [redmind: #142019]
 		- 20201116@Sophia: Add Time machine [redmind: #145405]
 		- 20210422@Sophia: Add new bettype 229 Saba Time machine [Redmind: #153777]		
+		- 20210504@Sophia: Separate TimeM HDP & OU [Redmine: #154465]
+		
 	Param Explanation:
 		 
 	   
@@ -27,9 +29,9 @@ BEGIN
 	SELECT Bettype, 'PHAIO' AS Market
 	FROM dbo.f_BettypeSportBook_PHAIO()
 	UNION ALL
-	SELECT 228 AS Bettype, 'TimeM' AS Market
+	SELECT 228 AS Bettype, 'TimeM_OU' AS Market
 	UNION ALL
-	SELECT 229 AS Bettype, 'TimeM' AS Market
+	SELECT 229 AS Bettype, 'TimeM_HDP' AS Market
 	
 	----- End get sport bettype  
 

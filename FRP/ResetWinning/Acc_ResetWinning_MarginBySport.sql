@@ -14,7 +14,9 @@ AS
 		- 20201008@Sophia: Separate Saba vs Real Sport [Redmine: #143173]
 		- 20201230@Sophia: add more LeagueGroupID 41, 72 [Redmine: #147907]
 		- 20210315@Sophia: add Live and Non-Live [Redmine: #151656]
-		- 20210422@Sophia: Add Cricket [Redmind: #153777]		
+		- 20210422@Sophia: Add Cricket [Redmind: #153777]	
+		- 20210504@Sophia: Fix Cricket of Saba [Redmine: #154465]
+		
 		 
 	Param Explanation:
 		 
@@ -56,9 +58,13 @@ BEGIN
 	INSERT INTO #SabaVirtualSportsLeague
 	SELECT leagueid
 	FROM dbo.League WITH (NOLOCK)
-	WHERE ((sporttype = 1 AND LeagueGroupID IN (41, 42, 74, 108))
+	WHERE  LeagueGroupID IN (41, 42, 74, 108)
+			/*((sporttype = 1 AND LeagueGroupID IN (41, 42, 74, 108))
 			OR (sporttype = 2 AND LeagueGroupID IN (42, 72)) 
+			OR (sporttype = 50 AND LeagueGroupID IN (42)) 
 			)
+			*/
+		
 	----- End get Saba League  	
 	
 	------Get Match ------	
