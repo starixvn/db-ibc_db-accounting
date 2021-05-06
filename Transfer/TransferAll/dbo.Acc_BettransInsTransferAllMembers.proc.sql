@@ -37,6 +37,7 @@ AS
 		- 20200730@Sophia: prevent duplicated transfer [Redmine: #137141]
 		- 20200730@Sophia: Check UM Transfer Function [Redmine: #136992]
 		- 20210310@Danny: Capture total cash before transfering  [Redmine: #146038]
+		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		
 	Param's Explanation:
 */ 
@@ -99,6 +100,15 @@ BEGIN
 	if @ErrCode <>0 return
 	--end
 	*/
+
+	DECLARE @balanceUpDay DATE, @moveBetsDay DATE
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay DATE, MoveBetsDay DATE)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+	
+	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
+
 	 -- CREATE TEMP TABLE CONTAIN MEMBER'S BALANCE @Phuong20080915
 	 CREATE TABLE #Member(	custid		int PRIMARY KEY,
 							recommend	int,
@@ -171,6 +181,12 @@ BEGIN
 		WHERE	b.ruben = 1
 				AND bettype NOT IN (21008, 21009)
 				AND b.custid IN (SELECT custid FROM #Member)
+				AND 
+				1 = CASE 
+						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+					ELSE 1 END
+
 		UNION ALL
 		SELECT	r.custid, r.gameID, r.winlostdate, r.winlost, r.actual_stake, r.playercomm
 		FROM	dbo.bettransRnG r WITH(NOLOCK)

@@ -32,6 +32,7 @@ AS
 		- 20200317@Malcolm: grant permission for finance account [Redmine : #128128]
 		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 		- 20210615@Sol: Alpha - All Sites - Lock account & indirect close account - [RedmineID: #148600]
+		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 
 	Param's Explanation:
 	
@@ -64,6 +65,15 @@ BEGIN
 	FROM DBCUST.CustDB.dbo.Acc_FinancePermission f WITH(NOLOCK) 
 		 INNER JOIN Customer c WITH(NOLOCK) ON f.FinanceCode = c.username
     WHERE c.custid = @UserId AND c.roleid > 4
+
+	-- get move bet date
+	DECLARE @balanceUpDay DATE, @moveBetsDay DATE
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay DATE, MoveBetsDay DATE)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 	
 	IF @roleID = 4 -- Super
 	BEGIN
@@ -86,6 +96,10 @@ BEGIN
 		WHERE srecommend = @custid
 			AND ((b.ruben = 0 AND ISNULL(s.RefTable, 0) = 0) OR b.ruben <> 0)
 			AND ((b.winlostdate >= @yesterday AND ISNULL(s.RefTable, 0) NOT IN (1,2)) OR b.winlostdate < @yesterday)
+			AND 1 = CASE 
+						WHEN b.bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+						WHEN b.bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+					ELSE 1 END
 		GROUP BY b.mrecommend
 
 		-- bettransRnG
@@ -162,6 +176,10 @@ BEGIN
 		WHERE b.mrecommend = @custid AND
 			((b.ruben = 0 AND ISNULL(s.RefTable, 0) = 0) OR b.ruben <> 0)
 			AND ((winlostdate >= @yesterday AND ISNULL(s.RefTable, 0) NOT IN (1,2)) OR winlostdate < @yesterday)
+			AND 1 = CASE 
+						WHEN b.bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+						WHEN b.bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+					ELSE 1 END
 		GROUP BY b.recommend
 
 		-- bettransRnG
@@ -230,6 +248,10 @@ BEGIN
 		WHERE b.recommend = @custid
 			AND ((b.ruben = 0 AND ISNULL(s.RefTable, 0) = 0) OR b.ruben <> 0)
 			AND ((winlostdate >= @yesterday AND ISNULL(s.RefTable, 0) NOT IN (1,2)) OR winlostdate < @yesterday)
+			AND 1 = CASE 
+						WHEN b.bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+						WHEN b.bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+					ELSE 1 END
 		GROUP BY b.custid
 
 		-- bettransRnG

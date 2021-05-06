@@ -43,6 +43,7 @@ AS
 		- 20201006@sophia: Comment SP Server_IsHeavyLoadPermitted due to cannot transfer [Redmine: #136992]
 		- 20201217@Sol: Optimize - mofidied code to get index seek on IX_ProductID_Issum_StatuaID [RedmineID: #147335]
 		- 20210310@Danny: Capture total cash before transfering  [Redmine: #146038]
+		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		 				       
 	Param's Explanation:
 		@AgentName: username of agent/master/super to clear his all downlines' balance
@@ -125,6 +126,13 @@ BEGIN
 		END
 	END
 	
+	DECLARE @balanceUpDay DATE, @moveBetsDay DATE
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay DATE, MoveBetsDay DATE)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+	
+	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 
 	/*--20091017@Thien: not check this function so that upline can get back the used credit  
 	--Check disable user  
@@ -208,6 +216,11 @@ BEGIN
 	WHERE (winlostdate < @winlostdate OR (winlostdate >= @winlostdate AND bettype > 20000))
 		AND ruben = 1
 		AND bettype NOT IN (21008, 21009)
+		AND 
+			1 = CASE 
+					WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+					WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+				ELSE 1 END
 	GROUP BY b.custid, b.recommend, b.mrecommend
 
 	INSERT INTO #tempdata (custid, recommend, mrecommend, winlost, actual_stake, playercomm, awinlost, comm, mwinlost, acomm)

@@ -48,6 +48,7 @@ Revisions:
 	- 20200821@Sophia: Check UM Transfer Function [Redmine: #136992]
 	- 20201005@Danny: Convert Ipv6 to dummy IPv4 [Redmine: #142511]
 	- 20210310@Danny: Capture total cash before transfering  [Redmine: #146038]
+	- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 	
 Param's Explanation:
 */ 
@@ -90,6 +91,15 @@ BEGIN
 
 	DECLARE @count int, @batch int
 	SELECT @batch=200, @count=0 
+
+	-- get move bet date
+	DECLARE @balanceUpDay DATE, @moveBetsDay DATE
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay DATE, MoveBetsDay DATE)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 
 	CREATE TABLE #Member (	custid int PRIMARY KEY,
 							memberName nvarchar(50),	
@@ -170,6 +180,10 @@ BEGIN
 			FROM  Bettrans AS b with (NOLOCK)
 			INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
 			WHERE c.recommend = @AgentID and c.roleid = 1 and b.ruben = 1 and b.bettype not in (21008, 21009)
+				AND 1 = CASE 
+							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+						ELSE 1 END
 			GROUP BY b.custid 
 
 			UNION ALL 
@@ -221,6 +235,10 @@ BEGIN
 			INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
 			WHERE EXISTS (SELECT 1 FROM #ToCustIDs WHERE custid = b.custid)
 				  and c.recommend = @AgentID and b.ruben = 1 and b.bettype not in (21008, 21009)
+				  AND 1 = CASE 
+							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+						ELSE 1 END
 			GROUP BY b.custid ,c.username
 
 			UNION ALL 
