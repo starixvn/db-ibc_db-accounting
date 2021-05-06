@@ -20,6 +20,7 @@ AS
 		- 20210204@Sol: NAP - email notification for last month only - [Redmine: #150060]
 		- 20210315@Sol: NAP - show from date - to date cols - [Redmine: #151607]
 		- 20210330@Sol: NAP - Enhance Manage Licensee Code to support change base currency of licensees - Phase 2 - [Redmine: #152056]
+		- 20210506@Sol: NAP - Remove Saba789 from auto mail informing the code needed - [Redmine: #154676]
 
 	Param Info:
 		- @MoveBetsDay: movebet get from sp [age_SelBalanceUpDay]
@@ -55,6 +56,9 @@ BEGIN
 		,@MoveBetsDay = CAST(@MoveBetsDay AS DATE)
 		,@transferDateTime = DATEADD(HOUR,5, DATEADD(DAY, 4, DATEADD(MONTH,1, @startDate)))
 
+	IF (@MoveBetsDay > @endDate) --in case foremail = 1, get data in last month only
+		SET @MoveBetsDay = @endDate
+		
 	IF (@transferDateTime < @currentDate) 
 		SET @BillingMonth = DATEADD(DAY, -1,  DATEADD(MONTH, 2, @startDate)) -- current month
 	ELSE SET @BillingMonth = DATEADD(DAY, -1,  DATEADD(MONTH, 1, @startDate)) -- last month
@@ -86,7 +90,12 @@ BEGIN
 					l.LicenseeID IN (SELECT val FROM dbo.strSplit(@LicenseeIds,',') t) 
 					OR @LicenseeIds = 'ALL'
 				)
-			AND l.LicenseeName NOT IN ( SELECT t.LicenseeName from @tblLicenseeTransferCode t WHERE @BillingMonth BETWEEN t.FromDate AND t.ToDate)
+			AND l.LicenseeName NOT IN 
+			( 
+				SELECT t.LicenseeName from @tblLicenseeTransferCode t WHERE @BillingMonth BETWEEN t.FromDate AND t.ToDate
+				UNION
+				SELECT 'Saba789' AS LicenseeName
+			)
 
 		---- get agent of licensee
 		INSERT INTO @tblLicenseeListAgent(LicenseeId, LicenseeName, CustAgentId)
