@@ -93,8 +93,6 @@ BEGIN
 			AND l.LicenseeName NOT IN 
 			( 
 				SELECT t.LicenseeName from @tblLicenseeTransferCode t WHERE @BillingMonth BETWEEN t.FromDate AND t.ToDate
-				UNION
-				SELECT 'Saba789' AS LicenseeName
 			)
 
 		---- get agent of licensee
@@ -187,6 +185,7 @@ BEGIN
 			lc.LicenseeID IN (SELECT val FROM dbo.strSplit(@LicenseeIds,',') t)
 			OR @LicenseeIds = 'ALL'
 		)
+		AND lc.LicenseeName <> 'Saba789'
 
 	--return data
 	SELECT @TotalRows = MAX(RowNumber) FROM #LicenseeCodeFinal
