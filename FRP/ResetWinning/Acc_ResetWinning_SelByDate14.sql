@@ -65,6 +65,7 @@ AS
 		- 20201012@Malcolm :  Change email Starixsoft.com to starixvn.com [RedmineId : #143312]
 		- 20210203@Malcolm : Add Saba.club (Amount due to Jackpot Pool) into Reset winning [RedmineId : #149409]
 		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
+		- 20210512@Malcolm : Add VGaming (Amount due to Jackpot Pool) into Reset winning [RedmineId : #154643]
 		
 	Explanation's Param:
 	    @mode:  0 _ view report
@@ -250,18 +251,20 @@ BEGIN
 		WinlostDueToRNG			MONEY, 
 		WinlostDueToPP			MONEY, 
 		WinlostDueToSaba		MONEY, 
+		WinlostDueToVgaming		MONEY, 
 		eWinlost				MONEY,
 
 		RealWinlost				MONEY, 
 		RealWinlostDueToRNG		MONEY, 
 		RealWinlostDueToPP		MONEY,  	
 		RealWinlostDueToSaba	MONEY,  	
+		RealWinlostDueToVgaming	MONEY,  
 		eRealWinlost			MONEY
 	)
 		 
 		INSERT INTO #wl (winlostdate, srecommend, Currency, Sporttype, ProductId, ProductName, SubProduct, 
-						Winlost, WinlostDueToRNG, WinlostDueToPP, WinlostDueToSaba, eWinlost,
-						RealWinlost, RealWinlostDueToRNG, RealWinlostDueToPP, RealWinlostDueToSaba, eRealWinlost)
+						Winlost, WinlostDueToRNG, WinlostDueToPP, WinlostDueToSaba, WinlostDueToVgaming, eWinlost,
+						RealWinlost, RealWinlostDueToRNG, RealWinlostDueToPP, RealWinlostDueToSaba, RealWinlostDueToVgaming, eRealWinlost)
 		SELECT  b.winlostdate,
 				b.srecommend,
 				b.currency,      
@@ -280,12 +283,12 @@ BEGIN
 				CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss','Bet Builder') THEN s.SubProduct ELSE '' END AS SubProduct,
 				
 				SUM(
-				CASE WHEN b.bettype IN (1699, 2199, 2399, 2999, 4298) THEN 0
+				CASE WHEN b.bettype IN (1699, 2199, 2399, 2999, 3899, 4298) THEN 0
 					ELSE
 					(ISNULL(winlost,0)-ISNULL(actual_stake,0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)
 						+ CASE
 							-- Jackpot
-							WHEN b.bettype IN (1698, 2198, 2398, 2998, 4297) THEN ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000),0)
+							WHEN b.bettype IN (1698, 2198, 2398, 2998, 3898, 4297) THEN ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000),0)
 							ELSE 0 END
 					) * CASE WHEN @Istest = 1 AND currency = 20 THEN 1 ELSE b.actualrate END  END
 				) AS Winlost,
@@ -313,11 +316,19 @@ BEGIN
 						ELSE 0 END
 					) * CASE WHEN @Istest = 1 AND currency = 20 THEN 1 ELSE b.actualrate END
 				) AS WinlostDueToSaba,
+				SUM(
+					(CASE
+							-- Jackpot
+							WHEN b.bettype IN (3898) THEN -ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0)
+							WHEN b.bettype IN (3899) THEN ISNULL(b.Winlost, 0) - ISNULL(b.actual_stake, 0)
+						ELSE 0 END
+					) * CASE WHEN @Istest = 1 AND currency = 20 THEN 1 ELSE b.actualrate END
+				) AS WinlostDueToVgaming,
 				SUM((CASE
 						-- Jackpot
-						WHEN b.bettype IN (1698, 2198, 2398, 2998, 4297) THEN
+						WHEN b.bettype IN (1698, 2198, 2398, 2998, 3898, 4297) THEN
 							CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) END
-						WHEN b.bettype IN (1699, 2199, 2399, 2999, 4298) THEN 0
+						WHEN b.bettype IN (1699, 2199, 2399, 2999, 3899, 4298) THEN 0
 						ELSE
 							CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
 						END
@@ -326,12 +337,12 @@ BEGIN
 				
 				--- Real					
 				SUM(
-				CASE WHEN b.bettype IN (1699, 2199, 2399, 2999, 4298) THEN 0
+				CASE WHEN b.bettype IN (1699, 2199, 2399, 2999, 3899, 4298) THEN 0
 					ELSE
 					(ISNULL(winlost,0)-ISNULL(actual_stake,0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)
 						+ CASE
 							-- Jackpot
-							WHEN b.bettype IN (1698, 2198, 2398, 2998, 4297) THEN ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000),0)
+							WHEN b.bettype IN (1698, 2198, 2398, 2998, 3898, 4297) THEN ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000),0)
 							ELSE 0 END
 					)  END
 				) AS RealWinlost,
@@ -359,11 +370,19 @@ BEGIN
 						ELSE 0 END
 					)  
 				) AS RealWinlostDueToSaba,	
+				SUM(
+					(CASE
+							-- Jackpot
+							WHEN b.bettype IN (3898) THEN -ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0)
+							WHEN b.bettype IN (3899) THEN ISNULL(b.Winlost, 0) - ISNULL(b.actual_stake, 0)
+						ELSE 0 END
+					)  
+				) AS RealWinlostDueToVgaming,	
 				SUM((CASE
 						-- Jackpot
-						WHEN b.bettype IN (1698, 2198, 2398, 2998, 4297) THEN
+						WHEN b.bettype IN (1698, 2198, 2398, 2998, 3898, 4297) THEN
 							CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) END
-						WHEN b.bettype IN (1699, 2199, 2399, 2999, 4298) THEN 0
+						WHEN b.bettype IN (1699, 2199, 2399, 2999, 3899, 4298) THEN 0
 						ELSE
 							CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
 						END
@@ -472,6 +491,12 @@ BEGIN
 	SELECT w.Winlostdate, '','Saba.club (Amount due to Jackpot Pool)', 0, 0 AS Currency, SUM(ISNULL(w.WinlostDueToSaba, 0)) AS Winlost, 0, SUM(ISNULL(w.RealWinlostDueToSaba, 0)) AS RealWinlost, 0 
     FROM #wl w
 	WHERE w.WinlostDueToSaba <> 0
+	GROUP BY Winlostdate
+
+	UNION ALL
+	SELECT w.Winlostdate, '','VGaming (Amount due to Jackpot Pool)', 0, 0 AS Currency, SUM(ISNULL(w.WinlostDueToVgaming, 0)) AS Winlost, 0, SUM(ISNULL(w.RealWinlostDueToVgaming, 0)) AS RealWinlost, 0 
+    FROM #wl w
+	WHERE w.WinlostDueToVgaming <> 0
 	GROUP BY Winlostdate
 	
 	----- Update ProductName
