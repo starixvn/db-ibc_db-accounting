@@ -162,7 +162,7 @@ BEGIN
 				SELECT TOP(1)	@DWLListError = t.ID, 
 								@ValueError   =	t.ProductID				
 				FROM #inputTmp t
-				WHERE NOT EXISTS (SELECT 1 FROM DB02.bodb02.dbo.Products pro WITH(NOLOCK) WHERE pro.ProductID = t.ProductID)
+				WHERE NOT EXISTS (SELECT 1 FROM DBPRO.bodb02.dbo.Products pro WITH(NOLOCK) WHERE pro.ProductID = t.ProductID)
 
 				IF @DWLListError <> ''
 				BEGIN

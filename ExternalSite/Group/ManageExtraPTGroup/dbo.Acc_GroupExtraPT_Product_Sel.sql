@@ -40,7 +40,7 @@ BEGIN
 	END
 	
 	SELECT p.ProductID, p.ProductName
-	FROM DB02.bodb02.dbo.Products p WITH (NOLOCK)
+	FROM DBPRO.bodb02.dbo.Products p WITH (NOLOCK)
 	WHERE EXISTS (SELECT 1 FROM @Product gp WHERE p.ProductID = gp.ProductID)
 	ORDER BY p.ProductID
 END
