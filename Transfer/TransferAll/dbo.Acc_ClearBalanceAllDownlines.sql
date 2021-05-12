@@ -223,6 +223,57 @@ BEGIN
 				ELSE 1 END
 	GROUP BY b.custid, b.recommend, b.mrecommend
 
+	----check move bet date again to make sure it is not changed
+	DECLARE @IsDiff BIT = 0, @NewMoveBetDate DATE = NULL
+	EXEC bodb02.dbo.Acc_Transfer_CheckUM @moveBetsDay, @IsDiff = @IsDiff OUTPUT, @NewMoveBetDate = @NewMoveBetDate OUTPUT
+
+	IF (@IsDiff = 1)
+	BEGIN
+		DELETE FROM #tempdata
+
+		IF (@roleid = 4)
+		BEGIN
+			-- master data		
+			INSERT INTO #tempdata (custid, recommend, mrecommend, winlost, actual_stake, playercomm, awinlost, comm, mwinlost, acomm)
+			SELECT b.custid, b.recommend, b.mrecommend
+				,SUM(winlost) winlost
+				,SUM(actual_stake) actual_stake
+				,SUM(playercomm) playercomm
+				,SUM(awinlost) awinlost
+				,SUM(comm) comm
+				,SUM(mwinlost) mwinlost
+				,SUM(acomm) acomm
+			FROM @masterlist c
+				INNER JOIN dbo.bettrans b WITH(NOLOCK) ON c.custid = b.custid
+			WHERE (winlostdate < @winlostdate OR (winlostdate >= @winlostdate AND bettype > 20000))
+				AND ruben = 1
+				AND bettype NOT IN (21008, 21009)
+			GROUP BY b.custid, b.recommend, b.mrecommend
+		END
+
+		-- member & agent data	
+		INSERT INTO #tempdata (custid, recommend, mrecommend, winlost, actual_stake, playercomm, awinlost, comm, mwinlost, acomm)
+		SELECT b.custid, b.recommend, b.mrecommend	
+			,SUM(winlost) winlost
+			,SUM(actual_stake) actual_stake
+			,SUM(playercomm) playercomm
+			,SUM(awinlost) awinlost
+			,SUM(comm) comm
+			,SUM(mwinlost) mwinlost
+			,SUM(acomm) acomm
+		FROM @agList ag
+			INNER JOIN dbo.bettrans b WITH(NOLOCK, INDEX=IX_Recommend) ON ag.custid = b.recommend
+		WHERE (winlostdate < @winlostdate OR (winlostdate >= @winlostdate AND bettype > 20000))
+			AND ruben = 1
+			AND bettype NOT IN (21008, 21009)
+			AND 
+				1 = CASE 
+						WHEN bettype = 19999 and winlostdate > @NewMoveBetDate THEN 0 --> get data from ticket detail
+						WHEN bettype < 19999 and winlostdate <= @NewMoveBetDate THEN 0 --> get data from sum record
+					ELSE 1 END
+		GROUP BY b.custid, b.recommend, b.mrecommend
+	END
+
 	INSERT INTO #tempdata (custid, recommend, mrecommend, winlost, actual_stake, playercomm, awinlost, comm, mwinlost, acomm)
 	SELECT b.custid, b.recommend, b.mrecommend	
 		,SUM(winlost) winlost
