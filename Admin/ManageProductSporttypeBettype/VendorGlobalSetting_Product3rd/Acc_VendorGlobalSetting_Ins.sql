@@ -13,9 +13,9 @@ DB:   DBCUST-CustDB
 Original:          
 Param's Explanation:        
  - @Fie:          
-  <ROOT><File VendorID = "40" VendorName = "3rdCashWLShareRate1" NumberValue = "1" SportType = "200" BetType = "200" />      
-<File VendorID = "40" VendorName = "3rdCashWLShareRate1" NumberValue = "1" SportType = "200" BetType = "200" />      
-<File VendorID = "40" VendorName = "3rdCashWLShareRate" NumberValue = "1" SportType = "200" BetType = "200" />      
+  <ROOT><File VendorId = "40" VendorName = "3rdCashWLShareRate1" NumberValue = "1" SportType = "200" BetType = "200" />      
+<File VendorId = "40" VendorName = "3rdCashWLShareRate1" NumberValue = "1" SportType = "200" BetType = "200" />      
+<File VendorId = "40" VendorName = "3rdCashWLShareRate" NumberValue = "1" SportType = "200" BetType = "200" />      
 </ROOT>      
 */        
 BEGIN      
@@ -45,7 +45,7 @@ CREATE TABLE #input
 CREATE TABLE #inputTmp      
 (      
     ID INT IDENTITY(1, 1),      
-    VendorID NVARCHAR(MAX),      
+    VendorId NVARCHAR(MAX),      
     VendorName NVARCHAR(MAX),      
     NumberValue NVARCHAR(MAX),      
     SportType NVARCHAR(MAX),      
@@ -55,13 +55,13 @@ BEGIN TRY
     EXEC sp_xml_preparedocument @iDoc OUTPUT, @File;      
  INSERT INTO #inputTmp      
  (      
-     VendorID,      
+     VendorId,      
      VendorName,      
      NumberValue,      
      SportType,      
      BetType      
  )      
-    SELECT VendorID,      
+    SELECT VendorId,      
            VendorName,      
            NumberValue,      
            SportType,      
@@ -70,7 +70,7 @@ BEGIN TRY
         OPENXML(@iDoc, '/ROOT/File', 1)      
         WITH      
         (      
-            VendorID NVARCHAR(MAX),      
+            VendorId NVARCHAR(MAX),      
             VendorName NVARCHAR(MAX),      
             NumberValue NVARCHAR(MAX),      
             SportType NVARCHAR(MAX),      
@@ -85,19 +85,19 @@ BEGIN CATCH
 END CATCH;      
 -- remove empty row      
 DELETE #inputTmp      
-WHERE LEN(VendorID) = 0      
+WHERE LEN(VendorId) = 0      
       AND LEN(VendorName) = 0      
       AND LEN(NumberValue) = 0      
       AND LEN(SportType) = 0      
       AND LEN(BetType) = 0;      
 -- Check Simple Data       
 UPDATE #inputTmp        
-SET     VendorID  = CASE WHEN LEN(VendorID)  = 0 THEN NULL ELSE VendorID  END,          
+SET     VendorId  = CASE WHEN LEN(VendorId)  = 0 THEN NULL ELSE VendorId  END,          
 VendorName  = CASE WHEN LEN(VendorName)  = 0 THEN NULL ELSE VendorName  END,       
 NumberValue  = CASE WHEN LEN(NumberValue)  = 0 THEN NULL ELSE NumberValue  END,       
 SportType  = CASE WHEN LEN(SportType)  = 0 THEN NULL ELSE SportType  END,       
 BetType  = CASE WHEN LEN(BetType)  = 0 THEN NULL ELSE BetType  END      
-WHERE LEN(VendorID) = 0      
+WHERE LEN(VendorId) = 0      
    OR LEN(VendorName) = 0      
    OR LEN(NumberValue) = 0      
    OR LEN(SportType) = 0      
@@ -120,7 +120,7 @@ SELECT TOP(1)  @VendorError = CONVERT(VARCHAR(5),ID),
  FROM #inputTmp  WITH(NOLOCK)       
  WHERE LEN(VendorName) > 50      
  OR VendorName IS NULL          
- OR VendorID IS NULL OR ISNUMERIC(VendorID) <> 1         
+ OR VendorId IS NULL OR ISNUMERIC(VendorId) <> 1         
  OR ISNUMERIC(SportType) <> 1       
  OR ISNUMERIC(BetType) <> 1       
  OR ISNUMERIC(NumberValue) <> 1;      
@@ -144,7 +144,7 @@ BEGIN TRY
   sporttype,      
   bettype      
  )      
- SELECT VendorID,      
+ SELECT VendorId,      
    VendorName,      
    NumberValue,      
    SportType,      
@@ -157,7 +157,7 @@ BEGIN CATCH
  RETURN;      
 END CATCH;      
       
---Check VendorID ,VendorName, SportType, BetType       
+--Check VendorId ,VendorName, SportType, BetType       
  SELECT TOP(1) @VendorError  = CONVERT(VARCHAR(5),I.ID),      
    @ErrCode = CASE WHEN vgs.VendorId IS NOT NULL THEN 10010 ELSE 1009 END,      
    @ValueError = CASE WHEN vgs.VendorId IS NOT NULL THEN CAST(vgs.VendorId AS NVARCHAR(MAX)) + ' - ' + vgs.VName      

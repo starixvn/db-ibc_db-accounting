@@ -1,0 +1,79 @@
+/*<info serverAlias="DBCUST-CustDB" executers="" viewers="" isFunction="0" isNested="0"></info>*/
+IF OBJECT_ID('Acc_Product3rd_Sel') IS NOT NULL
+    DROP PROC Acc_Product3rd_Sel;
+GO
+CREATE PROCEDURE dbo.Acc_Product3rd_Sel
+    @Productid INT = NULL,
+    @ProductName VARCHAR(50) = NULL,
+    @Description VARCHAR(100) = NULL,
+    @ProductPrefix VARCHAR(10) = NULL,
+    @OfferSingle BIT = NULL,
+    @ApplyDCS BIT = NULL,
+    @PageSize INT = 50,
+    @PageIndex INT = 1,
+    @TotalRows INT = 0 OUTPUT
+AS
+/*          
+Created: 20210513@Evan        
+Task :  NAP -  Manage VendorGlobal Setting and Product3rd [Redmine: #153521]
+DB:   DBCUST-CustDB           
+Original:          
+*/
+BEGIN
+    SET NOCOUNT ON;
+    SELECT Productid,
+           ProductName,
+           Description,
+           ProductPrefix,
+           OfferSingle,
+           ApplyDCS,
+           Enabled,
+           EndOfSupportDate,
+           ROW_NUMBER() OVER (ORDER BY Productid) AS RowNum
+    INTO #Tmp
+    FROM DBCUST.bodb_Licensee.dbo.Product3rd WITH (NOLOCK)
+    WHERE (
+              Productid = @Productid
+              OR @Productid IS NULL
+          )
+          AND
+          (
+              ProductName LIKE '%' + @ProductName + '%'
+              OR ISNULL(@ProductName, '') = ''
+          )
+          AND
+          (
+              Description LIKE '%' + @Description + '%'
+              OR ISNULL(@Description, '') = ''
+          )
+          AND
+          (
+              ProductPrefix = @ProductPrefix
+              OR ISNULL(@ProductPrefix, '') = ''
+          )
+          AND
+          (
+              OfferSingle = @OfferSingle
+              OR @OfferSingle IS NULL
+          )
+          AND
+          (
+              ApplyDCS = @ApplyDCS
+              OR @ApplyDCS IS NULL
+          );
+    SELECT @TotalRows = COUNT(*)
+    FROM #Tmp WITH (NOLOCK);
+    SELECT Productid,
+           ProductName,
+           Description,
+           ProductPrefix,
+           OfferSingle,
+           ApplyDCS,
+           Enabled,
+           EndOfSupportDate,
+           RowNum
+    FROM #Tmp WITH (NOLOCK)
+    WHERE RowNum > @PageIndex - 1 * @PageSize
+          AND RowNum <= @PageIndex * @PageSize;
+    DROP TABLE #Tmp;
+END;
