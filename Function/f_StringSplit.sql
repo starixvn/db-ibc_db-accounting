@@ -1,10 +1,4 @@
-/*<info serverAlias="DBEXT-bodb02,DBCUST-CustDB,DBCUST-bodb_CustomerLog,DBLOG-bodb_CustomerLog" executers="" isFunction="1"></info>*/
-/****** Object:  UserDefinedFunction [dbo].[f_StringSplit]    Script Date: 12/4/2018 9:36:41 AM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
+/*<info serverAlias="DBEXT-bodb02,DBCUST-CustDB,DBCUST-bodb_CustomerLog,DBLOG-bodb_CustomerLog,DBACC-bodb02" executers="" isFunction="1"></info>*/
 ALTER FUNCTION [dbo].[f_StringSplit]
 (
 	@String NVARCHAR(MAX),
