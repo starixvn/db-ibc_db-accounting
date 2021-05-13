@@ -1,8 +1,8 @@
 ﻿/*<info serverAlias="DBTXN-bodb02,DBAGE-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbExtAccNet,bodbDownlineNetView" isFunction="0"></info>*/
 CREATE PROCEDURE [dbo].[Acc_Transfer_CheckMoveBetDate] 
-	@MoveBetDate DATE,
+	@MoveBetDate DATETIME,
 	@IsDiff BIT = 0 OUTPUT,
-	@NewMoveBetDate DATE = NULL OUTPUT
+	@NewMoveBetDate DATETIME = NULL OUTPUT
 AS
 /*
 	Created: 20210512@Sol
@@ -18,15 +18,16 @@ AS
 */
 BEGIN 
 	
-	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay DATE, MoveBetsDay DATE)
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay DATETIME, MoveBetsDay DATETIME)
 
 	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
 	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	SELECT @NewMoveBetDate = MoveBetsDay FROM @tblMoveBetBalanceUp
 	
-	IF EXISTS (SELECT 1 FROM @tblMoveBetBalanceUp t WHERE t.MoveBetsDay <> @MoveBetDate)
+	IF @NewMoveBetDate IS NOT NULL AND @MoveBetDate < @NewMoveBetDate
 	BEGIN
-		SELECT @IsDiff = 1, @NewMoveBetDate = t.MoveBetsDay
-		FROM @tblMoveBetBalanceUp t
+		SET @IsDiff = 1
 	END
 	ELSE
 		SET @IsDiff = 0

@@ -101,8 +101,8 @@ BEGIN
 	--end
 	*/
 
-	DECLARE @balanceUpDay DATE, @moveBetsDay DATE
-	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay DATE, MoveBetsDay DATE)
+	DECLARE @balanceUpDay DATETIME, @moveBetsDay DATETIME
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay DATETIME, MoveBetsDay DATETIME)
 
 	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
 	EXEC bodb02.dbo.Age_SelBalanceUpDay
@@ -217,7 +217,7 @@ BEGIN
 	  GROUP BY custid
 
 	  ----check move bet date again to make sure it is not changed
-	  DECLARE @IsDiff BIT = 0, @NewMoveBetDate DATE = NULL
+	  DECLARE @IsDiff BIT = 0, @NewMoveBetDate DATETIME = NULL
 	  EXEC bodb02.dbo.Acc_Transfer_CheckMoveBetDate @moveBetsDay, @IsDiff = @IsDiff OUTPUT, @NewMoveBetDate = @NewMoveBetDate OUTPUT
 
 	  IF (@IsDiff = 1)
