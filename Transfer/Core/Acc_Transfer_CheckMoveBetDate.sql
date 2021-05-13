@@ -1,5 +1,5 @@
 ﻿/*<info serverAlias="DBTXN-bodb02,DBAGE-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbExtAccNet,bodbDownlineNetView" isFunction="0"></info>*/
-ALTER PROCEDURE [dbo].[Acc_Transfer_CheckUM] 
+CREATE PROCEDURE [dbo].[Acc_Transfer_CheckMoveBetDate] 
 	@MoveBetDate DATE,
 	@IsDiff BIT = 0 OUTPUT,
 	@NewMoveBetDate DATE = NULL OUTPUT

@@ -266,7 +266,7 @@ BEGIN
 
 	----check move bet date again to make sure it is not changed
 	DECLARE @IsDiff BIT = 0, @NewMoveBetDate DATE = NULL
-	EXEC bodb02.dbo.Acc_Transfer_CheckUM @moveBetsDay, @IsDiff = @IsDiff OUTPUT, @NewMoveBetDate = @NewMoveBetDate OUTPUT
+	EXEC bodb02.dbo.Acc_Transfer_CheckMoveBetDate @moveBetsDay, @IsDiff = @IsDiff OUTPUT, @NewMoveBetDate = @NewMoveBetDate OUTPUT
 
 	IF (@IsDiff = 1)
 	BEGIN
