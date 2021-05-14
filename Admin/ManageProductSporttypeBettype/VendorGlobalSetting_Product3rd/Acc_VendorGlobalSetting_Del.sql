@@ -1,6 +1,7 @@
 /*<info serverAlias="DBCUST-CustDB" executers="" viewers="" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE dbo.Acc_VendorGlobalSetting_Del    
-    @File NVARCHAR(MAX),    
+    @VendorId INT,      
+    @VName VARCHAR(50),    
     @LoginIP VARCHAR(20) = '',    
     @UserID INT,    
     @ErrCode INT = 0 OUTPUT,    
@@ -14,53 +15,18 @@ Original:
 */    
 BEGIN    
     SET NOCOUNT ON;    
-    IF ISNULL(@File, '') = ''    
-        RETURN;    
     DECLARE @StartRun DATETIME,    
             @EndRun DATETIME,    
             @Duration INT,    
-            @iDoc INT,    
             @logSpData NVARCHAR(MAX);    
-    CREATE TABLE #input    
-    (    
-        VendorID NVARCHAR(MAX),    
-        VendorName NVARCHAR(MAX)    
-    );    
-    SET @StartRun = GETDATE();    
-    
+    SET @StartRun = GETDATE();  
+    SELECT @LogSPData = '<R VendorId="'+ COALESCE(CAST(@VendorId AS VARCHAR(6)), SPACE(1)) + '" ' +
+                            'VName="' + COALESCE(CAST(@VName  AS VARCHAR(6)), SPACE(1)) + '" ' +
+                            'LoginIP="'+ COALESCE(CAST(@LoginIP as VARCHAR(20)),SPACE(1)) + '" />'
     BEGIN TRY    
-        EXEC sp_xml_preparedocument @iDoc OUTPUT, @File;    
-        INSERT INTO #input    
-        (    
-            VendorID,    
-            VendorName    
-        )    
-        SELECT VendorID,    
-               VendorName    
-        FROM    
-            OPENXML(@iDoc, '/ROOT/File', 1)    
-            WITH    
-            (    
-                VendorID NVARCHAR(MAX),    
-                VendorName NVARCHAR(MAX)    
-            );    
-        EXEC sp_xml_removedocument @iDoc;    
-        SELECT @logSpData =    
-        (    
-            SELECT vgs.VendorId,    
-                   vgs.VName  
-            FROM DBCUST.CustDB.dbo.VendorGlobalSetting vgs WITH (NOLOCK)    
-                INNER JOIN #input a WITH (NOLOCK)    
-                    ON a.VendorID = vgs.VendorId    
-     AND a.VendorName = vgs.VName    
-            FOR XML RAW('File')    
-        );    
-        SET @logSpData = N'<ROOT>' + @logSpData + N'</ROOT>';    
         DELETE vgs    
-  FROM DBCUST.CustDB.dbo.VendorGlobalSetting vgs WITH (ROWLOCK)    
-  INNER JOIN #input a WITH (NOLOCK)    
-  ON a.VendorID = vgs.VendorId    
-  AND a.VendorName = vgs.VName;    
+        FROM DBCUST.CustDB.dbo.VendorGlobalSetting vgs WITH (ROWLOCK)    
+        WHERE vgs.VendorId = @VendorId AND vgs.VName = @VName;
     END TRY    
     BEGIN CATCH    
         SELECT @ErrCode = ERROR_NUMBER(),    
@@ -74,5 +40,4 @@ BEGIN
     --                                        @ActionID = 6062,    
     --                                        @TrackingValue = @logSpData,    
     --                                        @Duration = @Duration;    
-    DROP TABLE #input;    
 END;    

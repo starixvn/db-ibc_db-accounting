@@ -95,7 +95,7 @@ BEGIN
             ON ISNULL(vgs.sporttype, '') = st.SportType
     WHERE (
               VendorId = @VendorId
-              OR ISNULL(@VendorId, 0) = 0
+              OR @VendorId IS NULL
           )
           AND
           (
