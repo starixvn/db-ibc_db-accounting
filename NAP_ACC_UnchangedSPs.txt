@@ -1,2 +1,3 @@
-ExternalSite\Group\ManageExtraPTGroup\dbo.Acc_CustGroupSelExtraPTGroupByCustID.sql
-ExternalSite\Group\ManageExtraPTGroup\dbo.Acc_CustGroupUpdPrimaryExtraPTGroup.sql
+Transfer\YesterdayTransfer\dbo.Acc_BettransInsTransfer.proc.sql
+Transfer\AutomateLicenseeCodeTransfer\dbo.Acc_LicenseeTransfer_CompanyWinlossByBatch.sql
+Transfer\AutomateLicenseeCodeTransfer\dbo.Acc_LicenseeTransfer_Job.sql
