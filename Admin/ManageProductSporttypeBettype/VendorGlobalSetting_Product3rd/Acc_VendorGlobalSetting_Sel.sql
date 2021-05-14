@@ -118,7 +118,7 @@ BEGIN
            typenamee,
            RowNum
     FROM #Tmp WITH (NOLOCK)
-    WHERE RowNum > @PageIndex - 1 * @PageSize
+    WHERE RowNum > (@PageIndex - 1) * @PageSize
           AND RowNum <= @PageIndex * @PageSize;
     DROP TABLE #Tmp;
 END;

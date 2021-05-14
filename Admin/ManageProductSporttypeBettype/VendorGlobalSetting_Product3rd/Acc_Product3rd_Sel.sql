@@ -1,7 +1,4 @@
 /*<info serverAlias="DBCUST-CustDB" executers="" viewers="" isFunction="0" isNested="0"></info>*/
-IF OBJECT_ID('Acc_Product3rd_Sel') IS NOT NULL
-    DROP PROC Acc_Product3rd_Sel;
-GO
 CREATE PROCEDURE dbo.Acc_Product3rd_Sel
     @Productid INT = NULL,
     @ProductName VARCHAR(50) = NULL,
@@ -73,7 +70,7 @@ BEGIN
            EndOfSupportDate,
            RowNum
     FROM #Tmp WITH (NOLOCK)
-    WHERE RowNum > @PageIndex - 1 * @PageSize
+    WHERE RowNum > (@PageIndex - 1) * @PageSize
           AND RowNum <= @PageIndex * @PageSize;
     DROP TABLE #Tmp;
 END;
