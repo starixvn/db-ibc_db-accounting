@@ -1,9 +1,9 @@
-/*<info serverAlias="DBCUST-CustDB" executers="" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-bodb_Licensee" executers="" viewers="" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE dbo.Acc_Product3rd_Sel
     @Productid INT = NULL,
-    @ProductName VARCHAR(50) = NULL,
-    @Description VARCHAR(100) = NULL,
-    @ProductPrefix VARCHAR(10) = NULL,
+    @ProductName VARCHAR(50) = '',
+    @Description VARCHAR(100) = '',
+    @ProductPrefix VARCHAR(10) = '',
     @OfferSingle BIT = NULL,
     @ApplyDCS BIT = NULL,
     @PageSize INT = 50,
@@ -12,8 +12,8 @@ CREATE PROCEDURE dbo.Acc_Product3rd_Sel
 AS
 /*          
 Created: 20210513@Evan        
-Task :  NAP -  Manage VendorGlobal Setting and Product3rd [Redmine: #153521]
-DB:   DBCUST-CustDB           
+Task :  NAP -  Manage Product3rd [Redmine: #153521]
+DB:   DBCUST-bodb_Licensee           
 Original:          
   Revisions: 
     - 20200413@Evan: Create new SP [Redmine: #153521]
@@ -30,7 +30,7 @@ BEGIN
            EndOfSupportDate,
            ROW_NUMBER() OVER (ORDER BY Productid) AS RowNum
     INTO #Tmp
-    FROM DBCUST.bodb_Licensee.dbo.Product3rd WITH (NOLOCK)
+    FROM dbo.Product3rd WITH (NOLOCK)
     WHERE (
               Productid = @Productid
               OR @Productid IS NULL
@@ -60,8 +60,10 @@ BEGIN
               ApplyDCS = @ApplyDCS
               OR @ApplyDCS IS NULL
           );
+
     SELECT @TotalRows = COUNT(*)
-    FROM #Tmp WITH (NOLOCK);
+    FROM #Tmp ;
+
     SELECT Productid,
            ProductName,
            Description,
@@ -71,7 +73,7 @@ BEGIN
            Enabled,
            EndOfSupportDate,
            RowNum
-    FROM #Tmp WITH (NOLOCK)
+    FROM #Tmp 
     WHERE RowNum > (@PageIndex - 1) * @PageSize
           AND RowNum <= @PageIndex * @PageSize;
     DROP TABLE #Tmp;
