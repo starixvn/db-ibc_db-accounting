@@ -10,7 +10,8 @@ AS
 Created: 20210513@Evan          
 Task :  NAP -  Manage VendorGlobal Setting and Product3rd     [Redmine: #153521]     
 DB:   DBCUST-CustDB          
-Original:            
+Original:    
+  - 20200413@Evan: Create new SP [Redmine: #153521]        
 Param's Explanation:          
  - @Fie:            
   <ROOT><File ProductId = "Test" ProductName = "Test" Description = "Test" ProductPrefix = "Test" OfferSingle = "Test"   
