@@ -1,4 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="Dot_Member" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBTXN-bodb02" executers="Dot_Member" isFunction="0" isNested="1"></info>*/
 ALTER PROCEDURE [dbo].[Dot_Int_BettransInsTransactionWithoutLog_Cust]
 	@amount				MONEY,	
 	@custid				INT,
@@ -62,6 +62,7 @@ Revision:
 	- 20190705@Bobby: Add Rebate Bonus [RedmineID: #116358]
 	- 20190710@Jamie: Check Bonus wallet if a member is joining a Bonus campaign [Redmine:#116273]
 	- 20201014@Danny: Convert Ipv6 to dummy IPv4 [Redmine: #143323]
+	- 20210518@Percy: Change code to adapt new Move Bets flow [RedmineID: #154866]
 
 Param's Explanation:
 @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction
@@ -152,7 +153,12 @@ BEGIN
 		@BonusWalletFlag		BIT,
 		-- Rebate bonus
 		@DBONRTRA				SMALLINT,
-		@DBONRADJ				SMALLINT
+		@DBONRADJ				SMALLINT,
+
+		@MoveBetsDay			SMALLDATETIME,
+		@NewMoveBetsDay			SMALLDATETIME
+
+	DECLARE @MBBU TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
 
 	SELECT	@ErrCode		= 0,
 			@ErrMsg			= '',
@@ -303,12 +309,27 @@ BEGIN
 			RETURN
 		END
 	END
+	
+	-- get MB day
+	SET @MoveBetsDay = NULL
+	INSERT INTO @MBBU (BalanceUpDay, MoveBetsDay)
+	EXEC dbo.Age_SelBalanceUpDay
+	SELECT @MoveBetsDay = MoveBetsDay FROM @MBBU
+
 	----------------------------------
 	--Check enough balance for withdrawing
-	SELECT @balance = SUM(winlost-actual_stake+playercomm) FROM dbo.bettrans WITH(NOLOCK) WHERE custid = @custid
-	SELECT @balance = ISNULL(@balance, 0)
 
-	SELECT @translogCredit = ISNULL(SUM(ISNULL(actual_stake,0)) ,0)
+	SELECT @balance = 0, @translogCredit = 0, @balance_bettransRNG = 0, @balance_bettransLC = 0
+
+	SELECT @balance = SUM(winlost-actual_stake+playercomm)
+	FROM dbo.bettrans WITH (NOLOCK)
+	WHERE custid = @custid
+		AND 1 = CASE
+					WHEN bettype = 19999 AND winlostdate > @MoveBetsDay THEN 0
+					WHEN bettype < 19999 AND winlostdate <= @MoveBetsDay THEN 0
+					ELSE 1 END
+
+	SELECT @translogCredit = SUM(ISNULL(actual_stake, 0))
 	FROM dbo.translog WITH(NOLOCK) 
 	WHERE custid=@custid AND statusID=0	
 	
@@ -339,11 +360,59 @@ BEGIN
 		END
 	END
 
-	SELECT @balance_bettransRNG = ISNULL(@balance_bettransRNG,0)
-			,@balance_bettransLC = ISNULL(@balance_bettransLC,0)
+	-- get MB day again
+	SET @NewMoveBetsDay = NULL
+	DELETE @MBBU
+	INSERT INTO @MBBU (BalanceUpDay, MoveBetsDay)
+	EXEC dbo.Age_SelBalanceUpDay
+	SELECT @NewMoveBetsDay = MoveBetsDay FROM @MBBU
 
-	SELECT @beforebalance = @balance + @balance_bettransRNG + @balance_bettransLC  - @translogCredit
-	SELECT @postbalance = @balance + @balance_bettransRNG + @balance_bettransLC + @winlost - @actual_stake - @translogCredit
+	IF @NewMoveBetsDay <> @MoveBetsDay
+	BEGIN
+		SELECT @balance = 0, @translogCredit = 0, @balance_bettransRNG = 0, @balance_bettransLC = 0
+
+		SELECT @balance = SUM(winlost-actual_stake+playercomm)
+		FROM dbo.bettrans WITH (NOLOCK)
+		WHERE custid = @custid
+			AND 1 = CASE
+						WHEN bettype = 19999 AND winlostdate > @NewMoveBetsDay THEN 0
+						WHEN bettype < 19999 AND winlostdate <= @NewMoveBetsDay THEN 0
+						ELSE 1 END
+
+		SELECT @translogCredit = SUM(ISNULL(actual_stake, 0))
+		FROM dbo.translog WITH (NOLOCK)
+		WHERE custid = @custid AND statusId = 0
+		
+		SELECT	@balance_bettransRNG = SUM(winlost - actual_stake + playercomm)
+		FROM	dbo.bettransRnG WITH (NOLOCK)
+		WHERE	custid = @custID
+				AND IsSum=0
+				
+		SELECT	@balance_bettransLC = SUM(winlost - actual_stake + playercomm)
+		FROM	dbo.bettransLC WITH (NOLOCK)
+		WHERE	custid = @custID
+				AND IsSum=0
+
+		IF (@bettype = @DWIT AND @IsCharge = 0) OR (@bettype = @DTRATP AND @amount < 0) --only check when not Charge transaction, and is Withdrawal
+		BEGIN
+			--//3rd check: MB/BU is running?
+			 EXEC dbo.Acc_Core_IsMainProcessRunning
+				  @CustId = @custid
+				, @UplineId = @recommend
+				, @IsDepositMember = 1
+				, @ErrCode = @ErrCode OUTPUT
+				, @ErrMsg = @ErrMsg OUTPUT
+
+			IF @ErrCode <> 0
+			BEGIN
+				SELECT @ErrMsg = @ErrMsg, @ErrCode = 333	
+				RETURN
+			END
+		END
+	END
+
+	SELECT @beforebalance = ISNULL(@balance, 0) + ISNULL(@balance_bettransRNG, 0) + ISNULL(@balance_bettransLC, 0)  - ISNULL(@translogCredit, 0)
+	SELECT @postbalance = @beforebalance + @winlost - @actual_stake
 
 	IF (@bettype=@DWIT AND @IsCharge = 0) OR (@bettype=@DTRATP AND @amount < 0) --only check when not Charge transaction, and is Withdrawal
 	BEGIN

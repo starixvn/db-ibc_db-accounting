@@ -58,6 +58,7 @@ Revisions:
 	- 20190705@Bobby: Add Rebate Bonus [RedmineID: #116358]
 	- 20190710@Jamie: Check Bonus wallet if a member is joining a Bonus campaign [Redmine:#116273]
 	- 20201014@Danny: Convert Ipv6 to dummy IPv4 [Redmine: #143323]
+	- 20210518@Percy: Change code to adapt new Move Bets flow [RedmineID: #154866]
 
 Param's Explanation:
 ? @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction
@@ -142,7 +143,12 @@ BEGIN
 		@BonusWalletFlag BIT, 
 		-- Rebate bonus
 		@DBONRTRA smallint,
-		@DBONRADJ smallint
+		@DBONRADJ smallint,
+
+		@MoveBetsDay smalldatetime,
+		@NewMoveBetsDay smalldatetime
+
+	declare @MBBU table (BalanceUpDay smalldatetime, MoveBetsDay smalldatetime)
 		
 	select @ip = dbo.f_ConvertIPv6ToDummy(@ip)	
 
@@ -257,21 +263,34 @@ BEGIN
 				RETURN
 			END
 
-			select @balance = sum(winlost-actual_stake+playercomm) from bettrans with (NOLOCK) where custid = @custid
-			select @balance = isnull(@balance, 0)	
-		
-			select @translogCredit = isnull(sum(isnull(actual_stake,0)) ,0)
-			from translog with (nolock) 
-			where custid=@custid and statusID=0	
+			-- get MB day
+			SET @MoveBetsDay = NULL
+			INSERT INTO @MBBU (BalanceUpDay, MoveBetsDay)
+			EXEC dbo.Age_SelBalanceUpDay
+			SELECT @MoveBetsDay = MoveBetsDay FROM @MBBU
+
+			SELECT @balance = 0, @translogCredit = 0, @balance_bettransRNG = 0, @balance_bettransLC = 0
+
+			SELECT @balance = SUM(winlost-actual_stake+playercomm)
+			FROM dbo.bettrans WITH (NOLOCK)
+			WHERE custid = @custid
+				AND 1 = CASE
+							WHEN bettype = 19999 AND winlostdate > @MoveBetsDay THEN 0
+							WHEN bettype < 19999 AND winlostdate <= @MoveBetsDay THEN 0
+							ELSE 1 END
+
+			SELECT @translogCredit = SUM(ISNULL(actual_stake, 0))
+			FROM dbo.translog WITH (NOLOCK)
+			WHERE custid = @custid AND statusId = 0
 		
 			SELECT	@balance_bettransRNG = SUM(winlost - actual_stake + playercomm)
-			FROM	dbo.bettransRnG WITH(NOLOCK)
-			WHERE	custid = @custID 
+			FROM	dbo.bettransRnG WITH (NOLOCK)
+			WHERE	custid = @custID
 					AND IsSum=0
 				
 			SELECT	@balance_bettransLC = SUM(winlost - actual_stake + playercomm)
-			FROM	dbo.bettransLC WITH(NOLOCK)
-			WHERE	custid = @custID 
+			FROM	dbo.bettransLC WITH (NOLOCK)
+			WHERE	custid = @custID
 					AND IsSum=0
 		
 			--//2nd check: MB/BU is running?
@@ -288,18 +307,64 @@ BEGIN
 				RETURN
 			END
 
+			-- get MB day again
+			SET @NewMoveBetsDay = NULL
+			DELETE @MBBU
+			INSERT INTO @MBBU (BalanceUpDay, MoveBetsDay)
+			EXEC dbo.Age_SelBalanceUpDay
+			SELECT @NewMoveBetsDay = MoveBetsDay FROM @MBBU
+
+			IF @NewMoveBetsDay <> @MoveBetsDay
+			BEGIN
+				SELECT @balance = 0, @translogCredit = 0, @balance_bettransRNG = 0, @balance_bettransLC = 0
+
+				SELECT @balance = SUM(winlost-actual_stake+playercomm)
+				FROM dbo.bettrans WITH (NOLOCK)
+				WHERE custid = @custid
+					AND 1 = CASE
+								WHEN bettype = 19999 AND winlostdate > @NewMoveBetsDay THEN 0
+								WHEN bettype < 19999 AND winlostdate <= @NewMoveBetsDay THEN 0
+								ELSE 1 END
+
+				SELECT @translogCredit = SUM(ISNULL(actual_stake, 0))
+				FROM dbo.translog WITH (NOLOCK)
+				WHERE custid = @custid AND statusId = 0
+		
+				SELECT	@balance_bettransRNG = SUM(winlost - actual_stake + playercomm)
+				FROM	dbo.bettransRnG WITH (NOLOCK)
+				WHERE	custid = @custID
+						AND IsSum=0
+				
+				SELECT	@balance_bettransLC = SUM(winlost - actual_stake + playercomm)
+				FROM	dbo.bettransLC WITH (NOLOCK)
+				WHERE	custid = @custID
+						AND IsSum=0
+
+				--//3rd check: MB/BU is running?
+				EXEC dbo.Acc_Core_IsMainProcessRunning
+					  @CustId = @custid
+					, @UplineId = @recommend
+					, @IsDepositMember = 1
+					, @ErrCode = @ErrCode OUTPUT
+					, @ErrMsg = @ErrMsg OUTPUT
+
+				IF @ErrCode <> 0
+				BEGIN
+					SELECT @ErrMsg = @ErrMsg, @ErrCode = 333
+					RETURN
+				END
+			END
+
 		/*
 			Check Member's Balance for Withdrawal 
 		*/
 
-			SELECT @balance_bettransRNG = ISNULL(@balance_bettransRNG,0)
-					,@balance_bettransLC = ISNULL(@balance_bettransLC,0)
-
-			if @balance + @balance_bettransRNG + @balance_bettransLC + @winlost-@actual_stake-@translogCredit<0
-			BEGIN
-				Select @ErrMsg = 'Sorry, you do not have enough money to withdraw.', @ErrCode = 103				
-				return		
-			END
+		IF (ISNULL(@balance, 0) + ISNULL(@balance_bettransRNG, 0) + ISNULL(@balance_bettransLC, 0) - ISNULL(@translogCredit, 0)
+			 + @winlost - @actual_stake) < 0
+		BEGIN
+			SELECT @ErrMsg = 'Sorry, you do not have enough money to withdraw.', @ErrCode = 103				
+			RETURN		
+		END
 
 		----------------------------------
 		-- Check Bonus Wallet 
