@@ -12,10 +12,10 @@ Task :  NAP -  Manage VendorGlobal Setting    [Redmine: #153521]
 DB:   DBCUST-CustDB            
 Original:              
   Revisions:   
-    - 20200413@Evan: Create new SP [Redmine: #153521]  
+    - 20210512@Evan: Create new SP [Redmine: #153521]  
 Param's Explanation:            
  - @Fie:              
-  <ROOT><File VendorID = "40" VendorName = "3rdCashWLShareRate1" NumberValue = "1" SportType = "200" BetType = "200" /></ROOT>          
+  <ROOT><File VendorId = "40" VendorName = "3rdCashWLShareRate1" NumberValue = "1" SportType = "200" BetType = "200" /></ROOT>          
 */
 BEGIN
     SET NOCOUNT ON;
@@ -43,7 +43,7 @@ BEGIN
     );
     CREATE TABLE #inputTmp
     (
-        VendorID NVARCHAR(MAX),
+        VendorId NVARCHAR(MAX),
         VendorName NVARCHAR(MAX),
         NumberValue NVARCHAR(MAX),
         SportType NVARCHAR(MAX),
@@ -54,13 +54,13 @@ BEGIN
         EXEC sp_xml_preparedocument @iDoc OUTPUT, @File;
         INSERT INTO #inputTmp
         (
-            VendorID,
+            VendorId,
             VendorName,
             NumberValue,
             SportType,
             BetType
         )
-        SELECT VendorID,
+        SELECT VendorId,
                VendorName,
                NumberValue,
                SportType,
@@ -69,7 +69,7 @@ BEGIN
             OPENXML(@iDoc, '/ROOT/File', 1)
             WITH
             (
-                VendorID NVARCHAR(MAX),
+                VendorId NVARCHAR(MAX),
                 VendorName NVARCHAR(MAX),
                 NumberValue NVARCHAR(MAX),
                 SportType NVARCHAR(MAX),
@@ -125,7 +125,7 @@ BEGIN
             sporttype,
             bettype
         )
-        SELECT VendorID,
+        SELECT VendorId,
                VendorName,
                NumberValue,
                SportType,
@@ -146,7 +146,7 @@ BEGIN
         SELECT @CurrentRow = @CurrentRow + 1,
                @startRun = GETDATE();
         SELECT @LogSPData_Old
-            = N'<R VendorID="' + COALESCE(CAST(vgs.VendorId AS VARCHAR(10)), SPACE(1)) + N'" ' + N'VendorName="'
+            = N'<R VendorId="' + COALESCE(CAST(vgs.VendorId AS VARCHAR(10)), SPACE(1)) + N'" ' + N'VendorName="'
               + COALESCE(CAST(vgs.VName AS VARCHAR(10)), SPACE(1)) + N'" ' + N'NumberValue="'
               + COALESCE(CAST(vgs.NumberValue AS VARCHAR(50)), SPACE(1)) + N'" ' + N'SportType="'
               + COALESCE(CAST(vgs.sporttype AS VARCHAR(10)), SPACE(1)) + N'" ' + N'BetType="'
@@ -174,7 +174,7 @@ BEGIN
             RETURN;
         END CATCH;
         SELECT @LogSPData
-            = N'<R VendorID="' + COALESCE(CAST(vgs.VendorId AS VARCHAR(10)), SPACE(1)) + N'" ' + N'VendorName="'
+            = N'<R VendorId="' + COALESCE(CAST(vgs.VendorId AS VARCHAR(10)), SPACE(1)) + N'" ' + N'VendorName="'
               + COALESCE(CAST(vgs.VName AS VARCHAR(10)), SPACE(1)) + N'" ' + N'NumberValue="'
               + COALESCE(CAST(vgs.NumberValue AS VARCHAR(50)), SPACE(1)) + N'" ' + N'SportType="'
               + COALESCE(CAST(vgs.sporttype AS VARCHAR(10)), SPACE(1)) + N'" ' + N'BetType="'

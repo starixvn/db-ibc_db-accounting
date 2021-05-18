@@ -16,7 +16,7 @@ Task :  NAP -  Manage Product3rd [Redmine: #153521]
 DB:   DBCUST-bodb_Licensee           
 Original:          
   Revisions: 
-    - 20200413@Evan: Create new SP [Redmine: #153521]
+    - 20210513@Evan: Create new SP [Redmine: #153521]
 */
 BEGIN
     SET NOCOUNT ON;

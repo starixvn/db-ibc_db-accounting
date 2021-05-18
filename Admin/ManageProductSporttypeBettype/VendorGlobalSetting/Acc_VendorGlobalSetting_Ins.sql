@@ -12,7 +12,7 @@ Task :  NAP -  Manage VendorGlobal Setting    [Redmine: #153521]
 DB:   DBCUST-CustDB            
 Original:             
   Revisions:     
-    - 20200413@Evan: Create new SP [Redmine: #153521]    
+    - 20210512@Evan: Create new SP [Redmine: #153521]    
 Param's Explanation:            
  - @Fie:              
   <ROOT><File VendorId = "40" VendorName = "3rdCashWLShareRate" NumberValue = "1" SportType = "200" BetType = "200" /></ROOT>          

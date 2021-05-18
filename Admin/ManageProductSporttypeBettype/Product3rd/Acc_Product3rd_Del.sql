@@ -12,7 +12,7 @@ Task :  NAP -  Manage Product3rd        [Redmine: #153521]
 DB:   DBCUST-bodb_Licensee  
 Original:    
   Revisions: 
-    - 20200413@Evan: Create new SP [Redmine: #153521]
+    - 20210514@Evan: Create new SP [Redmine: #153521]
 */
 BEGIN
     SET NOCOUNT ON;
@@ -38,7 +38,7 @@ BEGIN
     SELECT @EndRun = GETDATE(),
            @Duration = DATEDIFF(MILLISECOND, @StartRun, @EndRun);
 
-    EXEC Acc_WriteLog_UserLog_RunSP_Wrapper @UserID = @UserID,
+    EXEC DBCUST.CustDB.dbo.Acc_WriteLog_UserLog_RunSP_Wrapper @UserID = @UserID,
                                             @ActionID = 95049,
                                             @TrackingValue = @logSpData,
                                             @Duration = @Duration;

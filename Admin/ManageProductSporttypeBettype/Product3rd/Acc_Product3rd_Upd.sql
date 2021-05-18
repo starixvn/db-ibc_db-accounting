@@ -12,12 +12,11 @@ Task :  NAP -  Manage Product3rd     [Redmine: #153521]
 DB:   DBCUST-bodb_Licensee        
 Original:          
   Revisions: 
-    - 20200413@Evan: Create new SP [Redmine: #153521]
+    - 20210513@Evan: Create new SP [Redmine: #153521]
 Param's Explanation:        
  - @Fie:          
-  <ROOT><File ProductId = "Test" ProductName = "Test" Description = "Test" ProductPrefix = "Test" OfferSingle = "Test" 
-  ApplyDCS = "Test" Enabled = "Test" EndOfSupportDate = "Test" />      
-</ROOT>  
+  <ROOT><File ProductId = "1" ProductName = "Test" Description = "Test" ProductPrefix = "1" OfferSingle = "1" 
+  ApplyDCS = "1" Enabled = "1" EndOfSupportDate = "20210513" /></ROOT> 
 
 */
 BEGIN
@@ -226,7 +225,7 @@ BEGIN
                @ErrMsg = ERROR_MESSAGE();
         RETURN;
     END CATCH;
-
+  SELECT  @RowTotal = COUNT(*) FROM #input
     WHILE @CurrentRow <> @RowTotal
     BEGIN
         SELECT @CurrentRow = @CurrentRow + 1,
@@ -243,6 +242,7 @@ BEGIN
               + COALESCE(CAST(@LoginIP AS VARCHAR(20)), SPACE(1)) + N'" />'
         FROM #input
         WHERE ID = @CurrentRow;
+    
         BEGIN TRY
             UPDATE p3
             SET p3.ProductName = i.ProductName,
@@ -254,7 +254,7 @@ BEGIN
                 p3.EndOfSupportDate = i.EndOfSupportDate
             FROM dbo.Product3rd p3 WITH (ROWLOCK)
                 INNER JOIN #input i
-                    ON i.Productid = vgs.Productid
+                    ON i.Productid = p3.Productid
             WHERE i.ID = @CurrentRow;
         END TRY
         BEGIN CATCH
@@ -277,7 +277,7 @@ BEGIN
         SET @endRun = GETDATE();
         SET @duration = DATEDIFF(MILLISECOND, @startRun, @endRun);
 
-        EXEC dbo.Acc_WriteLog_UserLog_RunSP_Wrapper @UserID = @UserID,
+        EXEC DBCUST.CustDB.dbo.Acc_WriteLog_UserLog_RunSP_Wrapper @UserID = @UserID,
                                                     @ActionID = 95048,
                                                     @TrackingValue = @LogSPData,
                                                     @TrackingValue2 = @LogSPData_Old,
@@ -286,4 +286,3 @@ BEGIN
     DROP TABLE #input,
                #inputTmp;
 END;
-GO

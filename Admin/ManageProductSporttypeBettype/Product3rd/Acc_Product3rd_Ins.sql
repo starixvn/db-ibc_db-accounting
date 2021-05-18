@@ -12,12 +12,11 @@ Task :  NAP -  Manage Product3rd     [Redmine: #153521]
 DB:   DBCUST-bodb_Licensee          
 Original:    
   Revisions: 
-    - 20200413@Evan: Create new SP [Redmine: #153521]
+    - 20210513@Evan: Create new SP [Redmine: #153521]
 Param's Explanation:          
  - @Fie:            
-  <ROOT><File ProductId = "Test" ProductName = "Test" Description = "Test" ProductPrefix = "Test" OfferSingle = "Test"   
-  ApplyDCS = "Test" Enabled = "Test" EndOfSupportDate = "Test" />        
-</ROOT>    
+  <ROOT><File ProductId = "1" ProductName = "Test" Description = "Test" ProductPrefix = "1" OfferSingle = "1"   
+  ApplyDCS = "1" Enabled = "1" EndOfSupportDate = "20210513" /></ROOT>    
   
 */
 BEGIN
@@ -217,8 +216,8 @@ BEGIN
                                   OR ApplyDCS NOT IN ( '0', '1' )
                                   OR ISNUMERIC(ApplyDCS) <> 1 THEN
                                  'ApplyDCS'
-                             WHEN ISNULL(Enabled, 0) NOT IN ( 0, 1 )
-                                  OR ISNUMERIC(ISNULL(Enabled, 0)) <> 1 THEN
+                             WHEN Enabled NOT IN ( '0', '1' )
+                                  OR ISNUMERIC(Enabled) <> 1 THEN
                                  'Enabled'
                              ELSE
                                  NULL
@@ -236,8 +235,8 @@ BEGIN
           OR ISNUMERIC(OfferSingle) <> 1
           OR ISNUMERIC(Productid) <> 1
           OR ISNUMERIC(ApplyDCS) <> 1
-          OR ISNUMERIC(ISNULL(Enabled, 0)) <> 1
-          OR ISNULL(Enabled, 0) NOT IN ( 0, 1 )
+          OR ISNUMERIC(Enabled) <> 1
+          OR Enabled NOT IN ( '0', '1' )
     ORDER BY ID;
     IF @ErrCode <> 0
     BEGIN
@@ -389,7 +388,7 @@ BEGIN
         SET @endRun = GETDATE();
         SET @duration = DATEDIFF(MILLISECOND, @startRun, @endRun);
 
-        EXEC Acc_WriteLog_UserLog_RunSP_Wrapper @UserID = @UserID,
+        EXEC DBCUST.CustDB.dbo.Acc_WriteLog_UserLog_RunSP_Wrapper @UserID = @UserID,
                                                 @ActionID = 95047,
                                                 @TrackingValue = @LogSPData,
                                                 @Duration = @duration;
