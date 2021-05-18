@@ -23,6 +23,7 @@ AS
 		- 20190416@Percy: Separate Bet Builder to Sportsbook [RedmineID: #108791]
 		- 20191211@Percy: Add UplineId (HeadlineId) [RedmineID: #118962]
 		- 20191216@Percy: Do not allow user to select the current date in Effective Date [RedmineID: #125418]
+		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
 
 	Param's Explanation:
 */
@@ -45,7 +46,7 @@ BEGIN
 	SELECT  @startRun = GETDATE()
 
 	DECLARE @GroupName VARCHAR(30), @ProductName VARCHAR(30), @today DATETIME
-	SELECT  @GroupName = GroupName FROM DBACC.bodb_ACC.dbo.Acc_DWLList_ExtraPT WITH(NOLOCK) WHERE GroupId = @GroupId
+	SELECT  @GroupName = GroupName FROM dbo.Acc_DWLList_ExtraPT WITH(NOLOCK) WHERE GroupId = @GroupId
 	SELECT  @ProductName = ProductName FROM DBTXN.bodb02.dbo.Products WITH(NOLOCK) WHERE ProductID = @ProductID
 	SELECT  @today = CONVERT(DATE, GETDATE())
 
@@ -63,7 +64,7 @@ BEGIN
 		RETURN
 	END
 
-	IF NOT EXISTS (SELECT 1 FROM DBACC.bodb_ACC.dbo.Acc_DWLList WITH(NOLOCK) WHERE ProductId = @ProductId)
+	IF NOT EXISTS (SELECT 1 FROM dbo.Acc_DWLList WITH(NOLOCK) WHERE ProductId = @ProductId)
 	BEGIN
 		SELECT @ErrCode = 102, @ErrMsg = 'This product is not offers'
 		

@@ -21,6 +21,7 @@ AS
 		- 20131108@Elodie: Splitting bodb02 into CustDB (Call CustInfo by link database)
 		- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 		- 20181112@Sophia: Add Transfer Collection [redmine: #98621]
+		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
 */
 BEGIN
     SET NOCOUNT ON		
@@ -78,7 +79,7 @@ BEGIN
 			a.ToAmount,            
             a.Description,
 			a.IsCollection
-    FROM DBACC.bodb_acc.dbo.Acc_CustFinanceTransfer a WITH(NOLOCK)
+    FROM DBCUST.CustDB.dbo.Acc_CustFinanceTransfer a WITH(NOLOCK)
 		INNER JOIN CustDB.dbo.custinfo c1 WITH(NOLOCK) ON a.FromCust = c1.Username
 		INNER JOIN CustDB.dbo.custinfo c2 WITH(NOLOCK) ON a.ToCust = c2.Username
     WHERE UserId = @UserId

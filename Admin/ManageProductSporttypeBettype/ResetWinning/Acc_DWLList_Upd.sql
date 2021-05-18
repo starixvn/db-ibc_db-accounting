@@ -1,4 +1,4 @@
-/*<info serverAlias="DBACC-bodb_ACC" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE  dbo.Acc_DWLList_Upd
 	@File		NVARCHAR(MAX),
 	@LoginIP	VARCHAR(20)='',
@@ -11,11 +11,12 @@ AS
 /*
 Created: 20200916@Danny
 Task :  NAP Manage Reset Winning
-DB: DBACC/bodb_ACC
+DB: DBACC/bodb_ACC -> DBCUST.CustDB
 Original:
 
 	Revisions:
 		- 20200918@Danny: NAP Manage Reset Winning [Redmine: #131241][Task: #141775]
+		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
 */
 BEGIN
     SET NOCOUNT ON
@@ -109,7 +110,7 @@ BEGIN
 		BEGIN
 			SELECT TOP(1) @ValueError   =	t.CustID				
 			FROM #inputTmp t
-			WHERE NOT EXISTS (SELECT 1 FROM bodb02.dbo.Customer cus WITH(NOLOCK) WHERE cus.CustID = t.CustID)
+			WHERE NOT EXISTS (SELECT 1 FROM dbo.Customer cus WITH(NOLOCK) WHERE cus.CustID = t.CustID)
 
 			IF @ValueError <> ''
 			BEGIN

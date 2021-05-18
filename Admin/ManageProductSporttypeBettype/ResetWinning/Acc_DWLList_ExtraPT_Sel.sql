@@ -1,4 +1,4 @@
-/*<info serverAlias="DBACC-bodb_ACC" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE  dbo.Acc_DWLList_ExtraPT_Sel
 	@CustID			INT = NULL,
 	@UserName		VARCHAR(30) = NULL,
@@ -11,11 +11,12 @@ AS
 /*
 Created: 20200916@Danny
 Task :  NAP Manage Reset Winning
-DB: DBACC/bodb_ACC
+DB: DBACC/bodb_ACC -> DBCUST.CustDB
 Original:
 
 	Revisions:
 		- 20200918@Danny: NAP Manage Reset Winning [Redmine: #131241][Task: #141775]
+		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
 */
 
 BEGIN
@@ -44,7 +45,7 @@ BEGIN
 				   acc.GroupName,
 				   acc.IsDisabled
 		FROM Acc_DWLList_ExtraPT acc WITH(NOLOCK)
-		INNER JOIN bodb02.dbo.Customer cus WITH(NOLOCK) on acc.CustID = cus.CustID
+		INNER JOIN dbo.Customer cus WITH(NOLOCK) on acc.CustID = cus.CustID
 		WHERE (acc.CustID = @CustID OR @CustID IS NULL) 
 				AND (acc.CustID = @CustID OR @CustID IS NULL)
 				AND (acc.GroupID = @GroupID OR @GroupID IS NULL)	
@@ -69,7 +70,7 @@ BEGIN
 				   acc.GroupName,
 				   acc.IsDisabled
 		FROM Acc_DWLList_ExtraPT_xtest acc WITH(NOLOCK)
-		INNER JOIN bodb02.dbo.Customer cus WITH(NOLOCK) on acc.CustID = cus.CustID
+		INNER JOIN dbo.Customer cus WITH(NOLOCK) on acc.CustID = cus.CustID
 		WHERE (acc.CustID = @CustID OR @CustID IS NULL) 
 				AND (acc.CustID = @CustID OR @CustID IS NULL)
 				AND (acc.GroupID = @GroupID OR @GroupID IS NULL)	
