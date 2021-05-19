@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB" executers="" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE dbo.Acc_VendorGlobalSetting_Sel
     @VendorId INT = NULL,
     @VName VARCHAR(50) = '',
@@ -16,6 +16,9 @@ DB:   DBCUST-CustDB
 Original:            
   Revisions:   
     - 20210511@Evan: Create new SP [Redmine: #153521]  
+Param's Explanation:
+  @SportType = N'1,2,3,4'
+  @BetType = N'1,2,3,4'
 */
 BEGIN
     SET NOCOUNT ON;

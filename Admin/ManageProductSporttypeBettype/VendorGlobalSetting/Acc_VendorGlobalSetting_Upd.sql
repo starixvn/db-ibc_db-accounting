@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB" executers="" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE dbo.Acc_VendorGlobalSetting_Upd
     @File NVARCHAR(MAX),
     @LoginIP VARCHAR(20) = '',
