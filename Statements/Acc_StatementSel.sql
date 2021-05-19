@@ -35,6 +35,7 @@ AS
 		- 20180712@Sophia: WC2018 - Revise all the Sp [Redmine: #98039]
 		- 20190912@Bobby: Implement headline - Statement [Redmine: #119289]
 		- 20190918@Percy: Remove inactive products [RedmineID: #118699]
+		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 */
  
 BEGIN
@@ -43,6 +44,15 @@ BEGIN
 	----Get Sport bettype Matrix------
 	DECLARE @isTest BIT = 0
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
+
+	-- get move bet date
+	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 
 	CREATE TABLE #Sportbettype (Bettype INT PRIMARY KEY, RefTable TINYINT)
 	INSERT INTO #Sportbettype (Bettype, RefTable)
@@ -182,12 +192,14 @@ BEGIN
 					SELECT TOP (@i) winlostdate, StatusID, bettype, stake, winlost, actual_stake, playercomm
 					FROM dbo.bettrans bt WITH (NOLOCK)		-- use index = CUSTID					
 					WHERE r.recommend = bt.custID
-						AND winlostdate <= @todate					
+						AND winlostdate <= @todate
+						AND 1 = CASE 
+									WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+									WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+								ELSE 1 END
 					) b
 		GROUP BY winlostdate, bettype, StatusID, CASE WHEN bettype > 20000 THEN 1 ELSE 0 END 
 		OPTION (OPTIMIZE FOR (@i = 1))
-
-
 
 		-- I.1.2. BettransLC
 		INSERT INTO #Data (winlostdate ,bettype, StatusID, IsOwner, Outstanding, Turnover, OwnerWinloss, Winlost, Comm, BetCount)
@@ -259,11 +271,13 @@ BEGIN
 					WHERE r.recommend = bt.recommend
 						AND winlostdate <= @todate			
 						AND StatusID NOT IN (0,1)
+						AND 1 = CASE 
+									WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+									WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+								ELSE 1 END
 					) b
 		GROUP BY winlostdate, bettype, StatusID, IsOwner 
 		OPTION (OPTIMIZE FOR (@i = 1), HASH GROUP)
-
-
 		 
 		-- I.2.2. BettransLC:  Exclude ticket running, waiting 
 		INSERT INTO #Data (winlostdate, bettype, StatusID, IsOwner, Turnover, OwnerWinloss, Winlost, Comm, BetCount)
@@ -337,10 +351,13 @@ BEGIN
 					WHERE	bt.recommend = r.recommend		
 							AND winlostdate <= @todate 
 							AND StatusID NOT IN (0,1,102,101)
+							AND 1 = CASE 
+										WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+										WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+									ELSE 1 END
 				) b
 		GROUP BY winlostdate, bettype, StatusID
 		OPTION (OPTIMIZE FOR (@i = 1), HASH GROUP)
-			 
 
 		-- I.3.1b bettrans (itself, always is transfer & Openning BL & Sum tickets)
 		INSERT INTO #Data (winlostdate, bettype, StatusID, IsOwner, Turnover, OwnerWinloss, Winlost, Comm, BetCount)
@@ -429,10 +446,13 @@ BEGIN
 					WHERE	bt.recommend = r.recommend		
 							AND winlostdate <= @todate 
 							AND StatusID NOT IN (0,1,102,101) -- 'running','waiting','VOID','REJECT'
+							AND 1 = CASE 
+										WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+										WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+									ELSE 1 END
 				) b
 		GROUP BY winlostdate, bettype, StatusID
 		OPTION (OPTIMIZE FOR (@i = 1), HASH GROUP)	
-
 
 		-- I.4.1b bettrans (Super and master level - always is transfer & SUM & Opening BL tickets)		
 		INSERT INTO #Data (winlostdate, bettype, StatusID, IsOwner, Turnover, OwnerWinloss, Winlost, Comm, BetCount)
