@@ -311,62 +311,44 @@ BEGIN
 	END CATCH
 
 
-	SELECT  @RowTotal = COUNT(1) FROM #input
-	WHILE @CurrentRow <> @RowTotal
-	BEGIN
-		SELECT @CurrentRow= @CurrentRow + 1, @startRun = GETDATE();
+	BEGIN TRY
+		;MERGE dbo.Acc_ManualMovebetConfig AS t
+		USING #input AS s ON t.MBDate = s.MBDate
+		WHEN MATCHED THEN UPDATE 
+		SET  	MBDate = s.MBDate
+				,Isbackday1 = s.Isbackday1
+				,Isbackday2 = s.Isbackday2
+				,Isbackday3 = s.Isbackday3
+				,Isbackday4 = s.Isbackday4
+				,Isbackday5 = s.Isbackday5
+				,Isbackday6 = s.Isbackday6
+				,Isbackday7 = s.Isbackday7
+		WHEN NOT MATCHED THEN
+		INSERT (MBDate
+				,Isbackday1   
+				,Isbackday2 
+				,Isbackday3 
+				,Isbackday4 
+				,Isbackday5 
+				,Isbackday6 
+				,Isbackday7 )
+		VALUES
+				(
+				s.MBDate
+				,s.Isbackday1   
+				,s.Isbackday2 
+				,s.Isbackday3 
+				,s.Isbackday4 
+				,s.Isbackday5 
+				,s.Isbackday6 
+				,s.Isbackday7 
+				);
+	END TRY
 
-		BEGIN TRY
-			INSERT INTO dbo.Acc_ManualMovebetConfig(
-									MBDate
-									,Isbackday1   
-									,Isbackday2 
-									,Isbackday3 
-									,Isbackday4 
-									,Isbackday5 
-									,Isbackday6 
-									,Isbackday7 
-									)
-
-			SELECT					MBDate
-									,Isbackday1   
-									,Isbackday2 
-									,Isbackday3 
-									,Isbackday4 
-									,Isbackday5 
-									,Isbackday6 
-									,Isbackday7 
-			FROM #input
-			WHERE ID = @CurrentRow
-		END TRY
-
-		BEGIN CATCH
-			SELECT  @ErrCode = ERROR_NUMBER(),@ErrMsg = ERROR_MESSAGE()
-		    RETURN
-		END CATCH 
-		
-
-		SELECT @LogSPData =   '<R MBDate="'+ COALESCE(CAST(MBDate AS VARCHAR(15)), SPACE(1)) + '" ' +
-								'Isbackday1="' + COALESCE(CAST(Isbackday1  AS NVARCHAR(5)), SPACE(1)) + '" ' +
-								'Isbackday2="' + COALESCE(CAST(Isbackday2  AS NVARCHAR(5)), SPACE(1)) + '" ' +
-								'Isbackday3="' + COALESCE(CAST(Isbackday3  AS NVARCHAR(5)), SPACE(1)) + '" ' +
-								'Isbackday4="' + COALESCE(CAST(Isbackday4  AS NVARCHAR(5)), SPACE(1)) + '" ' +
-								'Isbackday5="' + COALESCE(CAST(Isbackday5  AS NVARCHAR(5)), SPACE(1)) + '" ' +								
-								'Isbackday6="' + COALESCE(CAST(Isbackday6  AS NVARCHAR(5)), SPACE(1)) + '" ' +
-								'Isbackday7="' + COALESCE(CAST(Isbackday7  AS NVARCHAR(5)), SPACE(1)) + '" ' +
-								'LoginIP="'+ COALESCE(CAST(@LoginIP as VARCHAR(20)),SPACE(1)) + '" />'
-		FROM #input
-		WHERE ID = @CurrentRow
-
-		SET @endRun = GETDATE()
-		SET @duration = DATEDIFF (MILLISECOND,@startRun,@endRun)
-
-		EXEC  DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
-				@UserID = @UserID,
-				@ActionID = 99999,
-				@TrackingValue = @LogSPData,
-				@duration = @duration
-	END
+	BEGIN CATCH
+		SELECT  @ErrCode = ERROR_NUMBER(),@ErrMsg = ERROR_MESSAGE()
+		RETURN
+	END CATCH 
 	
 	DROP TABLE #input
 	DROP TABLE #inputTmp
