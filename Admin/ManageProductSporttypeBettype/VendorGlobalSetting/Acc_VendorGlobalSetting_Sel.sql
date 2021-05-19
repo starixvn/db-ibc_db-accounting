@@ -1,5 +1,5 @@
 /*<info serverAlias="DBCUST-CustDB" executers="" viewers="" isFunction="0" isNested="0"></info>*/
-CREATE PROCEDURE dbo.Acc_VendorGlobalSetting_Sel_xtest
+CREATE PROCEDURE dbo.Acc_VendorGlobalSetting_Sel
     @VendorId INT = NULL,
     @VName VARCHAR(50) = '',
     @NumberValue DECIMAL(19, 8) = NULL,
