@@ -22,6 +22,10 @@ Param's Explanation:
 */
 BEGIN
     SET NOCOUNT ON;
+
+    DECLARE @RowStart INT , @RowEnd INT
+    SELECT @PageIndex = @PageIndex - 1, @RowStart =  @PageIndex * @PageSize + 1, @RowEnd = @RowStart + @PageSize - 1;
+
     DECLARE @tmp_Sports TABLE
     (
         SportType SMALLINT,
@@ -123,7 +127,6 @@ BEGIN
            typenamee,
            RowNum
     FROM #Tmp
-    WHERE RowNum > (@PageIndex - 1) * @PageSize
-          AND RowNum <= @PageIndex * @PageSize;
+    WHERE @PageIndex < 0 OR @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd);
     DROP TABLE #Tmp;
 END;

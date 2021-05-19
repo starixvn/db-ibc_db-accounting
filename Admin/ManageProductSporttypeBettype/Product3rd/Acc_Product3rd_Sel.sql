@@ -6,8 +6,8 @@ CREATE PROCEDURE dbo.Acc_Product3rd_Sel
     @ProductPrefix VARCHAR(10) = '',
     @OfferSingle BIT = NULL,
     @ApplyDCS BIT = NULL,
-    @PageSize INT = 50,
-    @PageIndex INT = 1,
+    @PageSize INT = 0,
+    @PageIndex INT = 0,
     @TotalRows INT = 0 OUTPUT
 AS
 /*          
@@ -20,6 +20,10 @@ Original:
 */
 BEGIN
     SET NOCOUNT ON;
+
+    DECLARE @RowStart INT , @RowEnd INT
+    SELECT @PageIndex = @PageIndex - 1, @RowStart =  @PageIndex * @PageSize + 1, @RowEnd = @RowStart + @PageSize - 1;
+
     SELECT Productid,
            ProductName,
            Description,
@@ -74,7 +78,6 @@ BEGIN
            EndOfSupportDate,
            RowNum
     FROM #Tmp 
-    WHERE RowNum > (@PageIndex - 1) * @PageSize
-          AND RowNum <= @PageIndex * @PageSize;
+    WHERE @PageIndex < 0 OR @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd);
     DROP TABLE #Tmp;
 END;
