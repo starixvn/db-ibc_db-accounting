@@ -46,7 +46,7 @@ BEGIN
 
 	DECLARE @CurrentTime TIME = CONVERT(TIME, GETDATE())
 
-	IF @CurrentTime >= '05:30'
+	IF @CurrentTime >= '23:59'
 	BEGIN
 			SELECT @ErrCode = 1001, @ErrMsg = 'You can not adjust the schedule after Move Bet Time.' 
 			RETURN
