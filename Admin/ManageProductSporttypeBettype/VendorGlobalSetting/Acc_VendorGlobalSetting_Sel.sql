@@ -13,8 +13,8 @@ AS
 Created: 20210511@Evan          
 Task :  NAP -  Manage VendorGlobal Setting  [Redmine: #153521]  
 DB:   DBCUST-CustDB         
-Original:            
-  Revisions:   
+
+Revisions:   
     - 20210511@Evan: Create new SP [Redmine: #153521]  
 Param's Explanation:
   @SportType = N'1,2,3,4'

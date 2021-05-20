@@ -10,8 +10,8 @@ AS
 Created: 20210513@Evan        
 Task :  NAP -  Manage Product3rd     [Redmine: #153521]   
 DB:   DBCUST-bodb_Licensee        
-Original:          
-  Revisions: 
+
+Revisions: 
     - 20210513@Evan: Create new SP [Redmine: #153521]
 Param's Explanation:        
  - @Fie:          
