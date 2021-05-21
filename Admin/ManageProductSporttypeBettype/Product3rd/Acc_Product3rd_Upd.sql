@@ -16,7 +16,7 @@ Revisions:
 Param's Explanation:        
  - @Fie:          
   <ROOT><File ProductId = "1" ProductName = "Test" Description = "Test" ProductPrefix = "1" OfferSingle = "1" 
-  ApplyDCS = "1" Enabled = "1" EndOfSupportDate = "20210513" /></ROOT> 
+  ApplyDCS = "1" Enabled = "1" EndOfSupportDate = "20210513" OfferSite = "1" /></ROOT> 
 
 */
 BEGIN
@@ -43,7 +43,8 @@ BEGIN
         OfferSingle BIT,
         ApplyDCS BIT,
         Enabled BIT,
-        EndOfSupportDate DATE
+        EndOfSupportDate DATE,
+        OfferSite TINYINT
     );
     CREATE TABLE #inputTmp
     (
@@ -54,7 +55,8 @@ BEGIN
         OfferSingle NVARCHAR(MAX),
         ApplyDCS NVARCHAR(MAX),
         Enabled NVARCHAR(MAX),
-        EndOfSupportDate NVARCHAR(MAX)
+        EndOfSupportDate NVARCHAR(MAX),
+        OfferSite NVARCHAR(MAX)
     );
     BEGIN TRY
         EXEC sp_xml_preparedocument @iDoc OUTPUT, @File;
@@ -67,7 +69,8 @@ BEGIN
             OfferSingle,
             ApplyDCS,
             Enabled,
-            EndOfSupportDate
+            EndOfSupportDate,
+            OfferSite
         )
         SELECT ProductId,
                ProductName,
@@ -76,7 +79,8 @@ BEGIN
                OfferSingle,
                ApplyDCS,
                Enabled,
-               EndOfSupportDate
+               EndOfSupportDate,
+               OfferSite
         FROM
             OPENXML(@iDoc, '/ROOT/File', 1)
             WITH
@@ -88,7 +92,8 @@ BEGIN
                 OfferSingle NVARCHAR(MAX),
                 ApplyDCS NVARCHAR(MAX),
                 Enabled NVARCHAR(MAX),
-                EndOfSupportDate NVARCHAR(MAX)
+                EndOfSupportDate NVARCHAR(MAX),
+                OfferSite NVARCHAR(MAX)
             );
         EXEC sp_xml_removedocument @iDoc;
     END TRY
@@ -140,7 +145,12 @@ BEGIN
                                WHEN LEN(EndOfSupportDate) = 0 THEN
                                    NULL
                                ELSE
-                                   EndOfSupportDate
+                                   EndOfSupportDate END,
+        OfferSite = CASE
+                                       WHEN LEN(OfferSite) = 0 THEN
+                                           NULL
+                                       ELSE
+                                           OfferSite
                            END
     WHERE LEN(ProductName) = 0
           OR LEN(Description) = 0
@@ -148,7 +158,8 @@ BEGIN
           OR LEN(OfferSingle) = 0
           OR LEN(ApplyDCS) = 0
           OR LEN(Enabled) = 0
-          OR LEN(EndOfSupportDate) = 0;
+          OR LEN(EndOfSupportDate) = 0
+          OR LEN(OfferSite) = 0;
 
     SELECT TOP (1)
            @ValueError = CASE
@@ -208,7 +219,8 @@ BEGIN
             OfferSingle,
             ApplyDCS,
             Enabled,
-            EndOfSupportDate
+            EndOfSupportDate,
+            OfferSite
         )
         SELECT Productid,
                ProductName,
@@ -217,7 +229,8 @@ BEGIN
                OfferSingle,
                ApplyDCS,
                Enabled,
-               EndOfSupportDate
+               EndOfSupportDate,
+               OfferSite
         FROM #inputTmp;
     END TRY
     BEGIN CATCH
@@ -238,7 +251,8 @@ BEGIN
               + COALESCE(CAST(OfferSingle AS VARCHAR(1)), SPACE(1)) + N'" ' + N'ApplyDCS="'
               + COALESCE(CAST(ApplyDCS AS VARCHAR(1)), SPACE(1)) + N'" ' + N'Enabled="'
               + COALESCE(CAST(Enabled AS VARCHAR(1)), SPACE(1)) + N'" ' + N'EndOfSupportDate="'
-              + COALESCE(CAST(EndOfSupportDate AS VARCHAR(50)), SPACE(1)) + N'" ' + N'LoginIP="'
+              + COALESCE(CAST(EndOfSupportDate AS VARCHAR(50)), SPACE(1)) + N'" ' + N'OfferSite="'
+              + COALESCE(CAST(OfferSite AS VARCHAR(1)), SPACE(1)) + N'" ' + N'LoginIP="'
               + COALESCE(CAST(@LoginIP AS VARCHAR(20)), SPACE(1)) + N'" />'
         FROM #input
         WHERE ID = @CurrentRow;
@@ -251,7 +265,8 @@ BEGIN
                 p3.OfferSingle = i.OfferSingle,
                 p3.ApplyDCS = i.ApplyDCS,
                 p3.Enabled = i.Enabled,
-                p3.EndOfSupportDate = i.EndOfSupportDate
+                p3.EndOfSupportDate = i.EndOfSupportDate,
+                p3.OfferSite = i.OfferSite
             FROM dbo.Product3rd p3 WITH (ROWLOCK)
                 INNER JOIN #input i
                     ON i.Productid = p3.Productid
@@ -270,7 +285,8 @@ BEGIN
               + COALESCE(CAST(OfferSingle AS VARCHAR(1)), SPACE(1)) + N'" ' + N'ApplyDCS="'
               + COALESCE(CAST(ApplyDCS AS VARCHAR(1)), SPACE(1)) + N'" ' + N'Enabled="'
               + COALESCE(CAST(Enabled AS VARCHAR(1)), SPACE(1)) + N'" ' + N'EndOfSupportDate="'
-              + COALESCE(CAST(EndOfSupportDate AS VARCHAR(50)), SPACE(1)) + N'" ' + N'LoginIP="'
+              + COALESCE(CAST(EndOfSupportDate AS VARCHAR(50)), SPACE(1))  + N'" ' + N'OfferSite="'
+              + COALESCE(CAST(OfferSite AS VARCHAR(1)), SPACE(1)) + N'" ' + N'LoginIP="'
               + COALESCE(CAST(@LoginIP AS VARCHAR(20)), SPACE(1)) + N'" />'
         FROM #input
         WHERE ID = @CurrentRow;

@@ -16,7 +16,7 @@ Revisions:
 Param's Explanation:          
  - @Fie:            
   <ROOT><File ProductId = "1" ProductName = "Test" Description = "Test" ProductPrefix = "1" OfferSingle = "1"   
-  ApplyDCS = "1" Enabled = "1" EndOfSupportDate = "20210513" /></ROOT>    
+  ApplyDCS = "1" Enabled = "1" EndOfSupportDate = "20210513" OfferSite = "1" /></ROOT>    
   
 */
 BEGIN
@@ -44,7 +44,8 @@ BEGIN
         OfferSingle BIT,
         ApplyDCS BIT,
         Enabled BIT,
-        EndOfSupportDate DATE
+        EndOfSupportDate DATE,
+        OfferSite TINYINT
     );
     CREATE TABLE #inputTmp
     (
@@ -56,7 +57,8 @@ BEGIN
         OfferSingle NVARCHAR(MAX),
         ApplyDCS NVARCHAR(MAX),
         Enabled NVARCHAR(MAX),
-        EndOfSupportDate NVARCHAR(MAX)
+        EndOfSupportDate NVARCHAR(MAX),
+        OfferSite NVARCHAR(MAX)
     );
     BEGIN TRY
         EXEC sp_xml_preparedocument @iDoc OUTPUT, @File;
@@ -69,7 +71,8 @@ BEGIN
             OfferSingle,
             ApplyDCS,
             Enabled,
-            EndOfSupportDate
+            EndOfSupportDate,
+            OfferSite
         )
         SELECT ProductId,
                ProductName,
@@ -78,7 +81,8 @@ BEGIN
                OfferSingle,
                ApplyDCS,
                Enabled,
-               EndOfSupportDate
+               EndOfSupportDate,
+               OfferSite
         FROM
             OPENXML(@iDoc, '/ROOT/File', 1)
             WITH
@@ -90,7 +94,8 @@ BEGIN
                 OfferSingle NVARCHAR(MAX),
                 ApplyDCS NVARCHAR(MAX),
                 Enabled NVARCHAR(MAX),
-                EndOfSupportDate NVARCHAR(MAX)
+                EndOfSupportDate NVARCHAR(MAX),
+                OfferSite NVARCHAR(MAX)
             );
         EXEC sp_xml_removedocument @iDoc;
     END TRY
@@ -109,7 +114,8 @@ BEGIN
           AND LEN(OfferSingle) = 0
           AND LEN(ApplyDCS) = 0
           AND LEN(Enabled) = 0
-          AND LEN(EndOfSupportDate) = 0;
+          AND LEN(EndOfSupportDate) = 0
+          AND LEN(OfferSite) = 0;
 
     -- Check Simple Data         
     UPDATE #inputTmp
@@ -160,6 +166,12 @@ BEGIN
                                    NULL
                                ELSE
                                    EndOfSupportDate
+                           END,
+        OfferSite = CASE
+                                   WHEN LEN(OfferSite) = 0 THEN
+                                       NULL
+                                   ELSE
+                                       OfferSite
                            END
     WHERE LEN(Productid) = 0
           OR LEN(ProductName) = 0
@@ -168,7 +180,8 @@ BEGIN
           OR LEN(OfferSingle) = 0
           OR LEN(ApplyDCS) = 0
           OR LEN(Enabled) = 0
-          OR LEN(EndOfSupportDate) = 0;
+          OR LEN(EndOfSupportDate) = 0
+          OR LEN(OfferSite) = 0;
 
     SELECT TOP (1)
            @Product3rdError = CONVERT(VARCHAR(5), ID),
@@ -219,6 +232,9 @@ BEGIN
                              WHEN Enabled NOT IN ( '0', '1' )
                                   OR ISNUMERIC(Enabled) <> 1 THEN
                                  'Enabled'
+               WHEN OfferSite NOT IN ( '0', '1', '2' )
+                                  OR ISNUMERIC(OfferSite) <> 1 THEN
+                                 'OfferSite'
                              ELSE
                                  NULL
                          END
@@ -236,7 +252,9 @@ BEGIN
           OR ISNUMERIC(Productid) <> 1
           OR ISNUMERIC(ApplyDCS) <> 1
           OR ISNUMERIC(Enabled) <> 1
+          OR ISNUMERIC(OfferSite) <> 1
           OR Enabled NOT IN ( '0', '1' )
+          OR OfferSite NOT IN ( '0', '1', '2' )
     ORDER BY ID;
     IF @ErrCode <> 0
     BEGIN
@@ -256,6 +274,8 @@ BEGIN
                             '"- The values must be IN (0,1)'
                         WHEN @ColumnName = 'Enabled' THEN
                             '"- The values must be IN (0,1)'
+            WHEN @ColumnName = 'OfferSite' THEN
+                            '"- The values must be IN (0,1,2)'
                         ELSE
                             ''
                     END + '. Please check them again.';
@@ -272,7 +292,8 @@ BEGIN
             OfferSingle,
             ApplyDCS,
             Enabled,
-            EndOfSupportDate
+            EndOfSupportDate,
+            OfferSite
         )
         SELECT Productid,
                ProductName,
@@ -281,7 +302,8 @@ BEGIN
                OfferSingle,
                ApplyDCS,
                Enabled,
-               EndOfSupportDate
+               EndOfSupportDate,
+         OfferSite
         FROM #inputTmp ;
     END TRY
     BEGIN CATCH
@@ -353,7 +375,8 @@ BEGIN
                 OfferSingle,
                 ApplyDCS,
                 Enabled,
-                EndOfSupportDate
+                EndOfSupportDate,
+        OfferSite
             )
             SELECT Productid,
                    ProductName,
@@ -362,7 +385,8 @@ BEGIN
                    OfferSingle,
                    ApplyDCS,
                    Enabled,
-                   EndOfSupportDate
+                   EndOfSupportDate,
+           OfferSite
             FROM #input
             WHERE ID = @CurrentRow;
         END TRY
@@ -380,7 +404,8 @@ BEGIN
               + COALESCE(CAST(OfferSingle AS VARCHAR(1)), SPACE(1)) + N'" ' + N'ApplyDCS="'
               + COALESCE(CAST(ApplyDCS AS VARCHAR(1)), SPACE(1)) + N'" ' + N'Enabled="'
               + COALESCE(CAST(Enabled AS VARCHAR(1)), SPACE(1)) + N'" ' + N'EndOfSupportDate="'
-              + COALESCE(CAST(EndOfSupportDate AS VARCHAR(50)), SPACE(1)) + N'" ' + N'LoginIP="'
+              + COALESCE(CAST(EndOfSupportDate AS VARCHAR(50)), SPACE(1))+ N'" ' + N'OfferSite="'
+              + COALESCE(CAST(OfferSite AS VARCHAR(1)), SPACE(1)) + N'" ' + N'LoginIP="'
               + COALESCE(CAST(@LoginIP AS VARCHAR(20)), SPACE(1)) + N'" />'
         FROM #input
         WHERE ID = @CurrentRow;

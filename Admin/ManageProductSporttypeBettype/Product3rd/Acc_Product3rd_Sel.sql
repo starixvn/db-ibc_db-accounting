@@ -6,6 +6,7 @@ CREATE PROCEDURE dbo.Acc_Product3rd_Sel
     @ProductPrefix VARCHAR(10) = '',
     @OfferSingle BIT = NULL,
     @ApplyDCS BIT = NULL,
+    @OfferSite TINYINT = 0,
     @PageSize INT = 0,
     @PageIndex INT = 0,
     @TotalRows INT = 0 OUTPUT
@@ -20,7 +21,7 @@ Revisions:
 */
 BEGIN
     SET NOCOUNT ON;
-
+  
     DECLARE @RowStart INT , @RowEnd INT
     SELECT @PageIndex = @PageIndex - 1, @RowStart =  @PageIndex * @PageSize + 1, @RowEnd = @RowStart + @PageSize - 1;
 
@@ -32,6 +33,7 @@ BEGIN
            ApplyDCS,
            Enabled,
            EndOfSupportDate,
+           OfferSite,
            ROW_NUMBER() OVER (ORDER BY Productid) AS RowNum
     INTO #Tmp
     FROM dbo.Product3rd WITH (NOLOCK)
@@ -63,6 +65,11 @@ BEGIN
           (
               ApplyDCS = @ApplyDCS
               OR @ApplyDCS IS NULL
+          )
+      AND
+          (
+              OfferSite = @OfferSite
+              OR @OfferSite = 0
           );
 
     SELECT @TotalRows = COUNT(*)
@@ -76,6 +83,7 @@ BEGIN
            ApplyDCS,
            Enabled,
            EndOfSupportDate,
+       OfferSite,
            RowNum
     FROM #Tmp 
     WHERE @PageIndex < 0 OR @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd);

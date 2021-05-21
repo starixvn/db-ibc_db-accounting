@@ -5,8 +5,8 @@ CREATE PROCEDURE dbo.Acc_VendorGlobalSetting_Sel
     @NumberValue DECIMAL(19, 8) = NULL,
     @SportType VARCHAR(MAX) = NULL,
     @BetType VARCHAR(MAX) = NULL,
-    @PageSize INT = 50,
-    @PageIndex INT = 1,
+    @PageSize INT = 0,
+    @PageIndex INT = 0,
     @TotalRows INT = 0 OUTPUT
 AS
 /*            
