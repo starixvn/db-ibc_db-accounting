@@ -19,6 +19,7 @@ Original:
 	- @FromDate	: User input in UI
 	- @ToDate	: User input in UI
 		
+	EXEC Acc_Manual_MoveBet_Sel @IsDefault = 1
 */
 
 BEGIN
@@ -28,22 +29,22 @@ BEGIN
 	 CREATE TABLE #DefaultMovebetConfig
 	 (
 		_weekDay SmallInt, 
-		Isbackday1 BIT,  
-		Isbackday2 BIT,
-		Isbackday3 BIT,
-		Isbackday4 BIT,
-		Isbackday5 BIT,
-		Isbackday6 BIT,
-		Isbackday7 BIT,   
+		IsBackDay1 BIT,  
+		IsBackDay2 BIT,
+		IsBackDay3 BIT,
+		IsBackDay4 BIT,
+		IsBackDay5 BIT,
+		IsBackDay6 BIT,
+		IsBackDay7 BIT,   
 	)
 
-	Insert into #DefaultMovebetConfig(_weekDay,Isbackday1, Isbackday2, Isbackday3,Isbackday4, Isbackday5,Isbackday6,Isbackday7)  VALUES (1, 0, 0, 0,0,0,0,0)
-	Insert into #DefaultMovebetConfig(_weekDay,Isbackday1, Isbackday2, Isbackday3,Isbackday4, Isbackday5,Isbackday6,Isbackday7)  VALUES (2, 0, 0, 1,1,0,0,0)
-	Insert into #DefaultMovebetConfig(_weekDay,Isbackday1, Isbackday2, Isbackday3,Isbackday4, Isbackday5,Isbackday6,Isbackday7)  VALUES (3, 0, 0, 1,0,0,0,0)
-	Insert into #DefaultMovebetConfig(_weekDay,Isbackday1, Isbackday2, Isbackday3,Isbackday4, Isbackday5,Isbackday6,Isbackday7)  VALUES (4, 0, 0, 1,0,0,0,0)
-	Insert into #DefaultMovebetConfig(_weekDay,Isbackday1, Isbackday2, Isbackday3,Isbackday4, Isbackday5,Isbackday6,Isbackday7)  VALUES (5, 0, 0, 0,0,0,0,0)
-	Insert into #DefaultMovebetConfig(_weekDay,Isbackday1, Isbackday2, Isbackday3,Isbackday4, Isbackday5,Isbackday6,Isbackday7)  VALUES (6, 0, 0, 1,1,0,0,0)
-	Insert into #DefaultMovebetConfig(_weekDay,Isbackday1, Isbackday2, Isbackday3,Isbackday4, Isbackday5,Isbackday6,Isbackday7)  VALUES (7, 0, 0, 1,0,0,0,0)
+	Insert into #DefaultMovebetConfig(_weekDay,IsBackDay1, IsBackDay2, IsBackDay3,IsBackDay4, IsBackDay5,IsBackDay6,IsBackDay7)  VALUES (1, 0, 0, 0,0,0,0,0)
+	Insert into #DefaultMovebetConfig(_weekDay,IsBackDay1, IsBackDay2, IsBackDay3,IsBackDay4, IsBackDay5,IsBackDay6,IsBackDay7)  VALUES (2, 0, 0, 1,1,0,0,0)
+	Insert into #DefaultMovebetConfig(_weekDay,IsBackDay1, IsBackDay2, IsBackDay3,IsBackDay4, IsBackDay5,IsBackDay6,IsBackDay7)  VALUES (3, 0, 0, 1,0,0,0,0)
+	Insert into #DefaultMovebetConfig(_weekDay,IsBackDay1, IsBackDay2, IsBackDay3,IsBackDay4, IsBackDay5,IsBackDay6,IsBackDay7)  VALUES (4, 0, 0, 1,0,0,0,0)
+	Insert into #DefaultMovebetConfig(_weekDay,IsBackDay1, IsBackDay2, IsBackDay3,IsBackDay4, IsBackDay5,IsBackDay6,IsBackDay7)  VALUES (5, 0, 0, 0,0,0,0,0)
+	Insert into #DefaultMovebetConfig(_weekDay,IsBackDay1, IsBackDay2, IsBackDay3,IsBackDay4, IsBackDay5,IsBackDay6,IsBackDay7)  VALUES (6, 0, 0, 1,1,0,0,0)
+	Insert into #DefaultMovebetConfig(_weekDay,IsBackDay1, IsBackDay2, IsBackDay3,IsBackDay4, IsBackDay5,IsBackDay6,IsBackDay7)  VALUES (7, 0, 0, 1,0,0,0,0)
 	--End  Default MB schedule
 
 
@@ -51,13 +52,13 @@ BEGIN
 	BEGIN
 		SELECT
 				t._weekDay  
-				,t.Isbackday1 
-				,t.Isbackday2 
-				,t.Isbackday3 
-				,t.Isbackday4
-				,t.Isbackday5
-				,t.Isbackday6
-				,t.Isbackday7
+				,t.IsBackDay1 
+				,t.IsBackDay2 
+				,t.IsBackDay3 
+				,t.IsBackDay4
+				,t.IsBackDay5
+				,t.IsBackDay6
+				,t.IsBackDay7
 	from		#DefaultMovebetConfig t
 	END
 	ELSE
@@ -81,13 +82,13 @@ BEGIN
 
 		select		t.scheduleDate  
 					,t.weekday_  
-					,Isbackday1 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.Isbackday1 ELSE dc.Isbackday1 END
-					,Isbackday2 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.Isbackday2 ELSE dc.Isbackday2 END
-					,Isbackday3 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.Isbackday3 ELSE dc.Isbackday3 END
-					,Isbackday4 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.Isbackday4 ELSE dc.Isbackday4 END
-					,Isbackday5 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.Isbackday5 ELSE dc.Isbackday5 END
-					,Isbackday6 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.Isbackday6 ELSE dc.Isbackday6 END
-					,Isbackday7 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.Isbackday7 ELSE dc.Isbackday7 END
+					,IsBackDay1 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.IsBackDay1 ELSE dc.IsBackDay1 END
+					,IsBackDay2 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.IsBackDay2 ELSE dc.IsBackDay2 END
+					,IsBackDay3 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.IsBackDay3 ELSE dc.IsBackDay3 END
+					,IsBackDay4 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.IsBackDay4 ELSE dc.IsBackDay4 END
+					,IsBackDay5 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.IsBackDay5 ELSE dc.IsBackDay5 END
+					,IsBackDay6 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.IsBackDay6 ELSE dc.IsBackDay6 END
+					,IsBackDay7 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.IsBackDay7 ELSE dc.IsBackDay7 END
 		from		@calendarTable t
 		left join	#DefaultMovebetConfig dc ON dc._weekDay = t.weekday_
 		left join	dbo.Acc_ManualMovebetConfig mc ON t.scheduleDate = mc.MBDate

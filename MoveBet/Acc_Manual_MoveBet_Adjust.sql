@@ -24,13 +24,13 @@ Original:
 		<ROOT>
 				<File 
 						MBDate="YYYY-MM-DD"
-						Isbackday1="0"
-						Isbackday2="0"
-						Isbackday3="1"
-						Isbackday4="0"
-						Isbackday5="0"
-						Isbackday6="0"
-						Isbackday7="0"
+						IsBackDay1="0"
+						IsBackDay2="0"
+						IsBackDay3="1"
+						IsBackDay4="0"
+						IsBackDay5="0"
+						IsBackDay6="0"
+						IsBackDay7="0"
 				/>
 		</ROOT>	
 */
@@ -44,38 +44,53 @@ BEGIN
 	IF ISNULL(@File, '') = ''
 			RETURN
 
-	DECLARE @CurrentTime TIME = CONVERT(TIME, GETDATE())
+	--- Check moveBet is running
+	DECLARE @BeingMovebetDate VARCHAR(200)
 
-	IF @CurrentTime >= '23:59'
-	BEGIN
-			SELECT @ErrCode = 1001, @ErrMsg = 'You can not adjust the schedule after Move Bet Time.' 
-			RETURN
-	END
+	SELECT @BeingMovebetDate = VValue
+	FROM dbo.SystemSettings
+	WHERE VName = 'BeingMovebetDate'
+
+	IF  @BeingMovebetDate IS NOT NULL
+		RETURN
+
+	---- Get MoveBet, BU
+	DECLARE @MoveBetsDay SMALLDATETIME, @BalanceUpDay SMALLDATETIME
+	DECLARE @MBU TABLE ( MoveBetsDay SMALLDATETIME, BalanceUpDay SMALLDATETIME)
+
+	INSERT INTO @MBU (BalanceUpDay, MoveBetsDay)
+	EXEC dbo.Age_SelBalanceUpDay
+
+
+	SELECT @MoveBetsDay = MoveBetsDay, @BalanceUpDay = BalanceUpDay
+	FROM @MBU
+
+	---- End
 
 	CREATE TABLE #input 
 	(    
 		ID				INT IDENTITY (1,1),
 		MBDate			SMALLDATETIME,
-		Isbackday1		BIT,
-		Isbackday2		BIT,
-		Isbackday3		BIT,
-		Isbackday4		BIT,
-		Isbackday5		BIT,
-		Isbackday6		BIT,
-		Isbackday7		BIT 
+		IsBackDay1		BIT,
+		IsBackDay2		BIT,
+		IsBackDay3		BIT,
+		IsBackDay4		BIT,
+		IsBackDay5		BIT,
+		IsBackDay6		BIT,
+		IsBackDay7		BIT 
 		)
 
 	CREATE TABLE #inputTmp
 	(    
 		ID              INT IDENTITY (1,1),
 		MBDate          NVARCHAR(MAX),
-		Isbackday1		NVARCHAR(MAX),
-		Isbackday2		NVARCHAR(MAX),
-		Isbackday3		NVARCHAR(MAX),
-		Isbackday4		NVARCHAR(MAX),
-		Isbackday5		NVARCHAR(MAX),
-		Isbackday6		NVARCHAR(MAX),
-		Isbackday7		NVARCHAR(MAX)
+		IsBackDay1		NVARCHAR(MAX),
+		IsBackDay2		NVARCHAR(MAX),
+		IsBackDay3		NVARCHAR(MAX),
+		IsBackDay4		NVARCHAR(MAX),
+		IsBackDay5		NVARCHAR(MAX),
+		IsBackDay6		NVARCHAR(MAX),
+		IsBackDay7		NVARCHAR(MAX)
 		)
 
 	BEGIN TRY
@@ -83,31 +98,31 @@ BEGIN
 		
 			INSERT #inputTmp ( 
 							MBDate,
-							Isbackday1,
-							Isbackday2,
-							Isbackday3,
-							Isbackday4,
-							Isbackday5,
-							Isbackday6,
-							Isbackday7
+							IsBackDay1,
+							IsBackDay2,
+							IsBackDay3,
+							IsBackDay4,
+							IsBackDay5,
+							IsBackDay6,
+							IsBackDay7
 							)
 
 			SELECT			MBDate,
-							Isbackday1,
-							Isbackday2,
-							Isbackday3,
-							Isbackday4,
-							Isbackday5,
-							Isbackday6,
-							Isbackday7
+							IsBackDay1,
+							IsBackDay2,
+							IsBackDay3,
+							IsBackDay4,
+							IsBackDay5,
+							IsBackDay6,
+							IsBackDay7
 			FROM OPENXML(@iDoc, '/ROOT/File', 1) WITH  (MBDate			NVARCHAR(MAX),
-														Isbackday1		NVARCHAR(MAX),
-														Isbackday2		NVARCHAR(MAX),
-														Isbackday3		NVARCHAR(MAX),
-														Isbackday4		NVARCHAR(MAX),
-														Isbackday5		NVARCHAR(MAX),
-														Isbackday6		NVARCHAR(MAX),
-														Isbackday7		NVARCHAR(MAX)
+														IsBackDay1		NVARCHAR(MAX),
+														IsBackDay2		NVARCHAR(MAX),
+														IsBackDay3		NVARCHAR(MAX),
+														IsBackDay4		NVARCHAR(MAX),
+														IsBackDay5		NVARCHAR(MAX),
+														IsBackDay6		NVARCHAR(MAX),
+														IsBackDay7		NVARCHAR(MAX)
 														)
 		    
 			EXEC sp_xml_removedocument @iDoc
@@ -120,33 +135,33 @@ BEGIN
 
 	SELECT TOP(1) @ErrCode = 1002, 
 	              @ValueError   = CASE WHEN ISDATE(MBDate) = 0 THEN MBDate
-									   WHEN Isbackday1 NOT IN (0,1) THEN Isbackday1
-									   WHEN Isbackday2 NOT IN (0,1) THEN Isbackday2
-									   WHEN Isbackday3 NOT IN (0,1) THEN Isbackday3
-							           WHEN Isbackday4 NOT IN (0,1) THEN Isbackday4
-							           WHEN Isbackday5 NOT IN (0,1) THEN Isbackday5
-							           WHEN Isbackday6 NOT IN (0,1) THEN Isbackday6
-									   WHEN Isbackday7 NOT IN (0,1) THEN Isbackday7
+									   WHEN IsBackDay1 NOT IN (0,1) THEN IsBackDay1
+									   WHEN IsBackDay2 NOT IN (0,1) THEN IsBackDay2
+									   WHEN IsBackDay3 NOT IN (0,1) THEN IsBackDay3
+							           WHEN IsBackDay4 NOT IN (0,1) THEN IsBackDay4
+							           WHEN IsBackDay5 NOT IN (0,1) THEN IsBackDay5
+							           WHEN IsBackDay6 NOT IN (0,1) THEN IsBackDay6
+									   WHEN IsBackDay7 NOT IN (0,1) THEN IsBackDay7
 									END,
 				
 					@ColumnName = CASE WHEN ISDATE(MBDate) = 0 THEN 'MBDate'
-									   WHEN Isbackday1 NOT IN (0,1) THEN 'Isbackday1'
-									   WHEN Isbackday2 NOT IN (0,1) THEN 'Isbackday2'
-									   WHEN Isbackday3 NOT IN (0,1) THEN 'Isbackday3'
-							           WHEN Isbackday4 NOT IN (0,1) THEN 'Isbackday4'
-							           WHEN Isbackday5 NOT IN (0,1) THEN 'Isbackday5'
-							           WHEN Isbackday6 NOT IN (0,1) THEN 'Isbackday6'
-									   WHEN Isbackday7 NOT IN (0,1) THEN 'Isbackday7'
+									   WHEN IsBackDay1 NOT IN (0,1) THEN 'IsBackDay1'
+									   WHEN IsBackDay2 NOT IN (0,1) THEN 'IsBackDay2'
+									   WHEN IsBackDay3 NOT IN (0,1) THEN 'IsBackDay3'
+							           WHEN IsBackDay4 NOT IN (0,1) THEN 'IsBackDay4'
+							           WHEN IsBackDay5 NOT IN (0,1) THEN 'IsBackDay5'
+							           WHEN IsBackDay6 NOT IN (0,1) THEN 'IsBackDay6'
+									   WHEN IsBackDay7 NOT IN (0,1) THEN 'IsBackDay7'
 									END
 	FROM #inputTmp
 	WHERE ISDATE(MBDate) = 0 OR MBDate IS NULL OR MBDate = '' 
-		  OR Isbackday1 NOT IN (0,1)
-		  OR Isbackday2 NOT IN (0,1)
-		  OR Isbackday3 NOT IN (0,1)
-		  OR Isbackday4 NOT IN (0,1)
-		  OR Isbackday5 NOT IN (0,1)
-		  OR Isbackday6 NOT IN (0,1)
-		  OR Isbackday7 NOT IN (0,1)
+		  OR IsBackDay1 NOT IN (0,1)
+		  OR IsBackDay2 NOT IN (0,1)
+		  OR IsBackDay3 NOT IN (0,1)
+		  OR IsBackDay4 NOT IN (0,1)
+		  OR IsBackDay5 NOT IN (0,1)
+		  OR IsBackDay6 NOT IN (0,1)
+		  OR IsBackDay7 NOT IN (0,1)
 		 
 	IF @ErrCode = 1002
 	BEGIN
@@ -159,22 +174,22 @@ BEGIN
 		INSERT INTO #input
 		(
 				MBDate,
-				Isbackday1,
-				Isbackday2,
-				Isbackday3,
-				Isbackday4,
-				Isbackday5,
-				Isbackday6,
-				Isbackday7
+				IsBackDay1,
+				IsBackDay2,
+				IsBackDay3,
+				IsBackDay4,
+				IsBackDay5,
+				IsBackDay6,
+				IsBackDay7
 		)
 		SELECT	MBDate,
-				Isbackday1,
-				Isbackday2,
-				Isbackday3,
-				Isbackday4,
-				Isbackday5,
-				Isbackday6,
-				Isbackday7
+				IsBackDay1,
+				IsBackDay2,
+				IsBackDay3,
+				IsBackDay4,
+				IsBackDay5,
+				IsBackDay6,
+				IsBackDay7
 		FROM #inputTmp
 	END TRY
 
@@ -183,24 +198,35 @@ BEGIN
 		RETURN
 	END CATCH
 
+	-- Check MB 
+	IF EXISTS (SELECT 1 FROM #input WHERE MBDate <= @MoveBetsDay)
+	BEGIN
+			SELECT TOP(1)  @ValueError = CAST(MBDate as NVARCHAR(50))  
+			FROM #input
+			WHERE MBDate <= @MoveBetsDay
+
+			SELECT @ErrCode = 1000, @ErrMsg = 'You cannot adjust the schedule of date "' + @ValueError + ' . It has moved bet already.'
+			RETURN
+	END
+
 
 	-- Generate data for checking duplicate MB date
 	BEGIN TRY
 		 CREATE TABLE #DefaultMovebetConfig
 		 (
 			_weekDay SmallInt, 
-			Isbackday1 BIT,  
-			Isbackday2 BIT,
-			Isbackday3 BIT,
-			Isbackday4 BIT,
-			Isbackday5 BIT,
-			Isbackday6 BIT,
-			Isbackday7 BIT,   
+			IsBackDay1 BIT,  
+			IsBackDay2 BIT,
+			IsBackDay3 BIT,
+			IsBackDay4 BIT,
+			IsBackDay5 BIT,
+			IsBackDay6 BIT,
+			IsBackDay7 BIT,   
 		)
 
 		CREATE TABLE #MBDetail (RunningDate SMALLDATETIME, MBDate SMALLDATETIME)
 
-		INSERT INTO #DefaultMovebetConfig (_weekDay,Isbackday1,Isbackday2,Isbackday3,Isbackday4,Isbackday5,Isbackday6,Isbackday7 )
+		INSERT INTO #DefaultMovebetConfig (_weekDay,IsBackDay1,IsBackDay2,IsBackDay3,IsBackDay4,IsBackDay5,IsBackDay6,IsBackDay7 )
 		EXEC dbo.Acc_Manual_MoveBet_Sel @IsDefault = 1
 
 		DECLARE @calendarTable TABLE (scheduleDate smalldatetime, weekday_ tinyint)
@@ -219,13 +245,13 @@ BEGIN
 
 		select		t.scheduleDate  
 					,t.weekday_  
-					,Isbackday1 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.Isbackday1 ELSE CASE WHEN mmc.Isbackday1 IS NOT NULL THEN mmc.Isbackday1 ELSE dc.Isbackday1 END END
-					,Isbackday2 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.Isbackday2 ELSE CASE WHEN mmc.Isbackday2 IS NOT NULL THEN mmc.Isbackday2 ELSE dc.Isbackday2 END END
-					,Isbackday3 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.Isbackday3 ELSE CASE WHEN mmc.Isbackday3 IS NOT NULL THEN mmc.Isbackday3 ELSE dc.Isbackday3 END END
-					,Isbackday4 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.Isbackday4 ELSE CASE WHEN mmc.Isbackday4 IS NOT NULL THEN mmc.Isbackday4 ELSE dc.Isbackday4 END END
-					,Isbackday5 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.Isbackday5 ELSE CASE WHEN mmc.Isbackday5 IS NOT NULL THEN mmc.Isbackday5 ELSE dc.Isbackday5 END END
-					,Isbackday6 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.Isbackday6 ELSE CASE WHEN mmc.Isbackday6 IS NOT NULL THEN mmc.Isbackday6 ELSE dc.Isbackday6 END END
-					,Isbackday7 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.Isbackday7 ELSE CASE WHEN mmc.Isbackday7 IS NOT NULL THEN mmc.Isbackday7 ELSE dc.Isbackday7 END END
+					,IsBackDay1 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.IsBackDay1 ELSE CASE WHEN mmc.IsBackDay1 IS NOT NULL THEN mmc.IsBackDay1 ELSE dc.IsBackDay1 END END
+					,IsBackDay2 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.IsBackDay2 ELSE CASE WHEN mmc.IsBackDay2 IS NOT NULL THEN mmc.IsBackDay2 ELSE dc.IsBackDay2 END END
+					,IsBackDay3 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.IsBackDay3 ELSE CASE WHEN mmc.IsBackDay3 IS NOT NULL THEN mmc.IsBackDay3 ELSE dc.IsBackDay3 END END
+					,IsBackDay4 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.IsBackDay4 ELSE CASE WHEN mmc.IsBackDay4 IS NOT NULL THEN mmc.IsBackDay4 ELSE dc.IsBackDay4 END END
+					,IsBackDay5 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.IsBackDay5 ELSE CASE WHEN mmc.IsBackDay5 IS NOT NULL THEN mmc.IsBackDay5 ELSE dc.IsBackDay5 END END
+					,IsBackDay6 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.IsBackDay6 ELSE CASE WHEN mmc.IsBackDay6 IS NOT NULL THEN mmc.IsBackDay6 ELSE dc.IsBackDay6 END END
+					,IsBackDay7 = CASE WHEN mc.MBDate IS NOT NULL THEN mc.IsBackDay7 ELSE CASE WHEN mmc.IsBackDay7 IS NOT NULL THEN mmc.IsBackDay7 ELSE dc.IsBackDay7 END END
 		INTO		#check_MB_duplicate
 		from		@calendarTable t
 		left join	#DefaultMovebetConfig dc ON dc._weekDay = t.weekday_
@@ -233,13 +259,13 @@ BEGIN
 		left join	dbo.Acc_ManualMovebetConfig mmc ON mmc.MBDate = t.scheduleDate
 
 		---------------
-		INSERT INTO #MBDetail (RunningDate,MBDate) SELECT scheduleDate, DATEADD(day, -1, scheduleDate) FROM #check_MB_duplicate where  Isbackday1 = 1
-		INSERT INTO #MBDetail (RunningDate,MBDate) SELECT scheduleDate, DATEADD(day, -2, scheduleDate) FROM #check_MB_duplicate where  Isbackday2 = 1
-		INSERT INTO #MBDetail (RunningDate,MBDate) SELECT scheduleDate, DATEADD(day, -3, scheduleDate) FROM #check_MB_duplicate where  Isbackday3 = 1
-		INSERT INTO #MBDetail (RunningDate,MBDate) SELECT scheduleDate, DATEADD(day, -4, scheduleDate) FROM #check_MB_duplicate where  Isbackday4 = 1
-		INSERT INTO #MBDetail (RunningDate,MBDate) SELECT scheduleDate, DATEADD(day, -5, scheduleDate) FROM #check_MB_duplicate where  Isbackday5 = 1
-		INSERT INTO #MBDetail (RunningDate,MBDate) SELECT scheduleDate, DATEADD(day, -6, scheduleDate) FROM #check_MB_duplicate where  Isbackday6 = 1
-		INSERT INTO #MBDetail (RunningDate,MBDate) SELECT scheduleDate, DATEADD(day, -7, scheduleDate) FROM #check_MB_duplicate where  Isbackday7 = 1
+		INSERT INTO #MBDetail (RunningDate,MBDate) SELECT scheduleDate, DATEADD(day, -1, scheduleDate) FROM #check_MB_duplicate where  IsBackDay1 = 1
+		INSERT INTO #MBDetail (RunningDate,MBDate) SELECT scheduleDate, DATEADD(day, -2, scheduleDate) FROM #check_MB_duplicate where  IsBackDay2 = 1
+		INSERT INTO #MBDetail (RunningDate,MBDate) SELECT scheduleDate, DATEADD(day, -3, scheduleDate) FROM #check_MB_duplicate where  IsBackDay3 = 1
+		INSERT INTO #MBDetail (RunningDate,MBDate) SELECT scheduleDate, DATEADD(day, -4, scheduleDate) FROM #check_MB_duplicate where  IsBackDay4 = 1
+		INSERT INTO #MBDetail (RunningDate,MBDate) SELECT scheduleDate, DATEADD(day, -5, scheduleDate) FROM #check_MB_duplicate where  IsBackDay5 = 1
+		INSERT INTO #MBDetail (RunningDate,MBDate) SELECT scheduleDate, DATEADD(day, -6, scheduleDate) FROM #check_MB_duplicate where  IsBackDay6 = 1
+		INSERT INTO #MBDetail (RunningDate,MBDate) SELECT scheduleDate, DATEADD(day, -7, scheduleDate) FROM #check_MB_duplicate where  IsBackDay7 = 1
 		---------------
 
 		---- Duplicate MB checking
@@ -316,32 +342,32 @@ BEGIN
 		USING #input AS s ON t.MBDate = s.MBDate
 		WHEN MATCHED THEN UPDATE 
 		SET  	MBDate = s.MBDate
-				,Isbackday1 = s.Isbackday1
-				,Isbackday2 = s.Isbackday2
-				,Isbackday3 = s.Isbackday3
-				,Isbackday4 = s.Isbackday4
-				,Isbackday5 = s.Isbackday5
-				,Isbackday6 = s.Isbackday6
-				,Isbackday7 = s.Isbackday7
+				,IsBackDay1 = s.IsBackDay1
+				,IsBackDay2 = s.IsBackDay2
+				,IsBackDay3 = s.IsBackDay3
+				,IsBackDay4 = s.IsBackDay4
+				,IsBackDay5 = s.IsBackDay5
+				,IsBackDay6 = s.IsBackDay6
+				,IsBackDay7 = s.IsBackDay7
 		WHEN NOT MATCHED THEN
 		INSERT (MBDate
-				,Isbackday1   
-				,Isbackday2 
-				,Isbackday3 
-				,Isbackday4 
-				,Isbackday5 
-				,Isbackday6 
-				,Isbackday7 )
+				,IsBackDay1   
+				,IsBackDay2 
+				,IsBackDay3 
+				,IsBackDay4 
+				,IsBackDay5 
+				,IsBackDay6 
+				,IsBackDay7 )
 		VALUES
 				(
 				s.MBDate
-				,s.Isbackday1   
-				,s.Isbackday2 
-				,s.Isbackday3 
-				,s.Isbackday4 
-				,s.Isbackday5 
-				,s.Isbackday6 
-				,s.Isbackday7 
+				,s.IsBackDay1   
+				,s.IsBackDay2 
+				,s.IsBackDay3 
+				,s.IsBackDay4 
+				,s.IsBackDay5 
+				,s.IsBackDay6 
+				,s.IsBackDay7 
 				);
 	END TRY
 
