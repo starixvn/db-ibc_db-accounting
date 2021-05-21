@@ -152,9 +152,9 @@ BEGIN
            @ColumnName = CASE
                              WHEN ISNUMERIC(NumberValue) <> 1 THEN
                                  'NumberValue'
-                             WHEN ISNUMERIC(SportType) <> 1 THEN
+                             WHEN ISNUMERIC(ISNULL(SportType, 0)) <> 1 THEN
                                  'SportType'
-                             WHEN ISNUMERIC(BetType) <> 1 THEN
+                             WHEN ISNUMERIC(ISNULL(BetType, 0)) <> 1 THEN
                                  'BetType'
                              WHEN VendorId IS NULL
                                   OR ISNUMERIC(VendorId) <> 1 THEN
@@ -169,8 +169,8 @@ BEGIN
           OR VendorName IS NULL
           OR VendorId IS NULL
           OR ISNUMERIC(VendorId) <> 1
-          OR ISNUMERIC(SportType) <> 1
-          OR ISNUMERIC(BetType) <> 1
+          OR ISNUMERIC(ISNULL(SportType, 0)) <> 1
+          OR ISNUMERIC(ISNULL(BetType, 0)) <> 1
           OR ISNUMERIC(NumberValue) <> 1;
 
     IF @ErrCode <> 0
@@ -218,7 +218,8 @@ BEGIN
            @ValueError = CASE
                              WHEN vgs.VendorId IS NOT NULL THEN
                                  CAST(vgs.VendorId AS NVARCHAR(MAX)) + ' - ' + vgs.VName
-                             WHEN bt.typeid IS NULL THEN
+                             WHEN bt.typeid IS NULL
+                                  AND i.bettype IS NOT NULL THEN
                                  CAST(i.bettype AS NVARCHAR(MAX))
                              ELSE
                                  CAST(i.sporttype AS NVARCHAR(MAX))
@@ -226,7 +227,8 @@ BEGIN
            @ColumnName = CASE
                              WHEN vgs.VendorId IS NOT NULL THEN
                                  'VendorId and VendorName'
-                             WHEN bt.typeid IS NULL THEN
+                             WHEN bt.typeid IS NULL
+                                  AND i.bettype IS NOT NULL THEN
                                  'Bettype'
                              ELSE
                                  'Sporttype'
@@ -239,9 +241,18 @@ BEGIN
             ON bt.typeid = i.bettype
         LEFT JOIN DBPRO.bodb02.dbo.Sports s WITH (NOLOCK)
             ON s.SportType = i.sporttype
+               AND i.sporttype IS NOT NULL
     WHERE vgs.VendorId IS NOT NULL
-          OR bt.typeid IS NULL
-          OR s.SportType IS NULL;
+          OR
+          (
+              bt.typeid IS NULL
+              AND i.bettype IS NOT NULL
+          )
+          OR
+          (
+              s.SportType IS NULL
+              AND i.sporttype IS NOT NULL
+          );
 
     IF @ErrCode <> 0
     BEGIN

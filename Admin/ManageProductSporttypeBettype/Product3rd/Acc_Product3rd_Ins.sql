@@ -168,11 +168,11 @@ BEGIN
                                    EndOfSupportDate
                            END,
         OfferSite = CASE
-                                   WHEN LEN(OfferSite) = 0 THEN
-                                       NULL
-                                   ELSE
-                                       OfferSite
-                           END
+                        WHEN LEN(OfferSite) = 0 THEN
+                            0
+                        ELSE
+                            OfferSite
+                    END
     WHERE LEN(Productid) = 0
           OR LEN(ProductName) = 0
           OR LEN(Description) = 0
@@ -222,23 +222,23 @@ BEGIN
                              WHEN ProductName IS NULL THEN
                                  'ProductName'
                              WHEN OfferSingle IS NULL
-                                  OR OfferSingle NOT IN ( '0', '1' )
-                                  OR ISNUMERIC(OfferSingle) <> 1 THEN
+                                  OR ISNUMERIC(OfferSingle) <> 1
+                                  OR OfferSingle NOT IN ( 0, 1 ) THEN
                                  'OfferSingle'
                              WHEN ApplyDCS IS NULL
-                                  OR ApplyDCS NOT IN ( '0', '1' )
-                                  OR ISNUMERIC(ApplyDCS) <> 1 THEN
+                  OR ISNUMERIC(ApplyDCS) <> 1
+                                  OR ApplyDCS NOT IN ( 0, 1 ) THEN
                                  'ApplyDCS'
-                             WHEN Enabled NOT IN ( '0', '1' )
-                                  OR ISNUMERIC(Enabled) <> 1 THEN
+                             WHEN ISNUMERIC(Enabled) <> 1
+                                  OR  Enabled NOT IN ( 0, 1 ) THEN
                                  'Enabled'
-               WHEN OfferSite NOT IN ( '0', '1', '2' )
-                                  OR ISNUMERIC(OfferSite) <> 1 THEN
+                             WHEN ISNUMERIC(OfferSite) <> 1
+                                  OR OfferSite NOT IN ( 0, 1, 2 ) THEN
                                  'OfferSite'
                              ELSE
                                  NULL
                          END
-    FROM #inputTmp 
+    FROM #inputTmp
     WHERE LEN(ProductName) > 50
           OR LEN(Description) > 100
           OR LEN(ProductPrefix) > 10
@@ -246,15 +246,15 @@ BEGIN
           OR ProductName IS NULL
           OR ApplyDCS IS NULL
           OR OfferSingle IS NULL
-          OR ApplyDCS NOT IN ( '0', '1' )
-          OR OfferSingle NOT IN ( '0', '1' )
           OR ISNUMERIC(OfferSingle) <> 1
           OR ISNUMERIC(Productid) <> 1
           OR ISNUMERIC(ApplyDCS) <> 1
           OR ISNUMERIC(Enabled) <> 1
           OR ISNUMERIC(OfferSite) <> 1
-          OR Enabled NOT IN ( '0', '1' )
-          OR OfferSite NOT IN ( '0', '1', '2' )
+      OR ApplyDCS NOT IN ( 0, 1 )
+          OR OfferSingle NOT IN ( 0, 1 )
+          OR Enabled NOT IN ( 0, 1 )
+          OR OfferSite NOT IN ( 0, 1, 2 )
     ORDER BY ID;
     IF @ErrCode <> 0
     BEGIN
@@ -274,7 +274,7 @@ BEGIN
                             '"- The values must be IN (0,1)'
                         WHEN @ColumnName = 'Enabled' THEN
                             '"- The values must be IN (0,1)'
-            WHEN @ColumnName = 'OfferSite' THEN
+                        WHEN @ColumnName = 'OfferSite' THEN
                             '"- The values must be IN (0,1,2)'
                         ELSE
                             ''
@@ -303,8 +303,8 @@ BEGIN
                ApplyDCS,
                Enabled,
                EndOfSupportDate,
-         OfferSite
-        FROM #inputTmp ;
+               OfferSite
+        FROM #inputTmp;
     END TRY
     BEGIN CATCH
         SELECT @ErrCode = ERROR_NUMBER(),
@@ -317,7 +317,7 @@ BEGIN
            @ErrCode = 1009,
            @ValueError = CAST(p3.Productid AS NVARCHAR(MAX)),
            @ColumnName = N'Productid'
-    FROM #input i 
+    FROM #input i
         LEFT JOIN dbo.Product3rd p3 WITH (NOLOCK)
             ON p3.Productid = i.Productid
     WHERE p3.Productid IS NOT NULL
@@ -337,15 +337,19 @@ BEGIN
                                   (
                                       SELECT DISTINCT
                                              i.ID
-                                      FROM #input i 
-                                          LEFT JOIN #input i2 
+                                      FROM #input i
+                                          LEFT JOIN #input i2
                                               ON i.Productid = i2.Productid
                                       WHERE i2.Productid IS NOT NULL
                                             AND i.ID <> i2.ID
                                   ) KQ
                                   ORDER BY KQ.ID
                                   FOR XML PATH('')
-                              ),1,1,'');
+                              ),
+                              1,
+                              1,
+                              ''
+                                   );
 
     IF ISNULL(@Product3rdError, '') <> ''
         SET @ErrCode = 1010;
@@ -376,7 +380,7 @@ BEGIN
                 ApplyDCS,
                 Enabled,
                 EndOfSupportDate,
-        OfferSite
+                OfferSite
             )
             SELECT Productid,
                    ProductName,
@@ -386,7 +390,7 @@ BEGIN
                    ApplyDCS,
                    Enabled,
                    EndOfSupportDate,
-           OfferSite
+                   OfferSite
             FROM #input
             WHERE ID = @CurrentRow;
         END TRY
@@ -404,7 +408,7 @@ BEGIN
               + COALESCE(CAST(OfferSingle AS VARCHAR(1)), SPACE(1)) + N'" ' + N'ApplyDCS="'
               + COALESCE(CAST(ApplyDCS AS VARCHAR(1)), SPACE(1)) + N'" ' + N'Enabled="'
               + COALESCE(CAST(Enabled AS VARCHAR(1)), SPACE(1)) + N'" ' + N'EndOfSupportDate="'
-              + COALESCE(CAST(EndOfSupportDate AS VARCHAR(50)), SPACE(1))+ N'" ' + N'OfferSite="'
+              + COALESCE(CAST(EndOfSupportDate AS VARCHAR(50)), SPACE(1)) + N'" ' + N'OfferSite="'
               + COALESCE(CAST(OfferSite AS VARCHAR(1)), SPACE(1)) + N'" ' + N'LoginIP="'
               + COALESCE(CAST(@LoginIP AS VARCHAR(20)), SPACE(1)) + N'" />'
         FROM #input
@@ -414,9 +418,9 @@ BEGIN
         SET @duration = DATEDIFF(MILLISECOND, @startRun, @endRun);
 
         EXEC DBCUST.CustDB.dbo.Acc_WriteLog_UserLog_RunSP_Wrapper @UserID = @UserID,
-                                                @ActionID = 95047,
-                                                @TrackingValue = @LogSPData,
-                                                @Duration = @duration;
+                                                                  @ActionID = 95047,
+                                                                  @TrackingValue = @LogSPData,
+                                                                  @Duration = @duration;
     END;
     DROP TABLE #input,
                #inputTmp;

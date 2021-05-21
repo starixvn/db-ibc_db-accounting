@@ -69,7 +69,7 @@ BEGIN
       AND
           (
               OfferSite = @OfferSite
-              OR @OfferSite = 0
+              OR ISNULL(@OfferSite,0) = 0
           );
 
     SELECT @TotalRows = COUNT(*)
@@ -83,7 +83,7 @@ BEGIN
            ApplyDCS,
            Enabled,
            EndOfSupportDate,
-       OfferSite,
+           OfferSite,
            RowNum
     FROM #Tmp 
     WHERE @PageIndex < 0 OR @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd);
