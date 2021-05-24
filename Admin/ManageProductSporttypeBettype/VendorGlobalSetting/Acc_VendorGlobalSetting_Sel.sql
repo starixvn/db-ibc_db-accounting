@@ -30,6 +30,17 @@ BEGIN
            @RowStart = @PageIndex * @PageSize + 1,
            @RowEnd = @RowStart + @PageSize - 1;
 
+  CREATE TABLE #Tmp
+    (
+        VendorId  INT,
+        VName VARCHAR(50),
+        NumberValue DECIMAL(19, 8),
+        sporttype SMALLINT,
+        SportName NVARCHAR(50),
+        bettype   INT,
+        typenamee NVARCHAR(128),
+        RowNum          INT
+    );
     CREATE TABLE #tmp_Sports
     (
         SportType SMALLINT,
@@ -43,7 +54,7 @@ BEGIN
 
   INSERT INTO #tmp_Sports (SportType,SportName)
   SELECT  val, ''
-    FROM dbo.f_StringSplit(ISNULL(@SportType, ''), ',') OPTION (MAXRECURSION 0) ;
+  FROM dbo.f_StringSplit(ISNULL(@SportType, ''), ',') OPTION (MAXRECURSION 0) ;
 
   INSERT INTO #tmp_Bettype (typeid,typenamee)
   SELECT  val, ''
@@ -57,34 +68,34 @@ BEGIN
   SET a.typenamee = b.typenamee
   FROM #tmp_Bettype a INNER JOIN DBPRO.bodb02.dbo.bettype b WITH (NOLOCK)  ON  a.typeid = b.typeid;
 
-    SELECT vgs.VendorId,
-           vgs.VName,
-           vgs.NumberValue,
-           vgs.sporttype,
-           st.SportName,
-           vgs.bettype,
-           bt.typenamee,
-           ROW_NUMBER() OVER (ORDER BY VendorId, VName) AS RowNum
-    INTO #Tmp
-    FROM dbo.VendorGlobalSetting vgs WITH (NOLOCK)
-        INNER JOIN #tmp_Bettype bt
-            ON ISNULL(vgs.bettype, 0) = bt.typeid
-        INNER JOIN #tmp_Sports st
-            ON ISNULL(vgs.sporttype, 0) = st.SportType
-    WHERE (
-              VendorId = @VendorId
-              OR @VendorId IS NULL
-          )
-          AND
-          (
-              VName LIKE '%' + @VName + '%'
-              OR ISNULL(@VName, '') = ''
-          )
-          AND
-          (
-              NumberValue = @NumberValue
-              OR @NumberValue IS NULL
-          );
+  INSERT INTO #Tmp (VendorId,VName,NumberValue,sporttype,SportName,bettype,typenamee,RowNum)
+  SELECT vgs.VendorId,
+      vgs.VName, 
+      vgs.NumberValue,
+      vgs.sporttype,
+      st.SportName,
+      vgs.bettype,
+      bt.typenamee,
+      ROW_NUMBER() OVER (ORDER BY VendorId, VName)
+  FROM dbo.VendorGlobalSetting vgs WITH (NOLOCK)
+      INNER JOIN #tmp_Bettype bt
+        ON ISNULL(vgs.bettype, 0) = bt.typeid
+      INNER JOIN #tmp_Sports st
+        ON ISNULL(vgs.sporttype, 0) = st.SportType
+  WHERE (
+        VendorId = @VendorId
+        OR @VendorId IS NULL
+      )
+      AND
+      (
+        VName LIKE '%' + @VName + '%'
+        OR ISNULL(@VName, '') = ''
+      )
+      AND
+      (
+        NumberValue = @NumberValue
+        OR @NumberValue IS NULL
+      );
 
     SELECT @TotalRows = COUNT(*)
     FROM #Tmp;

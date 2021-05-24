@@ -25,6 +25,20 @@ BEGIN
     DECLARE @RowStart INT , @RowEnd INT
     SELECT @PageIndex = @PageIndex - 1, @RowStart =  @PageIndex * @PageSize + 1, @RowEnd = @RowStart + @PageSize - 1;
 
+  CREATE TABLE #Tmp
+  (
+    Productid INT,  
+        ProductName VARCHAR(50),  
+        Description VARCHAR(100),  
+        ProductPrefix VARCHAR(10),  
+        OfferSingle BIT,  
+        ApplyDCS BIT,  
+        Enabled BIT,  
+        EndOfSupportDate DATE,  
+        OfferSite TINYINT ,
+    RowNum INT
+  )
+  INSERT INTO #Tmp (Productid,ProductName,Description,ProductPrefix,OfferSingle,ApplyDCS,Enabled,EndOfSupportDate,OfferSite,RowNum)
     SELECT Productid,
            ProductName,
            Description,
@@ -35,7 +49,6 @@ BEGIN
            EndOfSupportDate,
            OfferSite,
            ROW_NUMBER() OVER (ORDER BY Productid) AS RowNum
-    INTO #Tmp
     FROM dbo.Product3rd WITH (NOLOCK)
     WHERE (
               Productid = @Productid
