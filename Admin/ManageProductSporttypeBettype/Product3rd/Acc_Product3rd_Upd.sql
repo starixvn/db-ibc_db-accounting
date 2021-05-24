@@ -147,10 +147,10 @@ BEGIN
                                ELSE
                                    EndOfSupportDate END,
         OfferSite = CASE
-                                       WHEN LEN(OfferSite) = 0 THEN
-                                           NULL
-                                       ELSE
-                                           OfferSite
+            WHEN LEN(OfferSite) = 0 THEN
+              NULL
+            ELSE
+              OfferSite
                            END
     WHERE LEN(ProductName) = 0
           OR LEN(Description) = 0
@@ -163,40 +163,45 @@ BEGIN
 
     SELECT TOP (1)
            @ValueError = CASE
-                             WHEN LEN(ProductName) > 50 THEN
-                                 ProductName
-                             WHEN LEN(Description) > 100 THEN
-                                 Description
-                             WHEN LEN(ProductPrefix) > 10 THEN
-                                 ProductPrefix
+                             WHEN LEN(i.ProductName) > 50  THEN
+                                 i.ProductName
+                             WHEN LEN(i.Description) > 100 THEN
+                                 i.Description
+                             WHEN LEN(i.ProductPrefix) > 10 THEN
+                                 i.ProductPrefix
                              ELSE
                                  NULL
                          END,
            @LimitValue = CASE
-                             WHEN LEN(ProductName) > 50 THEN
+                             WHEN LEN (i.ProductName) > 50 THEN
                                  50
-                             WHEN LEN(Description) > 100 THEN
+                             WHEN LEN(i.Description) > 100 THEN
                                  100
-                             WHEN LEN(ProductPrefix) > 10 THEN
+                             WHEN LEN(i.ProductPrefix) > 10 THEN
                                  50
                              ELSE
                                  1
                          END,
            @ErrCode = CASE
-                          WHEN LEN(ProductName) > 50 THEN
+                          WHEN LEN(i.ProductName) > 50 THEN
                               1007
-                          WHEN LEN(Description) > 100 THEN
+                          WHEN LEN(i.Description) > 100 THEN
                               1007
-                          WHEN LEN(ProductPrefix) > 10 THEN
+                          WHEN LEN(i.ProductPrefix) > 10 THEN
                               1007
+                          WHEN i.ProductName IS NULL THEN
+                            1008
                           ELSE
-                              1008
+                              1009
                       END
-    FROM #inputTmp
-    WHERE LEN(ProductName) > 50
-          OR LEN(Description) > 100
-          OR LEN(ProductPrefix) > 10
-          OR ProductName IS NULL;
+    FROM #inputTmp i
+    LEFT JOIN dbo.Product3rd p3 WITH (NOLOCK)  
+            ON  p3.ProductName = i.ProductName
+    WHERE LEN(i.ProductName) > 50
+          OR LEN(i.Description) > 100
+          OR LEN(i.ProductPrefix) > 10
+          OR i.ProductName IS NULL
+          OR (p3.ProductName IS NOT NULL AND p3.Productid <> i.Productid);
 
     IF @ErrCode <> 0
     BEGIN
@@ -206,7 +211,9 @@ BEGIN
                   + CONVERT(VARCHAR(8), @LimitValue) + '.';
         IF @ErrCode = 1008
             SELECT @ErrMsg = 'Invalid "ProductName" - The values must be not null';
-        RETURN;
+        IF @ErrCode = 1009
+               SELECT @ErrMsg  ='ProductName already exists.'; 
+            RETURN;
     END;
 
     BEGIN TRY

@@ -17,24 +17,6 @@ Param's Explanation:
  - @Fie:              
   <ROOT><File ProductId = "1" ProductName = "Test" Description = "Test" ProductPrefix = "1" OfferSingle = "1"     
   ApplyDCS = "1" Enabled = "1" EndOfSupportDate = "20210513" OfferSite = "1" /></ROOT>      
-    @File NVARCHAR(MAX),  
-    @LoginIP VARCHAR(20) = '',  
-    @UserID INT,  
-    @ErrCode INT = 0 OUTPUT,  
-    @ErrMsg NVARCHAR(4000) = '' OUTPUT  
-AS  
-/*              
-Created: 20210513@Evan            
-Task :  NAP -  Manage Product3rd     [Redmine: #153521]       
-DB:   DBCUST-bodb_Licensee            
-  
-Revisions:   
-    - 20210513@Evan: Create new SP [Redmine: #153521]  
-Param's Explanation:            
- - @Fie:              
-  <ROOT><File ProductId = "1" ProductName = "Test" Description = "Test" ProductPrefix = "1" OfferSingle = "1"     
-  ApplyDCS = "1" Enabled = "1" EndOfSupportDate = "20210513" OfferSite = "1" /></ROOT>      
-   
     
 */  
 BEGIN  
@@ -52,6 +34,7 @@ BEGIN
             @LogSPData NVARCHAR(MAX),  
             @RowTotal INT = 0,  
             @CurrentRow INT = 0;  
+            
     CREATE TABLE #input  
     (  
         ID INT IDENTITY(1, 1),  
@@ -232,11 +215,11 @@ BEGIN
                               1007  
                           WHEN Productid IS NULL THEN   
                               1008  
-                          WHEN OfferSingle IS NULL THEN   
+              WHEN OfferSingle IS NULL THEN   
                               1009  
-                          WHEN ApplyDCS IS NULL THEN   
+              WHEN ApplyDCS IS NULL THEN   
                               1010  
-                         ELSE 1011  
+             ELSE  1011  
                       END,  
            @ColumnName = CASE  
                              WHEN Productid IS NULL OR ISNUMERIC(Productid) <> 1 THEN  
@@ -339,7 +322,7 @@ BEGIN
                @ErrMsg = ERROR_MESSAGE();  
         RETURN;  
     END CATCH;  
-    --Check Productid     
+    --Check Productid,ProductName        
     SELECT TOP (1)  
            @Product3rdError = CONVERT(VARCHAR(5), i.ID),  
            @ErrCode = 1012,  
@@ -356,7 +339,7 @@ BEGIN
             ON p3.Productid = i.Productid  
     LEFT JOIN dbo.Product3rd p3a WITH (NOLOCK)  
             ON  p3a.ProductName = i.ProductName
-    WHERE p3.Productid IS NOT NULL  
+    WHERE p3.Productid IS NOT NULL
     OR p3a.ProductName IS NOT NULL
     ORDER BY i.ID;  
     IF @ErrCode <> 0  
