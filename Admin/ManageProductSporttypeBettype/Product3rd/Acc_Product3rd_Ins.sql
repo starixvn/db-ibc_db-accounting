@@ -370,7 +370,7 @@ BEGIN
                @startRun = GETDATE();
 
         BEGIN TRY
-            INSERT INTO DBCUST.bodb_Licensee.dbo.Product3rd
+            INSERT INTO dbo.Product3rd
             (
                 Productid,
                 ProductName,
@@ -417,10 +417,10 @@ BEGIN
         SET @endRun = GETDATE();
         SET @duration = DATEDIFF(MILLISECOND, @startRun, @endRun);
 
-        EXEC DBCUST.CustDB.dbo.Acc_WriteLog_UserLog_RunSP_Wrapper @UserID = @UserID,
-                                                                  @ActionID = 95047,
-                                                                  @TrackingValue = @LogSPData,
-                                                                  @Duration = @duration;
+        EXEC Acc_WriteLog_UserLog_RunSP_Wrapper @UserID = @UserID,
+                                                @ActionID = 95047,
+                                                @TrackingValue = @LogSPData,
+                                                @Duration = @duration;
     END;
     DROP TABLE #input,
                #inputTmp;

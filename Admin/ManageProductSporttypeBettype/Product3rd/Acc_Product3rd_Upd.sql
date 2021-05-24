@@ -293,7 +293,7 @@ BEGIN
         SET @endRun = GETDATE();
         SET @duration = DATEDIFF(MILLISECOND, @startRun, @endRun);
 
-        EXEC DBCUST.CustDB.dbo.Acc_WriteLog_UserLog_RunSP_Wrapper @UserID = @UserID,
+        EXEC Acc_WriteLog_UserLog_RunSP_Wrapper @UserID = @UserID,
                                                     @ActionID = 95048,
                                                     @TrackingValue = @LogSPData,
                                                     @TrackingValue2 = @LogSPData_Old,

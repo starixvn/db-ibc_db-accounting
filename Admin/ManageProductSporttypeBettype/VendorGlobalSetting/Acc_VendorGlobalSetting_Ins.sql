@@ -307,7 +307,7 @@ BEGIN
         SELECT @CurrentRow = @CurrentRow + 1,
                @startRun = GETDATE();
         BEGIN TRY
-            INSERT INTO DBCUST.CustDB.dbo.VendorGlobalSetting
+            INSERT INTO VendorGlobalSetting
             (
                 VendorId,
                 VName,
@@ -348,6 +348,6 @@ BEGIN
                                                 @Duration = @duration;
 
     END;
-    DROP TABLE #input,
-               #inputTmp;
+    DROP TABLE #input;
+    DROP TABLE #inputTmp;
 END;

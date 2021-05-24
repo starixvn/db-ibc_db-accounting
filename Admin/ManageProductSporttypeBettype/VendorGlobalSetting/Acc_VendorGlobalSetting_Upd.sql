@@ -152,7 +152,7 @@ BEGIN
               + COALESCE(CAST(vgs.sporttype AS VARCHAR(10)), SPACE(1)) + N'" ' + N'BetType="'
               + COALESCE(CAST(vgs.sporttype AS VARCHAR(10)), SPACE(1)) + N'" ' + N'LoginIP="'
               + COALESCE(CAST(@LoginIP AS VARCHAR(20)), SPACE(1)) + N'" />'
-        FROM DBCUST.CustDB.dbo.VendorGlobalSetting vgs WITH (NOLOCK)
+        FROM dbo.VendorGlobalSetting vgs WITH (NOLOCK)
             INNER JOIN #input i
                 ON i.VendorId = vgs.VendorId
                    AND i.VName = vgs.VName
