@@ -293,12 +293,13 @@ BEGIN
         SET @endRun = GETDATE();
         SET @duration = DATEDIFF(MILLISECOND, @startRun, @endRun);
 
-        EXEC Acc_WriteLog_UserLog_RunSP_Wrapper @UserID = @UserID,
+        EXEC Lrf_WriteLog_UserLog_RunSP_Wrapper @UserID = @UserID,
                                                     @ActionID = 95048,
                                                     @TrackingValue = @LogSPData,
                                                     @TrackingValue2 = @LogSPData_Old,
                                                     @Duration = @duration;
     END;
-    DROP TABLE #input,
-               #inputTmp;
+
+    DROP TABLE #input;
+    DROP TABLE #inputTmp;
 END;

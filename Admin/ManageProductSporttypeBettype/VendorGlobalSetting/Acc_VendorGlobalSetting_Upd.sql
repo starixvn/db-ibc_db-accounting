@@ -110,7 +110,7 @@ BEGIN
            @ErrCode = 1007,
            @ColumnName = N'NumberValue'
     FROM #inputTmp WITH (NOLOCK)
-    WHERE ISNUMERIC(NumberValue) <> 1;
+    WHERE ISNUMERIC(ISNULL(NumberValue,0)) <> 1;
     IF @ErrCode <> 0
     BEGIN
         SELECT @ErrMsg = 'Invalid "' + @ColumnName + '"' + '.Please check them again.';
@@ -195,6 +195,7 @@ BEGIN
                                                     @TrackingValue2 = @LogSPData_Old,
                                                     @Duration = @duration;
     END;
-    DROP TABLE #input,
-               #inputTmp;
+    
+    DROP TABLE #input;
+    DROP TABLE #inputTmp;
 END;

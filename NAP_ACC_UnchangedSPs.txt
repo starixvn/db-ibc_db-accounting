@@ -1,3 +1,1 @@
-FRP\ResetWinning\Acc_ResetWinning_SelByDate14.sql
-FRP\ResetWinning\Task_ResetWinning_Non3rdParty.sql
-FRP\ResetWinning\Task_ResetWinning_ExtraPT.sql
+Admin\ManageProductSporttypeBettype\Acc_Sporttype_Sel.sql

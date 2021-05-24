@@ -148,9 +148,9 @@ BEGIN
                               1007
                           ELSE
                               1008
-                      END,
+                      END, 
            @ColumnName = CASE
-                             WHEN ISNUMERIC(NumberValue) <> 1 THEN
+                             WHEN ISNUMERIC(ISNULL(NumberValue,0)) <> 1 THEN
                                  'NumberValue'
                              WHEN ISNUMERIC(ISNULL(SportType, 0)) <> 1 THEN
                                  'SportType'
@@ -171,7 +171,7 @@ BEGIN
           OR ISNUMERIC(VendorId) <> 1
           OR ISNUMERIC(ISNULL(SportType, 0)) <> 1
           OR ISNUMERIC(ISNULL(BetType, 0)) <> 1
-          OR ISNUMERIC(NumberValue) <> 1;
+          OR ISNUMERIC(ISNULL(NumberValue,0)) <> 1;
 
     IF @ErrCode <> 0
     BEGIN
@@ -180,7 +180,14 @@ BEGIN
                 = 'Row "' + ISNULL(@VendorError, '') + '" - The value "' + ISNULL(@ValueError, '')
                   + '" is exceeded max length ' + CONVERT(VARCHAR(8), @LimitValue) + '.';
         IF @ErrCode = 1008
-            SELECT @ErrMsg = 'Invalid "' + @ColumnName + '" on row "' + @VendorError + '".Please check them again.';
+      SELECT @ErrMsg = 'Invalid "' + @ColumnName + '" on row "' + @VendorError + CASE
+                                                                               WHEN @ColumnName = 'VendorId' THEN
+                                                                                   '"- VendorId cannot be null'
+                                                                               WHEN @ColumnName = 'VendorName' THEN
+                                                                                   '"- VendorName cannot be null'
+                                                                               ELSE
+                                                                                   ''
+                                                                           END + '. Please check them again.';
         RETURN;
     END;
 
@@ -348,6 +355,7 @@ BEGIN
                                                 @Duration = @duration;
 
     END;
+    
     DROP TABLE #input;
     DROP TABLE #inputTmp;
 END;

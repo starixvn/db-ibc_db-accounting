@@ -40,6 +40,7 @@ BEGIN
 
     SELECT @EndRun = GETDATE(),
            @Duration = DATEDIFF(MILLISECOND, @StartRun, @EndRun);
+           
     EXEC Acc_WriteLog_UserLog_RunSP_Wrapper @UserID = @UserID,
                                             @ActionID = 95046,
                                             @TrackingValue = @logSpData,

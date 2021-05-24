@@ -53,7 +53,7 @@ BEGIN
           )
           AND
           (
-              ProductPrefix = @ProductPrefix
+              ProductPrefix LIKE '%' + @ProductPrefix + '%'
               OR ISNULL(@ProductPrefix, '') = ''
           )
           AND
@@ -87,5 +87,6 @@ BEGIN
            RowNum
     FROM #Tmp 
     WHERE @PageIndex < 0 OR @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd);
+    
     DROP TABLE #Tmp;
 END;
