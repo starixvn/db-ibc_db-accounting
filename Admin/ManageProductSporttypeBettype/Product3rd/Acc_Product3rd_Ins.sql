@@ -17,6 +17,24 @@ Param's Explanation:
  - @Fie:              
   <ROOT><File ProductId = "1" ProductName = "Test" Description = "Test" ProductPrefix = "1" OfferSingle = "1"     
   ApplyDCS = "1" Enabled = "1" EndOfSupportDate = "20210513" OfferSite = "1" /></ROOT>      
+    @File NVARCHAR(MAX),  
+    @LoginIP VARCHAR(20) = '',  
+    @UserID INT,  
+    @ErrCode INT = 0 OUTPUT,  
+    @ErrMsg NVARCHAR(4000) = '' OUTPUT  
+AS  
+/*              
+Created: 20210513@Evan            
+Task :  NAP -  Manage Product3rd     [Redmine: #153521]       
+DB:   DBCUST-bodb_Licensee            
+  
+Revisions:   
+    - 20210513@Evan: Create new SP [Redmine: #153521]  
+Param's Explanation:            
+ - @Fie:              
+  <ROOT><File ProductId = "1" ProductName = "Test" Description = "Test" ProductPrefix = "1" OfferSingle = "1"     
+  ApplyDCS = "1" Enabled = "1" EndOfSupportDate = "20210513" OfferSite = "1" /></ROOT>      
+   
     
 */  
 BEGIN  
@@ -129,7 +147,7 @@ BEGIN
                           WHEN LEN(ProductName) = 0 THEN  
                               NULL  
                           ELSE  
-       ProductName  
+                               ProductName  
                       END,  
         Description = CASE  
                           WHEN LEN(Description) = 0 THEN  
@@ -214,11 +232,11 @@ BEGIN
                               1007  
                           WHEN Productid IS NULL THEN   
                               1008  
-              WHEN OfferSingle IS NULL THEN   
+                          WHEN OfferSingle IS NULL THEN   
                               1009  
-              WHEN ApplyDCS IS NULL THEN   
+                          WHEN ApplyDCS IS NULL THEN   
                               1010  
-             ELSE  1011  
+                         ELSE 1011  
                       END,  
            @ColumnName = CASE  
                              WHEN Productid IS NULL OR ISNUMERIC(Productid) <> 1 THEN  
@@ -228,7 +246,7 @@ BEGIN
                              WHEN OfferSingle IS NULL  
                                   OR ISNUMERIC(OfferSingle) <> 1  
                                   OR OfferSingle NOT IN ( 0, 1 ) THEN  
-        'OfferSingle'  
+                                  'OfferSingle'  
                              WHEN ApplyDCS IS NULL  
                   OR ISNUMERIC(ApplyDCS) <> 1  
                                   OR ApplyDCS NOT IN ( 0, 1 ) THEN  
@@ -325,18 +343,27 @@ BEGIN
     SELECT TOP (1)  
            @Product3rdError = CONVERT(VARCHAR(5), i.ID),  
            @ErrCode = 1012,  
-           @ValueError = CAST(p3.Productid AS NVARCHAR(MAX)),  
-           @ColumnName = N'Productid'  
+           @ValueError = CASE  
+                         WHEN p3.Productid IS NOT NULL THEN  
+                              CAST(p3.Productid AS NVARCHAR(MAX))
+             ELSE CAST(p3a.ProductName AS NVARCHAR(MAX)) END,  
+           @ColumnName = CASE  
+                         WHEN p3.Productid IS NOT NULL THEN  
+                              'Productid'
+             ELSE 'ProductName' END
     FROM #input i  
         LEFT JOIN dbo.Product3rd p3 WITH (NOLOCK)  
             ON p3.Productid = i.Productid  
+    LEFT JOIN dbo.Product3rd p3a WITH (NOLOCK)  
+            ON  p3a.ProductName = i.ProductName
     WHERE p3.Productid IS NOT NULL  
+    OR p3a.ProductName IS NOT NULL
     ORDER BY i.ID;  
     IF @ErrCode <> 0  
     BEGIN  
         SELECT @ErrMsg  
             = 'Row "' + ISNULL(@Product3rdError, '') + '" - ' + @ColumnName + ' = "' + ISNULL(@ValueError, '')  
-              + '" already exist.';  
+              + '" already exists.';  
         RETURN;  
     END;  
   
