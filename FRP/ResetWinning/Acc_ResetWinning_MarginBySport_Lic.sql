@@ -10,6 +10,7 @@ AS
 	
 	Revision:
 		- 20210422@Sophia: Initial SP [Redmine: #153868]
+		- 20210524@Sophia: Add Saba Pin Goal [RedmineId: #155697]
 		
 	Param Explanation:
 		 
@@ -50,7 +51,7 @@ BEGIN
 	INSERT INTO #SabaVirtualSportsLeague
 	SELECT leagueid
 	FROM dbo.League WITH (NOLOCK)
-	WHERE  LeagueGroupID IN (41, 42, 74, 108)
+	WHERE  LeagueGroupID IN (41, 42, 74, 108, 113)
 			/*((sporttype = 1 AND LeagueGroupID IN (41, 42, 74, 108))
 			OR (sporttype = 2 AND LeagueGroupID IN (42, 72)) 
 			OR (sporttype = 50 AND LeagueGroupID IN (42)) 

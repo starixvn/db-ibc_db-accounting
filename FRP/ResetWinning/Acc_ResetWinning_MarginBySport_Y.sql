@@ -14,6 +14,7 @@ AS
 		- 20201230@Sophia: add more LeagueGroupID 41, 72 [Redmine: #147907]
 		- 20210315@Sophia: add Live and Non-Live [Redmine: #151656]
 		- 20210422@Sophia: Add Cricket [Redmind: #153777]
+		- 20210524@Sophia: Add Saba Pin Goal [RedmineId: #155697]
 		
 	Param Explanation:
 		 
@@ -55,7 +56,7 @@ BEGIN
 	INSERT INTO #SabaVirtualSportsLeague
 	SELECT leagueid
 	FROM dbo.League WITH (NOLOCK)
-	WHERE  LeagueGroupID IN (41, 42, 74, 108)
+	WHERE  LeagueGroupID IN (41, 42, 74, 108, 113)
 			/*((sporttype = 1 AND LeagueGroupID IN (41, 42, 74, 108))
 			OR (sporttype = 2 AND LeagueGroupID IN (42, 72)) 
 			OR (sporttype = 50 AND LeagueGroupID IN (42)) 
