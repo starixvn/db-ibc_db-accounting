@@ -45,14 +45,16 @@ BEGIN
 			RETURN
 
 	--- Check moveBet is running
-	DECLARE @BeingMovebetDate VARCHAR(200)
-
-	SELECT @BeingMovebetDate = VValue
-	FROM dbo.SystemSettings
-	WHERE VName = 'BeingMovebetDate'
-
-	IF  @BeingMovebetDate IS NOT NULL
+	IF EXISTS (
+			SELECT 1
+			FROM dbo.SystemSettings WITH(NOLOCK)
+			WHERE VValue 	= 1 
+			AND VName 		= 'isMovingBet_Local'
+			)
+	BEGIN
+		SELECT @ErrCode = 1006, @ErrMsg = 'You can not adjust the schedule during Move Bet Time.'
 		RETURN
+	END
 
 	---- Get MoveBet, BU
 	DECLARE @MoveBetsDay SMALLDATETIME, @BalanceUpDay SMALLDATETIME
