@@ -61,7 +61,7 @@ BEGIN
 	DECLARE @MBU TABLE ( MoveBetsDay SMALLDATETIME, BalanceUpDay SMALLDATETIME)
 
 	INSERT INTO @MBU (BalanceUpDay, MoveBetsDay)
-	EXEC dbo.Age_SelBalanceUpDay
+	EXEC DBEXT.bodb02.dbo.Age_SelBalanceUpDay
 
 
 	SELECT @MoveBetsDay = MoveBetsDay, @BalanceUpDay = BalanceUpDay
@@ -343,8 +343,7 @@ BEGIN
 		;MERGE dbo.Acc_ManualMovebetConfig AS t
 		USING #input AS s ON t.MBDate = s.MBDate
 		WHEN MATCHED THEN UPDATE 
-		SET  	MBDate = s.MBDate
-				,IsBackDay1 = s.IsBackDay1
+		SET  	 IsBackDay1 = s.IsBackDay1
 				,IsBackDay2 = s.IsBackDay2
 				,IsBackDay3 = s.IsBackDay3
 				,IsBackDay4 = s.IsBackDay4
