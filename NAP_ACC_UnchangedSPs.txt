@@ -1,3 +1,4 @@
 Transfer\YesterdayTransfer\dbo.Acc_BettransInsTransfer.proc.sql
 Transfer\AutomateLicenseeCodeTransfer\dbo.Acc_LicenseeTransfer_CompanyWinlossByBatch.sql
 Transfer\AutomateLicenseeCodeTransfer\dbo.Acc_LicenseeTransfer_Job.sql
+ProcessingData\dbo.Acc_ShowNotificationWhenProcessingData.sql
