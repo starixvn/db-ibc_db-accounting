@@ -12,6 +12,7 @@ AS
 		- 20201230@Sophia: Initial SPs [Redmine: #147907]
 		- 20210422@Sophia: Exclude Saba789 out of Licensee [Redmind: #153777]
 		- 20210524@Sophia: Add Saba Pin Goal [RedmineId: #155697]
+		- 20210529@Sophia: use base currency RMB and Licensee Rate of LA [RedmineId: #155697]
 	
 	Original: Acc_Rpt_Letstalk_TopLicenseeMargin 
 	Param Explanation:
