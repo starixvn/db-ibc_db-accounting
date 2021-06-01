@@ -1,5 +1,5 @@
 /*<info serverAlias="DBEXT-bodb02" executers="bodbAdminNet" isFunction="0" isNested="1"></info>*/
-ALTER PROCEDURE [dbo].[Acc_ResetWinning_MarginBySport_Lic]
+ALTER PROCEDURE [dbo].[Acc_ResetWinning_MarginBySport_Lic] 
 	@Winlostdate SMALLDATETIME 
 AS 
  
@@ -190,9 +190,10 @@ BEGIN
 			LiveIndicator	BIT,
 			IsSaba 			BIT	,			
 			TurnOver		MONEY,
-			Winlost			MONEY 
+			Winlost			MONEY,
+			OddsSpreadAdj	MONEY
 		) 	 
-		INSERT INTO #wl ( PartyID, Currency, Product3rdId, Sporttype, LiveIndicator, IsSaba, TurnOver, winlost)
+		INSERT INTO #wl ( PartyID, Currency, Product3rdId, Sporttype, LiveIndicator, IsSaba, TurnOver, winlost, OddsSpreadAdj)
 		SELECT  s.PartyID, b.Currency, 
 				CASE WHEN ba.TransID IS NOT NULL THEN 3 ELSE 0 END AS Product3rdId,
 				CASE WHEN m.Sporttype IN (1, 2, 5, 43, 50, -29) THEN m.Sporttype ELSE 0 END AS Sporttype, 
@@ -202,17 +203,13 @@ BEGIN
 				SUM (   CASE WHEN b.StatusID = 111 THEN 0 ELSE 
 						CASE WHEN ABS(modds) = 0.25 AND b.Bettype <> 29 THEN ABS(Stake) / 2 ELSE  ABS(Stake) END END						
 						* e.CNY
-						--* CASE
-						--	  WHEN virtualrate > actualrate
-						--	  THEN virtualrate
-						--	  ELSE actualrate
-						--	END
 					)	 AS TurnOver,
 				SUM(
-						(ISNULL(winlost,0)-ISNULL(actual_stake,0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)) 
+						(ISNULL(winlost,0)-ISNULL(actual_stake,0)) 
 						* e.CNY				
-					) AS winlost 				
-		FROM dbo.bettrans b WITH (NOLOCK)
+					) AS winlost,
+				SUM (CASE WHEN bettype = 999 THEN awinlost ELSE 0 END ) AS OddsSpreadAdj
+ 		FROM dbo.bettrans b WITH (NOLOCK)
 		INNER JOIN @Exchange e ON e.ExchangeId = b.Currency		
 		INNER JOIN #Supers s ON s.Custid = b.srecommend
 		INNER JOIN #Match AS m 
@@ -241,8 +238,11 @@ BEGIN
 		FROM  (
 				SELECT	s.orderId, s.SportName, w.LiveIndicator, w.IsSaba, 
 						SUM (w.TurnOver * ISNULL(lc.Rate, p.Rate)) AS TurnOver, 
-						CASE WHEN SUM (w.TurnOver * ISNULL(lc.Rate, p.Rate)) = 0 THEN 0 ELSE SUM (w.winlost) / SUM (w.TurnOver * ISNULL(lc.Rate, p.Rate)) * 100 END AS Margin,
-						SUM (w.winlost) AS HouseWinlost
+						CASE 	WHEN SUM (w.TurnOver * ISNULL(lc.Rate, p.Rate)) = 0 
+								THEN 0 
+								ELSE SUM ((- w.winlost - w.OddsSpreadAdj) * ISNULL(lc.Rate, p.Rate) - w.OddsSpreadAdj)/SUM (w.TurnOver * ISNULL(lc.Rate, p.Rate)) * 100 
+								END AS Margin,
+						SUM ((- w.winlost - w.OddsSpreadAdj) * ISNULL(lc.Rate, p.Rate) - w.OddsSpreadAdj) AS HouseWinlost
 				FROM 	#wl w 
 				INNER JOIN #Sports s ON s.Sporttype = w.sporttype				
 				INNER JOIN #PartyChargeInfo p 
@@ -257,8 +257,11 @@ BEGIN
 
 				SELECT	0 AS orderId, 'All Sports' AS SportName, 2 AS LiveIndicator, w.IsSaba, 
 						SUM (w.TurnOver * ISNULL(lc.Rate, p.Rate)) AS TurnOver, 
-						CASE WHEN SUM (w.TurnOver * ISNULL(lc.Rate, p.Rate)) = 0 THEN 0 ELSE SUM (w.winlost) / SUM (w.TurnOver * ISNULL(lc.Rate, p.Rate)) * 100 END AS Margin , 
-						SUM (w.winlost) AS HouseWinlost
+						CASE 	WHEN SUM (w.TurnOver * ISNULL(lc.Rate, p.Rate)) = 0 
+								THEN 0 
+								ELSE SUM ((- w.winlost - w.OddsSpreadAdj) * ISNULL(lc.Rate, p.Rate) - w.OddsSpreadAdj)/SUM (w.TurnOver * ISNULL(lc.Rate, p.Rate)) * 100 
+								END AS Margin,
+						SUM ((- w.winlost - w.OddsSpreadAdj) * ISNULL(lc.Rate, p.Rate) - w.OddsSpreadAdj) AS HouseWinlost
 				FROM 	#wl w  
 				INNER JOIN #PartyChargeInfo p 
 					ON 	p.PartyId = w.PartyId 
