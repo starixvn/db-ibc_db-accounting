@@ -430,7 +430,7 @@ BEGIN
         EXEC Lrf_WriteLog_UserLog_RunSP_Wrapper @UserID = @UserID,  
                                                 @ActionID = 95047,  
                                                 @TrackingValue = @LogSPData,  
-                                       @Duration = @duration;  
+                                                @Duration = @duration;  
     END;  
     DROP TABLE #input;  
     DROP TABLE #inputTmp;  
