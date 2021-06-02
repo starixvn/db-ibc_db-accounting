@@ -201,14 +201,38 @@ BEGIN
 	END CATCH
 
 	-- Check MB 
-	IF EXISTS (SELECT 1 FROM #input WHERE MBDate <= @MoveBetsDay)
+	IF EXISTS (
+				SELECT 1 
+				FROM #input 
+				WHERE 
+					(IsBackDay1 = 1 AND DATEADD(DAY, -1, MBDate) <= @MoveBetsDay)
+					OR (IsBackDay2 = 1 AND DATEADD(DAY, -2, MBDate) <= @MoveBetsDay)
+					OR (IsBackDay3 = 1 AND DATEADD(DAY, -3, MBDate) <= @MoveBetsDay)
+					OR (IsBackDay4 = 1 AND DATEADD(DAY, -4, MBDate) <= @MoveBetsDay)
+					OR (IsBackDay5 = 1 AND DATEADD(DAY, -5, MBDate) <= @MoveBetsDay)
+					OR (IsBackDay6 = 1 AND DATEADD(DAY, -6, MBDate) <= @MoveBetsDay)
+					OR (IsBackDay7 = 1 AND DATEADD(DAY, -7, MBDate) <= @MoveBetsDay)
+				)
 	BEGIN
-			SELECT TOP(1)  @ValueError = CAST(MBDate as NVARCHAR(50))  
-			FROM #input
-			WHERE MBDate <= @MoveBetsDay
-
-			SELECT @ErrCode = 1000, @ErrMsg = 'You cannot adjust the schedule of date "' + @ValueError + ' . It has moved bet already.'
-			RETURN
+		SELECT TOP(1)  @ValueError = CASE WHEN (IsBackDay1 = 1 AND DATEADD(DAY, -1, MBDate) <= @MoveBetsDay) THEN CAST(DATEADD(DAY, -1, MBDate) as NVARCHAR(50))
+										    WHEN (IsBackDay2 = 1 AND DATEADD(DAY, -2, MBDate) <= @MoveBetsDay) THEN CAST(DATEADD(DAY, -2, MBDate) as NVARCHAR(50))
+											WHEN (IsBackDay3 = 1 AND DATEADD(DAY, -3, MBDate) <= @MoveBetsDay) THEN CAST(DATEADD(DAY, -3, MBDate) as NVARCHAR(50))
+											WHEN (IsBackDay4 = 1 AND DATEADD(DAY, -4, MBDate) <= @MoveBetsDay) THEN CAST(DATEADD(DAY, -4, MBDate) as NVARCHAR(50))
+											WHEN (IsBackDay5 = 1 AND DATEADD(DAY, -5, MBDate) <= @MoveBetsDay) THEN CAST(DATEADD(DAY, -5, MBDate) as NVARCHAR(50))
+											WHEN (IsBackDay6 = 1 AND DATEADD(DAY, -6, MBDate) <= @MoveBetsDay) THEN CAST(DATEADD(DAY, -6, MBDate) as NVARCHAR(50))
+											WHEN (IsBackDay7 = 1 AND DATEADD(DAY, -7, MBDate) <= @MoveBetsDay) THEN CAST(DATEADD(DAY, -7, MBDate) as NVARCHAR(50))
+										END
+		FROM #input
+		WHERE  (IsBackDay1 = 1 AND DATEADD(DAY, -1, MBDate) <= @MoveBetsDay)
+			OR (IsBackDay2 = 1 AND DATEADD(DAY, -2, MBDate) <= @MoveBetsDay)
+			OR (IsBackDay3 = 1 AND DATEADD(DAY, -3, MBDate) <= @MoveBetsDay)
+			OR (IsBackDay4 = 1 AND DATEADD(DAY, -4, MBDate) <= @MoveBetsDay)
+			OR (IsBackDay5 = 1 AND DATEADD(DAY, -5, MBDate) <= @MoveBetsDay)
+			OR (IsBackDay6 = 1 AND DATEADD(DAY, -6, MBDate) <= @MoveBetsDay)
+			OR (IsBackDay7 = 1 AND DATEADD(DAY, -7, MBDate) <= @MoveBetsDay)
+	
+		SELECT @ErrCode = 1000, @ErrMsg = 'You cannot adjust the schedule of date "' + @ValueError + ' . It has moved bet already.'
+		RETURN
 	END
 
 
