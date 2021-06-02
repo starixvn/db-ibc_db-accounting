@@ -48,7 +48,7 @@ BEGIN
 	IF EXISTS (
 			SELECT 1
 			FROM dbo.SystemSettings WITH(NOLOCK)
-			WHERE VValue 	= 1 
+			WHERE VValue 	<>  '0'
 			AND VName 		= 'isMovingBet_Local'
 			)
 	BEGIN
