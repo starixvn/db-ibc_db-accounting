@@ -403,13 +403,13 @@ BEGIN
 			FROM #input WHERE ID = @i
 
 			EXEC dbo.ExecRep_11  @MBDate = @MBDate, 
-								@IsBackDate1 = @IsBackDate1,
-								@IsBackDate2 = @IsBackDate2, 
-								@IsBackDate3 = @IsBackDate3, 
-								@IsBackDate4 = @IsBackDate4, 
-								@IsBackDate5 = @IsBackDate5, 
-								@IsBackDate6 = @IsBackDate6, 
-								@IsBackDate7 = @IsBackDate7 
+								@IsBackDay1 = @IsBackDay1,
+								@IsBackDay2 = @IsBackDay2,
+								@IsBackDay3 = @IsBackDay3,
+								@IsBackDay4 = @IsBackDay4,
+								@IsBackDay5 = @IsBackDay5,
+								@IsBackDay6 = @IsBackDay6,
+								@IsBackDay7 = @IsBackDay7
 			SELECT @i = @i + 1
 		END
 	END TRY
