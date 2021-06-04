@@ -364,36 +364,54 @@ BEGIN
 
 
 	BEGIN TRY
-		;MERGE dbo.Acc_ManualMovebetConfig AS t
-		USING #input AS s ON t.MBDate = s.MBDate
-		WHEN MATCHED THEN UPDATE 
-		SET  	 IsBackDay1 = s.IsBackDay1
-				,IsBackDay2 = s.IsBackDay2
-				,IsBackDay3 = s.IsBackDay3
-				,IsBackDay4 = s.IsBackDay4
-				,IsBackDay5 = s.IsBackDay5
-				,IsBackDay6 = s.IsBackDay6
-				,IsBackDay7 = s.IsBackDay7
-		WHEN NOT MATCHED THEN
-		INSERT (MBDate
-				,IsBackDay1   
-				,IsBackDay2 
-				,IsBackDay3 
-				,IsBackDay4 
-				,IsBackDay5 
-				,IsBackDay6 
-				,IsBackDay7 )
-		VALUES
-				(
-				s.MBDate
-				,s.IsBackDay1   
-				,s.IsBackDay2 
-				,s.IsBackDay3 
-				,s.IsBackDay4 
-				,s.IsBackDay5 
-				,s.IsBackDay6 
-				,s.IsBackDay7 
-				);
+		--Remove invalid data
+		DELETE t
+		FROM #input t 
+		WHERE MBDate IS NULL 
+			OR IsBackDay1 NOT IN (0,1)
+			OR IsBackDay2 NOT IN (0,1)
+			OR IsBackDay3 NOT IN (0,1)
+			OR IsBackDay4 NOT IN (0,1)
+			OR IsBackDay5 NOT IN (0,1)
+			OR IsBackDay6 NOT IN (0,1)
+			OR IsBackDay7 NOT IN (0,1)
+
+		DECLARE @i INT = 1
+
+		DECLARE @RowCnt INT
+		SELECT @RowCnt = COUNT(1) FROM #input;
+
+		DECLARE @MBDate			SMALLDATETIME,
+				@IsBackDay1		BIT,
+				@IsBackDay2		BIT,
+				@IsBackDay3		BIT,
+				@IsBackDay4		BIT,
+				@IsBackDay5		BIT,
+				@IsBackDay6		BIT,
+				@IsBackDay7		BIT 
+
+		WHILE @i <= @RowCnt
+		BEGIN
+			SELECT	@MBDate = MBDate,
+					@IsBackDay1 = IsBackDay1,
+					@IsBackDay2 = IsBackDay2,
+					@IsBackDay3 = IsBackDay3,
+					@IsBackDay4 = IsBackDay4,
+					@IsBackDay5 = IsBackDay5,
+					@IsBackDay6 = IsBackDay6,
+					@IsBackDay7 = IsBackDay7
+			FROM #input WHERE ID = @i
+
+			EXEC dbo.ExecRep_11  @MBDate = @MBDate, 
+								@IsBackDate1 = @IsBackDate1,
+								@IsBackDate2 = @IsBackDate2, 
+								@IsBackDate3 = @IsBackDate3, 
+								@IsBackDate4 = @IsBackDate4, 
+								@IsBackDate5 = @IsBackDate5, 
+								@IsBackDate6 = @IsBackDate6, 
+								@IsBackDate7 = @IsBackDate7 
+			SELECT @i = @i + 1
+		END
 	END TRY
 
 	BEGIN CATCH
