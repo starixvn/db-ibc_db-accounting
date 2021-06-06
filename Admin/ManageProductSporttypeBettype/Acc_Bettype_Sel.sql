@@ -17,6 +17,7 @@ Original:
 		- 20200328@Malcolm: NAP Manage Products/Sporttype/Bettype [Redmine: #131241]
 		- 20200917@Danny: NAP Manage Bettype add column LicSpreadBetTypeGroupId [Redmine: #131241]
 		- 20200930@Danny: NAP Manage Bettype add column Is3rdParty [Redmine: #131241]
+		- 20210526@EVan: NAP Manage VendorGlobal Setting  [Redmine: #153521]  
 		
 */
 BEGIN
@@ -148,8 +149,8 @@ BEGIN
 			RowNum
 	FROM #Tmp
 	WHERE @PageIndex < 0 OR @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd) 
-	
-	DROP TABLE #Tmp
+	ORDER BY typeid;
 
+	DROP TABLE #Tmp
 END
 
