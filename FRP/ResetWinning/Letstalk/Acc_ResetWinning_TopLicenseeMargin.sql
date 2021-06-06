@@ -1,6 +1,7 @@
 /*<info serverAlias="DBEXT-bodb02" executers="bodbAdminNet" isFunction="0" isNested="1"></info>*/
 ALTER PROCEDURE [dbo].[Acc_ResetWinning_TopLicenseeMargin]  
-	@Winlostdate SMALLDATETIME 
+	@Winlostdate SMALLDATETIME,
+	@BaseCurrency VARCHAR(10) = 'CNY'
 AS  
  
 /*	
@@ -108,14 +109,22 @@ BEGIN
 			   
 	------End Get Match ------			   
 	
-	------Get Base Currency CNY -------
+	------Get Base currency CNY ------- 
+		CREATE TABLE #ExchangeOANDA(
+				ExchangeDate    DATE
+			  , ExchangeID      INT
+			  , BaseCurrencyRate  FLOAT);
 
-	DECLARE @Exchange AS TABLE (ExchangeId INT, CNY float)
-	
-	INSERT INTO @Exchange (ExchangeId, CNY)
-	SELECT ExchangeId, CNY FROM dbo.ExchangeDailyOanda WITH (NOLOCK) WHERE ExchangeDate = @Winlostdate
-
-	------Enf Get Base Currency CNY -------
+			INSERT INTO #ExchangeOANDA(ExchangeDate
+								, ExchangeID
+								, BaseCurrencyRate)
+				 SELECT ExchangeDate
+					 , ExchangeID
+					 , BaseCurrencyRate
+				 FROM bodb02.dbo.LA_f_ExchangeDailySel
+					 (@Winlostdate, @Winlostdate, @BaseCurrency);
+			
+	------End of get Base currency CNY -------
 
 
 	-------------- Get Charge Info -------------------
@@ -169,7 +178,8 @@ BEGIN
 			Sporttype  		SMALLINT,  
 			TurnOver		DECIMAL(19,4),
 			Winloss			DECIMAL(19,4),
-			OddsSpreadAdj	MONEY
+			OddsSpreadAdj	MONEY,
+			BAComm			MONEY
 		) 	 
 
 					
@@ -193,15 +203,16 @@ BEGIN
 				--- Licensee
 				SUM (   CASE WHEN b.StatusID = 111 THEN 0 ELSE 
 						CASE WHEN ABS(modds) = 0.25 AND b.Bettype <> 29 THEN ABS(Stake) / 2 ELSE ABS(Stake) END END					
-						* e.CNY
+						* e.BaseCurrencyRate
 					)	 AS TurnOver,
 			
 				SUM (
-						(ISNULL(winlost,0)-ISNULL(actual_stake,0)) * e.CNY							
+						(ISNULL(winlost,0)-ISNULL(actual_stake,0)) * e.BaseCurrencyRate							
 					) AS Winloss,
-				SUM (CASE WHEN bettype = 999 THEN awinlost ELSE 0 END ) AS OddsSpreadAdj					
+				SUM (CASE WHEN bettype = 999 THEN awinlost ELSE 0 END ) AS OddsSpreadAdj,
+				SUM (Comm) AS BAComm 				
 		FROM dbo.bettrans b WITH (NOLOCK)
-		INNER JOIN @Exchange e ON e.ExchangeId = b.Currency
+		INNER JOIN #ExchangeOANDA e ON e.ExchangeId = b.Currency
 		INNER JOIN #Supers s ON s.Custid = b.srecommend
 		INNER JOIN #Match AS m 
 			ON 	b.MatchId = m.MatchId
@@ -256,25 +267,25 @@ BEGIN
 						SUM(t1.Turnover * ISNULL(lc.Rate, p.Rate)) desc
 				) RankTO,
 				SUM(ISNULL(t1.Turnover,0) * ISNULL(lc.Rate, p.Rate)) Turnover_AllSports,
-				SUM ((- t1.Winloss - t1.OddsSpreadAdj) * ISNULL(lc.Rate, p.Rate) - t1.OddsSpreadAdj) Winloss_AllSports,
+				SUM ((- t1.Winloss) * ISNULL(lc.Rate, p.Rate) - BAComm) Winloss_AllSports,
 				SUM(CASE WHEN t1.sporttype = 1 THEN ISNULL(t1.Turnover,0) * ISNULL(lc.Rate, p.Rate) ELSE 0 END) Turnover_Soccer,
-				SUM(CASE WHEN t1.sporttype = 1 THEN ((- t1.Winloss - t1.OddsSpreadAdj) * ISNULL(lc.Rate, p.Rate) - t1.OddsSpreadAdj) ELSE 0 END) Winloss_Soccer,
+				SUM(CASE WHEN t1.sporttype = 1 THEN ((- t1.Winloss) * ISNULL(lc.Rate, p.Rate)- BAComm) ELSE 0 END) Winloss_Soccer,
 				SUM(CASE WHEN t1.sporttype = 2 THEN ISNULL(t1.Turnover,0) * ISNULL(lc.Rate, p.Rate) ELSE 0 END) Turnover_Basketball,
-				SUM(CASE WHEN t1.sporttype = 2 THEN ((- t1.Winloss - t1.OddsSpreadAdj) * ISNULL(lc.Rate, p.Rate) - t1.OddsSpreadAdj) ELSE 0 END) Winloss_Basketball,
+				SUM(CASE WHEN t1.sporttype = 2 THEN ((- t1.Winloss ) * ISNULL(lc.Rate, p.Rate)- BAComm) ELSE 0 END) Winloss_Basketball,
 				SUM(CASE WHEN t1.sporttype = 43 THEN ISNULL(t1.Turnover,0) * ISNULL(lc.Rate, p.Rate) ELSE 0 END) Turnover_Esport,
-				SUM(CASE WHEN t1.sporttype = 43 THEN ((- t1.Winloss - t1.OddsSpreadAdj) * ISNULL(lc.Rate, p.Rate) - t1.OddsSpreadAdj) ELSE 0 END) Winloss_Esport,
+				SUM(CASE WHEN t1.sporttype = 43 THEN ((- t1.Winloss) * ISNULL(lc.Rate, p.Rate)- BAComm) ELSE 0 END) Winloss_Esport,
 				SUM(CASE WHEN t1.sporttype = 5 THEN ISNULL(t1.Turnover,0) * ISNULL(lc.Rate, p.Rate) ELSE 0 END) Turnover_Tennis,
-				SUM(CASE WHEN t1.sporttype = 5 THEN ((- t1.Winloss - t1.OddsSpreadAdj) * ISNULL(lc.Rate, p.Rate) - t1.OddsSpreadAdj) ELSE 0 END) Winloss_Tennis,		
+				SUM(CASE WHEN t1.sporttype = 5 THEN ((- t1.Winloss) * ISNULL(lc.Rate, p.Rate)- BAComm) ELSE 0 END) Winloss_Tennis,		
 				SUM(CASE WHEN sporttype = -2 THEN ISNULL(t1.Turnover,0) * ISNULL(lc.Rate, p.Rate) ELSE 0 END) Turnover_Parlay,
-				SUM(CASE WHEN sporttype = -2 THEN ((- t1.Winloss - t1.OddsSpreadAdj) * ISNULL(lc.Rate, p.Rate) - t1.OddsSpreadAdj) ELSE 0 END) Winloss_Parlay,
+				SUM(CASE WHEN sporttype = -2 THEN ((- t1.Winloss) * ISNULL(lc.Rate, p.Rate)- BAComm) ELSE 0 END) Winloss_Parlay,
 				SUM(CASE WHEN sporttype = -3 THEN ISNULL(t1.Turnover,0) * ISNULL(lc.Rate, p.Rate) ELSE 0 END) Turnover_SabaSoccer,
-				SUM(CASE WHEN sporttype = -3 THEN ((- t1.Winloss - t1.OddsSpreadAdj) * ISNULL(lc.Rate, p.Rate) - t1.OddsSpreadAdj) ELSE 0 END) Winloss_SabaSoccer,
+				SUM(CASE WHEN sporttype = -3 THEN ((- t1.Winloss) * ISNULL(lc.Rate, p.Rate)- BAComm) ELSE 0 END) Winloss_SabaSoccer,
 				SUM(CASE WHEN sporttype = -4 THEN ISNULL(t1.Turnover,0) * ISNULL(lc.Rate, p.Rate) ELSE 0 END) Turnover_SabaBasketball,
-				SUM(CASE WHEN sporttype = -4 THEN ((- t1.Winloss - t1.OddsSpreadAdj) * ISNULL(lc.Rate, p.Rate) - t1.OddsSpreadAdj) ELSE 0 END) Winloss_SabaBasketball,
+				SUM(CASE WHEN sporttype = -4 THEN ((- t1.Winloss) * ISNULL(lc.Rate, p.Rate)- BAComm) ELSE 0 END) Winloss_SabaBasketball,
 				SUM(CASE WHEN t1.sporttype not in (1, 2, 5, 43, -2, -3, -4, -5, -6) THEN ISNULL(t1.Turnover,0) * ISNULL(lc.Rate, p.Rate) ELSE 0 END) Turnover_Othersport,
-				SUM(CASE WHEN t1.sporttype not in (1, 2, 5, 43, -2, -3, -4, -5, -6) THEN ((- t1.Winloss - t1.OddsSpreadAdj) * ISNULL(lc.Rate, p.Rate) - t1.OddsSpreadAdj) ELSE 0 END) Winloss_Othersport
+				SUM(CASE WHEN t1.sporttype not in (1, 2, 5, 43, -2, -3, -4, -5, -6) THEN ((- t1.Winloss - t1.OddsSpreadAdj) * ISNULL(lc.Rate, p.Rate) - t1.OddsSpreadAdj- BAComm) ELSE 0 END) Winloss_Othersport
 			FROM #TicketDetail t1 
-			INNER JOIN #PartyChargeInfo p 
+			LEFT JOIN #PartyChargeInfo p 
 				ON 	p.PartyId = t1.PartyId 
 					AND p.Product3rdId = t1.Product3rdId					
 			LEFT JOIN #PartyChargeByCurrencyInfo lc 

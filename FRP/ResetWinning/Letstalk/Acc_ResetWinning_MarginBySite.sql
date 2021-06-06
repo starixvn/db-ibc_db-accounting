@@ -29,12 +29,12 @@ BEGIN
 
 	SELECT  @MinTransID_RNG = MIN (TransID) , @MaxTransID_RNG = MAX(TransID) 
 	FROM	dbo.BettransRNG WITH (NOLOCK)
-	WHERE	@winlostdate = @Winlostdate
+	WHERE	winlostdate = @Winlostdate
 
 
 	SELECT  @MinTransID_LC = MIN (TransID), @MaxTransID_LC = MAX(TransID) 
 	FROM	dbo.BettransLC WITH (NOLOCK)
-	WHERE	@winlostdate = @Winlostdate
+	WHERE	winlostdate = @Winlostdate
 
 
 	------Get Sport Bettype Matrix------

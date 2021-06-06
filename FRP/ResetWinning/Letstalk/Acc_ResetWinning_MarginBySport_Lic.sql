@@ -1,6 +1,7 @@
 /*<info serverAlias="DBEXT-bodb02" executers="bodbAdminNet" isFunction="0" isNested="1"></info>*/
 ALTER PROCEDURE [dbo].[Acc_ResetWinning_MarginBySport_Lic] 
-	@Winlostdate SMALLDATETIME 
+	@Winlostdate SMALLDATETIME ,
+	@BaseCurrency VARCHAR(10) = 'CNY'
 AS 
  
 /*	
@@ -51,7 +52,7 @@ BEGIN
 	INSERT INTO #SabaVirtualSportsLeague
 	SELECT leagueid
 	FROM dbo.League WITH (NOLOCK)
-	WHERE  LeagueGroupID IN (41, 42, 74, 108, 113)
+	WHERE  LeagueGroupID IN (42, 74, 108, 113)
 			/*((sporttype = 1 AND LeagueGroupID IN (41, 42, 74, 108))
 			OR (sporttype = 2 AND LeagueGroupID IN (42, 72)) 
 			OR (sporttype = 50 AND LeagueGroupID IN (42)) 
@@ -103,13 +104,23 @@ BEGIN
 		   ) m           
 	------End Get Match ------	
 		
+
 	------Get Base currency CNY ------- 
-		DECLARE @Exchange AS TABLE (ExchangeId INT, CNY float)
-		
-		INSERT INTO @Exchange (ExchangeId, CNY)
-		SELECT ExchangeId, CNY FROM dbo.ExchangeDailyOanda WITH (NOLOCK) WHERE ExchangeDate = @Winlostdate	 
+		CREATE TABLE #ExchangeOANDA(
+				ExchangeDate    DATE
+			  , ExchangeID      INT
+			  , BaseCurrencyRate  FLOAT);
+
+			INSERT INTO #ExchangeOANDA(ExchangeDate
+								, ExchangeID
+								, BaseCurrencyRate)
+				 SELECT ExchangeDate
+					 , ExchangeID
+					 , BaseCurrencyRate
+				 FROM bodb02.dbo.LA_f_ExchangeDailySel
+					 (@Winlostdate, @Winlostdate, @BaseCurrency);
+			
 	------End of get Base currency CNY -------
-	
 	
 	-------------- Get Charge Info -------------------
 	
@@ -125,17 +136,13 @@ BEGIN
 			AND c.Site NOT IN ('Saba789')
 			AND c.currency <> 20
 			
-		---- Get Charge Info ----
-		
-		DECLARE @PartyIds VARCHAR(MAX), @ProductCodes VARCHAR(MAX)
 		-- Get party list 
+		DECLARE @PartyIds VARCHAR(MAX), @ProductCodes VARCHAR(MAX)
+		
 		SELECT @PartyIds = COALESCE(@PartyIds + ',', '') + CONVERT(VARCHAR(10), p.PartyId) 
 		FROM #Supers p
 
-		-- Get product list
-		--SELECT @ProductCodes = COALESCE(@ProductCodes + ',', '') + CONVERT(VARCHAR(10), p.ProductPrefix)  
-		--FROM bodb_licensee.dbo.Product3rd p WITH (NOLOCK)  
-		
+		-- Get product list		
 		SELECT @ProductCodes = 'SB,BA'
 
 		-- Get charge rate
@@ -146,22 +153,7 @@ BEGIN
 		FROM bodb_licensee.dbo.LA_f_ChargeInfo (@PartyIds, @Winlostdate, @Winlostdate, @ProductCodes,'OA', 1) ci 
 		WHERE ci.DI_Rate > 0
 			AND ci.ChargeType = 1 
-
-		/*INSERT INTO #PartyChargeInfo (ChargeId, PartyId, Product3rdId, FromDate, ToDate, Rate, Bettype, ChargeType)					
-		SELECT DISTINCT ci.ChargeId, ci.PartyId, ci.ProductId AS Product3rdId, ci.FromDate, ci.ToDate, ci.DI_Rate AS Rate, 
-			  ISNULL(sbr.Bettype, ci.Bettype) AS Bettype, ci.ChargeType
-		FROM bodb_licensee.dbo.LA_f_ChargeInfo (@PartyIds, @Winlostdate, @Winlostdate, @ProductCodes,'OA', 1) ci
-			LEFT JOIN bodb_licensee.dbo.Sport_Bettype_Reference sbr WITH (NOLOCK) ON sbr.BettypeRef = ci.Bettype
-		WHERE ci.DI_Rate > 0
-			 AND (
-				ci.ChargeType = 1
-				OR ci.ChargeType IN (9, 10, 12) AND ci.ProductId = 11 -- GD
-				OR ci.ChargeType IN (6, 7) AND ci.ProductId = 15 -- CB
-				OR ci.ChargeType = 5 AND ci.ProductId = 25 -- CO
-				OR ci.ChargeType = 12 AND ci.ProductId = 39 -- SAG
-			)
-			*/			
-			
+ 
 		
 		CREATE TABLE #PartyChargeByCurrencyInfo (ChargeId INT, CurrencyId INT, Rate FLOAT)
 
@@ -169,15 +161,7 @@ BEGIN
 	    SELECT pc.ChargeId, pc.CurrencyId, pc.Rate
 		FROM #PartyChargeInfo ci
 			INNER JOIN bodb_Licensee.dbo.LA_ChargeRateByCurrency pc WITH (NOLOCK) ON ci.ChargeId = pc.ChargeId
-		
-		
-		
-		/*INSERT INTO #PartyChargeByCurrencyInfo (ChargeId, CurrencyId, Rate)		 
-	    SELECT pc.ChargeId, pc.CurrencyId, pc.Rate
-		FROM bodb_licensee.dbo.LA_f_ChargeInfo (@PartyIds, @Winlostdate, @Winlostdate, @ProductCodes,'OA', 1) ci
-			INNER JOIN bodb_Licensee.dbo.LA_ChargeRateByCurrency pc WITH (NOLOCK) ON ci.ChargeId = pc.ChargeId
-		WHERE ci.ChargeType = 1 AND ci.DI_Rate > 0
-	*/
+		 
 	---- End Get Charge Info ----	
 	
 	--------------------------------------------------------------------------------------------------------- 
@@ -191,7 +175,8 @@ BEGIN
 			IsSaba 			BIT	,			
 			TurnOver		MONEY,
 			Winlost			MONEY,
-			OddsSpreadAdj	MONEY
+			OddsSpreadAdj	MONEY,
+			BAComm 			MONEY
 		) 	 
 		INSERT INTO #wl ( PartyID, Currency, Product3rdId, Sporttype, LiveIndicator, IsSaba, TurnOver, winlost, OddsSpreadAdj)
 		SELECT  s.PartyID, b.Currency, 
@@ -202,15 +187,16 @@ BEGIN
 				---Base currency
 				SUM (   CASE WHEN b.StatusID = 111 THEN 0 ELSE 
 						CASE WHEN ABS(modds) = 0.25 AND b.Bettype <> 29 THEN ABS(Stake) / 2 ELSE  ABS(Stake) END END						
-						* e.CNY
+						* e.BaseCurrencyRate
 					)	 AS TurnOver,
 				SUM(
 						(ISNULL(winlost,0)-ISNULL(actual_stake,0)) 
-						* e.CNY				
+						* e.BaseCurrencyRate			
 					) AS winlost,
-				SUM (CASE WHEN bettype = 999 THEN awinlost ELSE 0 END ) AS OddsSpreadAdj
+				SUM (CASE WHEN bettype = 999 THEN awinlost ELSE 0 END ) AS OddsSpreadAdj,
+				SUM (Comm) AS BAComm 
  		FROM dbo.bettrans b WITH (NOLOCK)
-		INNER JOIN @Exchange e ON e.ExchangeId = b.Currency		
+		INNER JOIN #ExchangeOANDA e ON e.ExchangeId = b.Currency		
 		INNER JOIN #Supers s ON s.Custid = b.srecommend
 		INNER JOIN #Match AS m 
 			ON 	b.MatchId = m.MatchId
@@ -240,12 +226,12 @@ BEGIN
 						SUM (w.TurnOver * ISNULL(lc.Rate, p.Rate)) AS TurnOver, 
 						CASE 	WHEN SUM (w.TurnOver * ISNULL(lc.Rate, p.Rate)) = 0 
 								THEN 0 
-								ELSE SUM ((- w.winlost - w.OddsSpreadAdj) * ISNULL(lc.Rate, p.Rate) - w.OddsSpreadAdj)/SUM (w.TurnOver * ISNULL(lc.Rate, p.Rate)) * 100 
+								ELSE SUM ((- w.winlost - w.OddsSpreadAdj) * ISNULL(lc.Rate, p.Rate) - w.OddsSpreadAdj - BAComm)/SUM (w.TurnOver * ISNULL(lc.Rate, p.Rate)) * 100 
 								END AS Margin,
-						SUM ((- w.winlost - w.OddsSpreadAdj) * ISNULL(lc.Rate, p.Rate) - w.OddsSpreadAdj) AS HouseWinlost
+						SUM ((- w.winlost - w.OddsSpreadAdj) * ISNULL(lc.Rate, p.Rate) - w.OddsSpreadAdj - BAComm) AS HouseWinlost
 				FROM 	#wl w 
 				INNER JOIN #Sports s ON s.Sporttype = w.sporttype				
-				INNER JOIN #PartyChargeInfo p 
+				LEFT JOIN #PartyChargeInfo p 
 					ON 	p.PartyId = w.PartyId 
 					AND p.Product3rdId = w.Product3rdId					
 				LEFT JOIN #PartyChargeByCurrencyInfo lc 
@@ -259,11 +245,11 @@ BEGIN
 						SUM (w.TurnOver * ISNULL(lc.Rate, p.Rate)) AS TurnOver, 
 						CASE 	WHEN SUM (w.TurnOver * ISNULL(lc.Rate, p.Rate)) = 0 
 								THEN 0 
-								ELSE SUM ((- w.winlost - w.OddsSpreadAdj) * ISNULL(lc.Rate, p.Rate) - w.OddsSpreadAdj)/SUM (w.TurnOver * ISNULL(lc.Rate, p.Rate)) * 100 
+								ELSE SUM ((- w.winlost - w.OddsSpreadAdj) * ISNULL(lc.Rate, p.Rate) - w.OddsSpreadAdj- BAComm)/SUM (w.TurnOver * ISNULL(lc.Rate, p.Rate)) * 100 
 								END AS Margin,
-						SUM ((- w.winlost - w.OddsSpreadAdj) * ISNULL(lc.Rate, p.Rate) - w.OddsSpreadAdj) AS HouseWinlost
+						SUM ((- w.winlost - w.OddsSpreadAdj) * ISNULL(lc.Rate, p.Rate) - w.OddsSpreadAdj- BAComm) AS HouseWinlost
 				FROM 	#wl w  
-				INNER JOIN #PartyChargeInfo p 
+				LEFT JOIN #PartyChargeInfo p 
 					ON 	p.PartyId = w.PartyId 
 					AND p.Product3rdId = w.Product3rdId					
 				LEFT JOIN #PartyChargeByCurrencyInfo lc 
