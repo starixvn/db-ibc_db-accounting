@@ -126,21 +126,21 @@ BEGIN
 	
 		----- Get Supers List -----
 		CREATE TABLE #Supers (Custid INT, Site VARCHAR(20), PartyId INT)
-		
+				
 		INSERT INTO #Supers (CustId, Site, PartyId)
-		SELECT c.Custid, c.Site, p.PartyId 
-		FROM dbo.Dep_CustSuper c WITH (NOLOCK) 		
-		INNER JOIN bodb_licensee.dbo.OAS_Party p WITH (NOLOCK) ON p.PartyName = c.Site
-		INNER JOIN bodb_licensee.dbo.OAS_PartyDetail pd WITH (NOLOCK) ON pd.PartyID = p.PartyID
-		WHERE p.PartyType = 1 AND pd.IsDeposit = 1 
-			AND c.Site NOT IN ('Saba789')
-			AND c.currency <> 20
+		SELECT c.Custid, c.Site, ISNULL(p.PartyId,0) AS PartyId
+		FROM dbo.Dep_CustSuper c WITH (NOLOCK) 	
+		INNER JOIN bodb_Licensee.dbo.Licensees l WITH (NOLOCK) ON l.LicenseeName = c.site	
+		LEFT JOIN bodb_licensee.dbo.OAS_Party p WITH (NOLOCK) ON p.OldRefID = l.LicenseeID AND p.PartyType = 1  
+		LEFT JOIN bodb_licensee.dbo.OAS_PartyDetail pd WITH (NOLOCK) ON pd.PartyID = p.PartyID AND pd.IsDeposit = 1 
+		WHERE  c.Site NOT IN ('Saba789')
+			AND c.currency <> 20 
 			
 		-- Get party list 
 		DECLARE @PartyIds VARCHAR(MAX), @ProductCodes VARCHAR(MAX)
 		
 		SELECT @PartyIds = COALESCE(@PartyIds + ',', '') + CONVERT(VARCHAR(10), p.PartyId) 
-		FROM #Supers p
+		FROM (SELECT DISTINCT PartyId FROM #Supers) p 
 
 		-- Get product list		
 		SELECT @ProductCodes = 'SB,BA'
@@ -178,7 +178,7 @@ BEGIN
 			OddsSpreadAdj	MONEY,
 			BAComm 			MONEY
 		) 	 
-		INSERT INTO #wl ( PartyID, Currency, Product3rdId, Sporttype, LiveIndicator, IsSaba, TurnOver, winlost, OddsSpreadAdj)
+		INSERT INTO #wl ( PartyID, Currency, Product3rdId, Sporttype, LiveIndicator, IsSaba, TurnOver, winlost, OddsSpreadAdj,BAComm)
 		SELECT  s.PartyID, b.Currency, 
 				CASE WHEN ba.TransID IS NOT NULL THEN 3 ELSE 0 END AS Product3rdId,
 				CASE WHEN m.Sporttype IN (1, 2, 5, 43, 50, -29) THEN m.Sporttype ELSE 0 END AS Sporttype, 
@@ -187,16 +187,16 @@ BEGIN
 				---Base currency
 				SUM (   CASE WHEN b.StatusID = 111 THEN 0 ELSE 
 						CASE WHEN ABS(modds) = 0.25 AND b.Bettype <> 29 THEN ABS(Stake) / 2 ELSE  ABS(Stake) END END						
-						* e.BaseCurrencyRate
+						* CASE WHEN @BaseCurrency = '' THEN a.actualrate ELSE e.BaseCurrencyRate END
 					)	 AS TurnOver,
 				SUM(
 						(ISNULL(winlost,0)-ISNULL(actual_stake,0)) 
-						* e.BaseCurrencyRate			
+						* CASE WHEN @BaseCurrency = '' THEN a.actualrate ELSE e.BaseCurrencyRate END	
 					) AS winlost,
 				SUM (CASE WHEN bettype = 999 THEN awinlost ELSE 0 END ) AS OddsSpreadAdj,
 				SUM (Comm) AS BAComm 
  		FROM dbo.bettrans b WITH (NOLOCK)
-		INNER JOIN #ExchangeOANDA e ON e.ExchangeId = b.Currency		
+		LEFT JOIN #ExchangeOANDA e ON e.ExchangeId = b.Currency		
 		INNER JOIN #Supers s ON s.Custid = b.srecommend
 		INNER JOIN #Match AS m 
 			ON 	b.MatchId = m.MatchId
@@ -220,7 +220,7 @@ BEGIN
 				 				   
 		-----------------------------------------------------------------------------------------------
 		----- Get Data -----
-		SELECt  a.SportName, a.LiveIndicator, a.IsSaba, a.Turnover, a.Margin, a.HouseWinlost
+		SELECt  a.SportName, a.LiveIndicator, a.IsSaba, a.Turnover, - a.Margin as Margin, -a.HouseWinlost as HouseWinlost
 		FROM  (
 				SELECT	s.orderId, s.SportName, w.LiveIndicator, w.IsSaba, 
 						SUM (w.TurnOver * ISNULL(lc.Rate, p.Rate)) AS TurnOver, 
@@ -268,6 +268,7 @@ BEGIN
 	DROP TABLE #SabaVirtualSportsLeague 
 	DROP TABLE #PartyChargeInfo
 	DROP TABLE #PartyChargeByCurrencyInfo
+	DROP TABLE #ExchangeOANDA
 		
 END
 

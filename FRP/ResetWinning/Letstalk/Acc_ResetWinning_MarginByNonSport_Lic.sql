@@ -62,7 +62,7 @@ BEGIN
 			ON p.ProductID = s.ProductID
 	LEFT JOIN bodb_Licensee.dbo.Product3rd d WITH (NOLOCK) 
 			ON p.ProductPrefix = d.ProductPrefix
-	WHERE  p.Enabled = 1  
+	WHERE  (p.Enabled = 1 OR d.Enabled = 1)
 		AND (s.ProductID <> 1 
 			OR s.Bettype BETWEEN 801 and 806  ---'MG-SuperLive'
 			OR s.Bettype = 38    ----'Bet Builder' 
@@ -114,13 +114,14 @@ BEGIN
 		CREATE TABLE #Supers (Custid INT, Site VARCHAR(50), PartyId INT)
 		
 		INSERT INTO #Supers (CustId, Site, PartyId)
-		SELECT c.Custid, c.Site, p.PartyId 
-		FROM dbo.Dep_CustSuper c WITH (NOLOCK) 		
-		INNER JOIN bodb_licensee.dbo.OAS_Party p WITH (NOLOCK) ON p.PartyName = c.Site
-		INNER JOIN bodb_licensee.dbo.OAS_PartyDetail pd WITH (NOLOCK) ON pd.PartyID = p.PartyID
-		WHERE p.PartyType = 1 AND pd.IsDeposit = 1 
-			AND c.Site NOT IN ('Saba789')
-			AND c.currency <> 20
+		SELECT c.Custid, c.Site, ISNULL(p.PartyId,0) AS PartyId
+		FROM dbo.Dep_CustSuper c WITH (NOLOCK) 	
+		INNER JOIN bodb_Licensee.dbo.Licensees l WITH (NOLOCK) ON l.LicenseeName = c.site	
+		LEFT JOIN bodb_licensee.dbo.OAS_Party p WITH (NOLOCK) ON p.OldRefID = l.LicenseeID AND p.PartyType = 1  
+		LEFT JOIN bodb_licensee.dbo.OAS_PartyDetail pd WITH (NOLOCK) ON pd.PartyID = p.PartyID AND pd.IsDeposit = 1 
+		WHERE  c.Site NOT IN ('Saba789')
+			AND c.currency <> 20 
+			
 			
 		--- Get party list		
 		DECLARE @PartyIds VARCHAR(MAX) 	 
@@ -160,7 +161,7 @@ BEGIN
 			Currency		INT,	
 			Product3rdId	INT,
 			SubProduct 		VARCHAR(256),			
-			Bettype			INT,
+			BettypeType		VARCHAR(50),
 			TurnOver		MONEY,
 			Winlost			MONEY,   
 			Comm			MONEY,
@@ -171,26 +172,27 @@ BEGIN
 
 
 		------1. Bettrans
-		INSERT INTO #WL (PartyID, Currency, Product3rdId, SubProduct, Bettype, TurnOver, Winlost, Comm, FullContribution, HouseContribution, FreeBet) 
+		INSERT INTO #WL (PartyID, Currency, Product3rdId, SubProduct, BettypeType, TurnOver, Winlost, Comm, FullContribution, HouseContribution, FreeBet) 
 		SELECT  s.PartyID, b.Currency, 				
 				CASE WHEN sb.productID = 1  
 					THEN CASE WHEN ba.TransID IS NOT NULL THEN 3 ELSE 0 END 
 					ELSE sb.Product3rdID END AS Product3rdId, 
 				sb.SubProduct, 
-				0 AS Bettype,					
-				SUM (   CASE WHEN b.StatusID = 111 OR b.Bettype IN (911,912) THEN 0 ELSE
-						CASE WHEN ABS(modds) = 0.25 AND b.Bettype <> 29 THEN ABS(Stake) / 2 ELSE  ABS(Stake) END END						
+				'' AS BettypeType,					
+				SUM (   CASE 
+							 WHEN b.StatusID = 111 OR b.Bettype IN (911,912) THEN 0
+						     WHEN ABS(modds) = 0.25 AND b.Bettype <> 29 THEN ABS(Stake) / 2 ELSE  ABS(Stake) END 						
 					) AS TurnOver,
-				SUM(	CASE WHEN sb.ProductId = 15 
-							THEN (ISNULL(winlost, 0) - ISNULL(actual_stake, 0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)) 
-							ELSE (ISNULL(winlost,0)-ISNULL(actual_stake,0))
+				SUM(	CASE WHEN sb.ProductId IN (15, 25)
+							THEN (ISNULL(winlost,0) - ISNULL(actual_stake,0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)) 
+							ELSE (ISNULL(winlost,0) - ISNULL(actual_stake,0))
 							END									 
 					) AS winlost,			
 				SUM (CASE WHEN sb.productID = 1  
 							THEN CASE WHEN ba.TransID IS NOT NULL THEN b.Comm ELSE 0 END   --- BA Commision
 						  WHEN sb.productID = 31
 							THEN playercomm + comm     --- Charge comm of Exchange product 
-					ELSE 0 END) AS Comm,
+						  ELSE 0 END) AS Comm,
 				0 AS FullContribution,
 				0 AS HouseContribution,
 				0 AS FreeBet
@@ -210,14 +212,14 @@ BEGIN
 				CASE WHEN sb.productID = 1  
 					THEN CASE WHEN ba.TransID IS NOT NULL THEN 3 ELSE 0 END 
 					ELSE sb.Product3rdID END  			 
-
+ 
 			 
 		------2. BettransRNG
-		INSERT INTO #WL (PartyID, Currency, Product3rdId, SubProduct, Bettype, TurnOver, Winlost, Comm, FullContribution, HouseContribution, FreeBet) 
+		INSERT INTO #WL (PartyID, Currency, Product3rdId, SubProduct, BettypeType, TurnOver, Winlost, Comm, FullContribution, HouseContribution, FreeBet) 
 		SELECT  s.PartyID, b.Currency, 				
 				sb.Product3rdID AS Product3rdId, 
 				sb.SubProduct, 
-				0 AS Bettype,	 
+				'' AS BettypeType,	 
 				SUM (   CASE WHEN b.StatusID = 111 THEN 0 ELSE ABS(Stake) END 						  
 					)	 AS TurnOver,		 
 				SUM(
@@ -255,11 +257,11 @@ BEGIN
 				sb.SubProduct  	
 	
 		------3. BettransLC
-		INSERT INTO #WL (PartyID, Currency, Product3rdId, SubProduct, Bettype, TurnOver, Winlost, Comm, FullContribution, HouseContribution, FreeBet) 
+		INSERT INTO #WL (PartyID, Currency, Product3rdId, SubProduct, BettypeType, TurnOver, Winlost, Comm, FullContribution, HouseContribution, FreeBet) 
 		SELECT  s.PartyID, b.Currency, 				
 				sb.Product3rdID AS Product3rdId, 
 				sb.SubProduct, 
-				CASE WHEN sb.SubProduct = 'Tip' THEN sb.bettype ELSE 0 END AS Bettype,	  
+				CASE WHEN sb.SubProduct = 'Tip' THEN sb.SubProduct ELSE '' END AS BettypeType,	  
 				SUM (   CASE WHEN b.StatusID = 111 THEN 0 ELSE ABS(Stake) END
 					)	 AS TurnOver,				
 					
@@ -281,7 +283,7 @@ BEGIN
 		GROUP BY s.PartyID, b.Currency, 				
 				sb.Product3rdID , 
 				sb.SubProduct,
-				CASE WHEN sb.SubProduct = 'Tip' THEN sb.bettype ELSE 0 END
+				CASE WHEN sb.SubProduct = 'Tip' THEN sb.SubProduct ELSE '' END
 	
 		-----------------------------------------------------------------------------------------------
 	
@@ -290,9 +292,17 @@ BEGIN
 		CREATE TABLE #Winlost (Product3rdId INT, ProductName VARCHAR(50), TurnOver MONEY, Margin MONEY , HouseWinlost MONEY )  
 					
 		INSERT INTO #Winlost (Product3rdId, ProductName, TurnOver, Margin, HouseWinlost)						
-		SELECT  w.Product3rdId, CASE WHEN w.Product3rdId IN (0,1) AND w.SubProduct <> '' THEN w.SubProduct ELSE rd.ProductName END AS ProductName,
-				SUM(ISNULL(w.TurnOver,0)* ISNULL(lc.Rate, p.Rate) * e.BaseCurrencyRate ) AS TurnOver, 				
-				(CASE WHEN SUM(ISNULL(w.TurnOver,0)* ISNULL(lc.Rate, p.Rate) * e.BaseCurrencyRate ) = 0 
+		SELECT  w.Product3rdId, 
+				CASE WHEN w.Product3rdId IN (0,1) AND w.SubProduct <> '' THEN w.SubProduct ELSE rd.ProductName END AS ProductName,		 
+				SUM(CASE WHEN w.Product3rdId IN (15, 25, 37) 
+						THEN ISNULL(w.TurnOver,0)   ---- tpositiontaking = 0 
+						ELSE ISNULL(w.TurnOver,0)* ISNULL(lc.Rate, p.Rate) 
+						END * CASE WHEN @BaseCurrency = '' THEN a.actualrate ELSE e.BaseCurrencyRate END) AS TurnOver, 
+				
+				CASE WHEN 	SUM(CASE WHEN w.Product3rdId IN (15, 25, 37) 
+								THEN ISNULL(w.TurnOver,0)    
+								ELSE ISNULL(w.TurnOver,0)* ISNULL(lc.Rate, p.Rate)  
+								END * CASE WHEN @BaseCurrency = '' THEN a.actualrate ELSE e.BaseCurrencyRate END)  = 0 
 					THEN 0 
 					ELSE  SUM (CASE
 								WHEN w.Product3rdId IN (15, 25) THEN -w.Winlost  ---- House WL of Colossusbet and Cashout
@@ -300,28 +310,35 @@ BEGIN
 								ELSE
 									(- w.Winlost - (w.FullContribution - w.HouseContribution)) * ISNULL(lc.Rate, p.Rate)
 									- w.HouseContribution  - FreeBet - CASE WHEN w.Product3rdId IN (3,31) THEN w.Comm ELSE 0 END -- exchange product & BAComm
-									END * e.BaseCurrencyRate 
+									END * CASE WHEN @BaseCurrency = '' THEN a.actualrate ELSE e.BaseCurrencyRate END
 								) /
-							SUM(ISNULL(w.TurnOver,0)* ISNULL(lc.Rate, p.Rate) * e.BaseCurrencyRate ) * 100 END) 			
+							SUM(CASE WHEN w.Product3rdId IN (15, 25, 37) 
+								THEN ISNULL(w.TurnOver,0)     
+								ELSE ISNULL(w.TurnOver,0)* ISNULL(lc.Rate, p.Rate)  
+								END * CASE WHEN @BaseCurrency = '' THEN a.actualrate ELSE e.BaseCurrencyRate END) 
+								* 100 
+					END 			
 					AS Margin, 				
 				SUM(CASE
-						WHEN w.Product3rdId IN (15, 25) THEN -w.Winlost  ---- House WL of Colossusbet and Cashout
-						WHEN w.Product3rdId IN (37) THEN -w.Winlost   -- Member WL of saba promotion 
+						WHEN w.Product3rdId IN (15, 25, 37) THEN -w.Winlost  ---- House WL of Colossusbet and Cashout, Member WL of saba promotion 
 						ELSE
 							(- w.Winlost - (w.FullContribution - w.HouseContribution)) * ISNULL(lc.Rate, p.Rate)
-							- w.HouseContribution - FreeBet - CASE WHEN w.Product3rdId IN (3,31) THEN w.Comm ELSE 0 END -- exchange product & BAComm
-					END * e.BaseCurrencyRate )
+							- w.HouseContribution - FreeBet 
+							- (CASE	WHEN w.Product3rdId IN (3) THEN w.Comm     -- BA Comm of bet builder
+									WHEN w.Product3rdId IN (31) THEN w.Comm * ISNULL(lc.Rate, p.Rate)    --- exchange product
+									ELSE 0 END ) -- exchange product & BAComm
+					END * CASE WHEN @BaseCurrency = '' THEN a.actualrate ELSE e.BaseCurrencyRate END )
 					AS HouseWinlost 
 		FROM	#wl w 
 		LEFT JOIN bodb_Licensee.dbo.Product3rd rd WITH (NOLOCK) ON rd.ProductID = w.Product3rdId
-		INNER JOIN #ExchangeOANDA e ON e.ExchangeID = w.Currency					
+		LEFT JOIN #ExchangeOANDA e ON e.ExchangeID = w.Currency					
 		LEFT JOIN #PartyChargeInfo p 
 					ON 	p.PartyId = w.PartyId 
 					AND p.Product3rdId = w.Product3rdId
 					AND p.Bettype = -1
  					AND (
-						(w.Product3rdId IN (39) AND p.ChargeType = 12 AND w.Bettype <> 0)
-						 OR (w.Product3rdId IN (39) AND p.ChargeType = 1 AND w.Bettype = 0)
+						(w.Product3rdId IN (39) AND p.ChargeType = 12 AND w.BettypeType = 'Tip')
+						 OR (w.Product3rdId IN (39) AND p.ChargeType = 1 AND w.BettypeType = '')
 						 OR (w.Product3rdId NOT IN (39))
 						)					
 		LEFT JOIN #PartyChargeByCurrencyInfo lc 
@@ -331,7 +348,7 @@ BEGIN
 
 		
 		----- Get Data -----
-		SELECT  a.ProductName, a.TurnOver, a.Margin, a.HouseWinlost
+		SELECT  a.ProductName, a.TurnOver, -a.Margin AS Margin , -a.HouseWinlost AS HouseWinlost
 		FROM  (
 				SELECT	w.Product3rdId, w.ProductName, 
 						w.TurnOver, 
@@ -352,6 +369,10 @@ BEGIN
 	DROP TABLE #SportBettype
 	DROP TABLE #WL
 	DROP TABLE #Supers
+	DROP TABLE #Winlost 
+	DROP TABLE #ExchangeOANDA
+	DROP TABLE #PartyChargeInfo
+	DROP TABLE #PartyChargeByCurrencyInfo
 		
 END
 

@@ -133,20 +133,21 @@ BEGIN
 		CREATE TABLE #Supers (Custid INT, Site VARCHAR(20), PartyId INT)
 		
 		INSERT INTO #Supers (CustId, Site, PartyId)
-		SELECT c.Custid, c.Site, p.PartyId 
-		FROM dbo.Dep_CustSuper c WITH (NOLOCK) 		
-		INNER JOIN bodb_licensee.dbo.OAS_Party p WITH (NOLOCK) ON p.PartyName = c.Site
-		INNER JOIN bodb_licensee.dbo.OAS_PartyDetail pd WITH (NOLOCK) ON pd.PartyID = p.PartyID
-		WHERE p.PartyType = 1 AND pd.IsDeposit = 1 
-			AND c.Site NOT IN ('Saba789')
-			AND c.currency <> 20
+		SELECT c.Custid, c.Site, ISNULL(p.PartyId,0) AS PartyId
+		FROM dbo.Dep_CustSuper c WITH (NOLOCK) 	
+		INNER JOIN bodb_Licensee.dbo.Licensees l WITH (NOLOCK) ON l.LicenseeName = c.site	
+		LEFT JOIN bodb_licensee.dbo.OAS_Party p WITH (NOLOCK) ON p.OldRefID = l.LicenseeID AND p.PartyType = 1  
+		LEFT JOIN bodb_licensee.dbo.OAS_PartyDetail pd WITH (NOLOCK) ON pd.PartyID = p.PartyID AND pd.IsDeposit = 1 
+		WHERE  c.Site NOT IN ('Saba789')
+			AND c.currency <> 20 
+			
 			
 		---- Get Charge Info ----
 		
 		DECLARE @PartyIds VARCHAR(MAX), @ProductCodes VARCHAR(MAX)
 		-- Get party list 
 		SELECT @PartyIds = COALESCE(@PartyIds + ',', '') + CONVERT(VARCHAR(10), p.PartyId) 
-		FROM #Supers p
+		FROM (SELECT DISTINCT PartyId FROM  #Supers) p 
 
 		-- Get product list
 		SELECT @ProductCodes = 'SB,BA'
@@ -203,16 +204,16 @@ BEGIN
 				--- Licensee
 				SUM (   CASE WHEN b.StatusID = 111 THEN 0 ELSE 
 						CASE WHEN ABS(modds) = 0.25 AND b.Bettype <> 29 THEN ABS(Stake) / 2 ELSE ABS(Stake) END END					
-						* e.BaseCurrencyRate
+						*  CASE WHEN @BaseCurrency = '' THEN a.actualrate ELSE e.BaseCurrencyRate END
 					)	 AS TurnOver,
 			
 				SUM (
-						(ISNULL(winlost,0)-ISNULL(actual_stake,0)) * e.BaseCurrencyRate							
+						(ISNULL(winlost,0)-ISNULL(actual_stake,0)) * CASE WHEN @BaseCurrency = '' THEN a.actualrate ELSE e.BaseCurrencyRate END					
 					) AS Winloss,
 				SUM (CASE WHEN bettype = 999 THEN awinlost ELSE 0 END ) AS OddsSpreadAdj,
 				SUM (Comm) AS BAComm 				
 		FROM dbo.bettrans b WITH (NOLOCK)
-		INNER JOIN #ExchangeOANDA e ON e.ExchangeId = b.Currency
+		LEFT JOIN #ExchangeOANDA e ON e.ExchangeId = b.Currency
 		INNER JOIN #Supers s ON s.Custid = b.srecommend
 		INNER JOIN #Match AS m 
 			ON 	b.MatchId = m.MatchId
@@ -306,5 +307,8 @@ BEGIN
 	DROP TABLE #Detail	
 	DROP TABLE #TicketDetail
 	DROP TABLE #SabaVirtualSportsLeague
+	DROP TABLE #ExchangeOANDA
+	DROP TABLE #PartyChargeInfo
+	DROP TABLE #PartyChargeByCurrencyInfo
 		
 END
