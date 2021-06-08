@@ -297,12 +297,12 @@ BEGIN
 				SUM(CASE WHEN w.Product3rdId IN (15, 25, 37) 
 						THEN ISNULL(w.TurnOver,0)   ---- tpositiontaking = 0 
 						ELSE ISNULL(w.TurnOver,0)* ISNULL(lc.Rate, p.Rate) 
-						END * CASE WHEN @BaseCurrency = '' THEN a.actualrate ELSE e.BaseCurrencyRate END) AS TurnOver, 
+						END * CASE WHEN @BaseCurrency = '' THEN b.actualrate ELSE e.BaseCurrencyRate END) AS TurnOver, 
 				
 				CASE WHEN 	SUM(CASE WHEN w.Product3rdId IN (15, 25, 37) 
 								THEN ISNULL(w.TurnOver,0)    
 								ELSE ISNULL(w.TurnOver,0)* ISNULL(lc.Rate, p.Rate)  
-								END * CASE WHEN @BaseCurrency = '' THEN a.actualrate ELSE e.BaseCurrencyRate END)  = 0 
+								END * CASE WHEN @BaseCurrency = '' THEN b.actualrate ELSE e.BaseCurrencyRate END)  = 0 
 					THEN 0 
 					ELSE  SUM (CASE
 								WHEN w.Product3rdId IN (15, 25) THEN -w.Winlost  ---- House WL of Colossusbet and Cashout
@@ -310,12 +310,12 @@ BEGIN
 								ELSE
 									(- w.Winlost - (w.FullContribution - w.HouseContribution)) * ISNULL(lc.Rate, p.Rate)
 									- w.HouseContribution  - FreeBet - CASE WHEN w.Product3rdId IN (3,31) THEN w.Comm ELSE 0 END -- exchange product & BAComm
-									END * CASE WHEN @BaseCurrency = '' THEN a.actualrate ELSE e.BaseCurrencyRate END
+									END * CASE WHEN @BaseCurrency = '' THEN b.actualrate ELSE e.BaseCurrencyRate END
 								) /
 							SUM(CASE WHEN w.Product3rdId IN (15, 25, 37) 
 								THEN ISNULL(w.TurnOver,0)     
 								ELSE ISNULL(w.TurnOver,0)* ISNULL(lc.Rate, p.Rate)  
-								END * CASE WHEN @BaseCurrency = '' THEN a.actualrate ELSE e.BaseCurrencyRate END) 
+								END * CASE WHEN @BaseCurrency = '' THEN b.actualrate ELSE e.BaseCurrencyRate END) 
 								* 100 
 					END 			
 					AS Margin, 				
@@ -327,7 +327,7 @@ BEGIN
 							- (CASE	WHEN w.Product3rdId IN (3) THEN w.Comm     -- BA Comm of bet builder
 									WHEN w.Product3rdId IN (31) THEN w.Comm * ISNULL(lc.Rate, p.Rate)    --- exchange product
 									ELSE 0 END ) -- exchange product & BAComm
-					END * CASE WHEN @BaseCurrency = '' THEN a.actualrate ELSE e.BaseCurrencyRate END )
+					END * CASE WHEN @BaseCurrency = '' THEN b.actualrate ELSE e.BaseCurrencyRate END )
 					AS HouseWinlost 
 		FROM	#wl w 
 		LEFT JOIN bodb_Licensee.dbo.Product3rd rd WITH (NOLOCK) ON rd.ProductID = w.Product3rdId

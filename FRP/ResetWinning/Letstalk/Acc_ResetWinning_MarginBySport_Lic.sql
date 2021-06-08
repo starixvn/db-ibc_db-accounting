@@ -187,11 +187,11 @@ BEGIN
 				---Base currency
 				SUM (   CASE WHEN b.StatusID = 111 THEN 0 ELSE 
 						CASE WHEN ABS(modds) = 0.25 AND b.Bettype <> 29 THEN ABS(Stake) / 2 ELSE  ABS(Stake) END END						
-						* CASE WHEN @BaseCurrency = '' THEN a.actualrate ELSE e.BaseCurrencyRate END
+						* CASE WHEN @BaseCurrency = '' THEN b.actualrate ELSE e.BaseCurrencyRate END
 					)	 AS TurnOver,
 				SUM(
 						(ISNULL(winlost,0)-ISNULL(actual_stake,0)) 
-						* CASE WHEN @BaseCurrency = '' THEN a.actualrate ELSE e.BaseCurrencyRate END	
+						* CASE WHEN @BaseCurrency = '' THEN b.actualrate ELSE e.BaseCurrencyRate END	
 					) AS winlost,
 				SUM (CASE WHEN bettype = 999 THEN awinlost ELSE 0 END ) AS OddsSpreadAdj,
 				SUM (Comm) AS BAComm 

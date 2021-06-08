@@ -191,7 +191,7 @@ BEGIN
 			Winloss			DECIMAL(19,4)
 		) 
 
-		INSERT INTO #TicketDetail (PartyID, Currency, Site, Product3rdId, Sporttype, TurnOver, Winloss, OddsSpreadAdj)
+		INSERT INTO #TicketDetail (PartyID, Currency, Site, Product3rdId, Sporttype, TurnOver, Winloss, OddsSpreadAdj, BAComm)
 		SELECT  s.PartyID, b.Currency, s.Site, 
 				CASE WHEN ba.TransID IS NOT NULL THEN 3 ELSE 0 END AS Product3rdId,
 				CASE WHEN b.bettype in (9,29) THEN -2 
@@ -204,11 +204,11 @@ BEGIN
 				--- Licensee
 				SUM (   CASE WHEN b.StatusID = 111 THEN 0 ELSE 
 						CASE WHEN ABS(modds) = 0.25 AND b.Bettype <> 29 THEN ABS(Stake) / 2 ELSE ABS(Stake) END END					
-						*  CASE WHEN @BaseCurrency = '' THEN a.actualrate ELSE e.BaseCurrencyRate END
+						*  CASE WHEN @BaseCurrency = '' THEN b.actualrate ELSE e.BaseCurrencyRate END
 					)	 AS TurnOver,
 			
 				SUM (
-						(ISNULL(winlost,0)-ISNULL(actual_stake,0)) * CASE WHEN @BaseCurrency = '' THEN a.actualrate ELSE e.BaseCurrencyRate END					
+						(ISNULL(winlost,0)-ISNULL(actual_stake,0)) * CASE WHEN @BaseCurrency = '' THEN b.actualrate ELSE e.BaseCurrencyRate END					
 					) AS Winloss,
 				SUM (CASE WHEN bettype = 999 THEN awinlost ELSE 0 END ) AS OddsSpreadAdj,
 				SUM (Comm) AS BAComm 				
@@ -300,7 +300,7 @@ BEGIN
 		ORDER BY MIN(RankTO)
 		 
   
-
+	DROP TABLE #Supers
 	DROP TABLE #Bettype
     DROP TABLE #Sports
 	DROP TABLE #Match 

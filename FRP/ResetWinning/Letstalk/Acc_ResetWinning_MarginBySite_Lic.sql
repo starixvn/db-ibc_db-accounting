@@ -283,7 +283,7 @@ BEGIN
 		SELECT  w.Site, w.SB, 
 				SUM(CASE WHEN w.Product3rdId IN (15, 25, 37) 
 						THEN ISNULL(w.TurnOver,0)* e.BaseCurrencyRate   ---- tpositiontaking = 0 
-						ELSE ISNULL(w.TurnOver,0)* ISNULL(lc.Rate, p.Rate) * CASE WHEN @BaseCurrency = '' THEN a.actualrate ELSE e.BaseCurrencyRate END  
+						ELSE ISNULL(w.TurnOver,0)* ISNULL(lc.Rate, p.Rate) * CASE WHEN @BaseCurrency = '' THEN b.actualrate ELSE e.BaseCurrencyRate END  
 						END) AS TurnOver, 	
 				SUM(CASE
 					WHEN w.Product3rdId IN (15, 25, 37) THEN -w.Winlost  ---- House WL of Colossusbet and Cashout, Member WL of saba promotion 
@@ -293,7 +293,7 @@ BEGIN
 						- (CASE	WHEN w.Product3rdId IN (3) THEN w.Comm     -- BA Comm of bet builder
 								WHEN w.Product3rdId IN (31) THEN w.Comm * ISNULL(lc.Rate, p.Rate)    --- exchange product
 								ELSE 0 END ) -- exchange product & BAComm
-				END * CASE WHEN @BaseCurrency = '' THEN a.actualrate ELSE e.BaseCurrencyRate END ) AS Winlost  
+				END * CASE WHEN @BaseCurrency = '' THEN b.actualrate ELSE e.BaseCurrencyRate END ) AS Winlost  
 		FROM	#wl w 
 		LEFT JOIN #ExchangeOANDA e ON e.ExchangeID = w.Currency					
 		LEFT JOIN #PartyChargeInfo p 
