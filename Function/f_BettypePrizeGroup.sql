@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02,DBEXT-CustDB,DBACC-bodb02" executers="bodbAdminNet,bodbExtAccNet" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBAGE-bodb02,DBEXT-bodb02,DBACC-bodb02" selecters="bodbAdminNet,bodbLicenseeNet" isFunction="1" isNested="1"></info>*/
 CREATE FUNCTION [dbo].[f_BettypePrizeGroup]()
 RETURNS TABLE
 AS

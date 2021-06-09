@@ -171,24 +171,29 @@ BEGIN
 					ELSE sb.Product3rdID END AS Product3rdId, 
 				'' AS BettypeType,						
 				SUM (   CASE WHEN b.StatusID = 111 OR b.Bettype IN (911,912) THEN 0 ELSE
-						CASE WHEN ABS(modds) = 0.25 AND b.Bettype <> 29 THEN ABS(Stake) / 2 ELSE  ABS(Stake) END END						
+						CASE WHEN ABS(modds) = 0.25 AND b.Bettype <> 29 THEN ABS(Stake) / 2 ELSE  ABS(Stake) END END
+						* CASE WHEN @BaseCurrency = '' THEN b.actualrate ELSE e.BaseCurrencyRate END 						
 					) AS TurnOver,
 				SUM(	CASE WHEN sb.ProductId IN (15, 25)
 							THEN (ISNULL(winlost,0) - ISNULL(actual_stake,0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)) 
 							ELSE (ISNULL(winlost,0) - ISNULL(actual_stake,0))
-							END									 
+							END	
+						*CASE WHEN @BaseCurrency = '' THEN b.actualrate ELSE e.BaseCurrencyRate END 							
 					) AS winlost,			
-				SUM (CASE WHEN sb.productID = 1 AND sb.SubProduct = 'OddsSpreadAdj' THEN awinlost ELSE 0 END ) AS OddsSpreadAdj,
+				SUM (CASE WHEN sb.productID = 1 AND sb.SubProduct = 'OddsSpreadAdj' THEN awinlost ELSE 0 END 
+					 * CASE WHEN @BaseCurrency = '' THEN b.actualrate ELSE e.BaseCurrencyRate END ) AS OddsSpreadAdj,
 				SUM (CASE WHEN sb.productID = 1  
 							THEN CASE WHEN ba.TransID IS NOT NULL THEN b.Comm ELSE 0 END   --- BA Commision
 						  WHEN sb.productID = 31
 							THEN playercomm + comm     --- Charge comm of Exchange product 
-						 ELSE 0 END) AS Comm,
+						 ELSE 0 END
+						* CASE WHEN @BaseCurrency = '' THEN b.actualrate ELSE e.BaseCurrencyRate END ) AS Comm,
 				0 AS FullContribution,
 				0 AS HouseContribution,
 				0 AS FreeBet
 		FROM dbo.bettrans b WITH (NOLOCK)  
 		INNER JOIN #SportBettype sb ON sb.BetType = b.bettype 
+		LEFT JOIN #ExchangeOANDA e ON e.ExchangeID = b.Currency
 		LEFT JOIN bodb_Licensee.dbo.LicenseeBATransaction_Active ba WITH (NOLOCK)
 			ON 	ba.TransID = b.TransID
 		INNER JOIN #Supers s ON s.Custid = b.srecommend
@@ -198,7 +203,8 @@ BEGIN
 		--	AND b.Bettype <> 8000   --- exclude Exchange Product
 			AND b.MatchID >= 0
 			AND sb.RefTable NOT IN (1,2)	
-			AND b.Recommend NOT IN (52466,5707545)  --- Exclude 8RM, BARM			
+			AND b.Recommend NOT IN (52466,5707545)  --- Exclude 8RM, BARM	
+			AND CASE WHEN b.Bettype IN (8000, 1800) THEN BetID ELSE 0 END = 0    --- exclude adj tickets
 		GROUP BY s.PartyID, s.Site, b.Currency,
 				CASE WHEN sb.productID = 1 AND sb.SubProduct = '' THEN 1 ELSE 0 END ,				
 				CASE WHEN sb.productID = 1  
@@ -212,6 +218,7 @@ BEGIN
 				sb.Product3rdID  AS Product3rdId,
 				'' AS BettypeType,
 				SUM (   CASE WHEN b.StatusID = 111 THEN 0 ELSE ABS(Stake) END 
+						* CASE WHEN @BaseCurrency = '' THEN b.actualrate ELSE e.BaseCurrencyRate END 
 					)	 AS TurnOver,				
 					
 				SUM(
@@ -220,6 +227,7 @@ BEGIN
 							THEN 0  
 							ELSE winlost - actual_stake  
 							END) 
+						* CASE WHEN @BaseCurrency = '' THEN b.actualrate ELSE e.BaseCurrencyRate END 
 					) AS winlost,	
 				0 AS OddsSpreadAdj,
 				0 AS Comm,
@@ -227,18 +235,20 @@ BEGIN
 							WHEN sb.SubProduct IN('Contribution')
 							THEN b.ContributionStake3rd 
 							ELSE 0
-							END)   
+							END)* CASE WHEN @BaseCurrency = '' THEN b.actualrate ELSE e.BaseCurrencyRate END    
 					)AS FullContribution,
 				SUM	((CASE
 							WHEN sb.SubProduct IN('Contribution')
 								THEN b.ContributionStake3rd + b.swinlost + b.mwinlost + b.awinlost  
 							ELSE 0
-							END) 
+							END) * CASE WHEN @BaseCurrency = '' THEN b.actualrate ELSE e.BaseCurrencyRate END  
 					) AS HouseContribution,					
-				SUM (CASE WHEN b.ProductID IN (150,173) THEN winlost - actual_stake ELSE 0 END ) AS FreeBet --- freebet Saba.Cub and VGaming
+				SUM (CASE WHEN b.ProductID IN (150,173) THEN winlost - actual_stake ELSE 0 END 
+						* CASE WHEN @BaseCurrency = '' THEN b.actualrate ELSE e.BaseCurrencyRate END ) AS FreeBet --- freebet Saba.Cub and VGaming
 		FROM dbo.bettransRNG b WITH (NOLOCK, index = PK_bettransRnG)  
 		INNER JOIN #SportBettype sb ON sb.BetType = b.gameID 		 
 		INNER JOIN #Supers s ON s.Custid = b.srecommend
+		LEFT JOIN #ExchangeOANDA e ON e.ExchangeID = b.Currency	
 		WHERE   b.Winlostdate = @WinlostDate
 			AND b.statusid IN (111, 112, 113)
 			AND sb.RefTable = 1	
@@ -252,10 +262,12 @@ BEGIN
 				sb.Product3rdID AS Product3rdID,
 				CASE WHEN sb.SubProduct = 'Tip' THEN sb.SubProduct ELSE '' END AS BettypeType,	
 				SUM (   CASE WHEN b.StatusID = 111 THEN 0 ELSE ABS(Stake) END
+						* CASE WHEN @BaseCurrency = '' THEN b.actualrate ELSE e.BaseCurrencyRate END 
 					)	 AS TurnOver,					
 					
 				SUM(
-						( winlost - actual_stake)			
+						( winlost - actual_stake)		
+						* CASE WHEN @BaseCurrency = '' THEN b.actualrate ELSE e.BaseCurrencyRate END 						
 					) AS winlost,
 				0 AS OddsSpreadAdj,
 				0 AS Comm,
@@ -265,6 +277,7 @@ BEGIN
 		FROM dbo.bettransLC b WITH (NOLOCK, index = PK_bettransLC)  
 		INNER JOIN #SportBettype sb ON sb.BetType = b.gameID 
 		INNER JOIN #Supers s ON s.Custid = b.srecommend
+		LEFT JOIN #ExchangeOANDA e ON e.ExchangeID = b.Currency	
 		WHERE   b.Winlostdate = @WinlostDate
 			AND b.statusid IN (111, 112, 113)
 			AND sb.RefTable = 2			
@@ -282,8 +295,8 @@ BEGIN
 		INSERT INTO #Winlost (Site, SB, TurnOver, Winlost)						
 		SELECT  w.Site, w.SB, 
 				SUM(CASE WHEN w.Product3rdId IN (15, 25, 37) 
-						THEN ISNULL(w.TurnOver,0)* e.BaseCurrencyRate   ---- tpositiontaking = 0 
-						ELSE ISNULL(w.TurnOver,0)* ISNULL(lc.Rate, p.Rate) * CASE WHEN @BaseCurrency = '' THEN b.actualrate ELSE e.BaseCurrencyRate END  
+						THEN ISNULL(w.TurnOver,0)    ---- tpositiontaking = 0 
+						ELSE ISNULL(w.TurnOver,0)* ISNULL(lc.Rate, p.Rate)
 						END) AS TurnOver, 	
 				SUM(CASE
 					WHEN w.Product3rdId IN (15, 25, 37) THEN -w.Winlost  ---- House WL of Colossusbet and Cashout, Member WL of saba promotion 
@@ -293,9 +306,8 @@ BEGIN
 						- (CASE	WHEN w.Product3rdId IN (3) THEN w.Comm     -- BA Comm of bet builder
 								WHEN w.Product3rdId IN (31) THEN w.Comm * ISNULL(lc.Rate, p.Rate)    --- exchange product
 								ELSE 0 END ) -- exchange product & BAComm
-				END * CASE WHEN @BaseCurrency = '' THEN b.actualrate ELSE e.BaseCurrencyRate END ) AS Winlost  
-		FROM	#wl w 
-		LEFT JOIN #ExchangeOANDA e ON e.ExchangeID = w.Currency					
+				END ) AS Winlost  
+		FROM	#wl w  				
 		LEFT JOIN #PartyChargeInfo p 
 					ON 	p.PartyId = w.PartyId 
 					AND p.Product3rdId = w.Product3rdId
