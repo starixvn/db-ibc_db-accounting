@@ -1,7 +1,6 @@
 /*<info serverAlias="DBEXT-bodb02" executers="bodbAdminNet" isFunction="0" isNested="1"></info>*/
-ALTER PROCEDURE [dbo].[Acc_ResetWinning_TopLicenseeMargin]  
-	@Winlostdate SMALLDATETIME,
-	@BaseCurrency VARCHAR(10) = 'CNY'
+ALTER PROCEDURE [dbo].[Acc_ResetWinning_TopLicenseeMargin]
+	@Winlostdate SMALLDATETIME 
 AS  
  
 /*	
@@ -13,7 +12,6 @@ AS
 		- 20201230@Sophia: Initial SPs [Redmine: #147907]
 		- 20210422@Sophia: Exclude Saba789 out of Licensee [Redmind: #153777]
 		- 20210524@Sophia: Add Saba Pin Goal [RedmineId: #155697]
-		- 20210529@Sophia: use base currency CNY and Licensee Rate of LA [RedmineId: #155697]
 	
 	Original: Acc_Rpt_Letstalk_TopLicenseeMargin 
 	Param Explanation:
@@ -108,79 +106,13 @@ BEGIN
                ) m              
 			   
 	------End Get Match ------			   
-	
-	------Get Base currency CNY ------- 
-		CREATE TABLE #ExchangeOANDA(
-				ExchangeDate    DATE
-			  , ExchangeID      INT
-			  , BaseCurrencyRate  FLOAT);
 
-			INSERT INTO #ExchangeOANDA(ExchangeDate
-								, ExchangeID
-								, BaseCurrencyRate)
-				 SELECT ExchangeDate
-					 , ExchangeID
-					 , BaseCurrencyRate
-				 FROM bodb02.dbo.LA_f_ExchangeDailySel
-					 (@Winlostdate, @Winlostdate, @BaseCurrency);
-			
-	------End of get Base currency CNY -------
-
-
-	-------------- Get Charge Info -------------------
-	
-		----- Get Supers List -----
-		CREATE TABLE #Supers (Custid INT, Site VARCHAR(20), PartyId INT)
-		
-		INSERT INTO #Supers (CustId, Site, PartyId)
-		SELECT c.Custid, c.Site, ISNULL(p.PartyId,0) AS PartyId
-		FROM dbo.Dep_CustSuper c WITH (NOLOCK) 	
-		INNER JOIN bodb_Licensee.dbo.Licensees l WITH (NOLOCK) ON l.LicenseeName = c.site	
-		LEFT JOIN bodb_licensee.dbo.OAS_Party p WITH (NOLOCK) ON p.OldRefID = l.LicenseeID AND p.PartyType = 1  
-		LEFT JOIN bodb_licensee.dbo.OAS_PartyDetail pd WITH (NOLOCK) ON pd.PartyID = p.PartyID AND pd.IsDeposit = 1 
-		WHERE  c.Site NOT IN ('Saba789')
-			AND c.currency <> 20 
-			
-			
-		---- Get Charge Info ----
-		
-		DECLARE @PartyIds VARCHAR(MAX), @ProductCodes VARCHAR(MAX)
-		-- Get party list 
-		SELECT @PartyIds = COALESCE(@PartyIds + ',', '') + CONVERT(VARCHAR(10), p.PartyId) 
-		FROM (SELECT DISTINCT PartyId FROM  #Supers) p 
-
-		-- Get product list
-		SELECT @ProductCodes = 'SB,BA'
-
-		-- Get charge rate
-		CREATE TABLE #PartyChargeInfo (ChargeId INT, PartyId INT, Product3rdId INT, FromDate DATE, ToDate DATE, Rate FLOAT)
-		
-		INSERT INTO #PartyChargeInfo (ChargeId, PartyId, Product3rdId, FromDate, ToDate, Rate)					
-		SELECT DISTINCT ci.ChargeId, ci.PartyId, ci.ProductId AS Product3rdId, ci.FromDate, ci.ToDate, ci.DI_Rate AS Rate 
-		FROM bodb_licensee.dbo.LA_f_ChargeInfo (@PartyIds, @Winlostdate, @Winlostdate, @ProductCodes,'OA', 1) ci 
-		WHERE ci.DI_Rate > 0
-			AND ci.ChargeType = 1 
-				
-		CREATE TABLE #PartyChargeByCurrencyInfo (ChargeId INT, CurrencyId INT, Rate FLOAT)
-
-		INSERT INTO #PartyChargeByCurrencyInfo (ChargeId, CurrencyId, Rate)		 
-	    SELECT pc.ChargeId, pc.CurrencyId, pc.Rate
-		FROM #PartyChargeInfo ci
-			INNER JOIN bodb_Licensee.dbo.LA_ChargeRateByCurrency pc WITH (NOLOCK) ON ci.ChargeId = pc.ChargeId
-		
-	-------------- End Get Charge Info -------------------
-		
 	--------------------------------------------------------------------------------------------------------- 
 		CREATE TABLE #TicketDetail 
-		(	PartyID			INT,			
-			Currency		INT,
-			Site 			VARCHAR(20),
-			Product3rdId	INT,			 			
+		(	srecommend			INT, 
 			Sporttype  		SMALLINT,  
 			TurnOver		DECIMAL(19,4),
-			Winloss			DECIMAL(19,4),
-			OddsSpreadAdj	MONEY,
-			BAComm			MONEY
+			Winloss			DECIMAL(19,4)
 		) 	 
 
 					
@@ -189,58 +121,61 @@ BEGIN
 			Sporttype  		SMALLINT,  
 			TurnOver		DECIMAL(19,4),
 			Winloss			DECIMAL(19,4)
-		) 
+		) 	 	
 
-		INSERT INTO #TicketDetail (PartyID, Currency, Site, Product3rdId, Sporttype, TurnOver, Winloss, OddsSpreadAdj, BAComm)
-		SELECT  s.PartyID, b.Currency, s.Site, 
-				CASE WHEN ba.TransID IS NOT NULL THEN 3 ELSE 0 END AS Product3rdId,
+
+		INSERT INTO #TicketDetail (srecommend, Sporttype, TurnOver, Winloss)
+		SELECT b.srecommend,
 				CASE WHEN b.bettype in (9,29) THEN -2 
-				WHEN m.SportType = 1 and m.LeagueGroupID IN (42, 74, 108, 113) then -3  -- Saba soccer
+				WHEN m.SportType = 1 and m.LeagueGroupID IN (42, 74, 108) then -3  -- Saba soccer
 				WHEN m.SportType = 2 and m.LeagueGroupID = 42 then -4  -- Saba basketball
 				WHEN m.SportType = 1 and m.LeagueGroupID = 41 then -5  -- Esoccer
 				WHEN m.SportType = 2 and m.LeagueGroupID = 72 then -6  -- Ebasketball
 				WHEN b.bettype = 999 then -7 -- Odds Spread Adjustment
+				WHEN m.SportType = 1 and m.LeagueGroupID IN (113) then -8  -- Saba Pin Goal
 				ELSE m.SportType end SportType, 
 				--- Licensee
 				SUM (   CASE WHEN b.StatusID = 111 THEN 0 ELSE 
 						CASE WHEN ABS(modds) = 0.25 AND b.Bettype <> 29 THEN ABS(Stake) / 2 ELSE ABS(Stake) END END					
-						*  CASE WHEN @BaseCurrency = '' THEN b.actualrate ELSE e.BaseCurrencyRate END
+						* actualrate
 					)	 AS TurnOver,
 			
-				SUM (
-						(ISNULL(winlost,0)-ISNULL(actual_stake,0)) * CASE WHEN @BaseCurrency = '' THEN b.actualrate ELSE e.BaseCurrencyRate END					
-					) AS Winloss,
-				SUM (CASE WHEN bettype = 999 THEN awinlost ELSE 0 END ) AS OddsSpreadAdj,
-				SUM (Comm) AS BAComm 				
-		FROM dbo.bettrans b WITH (NOLOCK)
-		LEFT JOIN #ExchangeOANDA e ON e.ExchangeId = b.Currency
-		INNER JOIN #Supers s ON s.Custid = b.srecommend
+				- SUM (
+						(ISNULL(winlost,0)-ISNULL(actual_stake,0)) * actualrate							
+					) AS Winloss						
+		FROM dbo.bettrans b WITH (NOLOCK)  
 		INNER JOIN #Match AS m 
 			ON 	b.MatchId = m.MatchId
 			AND m.type = CASE b.BetType WHEN 10 THEN 'outright'
 										WHEN 29 THEN 'Parlay'
 										WHEN 999 THEN 'Oddspread'
 										ELSE 'Match'                           
-                         END
-		LEFT JOIN bodb_Licensee.dbo.LicenseeBATransaction_Active ba WITH (NOLOCK)
-			ON 	ba.TransID = b.TransID								 
+                         END	 
 		WHERE   b.Winlostdate = @WinlostDate
 			AND b.statusid IN (111, 112, 113)	
 			AND b.Recommend NOT IN (52466,5707545)  --- Exclude 8RM, BARM 
 			AND EXISTS (SELECT 1 FROM #Bettype s WHERE b.Bettype = s.Bettype) 
-			--AND EXISTS (SELECT 1 FROM dbo.Dep_CustSuper d WITH (NOLOCK) WHERE d.custid = b.srecommend AND Site <> 'Saba789')
-			--AND NOT EXISTS (SELECT 1 FROM bodb_Licensee.dbo.LicenseeBATransaction_active ba WITH (NOLOCK) WHERE ba.TransID = b.TransID)
+			AND EXISTS (SELECT 1 FROM dbo.Dep_CustSuper d WITH (NOLOCK) WHERE d.custid = b.srecommend AND Site <> 'Saba789')
+			AND NOT EXISTS (SELECT 1 FROM bodb_Licensee.dbo.LicenseeBATransaction_active ba WITH (NOLOCK) WHERE ba.TransID = b.TransID)
 		GROUP BY 
-			s.PartyID, b.Currency, s.Site,
-			CASE WHEN ba.TransID IS NOT NULL THEN 3 ELSE 0 END, 	
+			b.srecommend,	
 			CASE WHEN b.bettype in (9,29) THEN -2 
-				WHEN m.SportType = 1 and m.LeagueGroupID IN (42, 74, 108, 113) then -3  -- Saba soccer
+				WHEN m.SportType = 1 and m.LeagueGroupID IN (42, 74, 108) then -3  -- Saba soccer
 				WHEN m.SportType = 2 and m.LeagueGroupID = 42 then -4  -- Saba basketball
 				WHEN m.SportType = 1 and m.LeagueGroupID = 41 then -5  -- Esoccer
 				WHEN m.SportType = 2 and m.LeagueGroupID = 72 then -6  -- Ebasketball
 				WHEN b.bettype = 999 then -7 -- Odds Spread Adjustment
+				WHEN m.SportType = 1 and m.LeagueGroupID IN (113) then -8
 				ELSE m.SportType end
-				 
+				
+
+		INSERT INTO #Detail (site, Sporttype,TurnOver,Winloss) 		   
+		SELECT	site, Sporttype, 
+				SUM (TurnOver) AS TurnOver, 
+				SUM (Winloss) AS Winloss
+		FROM #TicketDetail b
+		CROSS APPLY (SELECT site FROM dbo.Dep_CustSuper d WITH (NOLOCK) WHERE d.custid = b.srecommend AND Site <> 'Saba789') d
+		GROUP BY site, Sporttype
 
 		-----------------------------------------------------------------------------------------------
 		----- Get Data ----------------  
@@ -265,33 +200,27 @@ BEGIN
 				t1.site SITE,
 				RANK() OVER (
 					order by 
-						SUM(t1.Turnover * ISNULL(lc.Rate, p.Rate)) desc
+						SUM(t1.Turnover) desc
 				) RankTO,
-				SUM(ISNULL(t1.Turnover,0) * ISNULL(lc.Rate, p.Rate)) Turnover_AllSports,
-				SUM ((- t1.Winloss) * ISNULL(lc.Rate, p.Rate) - BAComm) Winloss_AllSports,
-				SUM(CASE WHEN t1.sporttype = 1 THEN ISNULL(t1.Turnover,0) * ISNULL(lc.Rate, p.Rate) ELSE 0 END) Turnover_Soccer,
-				SUM(CASE WHEN t1.sporttype = 1 THEN ((- t1.Winloss) * ISNULL(lc.Rate, p.Rate)- BAComm) ELSE 0 END) Winloss_Soccer,
-				SUM(CASE WHEN t1.sporttype = 2 THEN ISNULL(t1.Turnover,0) * ISNULL(lc.Rate, p.Rate) ELSE 0 END) Turnover_Basketball,
-				SUM(CASE WHEN t1.sporttype = 2 THEN ((- t1.Winloss ) * ISNULL(lc.Rate, p.Rate)- BAComm) ELSE 0 END) Winloss_Basketball,
-				SUM(CASE WHEN t1.sporttype = 43 THEN ISNULL(t1.Turnover,0) * ISNULL(lc.Rate, p.Rate) ELSE 0 END) Turnover_Esport,
-				SUM(CASE WHEN t1.sporttype = 43 THEN ((- t1.Winloss) * ISNULL(lc.Rate, p.Rate)- BAComm) ELSE 0 END) Winloss_Esport,
-				SUM(CASE WHEN t1.sporttype = 5 THEN ISNULL(t1.Turnover,0) * ISNULL(lc.Rate, p.Rate) ELSE 0 END) Turnover_Tennis,
-				SUM(CASE WHEN t1.sporttype = 5 THEN ((- t1.Winloss) * ISNULL(lc.Rate, p.Rate)- BAComm) ELSE 0 END) Winloss_Tennis,		
-				SUM(CASE WHEN sporttype = -2 THEN ISNULL(t1.Turnover,0) * ISNULL(lc.Rate, p.Rate) ELSE 0 END) Turnover_Parlay,
-				SUM(CASE WHEN sporttype = -2 THEN ((- t1.Winloss) * ISNULL(lc.Rate, p.Rate)- BAComm) ELSE 0 END) Winloss_Parlay,
-				SUM(CASE WHEN sporttype = -3 THEN ISNULL(t1.Turnover,0) * ISNULL(lc.Rate, p.Rate) ELSE 0 END) Turnover_SabaSoccer,
-				SUM(CASE WHEN sporttype = -3 THEN ((- t1.Winloss) * ISNULL(lc.Rate, p.Rate)- BAComm) ELSE 0 END) Winloss_SabaSoccer,
-				SUM(CASE WHEN sporttype = -4 THEN ISNULL(t1.Turnover,0) * ISNULL(lc.Rate, p.Rate) ELSE 0 END) Turnover_SabaBasketball,
-				SUM(CASE WHEN sporttype = -4 THEN ((- t1.Winloss) * ISNULL(lc.Rate, p.Rate)- BAComm) ELSE 0 END) Winloss_SabaBasketball,
-				SUM(CASE WHEN t1.sporttype not in (1, 2, 5, 43, -2, -3, -4, -5, -6) THEN ISNULL(t1.Turnover,0) * ISNULL(lc.Rate, p.Rate) ELSE 0 END) Turnover_Othersport,
-				SUM(CASE WHEN t1.sporttype not in (1, 2, 5, 43, -2, -3, -4, -5, -6) THEN ((- t1.Winloss - t1.OddsSpreadAdj) * ISNULL(lc.Rate, p.Rate) - t1.OddsSpreadAdj- BAComm) ELSE 0 END) Winloss_Othersport
-			FROM #TicketDetail t1 
-			LEFT JOIN #PartyChargeInfo p 
-				ON 	p.PartyId = t1.PartyId 
-					AND p.Product3rdId = t1.Product3rdId					
-			LEFT JOIN #PartyChargeByCurrencyInfo lc 
-				ON 	p.ChargeId = lc.ChargeId 
-					AND t1.Currency = lc.CurrencyId	
+				SUM(isnull(t1.Turnover,0)) Turnover_AllSports,
+				SUM(isnull(t1.Winloss,0)) Winloss_AllSports,
+				SUM(CASE WHEN t1.sporttype = 1 THEN ISNULL(t1.Turnover,0) ELSE 0 END) Turnover_Soccer,
+				SUM(CASE WHEN t1.sporttype = 1 THEN ISNULL(t1.Winloss,0) ELSE 0 END) Winloss_Soccer,
+				SUM(CASE WHEN t1.sporttype = 2 THEN ISNULL(t1.Turnover,0) ELSE 0 END) Turnover_Basketball,
+				SUM(CASE WHEN t1.sporttype = 2 THEN ISNULL(t1.Winloss,0) ELSE 0 END) Winloss_Basketball,
+				SUM(CASE WHEN t1.sporttype = 43 THEN ISNULL(t1.Turnover,0) ELSE 0 END) Turnover_Esport,
+				SUM(CASE WHEN t1.sporttype = 43 THEN ISNULL(t1.Winloss,0) ELSE 0 END) Winloss_Esport,
+				SUM(CASE WHEN t1.sporttype = 5 THEN ISNULL(t1.Turnover,0) ELSE 0 END) Turnover_Tennis,
+				SUM(CASE WHEN t1.sporttype = 5 THEN ISNULL(t1.Winloss,0) ELSE 0 END) Winloss_Tennis,		
+				SUM(CASE WHEN sporttype = -2 THEN ISNULL(t1.Turnover,0) ELSE 0 END) Turnover_Parlay,
+				SUM(CASE WHEN sporttype = -2 THEN ISNULL(t1.Winloss,0) ELSE 0 END) Winloss_Parlay,
+				SUM(CASE WHEN sporttype = -3 THEN ISNULL(t1.Turnover,0) ELSE 0 END) Turnover_SabaSoccer,
+				SUM(CASE WHEN sporttype = -3 THEN ISNULL(t1.Winloss,0) ELSE 0 END) Winloss_SabaSoccer,
+				SUM(CASE WHEN sporttype = -4 THEN ISNULL(t1.Turnover,0) ELSE 0 END) Turnover_SabaBasketball,
+				SUM(CASE WHEN sporttype = -4 THEN ISNULL(t1.Winloss,0) ELSE 0 END) Winloss_SabaBasketball,
+				SUM(CASE WHEN t1.sporttype not in (1, 2, 5, 43, -2, -3, -4, -5, -6) THEN ISNULL(t1.Turnover,0) ELSE 0 END) Turnover_Othersport,
+				SUM(CASE WHEN t1.sporttype not in (1, 2, 5, 43, -2, -3, -4, -5, -6) THEN ISNULL(t1.Winloss,0) ELSE 0 END) Winloss_Othersport
+			FROM #Detail t1 
 			GROUP BY t1.site 
 		) T
 		GROUP BY CASE WHEN T.RankTO <= 50 THEN t.site 
@@ -300,15 +229,13 @@ BEGIN
 		ORDER BY MIN(RankTO)
 		 
   
-	DROP TABLE #Supers
+
 	DROP TABLE #Bettype
     DROP TABLE #Sports
 	DROP TABLE #Match 
 	DROP TABLE #Detail	
 	DROP TABLE #TicketDetail
 	DROP TABLE #SabaVirtualSportsLeague
-	DROP TABLE #ExchangeOANDA
-	DROP TABLE #PartyChargeInfo
-	DROP TABLE #PartyChargeByCurrencyInfo
 		
 END
+
