@@ -93,7 +93,7 @@ BEGIN
 	--validate movebet date
 	IF (@fromdate < DATEADD(DAY, 1, @moveBetsDay))
 	BEGIN
-		SELECT @ErrMsg = 'Incorrect MovebetDate!',
+		SELECT @ErrMsg = 'The Move Bets Day is changed. Please click on OK button to reload this page.',
                @ErrCode = 1
 		RETURN
 	END
