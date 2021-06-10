@@ -11,6 +11,7 @@ AS
 	Revision:
 		- 20201230@Sophia: Initial SPs [Redmine: #147907]
 		- 20210422@Sophia: Exclude Saba789 out of Licensee [Redmind: #153777]
+		- 20210524@Sophia: Add Saba Pin Goal [RedmineId: #155697]
 	
 	Original: Acc_Rpt_Letstalk_TopLicenseeMargin 
 	Param Explanation:
@@ -52,7 +53,7 @@ BEGIN
 	INSERT INTO #SabaVirtualSportsLeague (LeagueId, LeagueGroupID) 
 	SELECT leagueid, LeagueGroupID
 	FROM dbo.League WITH (NOLOCK)
-	WHERE ((sporttype = 1 AND LeagueGroupID IN (41, 42, 74, 108))
+	WHERE ((sporttype = 1 AND LeagueGroupID IN (41, 42, 74, 108, 113))
 			OR (sporttype = 2 AND LeagueGroupID IN (42, 72))
 			)
 	----- End get Saba League  	
@@ -131,6 +132,7 @@ BEGIN
 				WHEN m.SportType = 1 and m.LeagueGroupID = 41 then -5  -- Esoccer
 				WHEN m.SportType = 2 and m.LeagueGroupID = 72 then -6  -- Ebasketball
 				WHEN b.bettype = 999 then -7 -- Odds Spread Adjustment
+				WHEN m.SportType = 1 and m.LeagueGroupID IN (113) then -8  -- Saba Pin Goal
 				ELSE m.SportType end SportType, 
 				--- Licensee
 				SUM (   CASE WHEN b.StatusID = 111 THEN 0 ELSE 
@@ -163,6 +165,7 @@ BEGIN
 				WHEN m.SportType = 1 and m.LeagueGroupID = 41 then -5  -- Esoccer
 				WHEN m.SportType = 2 and m.LeagueGroupID = 72 then -6  -- Ebasketball
 				WHEN b.bettype = 999 then -7 -- Odds Spread Adjustment
+				WHEN m.SportType = 1 and m.LeagueGroupID IN (113) then -8
 				ELSE m.SportType end
 				
 

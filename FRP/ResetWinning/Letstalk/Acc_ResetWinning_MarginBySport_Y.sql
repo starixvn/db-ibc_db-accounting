@@ -1,15 +1,20 @@
 /*<info serverAlias="DBEXT-bodb02" executers="bodbAdminNet" isFunction="0" isNested="1"></info>*/
-ALTER PROCEDURE [dbo].[Acc_ResetWinning_MarginBySport_Lic]
+ALTER PROCEDURE [dbo].[Acc_ResetWinning_MarginBySport_Y]
 	@Winlostdate SMALLDATETIME 
 AS 
  
 /*	
-	Created: 20210422@Sophia
-	Task: Reset Winning - Margin By Non Sport (adhoc) for Licensee [Redmine: #153868]
+	Created: 20200517@Viet
+	Task: Reset Winning - Margin By Sport (adhoc) for 789Y  [redmind: #129653]
 	DB: DBEXT.BODB02
 	
 	Revision:
-		- 20210422@Sophia: Initial SP [Redmine: #153868]
+		- 20200517@Viet: Initial SP
+		- 20201008@Sophia: Separate Saba vs Real Sport [Redmine: #143173]
+		- 20201230@Sophia: add more LeagueGroupID 41, 72 [Redmine: #147907]
+		- 20210315@Sophia: add Live and Non-Live [Redmine: #151656]
+		- 20210422@Sophia: Add Cricket [Redmind: #153777]
+		- 20210524@Sophia: Add Saba Pin Goal [RedmineId: #155697]
 		
 	Param Explanation:
 		 
@@ -27,7 +32,8 @@ BEGIN
 			AND Bettype NOT BETWEEN 801 and 806 
 			AND bettype NOT BETWEEN 901 and 904
 			AND Bettype <> 38 
-	 
+	
+	--CREATE CLUSTERED INDEX CIX_Bettype ON #Bettype (bettype) 
 	----- End get sport bettype  
 	
 	------Get Sporttype------	
@@ -50,7 +56,7 @@ BEGIN
 	INSERT INTO #SabaVirtualSportsLeague
 	SELECT leagueid
 	FROM dbo.League WITH (NOLOCK)
-	WHERE  LeagueGroupID IN (41, 42, 74, 108)
+	WHERE  LeagueGroupID IN (41, 42, 74, 108, 113)
 			/*((sporttype = 1 AND LeagueGroupID IN (41, 42, 74, 108))
 			OR (sporttype = 2 AND LeagueGroupID IN (42, 72)) 
 			OR (sporttype = 50 AND LeagueGroupID IN (42)) 
@@ -101,15 +107,7 @@ BEGIN
 							0 AS IsSaba						   
                ) m              
 			   
-	------End Get Match ------	
-
-	CREATE TABLE #Supers (Custid INT)
-	
-	INSERT INTO #Supers
-	SELECT c.Custid  
-	FROM dbo.Dep_CustSuper c WITH (NOLOCK) 		
-	WHERE c.site NOT IN ('Saba789')
-		AND c.currency <> 20	
+	------End Get Match ------			   
 
 	--------------------------------------------------------------------------------------------------------- 
 		CREATE TABLE #wl 
@@ -157,7 +155,13 @@ BEGIN
 			AND b.bettype < 19001
 			AND b.MatchID >= 0
 			AND b.Recommend NOT IN (52466,5707545)  --- Exclude 8RM, BARM
-			AND b.srecommend IN (SELECT Custid FROM #Supers)
+			AND b.srecommend IN (
+				SELECT c.custid
+				FROM dbo.Customer c WITH (NOLOCK) 
+				WHERE c.roleid = 4  	
+					AND c.site IN ('789y')
+					AND c.currency<>20
+			)
 		GROUP BY CASE WHEN m.Sporttype IN (1, 2, 5, 43, 50, -29) THEN m.Sporttype ELSE 0 END, b.LiveIndicator, m.IsSaba
 				 
 	
@@ -183,7 +187,6 @@ BEGIN
     DROP TABLE #Sports
 	DROP TABLE #WL	
 	DROP TABLE #Match
-	DROP TABLE #Supers
 	DROP TABLE #SabaVirtualSportsLeague 
 		
 END

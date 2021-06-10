@@ -1,15 +1,18 @@
 /*<info serverAlias="DBEXT-bodb02" executers="bodbAdminNet" isFunction="0" isNested="1"></info>*/
-ALTER PROCEDURE [dbo].[Acc_ResetWinning_MarginByNonSport_Lic]
-	@Winlostdate SMALLDATETIME
+ALTER PROCEDURE [dbo].[Acc_ResetWinning_MarginByNonSport]
+	@Winlostdate SMALLDATETIME 
 AS 
  
 /*		
-	Created: 20210422@Sophia
-	Task: Reset Winning - Margin By Non Sport (adhoc) for Licensee [Redmine: #153868]
+	Created: 20200321@Sophia
+	Task: Reset Winning - Margin By Non Sport (adhoc) [redmind: #131624]
 	DB: DBEXT.BODB02
 	
 	Revision:
-		- 20210422@Sophia: Initial SP [Redmine: #153868]
+		- 20200321@Sophia: Initial SPs  
+		- 20200714@Sophia: Add PP Jackpot[Redmine: #137270]
+		- 20210226@Sophia: Exclude Saba.club (Amount due to Jackpot Pool)[RedmineId: #149409] 
+		- 20210524@Sophia: Add VGaming (Amount due to Jackpot Pool) [RedmineId: #155697]
 		 
 	Param Explanation:
 		 
@@ -18,17 +21,18 @@ AS
 BEGIN	
 	SET NOCOUNT ON
 
+
 	DECLARE @MinTransID_RNG BIGINT,  @MinTransID_LC BIGINT, @MaxTransID_RNG BIGINT,  @MaxTransID_LC BIGINT
-	DECLARE @WLdate SMALLDATETIME = @Winlostdate
 
 	SELECT  @MinTransID_RNG = MIN (TransID) , @MaxTransID_RNG = MAX(TransID) 
 	FROM	dbo.BettransRNG WITH (NOLOCK)
-	WHERE	winlostdate = @WLdate
+	WHERE	winlostdate = @Winlostdate
 
 
 	SELECT  @MinTransID_LC = MIN (TransID), @MaxTransID_LC = MAX(TransID) 
 	FROM	dbo.BettransLC WITH (NOLOCK)
-	WHERE	winlostdate = @WLdate
+	WHERE	winlostdate = @Winlostdate
+
 
 	------Get Sport Bettype Matrix------
 	
@@ -44,16 +48,11 @@ BEGIN
 	WHERE  s.ProductID <> 1 
 		OR s.Bettype BETWEEN 801 and 806  ---'MG-SuperLive'
 		OR s.Bettype = 38    ----'Bet Builder' 
-
+			
+	 
 	----- End get sport bettype 
+ 	
 
-	CREATE TABLE #Supers (Custid INT)
-	
-	INSERT INTO #Supers
-	SELECT c.Custid  
-	FROM dbo.Dep_CustSuper c WITH (NOLOCK) 		
-	WHERE c.site NOT IN ('Saba789')
-		AND c.currency <> 20
 	--------------------------------------------------------------------------------------------------------- 
 		CREATE TABLE #WL 
 		(	
@@ -78,12 +77,12 @@ BEGIN
 							END
 					)	 AS TurnOver,
 				SUM(
-						CASE WHEN b.bettype IN (1699, 2199, 2399, 2999, 4298) THEN 0
+						CASE WHEN b.bettype IN (1699, 2199, 2399, 2999, 3899, 4298) THEN 0
 							ELSE
 								(ISNULL(winlost,0)-ISNULL(actual_stake,0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)
 									+ CASE
 										-- Jackpot
-										WHEN b.bettype IN (1698, 2198, 2398, 2998, 4297) THEN ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000),0)
+										WHEN b.bettype IN (1698, 2198, 2398, 2998, 3898, 4297) THEN ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000),0)
 										ELSE 0 END
 								) * b.actualrate 
 							END
@@ -93,9 +92,9 @@ BEGIN
 						(	
 							CASE
 							-- Jackpot
-							WHEN b.bettype IN (1698, 2198, 2398, 2998, 4297) THEN
+							WHEN b.bettype IN (1698, 2198, 2398, 2998, 3898, 4297) THEN
 								CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) END
-							WHEN b.bettype IN (1699, 2199, 2399, 2999, 4298) THEN 0
+							WHEN b.bettype IN (1699, 2199, 2399, 2999, 3899, 4298) THEN 0
 							ELSE
 								CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
 							END
@@ -105,13 +104,13 @@ BEGIN
 					) AS ExtraWinlost
 					
 		FROM dbo.bettrans b WITH (NOLOCK, index = CIX_matchid_bettype)  
-		INNER JOIN #SportBettype s ON s.BetType = b.bettype 		
-		WHERE   b.Winlostdate = @WLdate
+		INNER JOIN #SportBettype s ON s.BetType = b.bettype 								  
+		WHERE   b.Winlostdate = @WinlostDate
 			AND b.statusid IN (111, 112, 113)		
 			AND b.bettype < 19001
 			AND b.MatchID >= 0
 			AND s.RefTable NOT IN (1,2)
-			AND b.srecommend IN (SELECT Custid FROM #Supers)
+			AND NOT EXISTS (SELECT 1 FROM CS_CustSuper c WITH (NOLOCK) WHERE c.CustID = b.Srecommend)
 		GROUP BY s.ProductId, s.ProductName			 
 
 			 
@@ -130,9 +129,9 @@ BEGIN
 					
 				SUM(
 						(CASE
-							WHEN b.gameId IN(1698, 2198, 2398, 2998, 4297)
+							WHEN b.gameId IN(1698, 2198, 2398, 2998, 3898, 4297)
 								THEN b.ContributionRate * b.BetStake + awinlost + mwinlost + swinlost + scomm 
-							WHEN b.GameId IN (1699, 2199,2399,2999,4298,4299,4300)	THEN 0 /*Progressive Jackpot, PP Promotion Prize, PP Tournament Prize*/
+							WHEN b.GameId IN (1699, 2199, 2399, 2999, 3899, 4298, 4299, 4300)	THEN 0 /*Progressive Jackpot, PP Promotion Prize, PP Tournament Prize*/
 							ELSE winlost - actual_stake + awinlost + mwinlost + swinlost + scomm 
 							END) * actualrate
 					) AS winlost,	
@@ -140,19 +139,19 @@ BEGIN
 				SUM(			(CASE
                                     WHEN tpositiontaking = 1
                                     THEN 0
-                                    WHEN b.GameId IN (1699, 2199,2399,2999,4298,4299,4300)	THEN 0 /*Progressive Jackpot, PP Promotion Prize, PP Tournament Prize*/
-                                    WHEN b.gameId IN(1698, 2198, 2398, 2998, 4297)
+                                    WHEN b.GameId IN (1699, 2199, 2399, 2999, 3899, 4298, 4299,4300)	THEN 0 /*Progressive Jackpot, PP Promotion Prize, PP Tournament Prize*/
+                                    WHEN b.gameId IN(1698, 2198, 2398, 2998, 3898, 4297)
                                     THEN ContributionRate * BetStake + 1.0 * scomm / (1 - tpositiontaking) --Jackpot Contribution
                                     ELSE winlost - actual_stake + 1.0 * scomm / (1 - tpositiontaking)
                                 END) * ISNULL(CAST(b.epositiontaking AS DECIMAL(9, 8)), 0) * actualrate
 					) AS ExtraWinlost				
 		FROM dbo.bettransRNG b WITH (NOLOCK, index = PK_bettransRnG)  
-		INNER JOIN #SportBettype s ON s.BetType = b.gameID		
-		WHERE   b.Winlostdate = @WLdate
+		INNER JOIN #SportBettype s ON s.BetType = b.gameID 								  
+		WHERE   b.Winlostdate = @WinlostDate
 			AND b.statusid IN (111, 112, 113)
 			AND s.RefTable = 1	
 			AND b.transID BETWEEN @MinTransID_RNG AND @MaxTransID_RNG
-			AND b.srecommend IN (SELECT custid FROM #Supers)
+			AND NOT EXISTS (SELECT 1 FROM CS_CustSuper c WITH (NOLOCK) WHERE c.CustID = b.Srecommend)
 		GROUP BY s.ProductId, s.ProductName			
 	
 		------3. BettransLC
@@ -178,12 +177,12 @@ BEGIN
 						* ISNULL(CAST(b.epositiontaking AS DECIMAL(9, 8)), 0) 
 						* actualrate
 					) AS ExtraWinlost	
-		FROM dbo.bettransLC b WITH (NOLOCK, index = PK_bettransLC)		
+		FROM dbo.bettransLC b WITH (NOLOCK, index = PK_bettransLC)  
 		INNER JOIN #SportBettype s ON s.BetType = b.gameID 								  
-		WHERE   b.Winlostdate = @WLdate
+		WHERE   b.Winlostdate = @WinlostDate
 			AND b.statusid IN (111, 112, 113)
 			AND s.RefTable = 2			
-			AND b.srecommend IN (SELECT custid FROM #Supers)
+			AND NOT EXISTS (SELECT 1 FROM CS_CustSuper c WITH (NOLOCK) WHERE c.CustID = b.Srecommend)
 			AND b.transID BETWEEN @MinTransID_LC AND @MaxTransID_LC
 		GROUP BY s.ProductId, s.ProductName		
 	
@@ -205,8 +204,7 @@ BEGIN
 		ORDER BY A.ProductId
 
 	DROP TABLE #SportBettype
-	DROP TABLE #WL
-	DROP TABLE #Supers
+	DROP TABLE #WL	 
 		
 END
-
+GO
