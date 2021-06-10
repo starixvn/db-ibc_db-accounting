@@ -19,7 +19,7 @@ RETURN
 		CONVERT(INT, Bettype) AS Bettype
 		,CONVERT(VARCHAR(50), 'Prize') AS BettypeGroup
 	FROM (
-		VALUES (1699), (1906), (2199), (2399), (2999), (3150), (3899), (4298), (4299), (4300)
+		VALUES (1699), (1906), (2199), (2399), (2999), (3899), (4298), (4299), (4300)
 	) AS t (Bettype)
 
 	UNION ALL
