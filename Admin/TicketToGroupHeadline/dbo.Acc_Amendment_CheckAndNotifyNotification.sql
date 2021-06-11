@@ -1,10 +1,11 @@
 /*<info serverAlias="DBEXT-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 CREATE PROC dbo.Acc_Amendment_CheckAndNotifyNotification
-	@XmlEvent	NVARCHAR(MAX)
-	,@XmlTicket NVARCHAR(MAX)
-	,@IsNotify	BIT = 0
-	,@ErrCode	INT= 0 OUTPUT
-	,@ErrMsg	NVARCHAR(MAX)='' OUTPUT
+	@XmlEvent	 NVARCHAR(MAX)
+	,@XmlTicket  NVARCHAR(MAX)
+	,@IsNotify	 BIT = 0
+	,@SubmitDate DATETIME2
+	,@ErrCode	 INT= 0 OUTPUT
+	,@ErrMsg	 NVARCHAR(MAX)='' OUTPUT
 
 AS
 /*
@@ -104,8 +105,8 @@ BEGIN
 
 	--Insert Event and Ticket
 	BEGIN TRY
-		INSERT INTO dbo.TicketAmendment_Event (ProductId, MatchId, MatchCode, EventType, EventDate, ActualResult, WrongResult, Status, MessageId)
-		SELECT ProductId, MatchId, MatchCode, EventType, EventDate, ActualResult, WrongResult, NULL, MessageId
+		INSERT INTO dbo.TicketAmendment_Event (ProductId, MatchId, MatchCode, EventType, EventDate, ActualResult, WrongResult, Status, MessageId,  SubmitDate)
+		SELECT ProductId, MatchId, MatchCode, EventType, EventDate, ActualResult, WrongResult, NULL, MessageId, @SubmitDate
 		FROM #EventInfo
 
 		SET @EventId = SCOPE_IDENTITY()
@@ -114,8 +115,8 @@ BEGIN
 
 		WHILE 1 = 1
 		BEGIN 
-			INSERT INTO dbo.TicketAmendment_Detail (CustId, RefNo, TicketEventId, RefTable, Bettype)
-			SELECT t.CustId, t.RefNo, @EventId, t.RefTable, t.Bettype 
+			INSERT INTO dbo.TicketAmendment_Detail (CustId, RefNo, TicketEventId, RefTable, Bettype, Seq)
+			SELECT t.CustId, t.RefNo, @EventId, t.RefTable, t.Bettype, t.Id 
 			FROM #TicketRefNo t 
 			WHERE t.ID < @ID 
 			ORDER BY t.ID
@@ -145,7 +146,7 @@ BEGIN
 	DELETE dbo.TicketAmendment_Event WITH(ROWLOCK, UPDLOCK)
 	OUTPUT deleted.TicketEventId
 		INTO @EventTmp
-	WHERE CreatedDate < DATEADD(MONTH, -2, GETDATE())
+	WHERE SubmitDate < DATEADD(MONTH, -2, GETDATE())
 
 	IF @@ROWCOUNT <> 0
 	BEGIN
