@@ -1,4 +1,7 @@
 /*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
+USE [CustDB]
+GO
+
 ALTER PROCEDURE [dbo].[Acc_GroupExtraPT_GroupByProduct_Ins]
 	@UserId			INT,
 	@GroupId		TINYINT,
@@ -6,7 +9,6 @@ ALTER PROCEDURE [dbo].[Acc_GroupExtraPT_GroupByProduct_Ins]
 	@ExtraPT		DECIMAL(9,8),
 	@EffectiveDate	DATETIME,
 	@EndDate		DATETIME = NULL,
-
 	@ErrCode		INT = 0 OUTPUT,
 	@ErrMsg			NVARCHAR(200) = '' OUTPUT
 AS
@@ -23,6 +25,7 @@ AS
 		- 20190416@Percy: Separate Bet Builder to Sportsbook [RedmineID: #108791]
 		- 20191211@Percy: Add UplineId (HeadlineId) [RedmineID: #118962]
 		- 20191216@Percy: Do not allow user to select the current date in Effective Date [RedmineID: #125418]
+		- 20210301@Percy: Change BC to real Extra PT Group [RedmineID: #146710]
 		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
 
 	Param's Explanation:
@@ -46,11 +49,11 @@ BEGIN
 	SELECT  @startRun = GETDATE()
 
 	DECLARE @GroupName VARCHAR(30), @ProductName VARCHAR(30), @today DATETIME
-	SELECT  @GroupName = GroupName FROM dbo.Acc_DWLList_ExtraPT WITH(NOLOCK) WHERE GroupId = @GroupId
+	SELECT  @GroupName = GroupName FROM dbo.Acc_DWLList_ExtraPT WITH(NOLOCK) WHERE GroupId = @GroupId AND IsDisabled = 0
 	SELECT  @ProductName = ProductName FROM DBTXN.bodb02.dbo.Products WITH(NOLOCK) WHERE ProductID = @ProductID
 	SELECT  @today = CONVERT(DATE, GETDATE())
 
-	IF ISNULL(@GroupName, '') = '' OR @GroupName IN ('ACCTHAI2', 'ACCTHAI56', 'ACCTHAI99')
+	IF ISNULL(@GroupName, '') = ''
 	BEGIN
 		SELECT @ErrCode = 100, @ErrMsg = 'Invalid Group.'
 		

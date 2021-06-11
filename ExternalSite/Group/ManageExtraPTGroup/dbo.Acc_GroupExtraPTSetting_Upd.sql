@@ -1,4 +1,7 @@
 /*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0" isNested="1"></info>*/
+USE CustDB
+GO
+
 ALTER PROCEDURE [dbo].[Acc_GroupExtraPTSetting_Upd]
 	@CustID			INT,
 	@GroupName		VARCHAR(50),
@@ -21,6 +24,7 @@ AS
 		- 20191211@Percy: Add UplineId (HeadlineId) [RedmineID: #118962]
 		- 20191216@Percy: Do not allow user to select the current date in Effective Date [RedmineID: #125418]
 		- 20200708@Sol: Add/modify setting for new table - Extra PT - Redmine: [#136320]
+		- 20210301@Percy: Change BC to real Extra PT Group [RedmineID: #146710]
 		
 	Param's Explanation:
 		- @EffectiveDate
@@ -136,18 +140,6 @@ BEGIN
 			FROM dbo.Acc_GroupExtraPT_Product WITH(NOLOCK)
 			WHERE GroupId = @GroupId
 				AND @EffectiveDate <= ToDate
-		
-			IF @GroupName IN ('ACCTHAI2','ACCTHAI56','ACCTHAI99')
-			BEGIN
-				INSERT INTO dbo.Acc_GroupExtraPTSetting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate, UplineId)
-				SELECT @CustId, GroupId, GroupName, ProductID, Sporttype, SubProduct, ExtraPT,
-					CASE WHEN @EffectiveDate < FromDate THEN FromDate ELSE @EffectiveDate END AS FromDate,
-					CASE WHEN @EndDate < ToDate THEN @EndDate ELSE ToDate END AS ToDate,
-					@UplineId
-				FROM dbo.Acc_GroupExtraPT_Product WITH(NOLOCK)
-				WHERE GroupName = 'BC'
-					AND @EffectiveDate <= ToDate
-			END
 		END
 
 		---- Mofify new setting in Acc_GroupExtraPT2Setting for ACCYEN789 / ACCYEN889 / ACCUT
@@ -183,12 +175,6 @@ BEGIN
 		BEGIN
 			DELETE dbo.Acc_GroupExtraPTSetting WITH(ROWLOCK, UPDLOCK)
 			WHERE SuperId = @CustID AND GroupId = @GroupId AND FromDate > @today
-
-			IF @GroupName IN ('ACCTHAI2','ACCTHAI56','ACCTHAI99')
-			BEGIN
-				DELETE dbo.Acc_GroupExtraPTSetting WITH(ROWLOCK, UPDLOCK)
-				WHERE SuperId = @CustID AND GroupName = 'BC' AND FromDate > @today
-			END
 
 			IF EXISTS (
 				SELECT TOP 1 1 FROM dbo.Acc_GroupExtraPTSetting WITH(NOLOCK)
