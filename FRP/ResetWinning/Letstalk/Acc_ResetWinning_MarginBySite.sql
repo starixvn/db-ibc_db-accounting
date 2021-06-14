@@ -17,6 +17,7 @@ AS
 		- 20201124@Sophia: Add detail by Myanmar (site 76666b) [Redmine: #145938]
 		- 20210226@Sophia: Exclude Saba.club (Amount due to Jackpot Pool)[RedmineId: #149409] 
 		- 20210524@Sophia: Add VGaming (Amount due to Jackpot Pool) [RedmineId: #155697]
+		- 20210614@Sophia: Do not separate Exchange Product anymore [Redmine: #156908]
 	Param Explanation:
 		 
 	   
@@ -351,7 +352,7 @@ BEGIN
 			-- Region: Get Sum data
 
 			CREATE TABLE #TempDataEX(
-				PartyId            INT
+				Site			 VARCHAR (50)	
 			  , rptDate            DATETIME
 			  , ProductID          INT
 			  , CurrencyId         INT
@@ -361,7 +362,7 @@ BEGIN
 			  , AmountToCompany    MONEY
 			  , PayToSupplier      MONEY);
 
-			INSERT INTO #TempDataEX(PartyId
+			INSERT INTO #TempDataEX(Site
 							 , rptDate
 							 , CurrencyId
 							 , MemberWL
@@ -371,7 +372,7 @@ BEGIN
 							 , AmountToCompany
 							 , PayToSupplier)
 				 (
-					SELECT p.PartyId
+					SELECT s.SiteName AS Site
 						, b.rptDate
 						, b.CurrencyID
 						, SUM(ISNULL(b.MemberWL, 0))
@@ -389,29 +390,31 @@ BEGIN
 						INNER JOIN @PartyCharge3rdInfo AS rd ON b.ProductID = rd.ProductID
 														AND b.SiteID = rd.LicenseeID
 														AND b.rptDate BETWEEN rd.FromDate AND rd.ToDate
+						LEFT JOIN bodb_Licensee.dbo.view_site_list s WITH (NOLOCK) ON s.SiteID = b.SiteID
 					WHERE b.rptDate BETWEEN @FDate AND @TDate
 						 AND b.CurrencyID <> 20
 						 AND b.customercategory NOT IN(27, 28)
 						 AND b.StatusId NOT IN(-1, 101, 102, 103) -- Exclude Reject , Void, Refund
 					GROUP BY b.rptdate
 						  , b.SiteId
-						  , p.PartyId
+						  , s.SiteName 
 						  , b.CurrencyID
 						  , b.ProductId
 				 );
 
-			CREATE TABLE #FinalResult(
-				RptDate          VARCHAR(10)
+			CREATE TABLE #ExchangeWL(
+				Site			 VARCHAR (50)			
 			  , LicenseeWL       MONEY
 			  , PayToSupplier    MONEY);
 
-			INSERT INTO #FinalResult(rptDate
+			INSERT INTO #ExchangeWL(Site
 							  , LicenseeWL
 							  , PayToSupplier)
-				 SELECT 'FullRange'
+				 SELECT Site						
 					 , SUM(AmountToCompany) - SUM(AComm + PComm)
 					 , SUM(PayToSupplier) + SUM(AComm + PComm)
-				 FROM #TempDataEX
+				 FROM #TempDataEX 
+				 GROUP BY Site 
 		 	
 		END 
 		---- End of Exchange Product
@@ -421,14 +424,20 @@ BEGIN
 		CREATE TABLE #Winlost (Site VARCHAR(50), SB TINYINT, TurnOver MONEY, Winlost MONEY, ExtraWinlost MONEY)  
 					
 		INSERT INTO #Winlost (Site, SB, TurnOver, Winlost, ExtraWinlost)						
-		SELECT  c.Site, w.SB, SUM(ISNULL(w.TurnOver,0)) AS TurnOver, 
+		SELECT Site, s.SB  AS SB, SUM (s.TurnOver) AS TurnOver, SUM (s.Winlost) AS Winlost, SUM (s.ExtraWinlost) AS ExtraWinlost
+		FROM 
+		(SELECT c.Site, w.SB, SUM(ISNULL(w.TurnOver,0)) AS TurnOver, 
 				SUM(ISNULL( w.Winlost,0)) AS Winlost,
 				SUM(ISNULL(w.ExtraWinlost,0)) AS ExtraWinlost
 		FROM	#wl w
 		INNER JOIN bodb02.dbo.customer c WITH (NOLOCK) 
 				ON c.CustID = w.srecommend AND c.roleid = 4			
 		GROUP BY c.Site, w.SB 
- 		  
+		UNION  
+		SELECT 	Site, 0 AS SB, 0 AS TurnOver, -1 * (LicenseeWL+PayToSupplier) AS Winlost, 0 as ExtraWinlost
+ 		FROM 	#ExchangeWL
+		) s
+		GROUP BY Site, s.SB 
 
 		SELECT a.Site, a.SB, a.TurnOver, a.Margin, a.HouseWinlost, IsDeposit
 		FROM  (  
@@ -436,11 +445,11 @@ BEGIN
 				SELECT	Site, SB, SUM(w.TurnOver) as TurnOver, 
 						CASE WHEN SUM(w.TurnOver) = 0 THEN 0 ELSE SUM(w.winlost - ExtraWinlost) / SUM(w.TurnOver) * 100 END AS Margin ,
 						SUM (w.winlost - ExtraWinlost) AS HouseWinlost,
-						CASE WHEN s.SiteID > 1000 THEN 0 ELSE 1 END AS IsDeposit
+						CASE WHEN s.SiteID > 1000 OR Site IN ('Saba789') THEN 0 ELSE 1 END AS IsDeposit
 				FROM 	#Winlost w 
 				INNER JOIN bodb_licensee.dbo.view_site_list s 
 					ON s.SiteName = w.Site
-				GROUP BY Site, SB, CASE WHEN s.SiteID > 1000 THEN 0 ELSE 1 END 
+				GROUP BY Site, SB, CASE WHEN s.SiteID > 1000 OR Site IN ('Saba789') THEN 0 ELSE 1 END 
 				HAVING  SUM (w.TurnOver) IS NOT NULL 
 				UNION 
 				----- Sum total excluded CN88
@@ -478,12 +487,7 @@ BEGIN
 						CASE WHEN c.Site ='76666b' THEN 5 ELSE 3 END
 
 				) a
-	 
-		---exchange product
-		UNION
-		SELECT 'Exchange Product', 0 AS SB, 0 AS TurnOver, 0 AS Margin , -1 * SUM(LicenseeWL+PayToSupplier) AS HouseWinlost, 4 AS IsDeposit
-		FROM	#FinalResult
-		HAVING  SUM(LicenseeWL+PayToSupplier) IS NOT NULL 
+	 		
 
 		ORDER BY  IsDeposit, Site
 
@@ -491,8 +495,8 @@ BEGIN
 	DROP TABLE #WL		
 	DROP TABLE #Winlost
 	
-	DROP TABLE #TempDataEX
-	DROP TABLE #FinalResult 
+	DROP TABLE #TempDataEX	
+	DROP TABLE #ExchangeWL 
 	DROP TABLE #ExchangeOANDA 
 
 END
