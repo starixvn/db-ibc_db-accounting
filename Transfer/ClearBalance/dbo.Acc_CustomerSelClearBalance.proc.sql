@@ -31,6 +31,7 @@ AS
 		- 20200316@Elodie: Remove from Hardcode list finance permission for Nova [Redmine: #130499]
 		- 20200317@Malcolm: grant permission for finance account [Redmine : #128128]
 		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
+		- 20210615@Sol: Alpha - All Sites - Lock account & indirect close account - [RedmineID: #148600]
 
 	Param's Explanation:
 	
@@ -308,10 +309,18 @@ BEGIN
 	SELECT rownum, custid, username, closed, firstname, lastname, credit, recommend, mrecommend, srecommend, SyncCasino
 	FROM (
 		SELECT
-			ROW_NUMBER() OVER(ORDER BY ci.closed, c.username) AS rownum,
-			c.custid, c.username, ci.closed, c.firstname, c.lastname, ci.credit, c.recommend, c.mrecommend, c.srecommend, ci.SyncCasino /* recommend, mrecommend, SyncCasino for agent level*/
+			ROW_NUMBER() OVER(ORDER BY cs.IsClosed, c.username) AS rownum,
+			c.custid, c.username, cs.IsClosed AS closed, c.firstname, c.lastname, ci.credit, c.recommend, c.mrecommend, c.srecommend, ci.SyncCasino /* recommend, mrecommend, SyncCasino for agent level*/
 		FROM dbo.Customer c WITH(NOLOCK)
 			INNER JOIN dbo.custInfo ci WITH(NOLOCK) ON c.custid = ci.custid
+			CROSS APPLY  
+			(
+				SELECT 
+					CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
+					,CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
+				FROM dbo.CustProductStatus WITH(NOLOCK)
+				WHERE CustID = ci.custid
+			) AS cs
 		WHERE c.srecommend = @srecommend -- to using index on srecommend
 			AND	c.srecommend	= CASE WHEN @roleID = 4 THEN @custid ELSE c.srecommend END
 			AND c.mrecommend	= CASE WHEN @roleID = 3 THEN @custid ELSE c.mrecommend END
