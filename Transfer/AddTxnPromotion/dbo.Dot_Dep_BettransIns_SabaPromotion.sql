@@ -241,21 +241,7 @@ BEGIN
 		-- insert into bettrans
 		SELECT @TransID = SCOPE_IDENTITY(), @doneinsert = CURRENT_TIMESTAMP
 
-		-- update account balance
-		EXEC dbo.Dot_BalanceCreditUpd @CustID = @CustID
-			, @balance	= 0
-			, @type		= 4 --others
-			, @ErrCode	= @ErrCode OUTPUT
-		IF (@ErrCode <> 0)
-		BEGIN
-			SELECT @ErrMsg = 'Insert balance credit failed.', @ErrCode = 109
-				,@result = 'failed-balance'
-
-			--Manually rollback bettrans
-			DELETE dbo.bettrans WHERE transid = @TransID
-				
-			GOTO FINISH
-		END
+		 
 		
 		-- GET final total balance
 		EXEC [dbo].[Dot_BalanceMemberSel]
@@ -289,7 +275,7 @@ BEGIN
 		SELECT @logInfo += N' . Error: ' + CAST(@ErrCode AS VARCHAR(10)) + '. ErrMessage: ' + @ErrMsg
 	END
 
-	-----------------Write Log Red Envelope ----------------------
+	-----------------Write Log ----------------------
 	BEGIN TRY	
 	
 		EXEC dbo.WriteLog_UserLog @UserID = @CustID, @Doing = @LogInfo
