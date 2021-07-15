@@ -11,6 +11,7 @@ AS
 	
 	Revision:
 		- 20210603@Sophia: initial [Redmine: #155697]
+		- 20210617@Sol: deploy function to DBTXN-bobd02 - [RedmineId : #156653]
 		 
 */
 
