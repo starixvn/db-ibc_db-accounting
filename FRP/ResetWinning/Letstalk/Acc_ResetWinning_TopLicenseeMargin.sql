@@ -53,8 +53,8 @@ BEGIN
 	INSERT INTO #SabaVirtualSportsLeague (LeagueId, LeagueGroupID) 
 	SELECT leagueid, LeagueGroupID
 	FROM dbo.League WITH (NOLOCK)
-	WHERE ((sporttype = 1 AND LeagueGroupID IN (41, 42, 74, 108, 113))
-			OR (sporttype = 2 AND LeagueGroupID IN (42, 72))
+	WHERE ((sporttype = 1 AND LeagueGroupID IN (42, 74, 108, 113))
+			OR (sporttype = 2 AND LeagueGroupID IN (42))
 			)
 	----- End get Saba League  	
 	
@@ -129,8 +129,6 @@ BEGIN
 				CASE WHEN b.bettype in (9,29) THEN -2 
 				WHEN m.SportType = 1 and m.LeagueGroupID IN (42, 74, 108) then -3  -- Saba soccer
 				WHEN m.SportType = 2 and m.LeagueGroupID = 42 then -4  -- Saba basketball
-				WHEN m.SportType = 1 and m.LeagueGroupID = 41 then -5  -- Esoccer
-				WHEN m.SportType = 2 and m.LeagueGroupID = 72 then -6  -- Ebasketball
 				WHEN b.bettype = 999 then -7 -- Odds Spread Adjustment
 				WHEN m.SportType = 1 and m.LeagueGroupID IN (113) then -8  -- Saba Pin Goal
 				ELSE m.SportType end SportType, 
@@ -162,8 +160,6 @@ BEGIN
 			CASE WHEN b.bettype in (9,29) THEN -2 
 				WHEN m.SportType = 1 and m.LeagueGroupID IN (42, 74, 108) then -3  -- Saba soccer
 				WHEN m.SportType = 2 and m.LeagueGroupID = 42 then -4  -- Saba basketball
-				WHEN m.SportType = 1 and m.LeagueGroupID = 41 then -5  -- Esoccer
-				WHEN m.SportType = 2 and m.LeagueGroupID = 72 then -6  -- Ebasketball
 				WHEN b.bettype = 999 then -7 -- Odds Spread Adjustment
 				WHEN m.SportType = 1 and m.LeagueGroupID IN (113) then -8
 				ELSE m.SportType end
@@ -218,8 +214,8 @@ BEGIN
 				SUM(CASE WHEN sporttype = -3 THEN ISNULL(t1.Winloss,0) ELSE 0 END) Winloss_SabaSoccer,
 				SUM(CASE WHEN sporttype = -4 THEN ISNULL(t1.Turnover,0) ELSE 0 END) Turnover_SabaBasketball,
 				SUM(CASE WHEN sporttype = -4 THEN ISNULL(t1.Winloss,0) ELSE 0 END) Winloss_SabaBasketball,
-				SUM(CASE WHEN t1.sporttype not in (1, 2, 5, 43, -2, -3, -4, -5, -6) THEN ISNULL(t1.Turnover,0) ELSE 0 END) Turnover_Othersport,
-				SUM(CASE WHEN t1.sporttype not in (1, 2, 5, 43, -2, -3, -4, -5, -6) THEN ISNULL(t1.Winloss,0) ELSE 0 END) Winloss_Othersport
+				SUM(CASE WHEN t1.sporttype not in (1, 2, 5, 43, -2, -3, -4) THEN ISNULL(t1.Turnover,0) ELSE 0 END) Turnover_Othersport,
+				SUM(CASE WHEN t1.sporttype not in (1, 2, 5, 43, -2, -3, -4) THEN ISNULL(t1.Winloss,0) ELSE 0 END) Winloss_Othersport
 			FROM #Detail t1 
 			GROUP BY t1.site 
 		) T
