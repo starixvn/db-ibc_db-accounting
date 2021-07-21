@@ -17,9 +17,13 @@ AS
 		- 20210422@Sophia: Add Cricket [Redmind: #153777]	
 		- 20210504@Sophia: Fix Cricket of Saba [Redmine: #154465]
 		- 20210524@Sophia: Add Saba Pin Goal [RedmineId: #155697]
+		- 20210720@Sophia: Split Saba Pin Goal out of Saba Virtual Sports [Redmine: #158780]
 		
 		 
 	Param Explanation:
+		IsSaba = 0: Normal,
+		IsSaba = 1: Saba Virtual Sports,
+		IsSaba = 2: Saba Pin Goal
 		 
 	   
 */
@@ -54,10 +58,10 @@ BEGIN
 	----- End get Sporttype  
 	
 	----- Get Saba League ---------
-	CREATE TABLE #SabaVirtualSportsLeague (LeagueId INT)
+	CREATE TABLE #SabaVirtualSportsLeague (LeagueId INT, SabaType TINYINT)
 
 	INSERT INTO #SabaVirtualSportsLeague
-	SELECT leagueid
+	SELECT leagueid, CASE WHEN LeagueGroupID = 113 THEN 2 ELSE 1 END AS SabaType  ---- SabaType = 2: Saba Pin Goal, SabaType = 1: Saba Virtual Sports 
 	FROM dbo.League WITH (NOLOCK)
 	WHERE  LeagueGroupID IN (41, 42, 74, 108, 113)
 			/*((sporttype = 1 AND LeagueGroupID IN (41, 42, 74, 108))
@@ -73,7 +77,7 @@ BEGIN
                      (MatchId   INT, 
                       type      VARCHAR(10), 
                       SportType INT,
-					  IsSaba	BIT
+					  IsSaba	TINYINT
                       PRIMARY KEY(MatchId, type)
                      );
         INSERT INTO #Match
@@ -87,7 +91,7 @@ BEGIN
 					SELECT MatchId, 
 						  'match' AS type,
 						  Sporttype,
-						  CASE WHEN l.LeagueId IS NULL THEN 0 ELSE 1 END AS IsSaba
+						  CASE WHEN l.LeagueId IS NULL THEN 0 ELSE SabaType END AS IsSaba
 					FROM Match m WITH(NOLOCK)
 					LEFT JOIN #SabaVirtualSportsLeague l 
 						ON l.LeagueId = m.leagueid 
@@ -96,7 +100,7 @@ BEGIN
 					SELECT orid,  
 						  'outright' AS type,
 						  ll.Sporttype,
-						  CASE WHEN l.LeagueId IS NULL THEN 0 ELSE 1 END AS IsSaba
+						  CASE WHEN l.LeagueId IS NULL THEN 0 ELSE SabaType END AS IsSaba
 					FROM outright o WITH(NOLOCK)
 					INNER JOIN league ll WITH (NOLOCK) 
 						ON ll.leagueID = o.LeagueId
@@ -117,7 +121,7 @@ BEGIN
 		(	
 			Sporttype  		SMALLINT, 
 			LiveIndicator	BIT,
-			IsSaba 			BIT	,
+			IsSaba 			TINYINT	,
 			TurnOver		MONEY,
 			Winlost			MONEY, 		
 			ExtraWinlost	MONEY
