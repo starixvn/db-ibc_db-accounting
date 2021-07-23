@@ -198,6 +198,10 @@ BEGIN
 		WHERE (winlostdate < @winlostdate OR (winlostdate >= @winlostdate AND bettype > 20000))
 			AND ruben = 1
 			AND bettype NOT IN (21008, 21009)
+			AND 1 = CASE 
+						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+					ELSE 1 END
 		GROUP BY b.custid, b.recommend, b.mrecommend
 	END
 		
@@ -248,6 +252,10 @@ BEGIN
 			WHERE (winlostdate < @winlostdate OR (winlostdate >= @winlostdate AND bettype > 20000))
 				AND ruben = 1
 				AND bettype NOT IN (21008, 21009)
+				AND 1 = CASE 
+							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+						ELSE 1 END
 			GROUP BY b.custid, b.recommend, b.mrecommend
 		END
 

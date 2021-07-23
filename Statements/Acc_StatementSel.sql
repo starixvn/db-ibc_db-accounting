@@ -373,7 +373,11 @@ BEGIN
 		FROM dbo.bettrans bt WITH (NOLOCK)	--- Use index on custID		
 		WHERE CustID = @CID
 			  AND Bettype >= 19999
-			  AND winlostdate <= @todate	
+			  AND winlostdate <= @todate
+			  AND 1 = CASE 
+						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+					ELSE 1 END
 		GROUP BY Winlostdate, bettype 
 		
 		-- I.3.2. BettransLC:  Exclude ticket running, waiting 	
@@ -472,6 +476,10 @@ BEGIN
 						WHERE m.mrecommend = bt.custid 
 							AND bettype >= 19999
 							AND winlostdate <= @todate
+							AND 1 = CASE 
+										WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+										WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+									ELSE 1 END
 					) b
 		GROUP BY Winlostdate, bettype, IsOwner
 		OPTION (OPTIMIZE FOR (@i = 1))
@@ -547,6 +555,10 @@ BEGIN
 		WHERE bt.custid = @CID
 			AND bettype >= 19999
 			AND winlostdate <= @todate
+			AND 1 = CASE 
+						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+					ELSE 1 END
 		GROUP BY Winlostdate, bettype
 	END
 	-- End Headline
