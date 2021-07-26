@@ -165,7 +165,7 @@ BEGIN
 			, NULL AS betteam
 			, @Betfrom AS betfrom
 			, @TransDesc AS transdesc
-			, NULL AS ExtraInfo
+			, @ExtraInfo AS ExtraInfo
 			, NULL AS transid2
 			--------------------------
 			
