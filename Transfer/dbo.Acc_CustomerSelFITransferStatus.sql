@@ -1,4 +1,5 @@
-﻿ALTER PROCEDURE [dbo].[Acc_CustomerSelFITransferStatus]
+﻿/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet,bodbExtAccNet" viewers="" isFunction="0" isNested="0"></info>*/
+ALTER PROCEDURE [dbo].[Acc_CustomerSelFITransferStatus]
     @FromCustId INT,
     @ToUser        VARCHAR(50),
     @IsTransfer BIT OUTPUT,
@@ -8,14 +9,14 @@
 AS
 SET NOCOUNT ON
 /*
-Created:
-Task : Check status acc when transfer (from Betting Acc to Finance Acc or contrary)
-DB: DB06.bodb02
-Original:
+	Created:
+	Task : Check status acc when transfer (from Betting Acc to Finance Acc or contrary)
+	DB: DB06.bodb02
+	Original:
 
-Revisions:
-    -
-Param's Explanation:
+	Revisions:
+		-
+	Param's Explanation:
    
 */
 BEGIN
@@ -34,13 +35,19 @@ BEGIN
         RETURN
     END
 
-    IF exists(SELECT 1 FROM custinfo(nolock) WHERE custid = @FromCustId and closed = 1)
+    IF exists(SELECT 1 
+			FROM custinfo ci (nolock) 
+				INNER JOIN CustProductStatus cs WITH (NOLOCK) ON ci.custid = cs.custid 
+			WHERE custid = @FromCustId and cs.CloseInfo > 0)
     BEGIN
         SELECT @errcode = 101, @errmsg = 'The account ' + username + ' was closed, so you can not transfer.' from custinfo (nolock) where custid = @FromCustId
         RETURN
     END
 
-    IF exists(SELECT 1 FROM custinfo(nolock) WHERE username = @ToUser and closed = 1)
+    IF exists(SELECT 1 
+			FROM custinfo ci (nolock) 
+				INNER JOIN CustProductStatus cs WITH (NOLOCK) ON ci.custid = cs.custid 
+			WHERE username = @ToUser and cs.CloseInfo > 0)
     BEGIN
         SELECT @errcode = 101, @errmsg = 'The account ' + @ToUser + ' was closed, so you can not transfer.'
         RETURN
@@ -48,10 +55,3 @@ BEGIN
 
     SELECT @IsTransfer = 1
 END
-
-GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelFITransferStatus] TO [bodbAdminNet]
-GO
-GRANT EXECUTE ON [dbo].[Acc_CustomerSelFITransferStatus] TO [bodbExtAccNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_CustomerSelFITransferStatus] TO [vnteam]
