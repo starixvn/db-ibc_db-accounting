@@ -1,11 +1,11 @@
-/*<info serverAlias="DBPOL-NAP_UserControl"></info>*/
+/*<info serverAlias="DBCUST-CustDB"></info>*/
 /*
 	Created: 20210301@Percy
-	DB: DBPOL-NAP_UserControl
+	DB: DBCUST-CustDB
 	Task: New tables for auto set primary extra pt group
 */
 
-USE NAP_UserControl
+USE CustDB
 GO
 
 CREATE TABLE dbo.EaGroupHeadline
@@ -26,16 +26,7 @@ CREATE TABLE dbo.EaGroupHeadline
 		SiteId ASC,
 		ExchangeId ASC
 	)
-) ON NAP_UserControl_table
-GO
-
-GRANT SELECT ON dbo.EaGroupHeadline TO bodbAdminNet AS dbo
-GO
-GRANT INSERT ON dbo.EaGroupHeadline TO bodbAdminNet AS dbo
-GO
-GRANT UPDATE ON dbo.EaGroupHeadline TO bodbAdminNet AS dbo
-GO
-GRANT DELETE ON dbo.EaGroupHeadline TO bodbAdminNet AS dbo
+) ON DATA
 GO
 
 CREATE TABLE dbo.Acc_CustGroup_Queue
@@ -49,15 +40,5 @@ CREATE TABLE dbo.Acc_CustGroup_Queue
 		CustId ASC,
 		GroupName ASC
 	)
-) ON NAP_UserControl_table
+) ON DATA
 GO
-
-GRANT SELECT ON dbo.Acc_CustGroup_Queue TO bodbAdminNet AS dbo
-GO
-GRANT INSERT ON dbo.Acc_CustGroup_Queue TO bodbAdminNet AS dbo
-GO
-GRANT UPDATE ON dbo.Acc_CustGroup_Queue TO bodbAdminNet AS dbo
-GO
-GRANT DELETE ON dbo.Acc_CustGroup_Queue TO bodbAdminNet AS dbo
-GO
-

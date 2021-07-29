@@ -9,7 +9,7 @@ USE [msdb]
 GO
 
 EXEC dbo.sp_add_job
-		@job_name=N'NAP_UserControl: Daily Auto Clean Up Headline Group Mapping',
+		@job_name=N'CustDB: Daily Auto Clean Up Headline Group Mapping',
 		@enabled=1,
 		@notify_level_eventlog=0,
 		@notify_level_email=0,
@@ -21,7 +21,7 @@ EXEC dbo.sp_add_job
 		@owner_login_name=N'sa'
 
 EXEC dbo.sp_add_jobstep
-		@job_name=N'NAP_UserControl: Daily Auto Clean Up Headline Group Mapping',
+		@job_name=N'CustDB: Daily Auto Clean Up Headline Group Mapping',
 		@step_name=N'Clean Up Data',
 		@step_id=1,
 		@cmdexec_success_code=0,
@@ -34,13 +34,13 @@ EXEC dbo.sp_add_jobstep
 		@os_run_priority=0,
 		@subsystem=N'TSQL',
 		@command=N'EXEC dbo.Task_Acc_CustGroup_Queue_Del',
-		@database_name=N'NAP_UserControl',
+		@database_name=N'CustDB',
 		@flags=0
 EXEC dbo.sp_update_job
-		@job_name=N'NAP_UserControl: Daily Auto Clean Up Headline Group Mapping',
+		@job_name=N'CustDB: Daily Auto Clean Up Headline Group Mapping',
 		@start_step_id = 1
 EXEC dbo.sp_add_jobschedule
-		@job_name=N'NAP_UserControl: Daily Auto Clean Up Headline Group Mapping',
+		@job_name=N'CustDB: Daily Auto Clean Up Headline Group Mapping',
 		@name=N'Schedule Auto Migrate Data ProblemAccount',
 		@enabled=1,
 		@freq_type=4,
@@ -54,5 +54,5 @@ EXEC dbo.sp_add_jobschedule
 		@active_start_time=500,
 		@active_end_time=235959
 EXEC dbo.sp_add_jobserver
-		@job_name=N'NAP_UserControl: Daily Auto Clean Up Headline Group Mapping',
+		@job_name=N'CustDB: Daily Auto Clean Up Headline Group Mapping',
 		@server_name = N'(local)'

@@ -1,5 +1,5 @@
-/*<info serverAlias="DBPOL-NAP_UserControl" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
-USE NAP_UserControl
+/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
+USE CustDB
 GO
 
 ALTER PROCEDURE [dbo].[Acc_ExternalGroupHeadline_MappingSuper]
@@ -9,7 +9,7 @@ AS
 
 /*
 	Created: 20210302@Percy
-	DB: DBPOL-NAP_UserControl
+	DB: DBCUST-CustDB
 	Task: Auto Set Primary Extra PT Group - Check Mapping Super
 
 	Revisions:
@@ -33,10 +33,10 @@ BEGIN
 		,s.SiteId = ss.SiteId
 		,s.Site = ss.Site
 	FROM @Supers s
-		INNER JOIN CustDB.dbo.Customer c WITH (NOLOCK) ON s.UserName = c.UserName
-		INNER JOIN CustDB.dbo.CustInfo i WITH (NOLOCK) ON c.CustId = i.CustId AND i.Enabled = 1
-		INNER JOIN CustDB.dbo.Exchange e WITH (NOLOCK) ON c.Currency = e.ExchangeId
-		INNER JOIN CustDB.dbo.Site ss WITH (NOLOCK) ON c.Site = ss.Site
+		INNER JOIN dbo.Customer c WITH (NOLOCK) ON s.UserName = c.UserName
+		INNER JOIN dbo.CustInfo i WITH (NOLOCK) ON c.CustId = i.CustId AND i.Enabled = 1
+		INNER JOIN dbo.Exchange e WITH (NOLOCK) ON c.Currency = e.ExchangeId
+		INNER JOIN dbo.Site ss WITH (NOLOCK) ON c.Site = ss.Site
 	WHERE c.RoleId = 4
 
 	DELETE @Supers WHERE CustId IS NULL

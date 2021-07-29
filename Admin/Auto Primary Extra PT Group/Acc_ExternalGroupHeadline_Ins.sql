@@ -1,5 +1,5 @@
-/*<info serverAlias="DBPOL-NAP_UserControl" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
-USE NAP_UserControl
+/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
+USE CustDB
 GO
 
 ALTER PROCEDURE [dbo].[Acc_ExternalGroupHeadline_Ins]
@@ -17,7 +17,7 @@ AS
 
 /*
 	Created: 20210302@Percy
-	DB: DBPOL-NAP_UserControl
+	DB: DBCUST-CustDB
 	Task: Auto Set Primary Extra PT Group
 
 	Revisions:
@@ -44,8 +44,8 @@ BEGIN
 	DECLARE @maxDate DATETIME = '9999-12-31'
 
 	DECLARE @Site VARCHAR(50), @Currency VARCHAR(50)
-	SELECT  @Site = Site FROM CustDB.dbo.Site WITH (NOLOCK) WHERE SiteId = @SiteId
-	SELECT  @Currency = Currency FROM CustDB.dbo.Exchange WITH (NOLOCK) WHERE ExchangeId = @ExchangeId
+	SELECT  @Site = Site FROM dbo.Site WITH (NOLOCK) WHERE SiteId = @SiteId
+	SELECT  @Currency = Currency FROM dbo.Exchange WITH (NOLOCK) WHERE ExchangeId = @ExchangeId
 
 	-- Check Effective Date
 	IF (ISNULL(@PrimaryExtraGroup, '') <> '' AND @EffectiveDate IS NULL) OR @EffectiveDate < @currentDate
@@ -66,7 +66,7 @@ BEGIN
 	END
 
 	-- Check Group Headline
-	IF NOT EXISTS (SELECT 1 FROM CustDB.dbo.CustGroupHeadline WITH (NOLOCK) WHERE GroupId = @GroupHeadlineId)
+	IF NOT EXISTS (SELECT 1 FROM dbo.CustGroupHeadline WITH (NOLOCK) WHERE GroupId = @GroupHeadlineId)
 	BEGIN
 		SELECT @ErrCode = 102, @ErrMsg = 'This Group Headline does not exist.'
 		RETURN
@@ -80,7 +80,7 @@ BEGIN
 	UPDATE t
 	SET t.GroupId = e.GroupId
 	FROM @EaGroup t
-		INNER JOIN dbo.EaGroup e WITH (NOLOCK) ON t.GroupName = e.GroupName
+		INNER JOIN NAP_UserControl.dbo.EaGroup e WITH (NOLOCK) ON t.GroupName = e.GroupName
 
 	IF EXISTS (SELECT 1 FROM @EaGroup WHERE GroupId IS NULL)
 	BEGIN
@@ -91,7 +91,7 @@ BEGIN
 	UPDATE t
 	SET t.GroupTypeId = 1, t.GroupExtraPTId = e.GroupId
 	FROM @EaGroup t
-		INNER JOIN CustDB.dbo.Acc_DWLList_ExtraPT e WITH (NOLOCK) ON t.GroupName = e.GroupName
+		INNER JOIN dbo.Acc_DWLList_ExtraPT e WITH (NOLOCK) ON t.GroupName = e.GroupName
 	WHERE t.GroupTypeId = 0
 
 	IF @PrimaryExtraGroup = 'No Extra PT'
@@ -114,7 +114,7 @@ BEGIN
 	SELECT @ErrMsg = COALESCE(@ErrMsg + ', ', '') + e.GroupName
 	FROM @EaGroup e
 	WHERE e.GroupId <> 0
-		AND NOT EXISTS (SELECT 1 FROM CustDB.dbo.f_SiteBySystem(e.GroupName) s WHERE ISNULL(s.SiteId, 0) = @SiteId)
+		AND NOT EXISTS (SELECT 1 FROM dbo.f_SiteBySystem(e.GroupName) s WHERE ISNULL(s.SiteId, 0) = @SiteId)
 
 	IF ISNULL(@ErrMsg, '') <> ''
 	BEGIN
@@ -126,7 +126,7 @@ BEGIN
 	SELECT @ErrMsg = COALESCE(@ErrMsg + ', ', '') + e.GroupName
 	FROM @EaGroup e
 	WHERE e.GroupId <> 0
-		AND NOT EXISTS (SELECT 1 FROM CustDB.dbo.f_CurrencyBySystem(e.GroupName) c WHERE ISNULL(c.ExchangeId, 0) = @ExchangeId)
+		AND NOT EXISTS (SELECT 1 FROM dbo.f_CurrencyBySystem(e.GroupName) c WHERE ISNULL(c.ExchangeId, 0) = @ExchangeId)
 
 	IF ISNULL(@ErrMsg, '') <> ''
 	BEGIN
@@ -141,9 +141,9 @@ BEGIN
 	SELECT s.CustId, e.GroupExtraPTId, e.GroupName, e.GroupTypeId, @EffectiveDate, DATEADD(DAY, -1, @currentDate)
 	FROM (
 		SELECT s.CustId
-		FROM CustDB.dbo.CustAccount ca WITH (NOLOCK)
-			INNER JOIN CustDB.dbo.Customer s WITH (NOLOCK) ON ca.CustId = s.CustId
-			INNER JOIN CustDB.dbo.CustInfo c WITH (NOLOCK) ON s.CustId = c.CustId AND c.Enabled = 1
+		FROM dbo.CustAccount ca WITH (NOLOCK)
+			INNER JOIN dbo.Customer s WITH (NOLOCK) ON ca.CustId = s.CustId
+			INNER JOIN dbo.CustInfo c WITH (NOLOCK) ON s.CustId = c.CustId AND c.Enabled = 1
 		WHERE ca.GroupId = @GroupHeadlineId AND s.Site = @Site AND s.Currency = @ExchangeId
 			AND s.RoleId = 4
 	) s
@@ -153,7 +153,7 @@ BEGIN
 	DECLARE @tblPrefix TABLE (GroupName VARCHAR(50), Prefix VARCHAR(10), AllowNewSuper BIT)
 	INSERT INTO @tblPrefix (GroupName, Prefix, AllowNewSuper)
 	SELECT GroupName, Prefix, AllowNewSuper
-	FROM CustDB.dbo.Acc_SuperPrefix WITH (NOLOCK)
+	FROM dbo.Acc_SuperPrefix WITH (NOLOCK)
 	WHERE ',' + @ExternalGroups + ',' LIKE '%,' + GroupName + ',%'
 		
 	IF @@ROWCOUNT <> 0
@@ -163,7 +163,7 @@ BEGIN
 		;WITH CTE_Group AS (
 			SELECT DISTINCT c.UserName, a.GroupName
 			FROM #Super s
-				INNER JOIN CustDB.dbo.Customer c WITH (NOLOCK) ON s.CustId = c.CustId
+				INNER JOIN dbo.Customer c WITH (NOLOCK) ON s.CustId = c.CustId
 				CROSS APPLY (SELECT DISTINCT t.GroupName FROM @tblPrefix t WHERE t.GroupName NOT IN (SELECT p.GroupName FROM @tblPrefix p WHERE c.UserName LIKE p.Prefix + '%' AND AllowNewSuper = 1)) a
 			WHERE a.GroupName IS NOT NULL
 		), CTE_UserName AS (
@@ -192,7 +192,7 @@ BEGIN
 		DECLARE @ExtraPTGroup TABLE (CustId INT, GroupId INT, GroupName VARCHAR(100), FromDate DATETIME, ToDate DATETIME)
 		INSERT INTO @ExtraPTGroup (CustId, GroupId, GroupName, FromDate, ToDate)
 		SELECT e.SuperId, e.GroupId, e.GroupName, MIN(e.FromDate), MAX(e.ToDate)
-		FROM CustDB.dbo.Acc_GroupExtraPTSetting e WITH (NOLOCK)
+		FROM dbo.Acc_GroupExtraPTSetting e WITH (NOLOCK)
 			INNER JOIN (SELECT DISTINCT CustId FROM #Super) s ON e.SuperId = s.CustId
 		WHERE e.ToDate >= @CurrentDate
 		GROUP BY e.SuperId, e.GroupId, e.GroupName
@@ -204,7 +204,7 @@ BEGIN
 			FROM @ExtraPTGroup eg
 				CROSS APPLY (
 					SELECT MIN(e.FromDate) AS FromDate
-					FROM CustDB.dbo.Acc_GroupExtraPTSetting e WITH (NOLOCK)
+					FROM dbo.Acc_GroupExtraPTSetting e WITH (NOLOCK)
 					WHERE e.SuperId = eg.CustId AND eg.GroupId = e.GroupId
 						AND e.ToDate = DATEADD(DAY, -1, eg.FromDate)
 				) e
@@ -220,8 +220,8 @@ BEGIN
 			SELECT c.CustId
 				,STUFF((
 					SELECT ', ' + cg.GroupName
-					FROM CustDB.dbo.Acc_CustGroup cg WITH (NOLOCK)
-						INNER JOIN dbo.EaGroup eg WITH (NOLOCK) ON cg.GroupName = eg.GroupName AND eg.ParentId = 0
+					FROM dbo.Acc_CustGroup cg WITH (NOLOCK)
+						INNER JOIN NAP_UserControl.dbo.EaGroup eg WITH (NOLOCK) ON cg.GroupName = eg.GroupName AND eg.ParentId = 0
 					WHERE cg.CustId = c.CustId
 					FOR XML PATH ('')), 1, 2, '') AS ExternalGroups
 				,STUFF((
@@ -252,11 +252,11 @@ BEGIN
 		SET s.EffectiveDate = CASE WHEN @EffectiveDate = @currentDate AND s.GroupTypeId = 2 THEN DATEADD(DAY, 1, s.EffectiveDate) ELSE s.EffectiveDate END
 			,s.EndDate = @currentDate
 		FROM #Super s
-		WHERE EXISTS (SELECT c.CustId FROM CustDB.dbo.Customer c WITH (NOLOCK) WHERE s.CustId = c.srecommend AND c.RoleId = 1)
+		WHERE EXISTS (SELECT c.CustId FROM dbo.Customer c WITH (NOLOCK) WHERE s.CustId = c.srecommend AND c.RoleId = 1)
 
 		-- Remove future setting
 		DELETE e WITH (ROWLOCK, UPDLOCK)
-		FROM CustDB.dbo.Acc_GroupExtraPTSetting e
+		FROM dbo.Acc_GroupExtraPTSetting e
 			INNER JOIN (SELECT DISTINCT CustId, EndDate FROM #Super) s ON e.SuperId = s.CustId
 		WHERE e.FromDate >= @currentDate
 			AND (
@@ -265,7 +265,7 @@ BEGIN
 			)
 
 		DELETE e WITH (ROWLOCK, UPDLOCK)
-		FROM CustDB.dbo.Acc_GroupExtraPT2Setting e
+		FROM dbo.Acc_GroupExtraPT2Setting e
 			INNER JOIN (SELECT DISTINCT CustId, EndDate FROM #Super) s ON e.SuperId = s.CustId
 		WHERE e.FromDate >= @currentDate
 			AND (
@@ -276,8 +276,8 @@ BEGIN
 		-- Update current setting
 		UPDATE e WITH (ROWLOCK)
 		SET e.ToDate = CASE WHEN s.EndDate < p.ToDate THEN s.EndDate ELSE p.ToDate END
-		FROM CustDB.dbo.Acc_GroupExtraPTSetting e
-			INNER JOIN CustDB.dbo.Acc_GroupExtraPT_Product p WITH (NOLOCK)
+		FROM dbo.Acc_GroupExtraPTSetting e
+			INNER JOIN dbo.Acc_GroupExtraPT_Product p WITH (NOLOCK)
 				ON		e.GroupId		= p.GroupId
 					AND e.ProductId		= p.ProductId
 					AND e.Sporttype		= p.Sporttype
@@ -288,8 +288,8 @@ BEGIN
 
 		UPDATE e WITH (ROWLOCK)
 		SET e.ToDate = CASE WHEN s.EndDate < p.ToDate THEN s.EndDate ELSE p.ToDate END
-		FROM CustDB.dbo.Acc_GroupExtraPT2Setting e
-			INNER JOIN CustDB.dbo.Acc_GroupExtraPT_Product p WITH (NOLOCK)
+		FROM dbo.Acc_GroupExtraPT2Setting e
+			INNER JOIN dbo.Acc_GroupExtraPT_Product p WITH (NOLOCK)
 				ON		e.GroupId		= p.GroupId
 					AND e.ProductId		= p.ProductId
 					AND e.Sporttype		= p.Sporttype
@@ -302,15 +302,15 @@ BEGIN
 		IF @PrimaryExtraGroup NOT IN ('', 'No Extra PT')
 		BEGIN
 			DECLARE @New_ExtraPTGroupId INT
-			SELECT TOP 1 @New_ExtraPTGroupId = GroupId FROM CustDB.dbo.Acc_GroupExtraPT_Product WITH (NOLOCK) WHERE GroupName = @PrimaryExtraGroup
+			SELECT TOP 1 @New_ExtraPTGroupId = GroupId FROM dbo.Acc_GroupExtraPT_Product WITH (NOLOCK) WHERE GroupName = @PrimaryExtraGroup
 			
-			INSERT INTO CustDB.dbo.Acc_GroupExtraPTSetting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate)
+			INSERT INTO dbo.Acc_GroupExtraPTSetting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate)
 			SELECT CustId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate
 			FROM (
 				SELECT s.CustId, p.GroupId, p.GroupName, p.ProductId, p.Sporttype, p.SubProduct, p.ExtraPT
 					,CASE WHEN s.EffectiveDate > p.FromDate THEN s.EffectiveDate ELSE p.FromDate END AS FromDate
 					,CASE WHEN p.ToDate < @maxDate THEN p.ToDate ELSE @maxDate END AS ToDate
-				FROM CustDB.dbo.Acc_GroupExtraPT_Product p WITH (NOLOCK)
+				FROM dbo.Acc_GroupExtraPT_Product p WITH (NOLOCK)
 					CROSS JOIN #Super s
 				WHERE s.GroupTypeId = 2
 					AND p.GroupId = @New_ExtraPTGroupId
@@ -318,13 +318,13 @@ BEGIN
 			) t
 			WHERE FromDate <= ToDate
 
-			INSERT INTO CustDB.dbo.Acc_GroupExtraPT2Setting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate)
+			INSERT INTO dbo.Acc_GroupExtraPT2Setting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate)
 			SELECT CustId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate
 			FROM (
 				SELECT s.CustId, p.GroupId, p.GroupName, p.ProductId, p.Sporttype, p.SubProduct, p.ExtraPT
 					,CASE WHEN s.EffectiveDate > p.FromDate THEN s.EffectiveDate ELSE p.FromDate END AS FromDate
 					,CASE WHEN p.ToDate < @maxDate THEN p.ToDate ELSE @maxDate END AS ToDate
-				FROM CustDB.dbo.Acc_GroupExtraPT2_Product p WITH (NOLOCK)
+				FROM dbo.Acc_GroupExtraPT2_Product p WITH (NOLOCK)
 					CROSS JOIN #Super s
 				WHERE s.GroupTypeId = 2
 					AND p.GroupId = @New_ExtraPTGroupId
@@ -337,10 +337,10 @@ BEGIN
 	-- Acc_CustGroup
 	IF EXISTS (SELECT 1 FROM #Super)
 	BEGIN
-		INSERT INTO CustDB.dbo.Acc_CustGroup (CustId, GroupName, RoleId)
+		INSERT INTO dbo.Acc_CustGroup (CustId, GroupName, RoleId)
 		SELECT s.CustId, s.GroupName, 4
 		FROM #Super s
-			LEFT JOIN CustDB.dbo.Acc_CustGroup cg WITH (NOLOCK) ON s.CustId = cg.CustId AND s.GroupName = cg.GroupName
+			LEFT JOIN dbo.Acc_CustGroup cg WITH (NOLOCK) ON s.CustId = cg.CustId AND s.GroupName = cg.GroupName
 		WHERE cg.CustId IS NULL AND s.GroupName <> '' -- No Extra PT
 
 		DELETE q WITH (ROWLOCK, UPDLOCK)
@@ -349,9 +349,9 @@ BEGIN
 
 		INSERT INTO #Super (CustId, GroupName, GroupTypeId)
 		SELECT cg.CustId, cg.GroupName, CASE WHEN e.GroupName IS NOT NULL THEN 1 ELSE 0 END
-		FROM CustDB.dbo.Acc_CustGroup cg WITH (NOLOCK)
-			INNER JOIN dbo.EaGroup eg WITH (NOLOCK) ON cg.GroupName = eg.GroupName AND eg.ParentId = 0
-			LEFT JOIN CustDB.dbo.Acc_DWLList_ExtraPT e WITH (NOLOCK) ON cg.GroupName = e.GroupName
+		FROM dbo.Acc_CustGroup cg WITH (NOLOCK)
+			INNER JOIN NAP_UserControl.dbo.EaGroup eg WITH (NOLOCK) ON cg.GroupName = eg.GroupName AND eg.ParentId = 0
+			LEFT JOIN dbo.Acc_DWLList_ExtraPT e WITH (NOLOCK) ON cg.GroupName = e.GroupName
 		WHERE NOT EXISTS (SELECT 1 FROM #Super s WHERE cg.CustId = s.CustId AND cg.GroupName = s.GroupName)
 	END
 
@@ -362,7 +362,7 @@ BEGIN
 		FROM @ExtraPTGroup eg
 			INNER JOIN (
 				SELECT e.SuperId, e.GroupName, MIN(e.FromDate) AS FromDate
-				FROM CustDB.dbo.Acc_GroupExtraPTSetting e WITH (NOLOCK)
+				FROM dbo.Acc_GroupExtraPTSetting e WITH (NOLOCK)
 					INNER JOIN (SELECT DISTINCT CustId FROM #Super) s ON e.SuperId = s.CustId
 				WHERE e.ToDate = DATEADD(DAY, -1, @CurrentDate) -- end yesterday
 				GROUP BY e.SuperId, e.GroupName
@@ -373,7 +373,7 @@ BEGIN
 		MERGE @ExtraPTGroup AS t
 		USING (
 			SELECT e.SuperId, e.GroupId, e.GroupName, MIN(e.FromDate) AS FromDate, MAX(e.ToDate) AS ToDate
-			FROM CustDB.dbo.Acc_GroupExtraPTSetting e WITH (NOLOCK)
+			FROM dbo.Acc_GroupExtraPTSetting e WITH (NOLOCK)
 				INNER JOIN (SELECT DISTINCT CustId FROM #Super) s ON e.SuperId = s.CustId
 			WHERE e.ToDate >= @CurrentDate
 			GROUP BY e.SuperId, e.GroupId, e.GroupName
@@ -391,7 +391,7 @@ BEGIN
 			FROM @ExtraPTGroup eg
 				CROSS APPLY (
 					SELECT MIN(e.FromDate) AS FromDate
-					FROM CustDB.dbo.Acc_GroupExtraPTSetting e WITH (NOLOCK)
+					FROM dbo.Acc_GroupExtraPTSetting e WITH (NOLOCK)
 					WHERE e.SuperId = eg.CustId AND eg.GroupId = e.GroupId
 						AND e.ToDate = DATEADD(DAY, -1, eg.FromDate)
 				) e
@@ -408,8 +408,8 @@ BEGIN
 				SELECT c.CustId
 					,STUFF((
 						SELECT ', ' + cg.GroupName
-						FROM CustDB.dbo.Acc_CustGroup cg WITH (NOLOCK)
-							INNER JOIN dbo.EaGroup eg WITH (NOLOCK) ON cg.GroupName = eg.GroupName AND eg.ParentId = 0
+						FROM dbo.Acc_CustGroup cg WITH (NOLOCK)
+							INNER JOIN NAP_UserControl.dbo.EaGroup eg WITH (NOLOCK) ON cg.GroupName = eg.GroupName AND eg.ParentId = 0
 						WHERE cg.CustId = c.CustId
 						FOR XML PATH ('')), 1, 2, '') AS ExternalGroups
 					,STUFF((
@@ -437,14 +437,14 @@ BEGIN
 	DECLARE @CustId INT
 
 	-- Log for Headline
-	SELECT @CustId = CustId FROM CustDB.dbo.CustGroupHeadline WITH (NOLOCK) WHERE GroupId = @GroupHeadlineId
+	SELECT @CustId = CustId FROM dbo.CustGroupHeadline WITH (NOLOCK) WHERE GroupId = @GroupHeadlineId
 	SELECT @TrackingValue = '<Acc_ExternalGroupHeadline_Ins Site="' + COALESCE(@Site, SPACE(1)) + '" ' +
 															'Currency="' + COALESCE(@Currency, SPACE(1)) + '" ' +
 															'PrimaryGroup="' + COALESCE(@PrimaryExtraGroup + ': ' + CONVERT(VARCHAR(10), @EffectiveDate, 120), SPACE(1)) + '" ' +
 															'HeadlineId="' + COALESCE(CONVERT(VARCHAR(20), @GroupHeadlineId), SPACE(1)) + '" ' +
 															'ExternalGroups="' + COALESCE(REPLACE(@ExternalGroups, ',', ', '), SPACE(1)) + '" />'
 
-	EXEC CustDB.dbo.Acc_WriteLog_UserLog_RunSP_Wrapper
+	EXEC dbo.Acc_WriteLog_UserLog_RunSP_Wrapper
 		@UserId			= @UserId
 		,@CustId		= @CustId
 		,@ActionId		= 95041
@@ -456,7 +456,7 @@ BEGIN
 	BEGIN
 		SELECT TOP 1 @CustId = CustId, @TrackingValue = ISNULL(TrackingValue, ''), @TrackingValue2 = ISNULL(TrackingValue2, '') FROM @ExtraPTLog
 
-		EXEC CustDB.dbo.Acc_WriteLog_UserLog_RunSP_Wrapper
+		EXEC dbo.Acc_WriteLog_UserLog_RunSP_Wrapper
 			@UserId				= @UserId
 			,@CustId			= @CustId
 			,@ActionId			= 95050

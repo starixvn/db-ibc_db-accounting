@@ -1,5 +1,5 @@
-/*<info serverAlias="DBPOL-NAP_UserControl" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
-USE NAP_UserControl
+/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
+USE CustDB
 GO
 
 ALTER PROCEDURE [dbo].[Acc_ExternalGroupHeadline_Sel]
@@ -13,7 +13,7 @@ AS
 
 /*
 	Created: 20210302@Percy
-	DB: DBPOL-NAP_UserControl
+	DB: DBCUST-CustDB
 	Task: Auto Set Primary Extra PT Group
 
 	Revisions:
@@ -49,10 +49,10 @@ BEGIN
 					,ISNULL(NULLIF(egh.GroupName, ''), 'No Extra PT') AS GroupName
 					,CASE WHEN egh.GroupTypeId = 2 AND egh.EndDate < @CurrentDate THEN 1 ELSE egh.GroupTypeId END AS GroupTypeId
 				FROM dbo.EaGroupHeadline egh WITH (NOLOCK)
-					INNER JOIN CustDB.dbo.CustGroupHeadline cda WITH (NOLOCK) ON egh.GroupHeadlineId = cda.GroupId
-					INNER JOIN CustDB.dbo.Customer c WITH (NOLOCK) ON cda.CustId = c.CustId
-					INNER JOIN CustDB.dbo.Exchange e WITH (NOLOCK) ON egh.ExchangeId = e.ExchangeId
-					INNER JOIN CustDB.dbo.Site s WITH (NOLOCK) ON egh.SiteId = s.SiteId
+					INNER JOIN dbo.CustGroupHeadline cda WITH (NOLOCK) ON egh.GroupHeadlineId = cda.GroupId
+					INNER JOIN dbo.Customer c WITH (NOLOCK) ON cda.CustId = c.CustId
+					INNER JOIN dbo.Exchange e WITH (NOLOCK) ON egh.ExchangeId = e.ExchangeId
+					INNER JOIN dbo.Site s WITH (NOLOCK) ON egh.SiteId = s.SiteId
 				WHERE ',' + @SiteIds + ',' LIKE '%,' + CONVERT(VARCHAR(15), egh.SiteId) + ',%'
 					AND ',' + @ExchangeIds + ',' LIKE '%,' + CONVERT(VARCHAR(15), egh.ExchangeId) + ',%'
 					AND 1 = CASE
@@ -73,8 +73,8 @@ BEGIN
 	BEGIN
 		IF ISNULL(@HeadlineName, '') <> ''
 			SELECT @GroupHeadlineId = cda.GroupId
-			FROM CustDB.dbo.Customer c WITH (NOLOCK)
-				INNER JOIN CustDB.dbo.CustGroupHeadline cda WITH (NOLOCK) ON c.CustId = cda.CustId
+			FROM dbo.Customer c WITH (NOLOCK)
+				INNER JOIN dbo.CustGroupHeadline cda WITH (NOLOCK) ON c.CustId = cda.CustId
 			WHERE c.UserName = @HeadlineName
 
 		INSERT INTO @EaGroupHeadline (GroupHeadlineId, HeadlineName, SiteId, Site, ExchangeId, Currency)
@@ -88,10 +88,10 @@ BEGIN
 					,ISNULL(NULLIF(egh.GroupName, ''), 'No Extra PT') AS GroupName
 					,CASE WHEN egh.GroupTypeId = 2 AND egh.EndDate < @CurrentDate THEN 1 ELSE egh.GroupTypeId END AS GroupTypeId
 				FROM dbo.EaGroupHeadline egh WITH (NOLOCK)
-					INNER JOIN CustDB.dbo.CustGroupHeadline cda WITH (NOLOCK) ON egh.GroupHeadlineId = cda.GroupId
-					INNER JOIN CustDB.dbo.Customer c WITH (NOLOCK) ON cda.CustId = c.CustId
-					INNER JOIN CustDB.dbo.Exchange e WITH (NOLOCK) ON egh.ExchangeId = e.ExchangeId
-					INNER JOIN CustDB.dbo.Site s WITH (NOLOCK) ON egh.SiteId = s.SiteId
+					INNER JOIN dbo.CustGroupHeadline cda WITH (NOLOCK) ON egh.GroupHeadlineId = cda.GroupId
+					INNER JOIN dbo.Customer c WITH (NOLOCK) ON cda.CustId = c.CustId
+					INNER JOIN dbo.Exchange e WITH (NOLOCK) ON egh.ExchangeId = e.ExchangeId
+					INNER JOIN dbo.Site s WITH (NOLOCK) ON egh.SiteId = s.SiteId
 				WHERE egh.GroupHeadlineId = @GroupHeadlineId
 					AND ',' + @SiteIds + ',' LIKE '%,' + CONVERT(VARCHAR(15), egh.SiteId) + ',%'
 					AND ',' + @ExchangeIds + ',' LIKE '%,' + CONVERT(VARCHAR(15), egh.ExchangeId) + ',%'
