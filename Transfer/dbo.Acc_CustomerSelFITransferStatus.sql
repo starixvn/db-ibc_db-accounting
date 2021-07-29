@@ -15,7 +15,7 @@ SET NOCOUNT ON
 	Original:
 
 	Revisions:
-		- 20210729@Elodie: Change use CustProductStatus.CloseInfo instead of Custinfo.closed
+		- 20210729@Elodie: Change use CustProductStatus.CloseInfo instead of Custinfo.closed [Redmine: #159245]
 	Param's Explanation:
    
 */
