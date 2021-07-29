@@ -15,7 +15,7 @@ SET NOCOUNT ON
 	Original:
 
 	Revisions:
-		-
+		- 20210729@Elodie: Change use CustProductStatus.CloseInfo instead of Custinfo.closed
 	Param's Explanation:
    
 */
