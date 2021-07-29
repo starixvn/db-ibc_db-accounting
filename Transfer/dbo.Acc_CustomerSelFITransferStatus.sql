@@ -38,7 +38,7 @@ BEGIN
     IF exists(SELECT 1 
 			FROM custinfo ci (nolock) 
 				INNER JOIN CustProductStatus cs WITH (NOLOCK) ON ci.custid = cs.custid 
-			WHERE custid = @FromCustId and cs.CloseInfo > 0)
+			WHERE ci.custid = @FromCustId and cs.CloseInfo > 0)
     BEGIN
         SELECT @errcode = 101, @errmsg = 'The account ' + username + ' was closed, so you can not transfer.' from custinfo (nolock) where custid = @FromCustId
         RETURN
@@ -47,7 +47,7 @@ BEGIN
     IF exists(SELECT 1 
 			FROM custinfo ci (nolock) 
 				INNER JOIN CustProductStatus cs WITH (NOLOCK) ON ci.custid = cs.custid 
-			WHERE username = @ToUser and cs.CloseInfo > 0)
+			WHERE ci.username = @ToUser and cs.CloseInfo > 0)
     BEGIN
         SELECT @errcode = 101, @errmsg = 'The account ' + @ToUser + ' was closed, so you can not transfer.'
         RETURN
