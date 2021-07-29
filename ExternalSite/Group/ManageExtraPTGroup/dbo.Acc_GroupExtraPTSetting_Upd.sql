@@ -125,12 +125,7 @@ BEGIN
 		FROM dbo.Acc_GroupExtraPTSetting WITH(NOLOCK)
 		WHERE SuperId = @CustID AND ToDate = DATEADD(DAY, -1, @EffectiveDate)
 
-		IF @GroupName = 'No Extra PT'
-		BEGIN
-			INSERT INTO dbo.Acc_GroupExtraPTSetting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate, UplineId)
-			VALUES (@CustId, 0, '', 0, 0, '', 0, @EffectiveDate, '9999-12-31', @UplineId)
-		END
-		ELSE
+		IF @GroupName <> 'No Extra PT'
 		BEGIN
 			INSERT INTO dbo.Acc_GroupExtraPTSetting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate, UplineId)
 			SELECT @CustId, @GroupId, @GroupName, ProductID, Sporttype, SubProduct, ExtraPT,

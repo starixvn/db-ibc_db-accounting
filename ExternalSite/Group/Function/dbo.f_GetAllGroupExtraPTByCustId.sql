@@ -32,7 +32,6 @@ BEGIN
 			WHERE SuperID = @CustID AND (CONVERT(DATE, GETDATE()) BETWEEN FromDate AND ToDate OR FromDate > CONVERT(DATE, GETDATE()))
 			GROUP BY GroupName
 		) s ON d.GroupName = s.GroupName
-	WHERE d.IsDisabled = 0
 	
 	IF NOT EXISTS (SELECT TOP 1 1 FROM @CustExtraPTGroup WHERE [Primary] = 1)
 	BEGIN

@@ -47,7 +47,7 @@ BEGIN
 		INNER JOIN dbo.Site s WITH (NOLOCK) ON c.Site = s.Site
 	WHERE c.CustId = @CustId
 
-	IF NOT EXISTS (SELECT 1 FROM NAP_UserControl.dbo.EaGroupHeadline WITH (NOLOCK) WHERE GroupHeadlineId IN (@GroupHeadlineId, @Old_GroupHeadlineId))
+	IF NOT EXISTS (SELECT 1 FROM dbo.EaGroupHeadline WITH (NOLOCK) WHERE GroupHeadlineId IN (@GroupHeadlineId, @Old_GroupHeadlineId))
 		RETURN
 
 	DECLARE @ExternalGroup TABLE (GroupName VARCHAR(100), GroupTypeId TINYINT, EffectiveDate DATETIME, EndDate DATETIME, DataType TINYINT)
@@ -86,7 +86,7 @@ BEGIN
 	BEGIN
 		INSERT INTO @ExternalGroup (GroupName, GroupTypeId, EffectiveDate, EndDate, DataType)
 		SELECT GroupName, GroupTypeId, EffectiveDate, EndDate, 1 AS DataType -- add super into External Group
-		FROM NAP_UserControl.dbo.EaGroupHeadline WITH (NOLOCK)
+		FROM dbo.EaGroupHeadline WITH (NOLOCK)
 		WHERE GroupHeadlineId = @GroupHeadlineId AND SiteId = @SiteId AND ExchangeId = @ExchangeId
 
 		UPDATE @ExternalGroup
@@ -297,19 +297,19 @@ BEGIN
 
 		DELETE @ExtraPTGroup WHERE ToDate >= @CurrentDate
 
-		MERGE @ExtraPTGroup AS t
-		USING (
-			SELECT GroupId, GroupName, MIN(FromDate) AS FromDate, MAX(ToDate) AS ToDate
-			FROM dbo.Acc_GroupExtraPTSetting WITH (NOLOCK)
-			WHERE SuperId = @CustId
-				AND ToDate >= @CurrentDate
-			GROUP BY GroupId, GroupName
-		) AS s ON t.GroupId = s.GroupId AND t.GroupName = s.GroupName
-		WHEN MATCHED THEN UPDATE
-			SET t.FromDate = s.FromDate, t.ToDate = s.ToDate
-		WHEN NOT MATCHED THEN INSERT
-			(GroupId, GroupName, FromDate, ToDate)
-			VALUES (s.GroupId, s.GroupName, s.FromDate, s.ToDate);
+		INSERT INTO @ExtraPTGroup (GroupId, GroupName, FromDate, ToDate)
+		SELECT GroupId, GroupName, MIN(FromDate) AS FromDate, MAX(ToDate) AS ToDate
+		FROM dbo.Acc_GroupExtraPTSetting WITH (NOLOCK)
+		WHERE SuperId = @CustId
+			AND ToDate >= @CurrentDate
+		GROUP BY GroupId, GroupName
+
+		DELETE e
+		FROM (
+			SELECT GroupName, ROW_NUMBER() OVER(PARTITION BY GroupName ORDER BY FromDate DESC) AS RN
+			FROM @ExtraPTGroup e
+		) e
+		WHERE RN > 1
 
 		WHILE 1 = 1
 		BEGIN
@@ -350,7 +350,10 @@ BEGIN
 	IF @RoleId = 4
 	BEGIN
 		SET @Duration = DATEDIFF (MILLISECOND, @startRun, GETDATE())
-		SELECT @ActionId = CASE @SPName WHEN 'Acc_CreditTermUpdAddToGroup' THEN 95053 WHEN 'Acc_CreditTermUpdCustomer' THEN 95054 ELSE 0 END
+		SELECT @ActionId = CASE
+							WHEN 'Acc_CreditTermUpdAddToGroup' LIKE @SPName + '%' THEN 95053
+							WHEN 'Acc_CreditTermUpdCustomer' LIKE @SPName + '%' THEN 95054
+							ELSE 0 END
 
 		IF ISNULL(@TrackingValue, '') = ''
 			SELECT @TrackingValue = @TrackingValue2, @TrackingValue2 = ''

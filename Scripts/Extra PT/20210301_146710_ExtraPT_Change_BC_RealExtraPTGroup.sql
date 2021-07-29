@@ -7,7 +7,7 @@
 use CustDB
 go
 
-declare @EndDate datetime = '2021-06-30'
+declare @EndDate datetime = convert(date, getdate())
 
 -- Extra PT Group
 delete dbo.Acc_DWLList_ExtraPT with (rowlock, updlock)

@@ -44,12 +44,7 @@ BEGIN
 		WHERE SuperId = @CustID AND FromDate < @EffectiveDate
 			AND ToDate >= @today
 
-		IF @GroupName = 'No Extra PT'
-		BEGIN
-			INSERT INTO dbo.Acc_GroupExtraPT2Setting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate)
-			VALUES (@CustId, 0, '', 0, 0, '', 0, @EffectiveDate, '9999-12-31')
-		END
-		ELSE
+		IF @GroupName <> 'No Extra PT'
 		BEGIN
 			INSERT INTO dbo.Acc_GroupExtraPT2Setting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate)
 			SELECT @CustId, @GroupId, @GroupName, ProductID, Sporttype, SubProduct, ExtraPT,

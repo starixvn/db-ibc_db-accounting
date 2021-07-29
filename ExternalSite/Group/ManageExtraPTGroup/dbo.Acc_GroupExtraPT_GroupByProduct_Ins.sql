@@ -49,7 +49,7 @@ BEGIN
 	SELECT  @startRun = GETDATE()
 
 	DECLARE @GroupName VARCHAR(30), @ProductName VARCHAR(30), @today DATETIME
-	SELECT  @GroupName = GroupName FROM dbo.Acc_DWLList_ExtraPT WITH(NOLOCK) WHERE GroupId = @GroupId AND IsDisabled = 0
+	SELECT  @GroupName = GroupName FROM dbo.Acc_DWLList_ExtraPT WITH(NOLOCK) WHERE GroupId = @GroupId
 	SELECT  @ProductName = ProductName FROM DBTXN.bodb02.dbo.Products WITH(NOLOCK) WHERE ProductID = @ProductID
 	SELECT  @today = CONVERT(DATE, GETDATE())
 

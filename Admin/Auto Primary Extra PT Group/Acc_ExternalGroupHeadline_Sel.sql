@@ -157,5 +157,6 @@ BEGIN
 				FOR XML PATH('')), 1, 2, '') AS CurrentEffectiveDate
 	FROM CTE_Data d1
 	GROUP BY GroupHeadlineId, HeadlineName, SiteId, Site, ExchangeId, Currency
+	ORDER BY HeadlineName, Site, Currency
 END
 GO

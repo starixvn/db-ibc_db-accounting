@@ -349,10 +349,11 @@ BEGIN
 
 	-- Log Extra PT
 	BEGIN
-		DECLARE @ExtraPTLog TABLE (CustId INT, TrackingValue NVARCHAR(1000), TrackingValue2 NVARCHAR(1000))
+		CREATE TABLE #ExtraPTLog (CustId INT, TrackingValue NVARCHAR(1000), TrackingValue2 NVARCHAR(1000))
+		CREATE CLUSTERED INDEX CIX_ExtraPTLog ON #ExtraPTLog (CustId)
 
-		DECLARE @ExtraPTGroup TABLE (CustId INT, GroupId INT, GroupName VARCHAR(100), FromDate DATETIME, ToDate DATETIME)
-		INSERT INTO @ExtraPTGroup (CustId, GroupId, GroupName, FromDate, ToDate)
+		CREATE TABLE #ExtraPTGroup (CustId INT, GroupId INT, GroupName VARCHAR(100), FromDate DATETIME, ToDate DATETIME, PRIMARY KEY (CustId, GroupId, GroupName, FromDate))
+		INSERT INTO #ExtraPTGroup (CustId, GroupId, GroupName, FromDate, ToDate)
 		SELECT e.SuperId, e.GroupId, e.GroupName, MIN(e.FromDate), MAX(e.ToDate)
 		FROM dbo.Acc_GroupExtraPTSetting e WITH (NOLOCK)
 			INNER JOIN (SELECT DISTINCT CustId FROM #Super) s ON e.SuperId = s.CustId
@@ -363,7 +364,7 @@ BEGIN
 		BEGIN
 			UPDATE eg
 			SET eg.FromDate = e.FromDate
-			FROM @ExtraPTGroup eg
+			FROM #ExtraPTGroup eg
 				CROSS APPLY (
 					SELECT MIN(e.FromDate) AS FromDate
 					FROM dbo.Acc_GroupExtraPTSetting e WITH (NOLOCK)
@@ -376,7 +377,7 @@ BEGIN
 				BREAK
 		END
 
-		INSERT INTO @ExtraPTLog (CustId, TrackingValue2)
+		INSERT INTO #ExtraPTLog (CustId, TrackingValue2)
 		SELECT CustId, '<Acc_ExternalGroupHeadline_Upd ExternalGroups="' + COALESCE(ExternalGroups, SPACE(1)) + '" ' + 'PrimaryGroup="' + COALESCE(PrimaryExtraGroup, SPACE(1)) + '" />'
 		FROM (
 			SELECT c.CustId
@@ -384,11 +385,12 @@ BEGIN
 					SELECT ', ' + cg.GroupName
 					FROM dbo.Acc_CustGroup cg WITH (NOLOCK)
 						INNER JOIN NAP_UserControl.dbo.EaGroup eg WITH (NOLOCK) ON cg.GroupName = eg.GroupName AND eg.ParentId = 0
-					WHERE cg.CustId = c.CustId
+						LEFT JOIN dbo.Acc_CustGroup_Queue q WITH (NOLOCK) ON cg.CustId = q.CustId AND cg.GroupName = q.GroupName
+					WHERE cg.CustId = c.CustId AND q.CustId IS NULL
 					FOR XML PATH ('')), 1, 2, '') AS ExternalGroups
 				,STUFF((
 					SELECT ', ' + e.GroupName + ': ' + CONVERT(VARCHAR(10), e.FromDate, 120) + ' - ' + CONVERT(VARCHAR(10), e.ToDate, 120)
-					FROM @ExtraPTGroup e
+					FROM #ExtraPTGroup e
 					WHERE e.CustId = c.CustId
 					FOR XML PATH ('')), 1, 2, '') AS PrimaryExtraGroup
 			FROM (SELECT DISTINCT CustId FROM #Super) c
@@ -530,13 +532,23 @@ BEGIN
 		DELETE q WITH (ROWLOCK, UPDLOCK)
 		FROM dbo.Acc_CustGroup_Queue q
 			INNER JOIN #Super s ON q.CustId = s.CustId AND q.GroupName = s.GroupName
+
+		INSERT INTO #Super (CustId, GroupName, GroupTypeId)
+		SELECT cg.CustId, cg.GroupName, CASE WHEN e.GroupName IS NOT NULL THEN 1 ELSE 0 END
+		FROM dbo.Acc_CustGroup cg WITH (NOLOCK)
+			INNER JOIN (SELECT DISTINCT CustId FROM #Super) c ON cg.CustId = c.CustId
+			INNER JOIN NAP_UserControl.dbo.EaGroup eg WITH (NOLOCK) ON cg.GroupName = eg.GroupName AND eg.ParentId = 0
+			LEFT JOIN dbo.Acc_DWLList_ExtraPT e WITH (NOLOCK) ON cg.GroupName = e.GroupName
+			LEFT JOIN dbo.Acc_CustGroup_Queue q WITH (NOLOCK) ON cg.CustId = q.CustId AND cg.GroupName = q.GroupName
+		WHERE NOT EXISTS (SELECT 1 FROM #Super s WHERE cg.CustId = s.CustId AND cg.GroupName = s.GroupName)
+			AND q.CustId IS NULL
 	END
 
 	-- Log for Extra PT
 	BEGIN
 		UPDATE eg
 		SET eg.FromDate = e.FromDate, eg.ToDate = DATEADD(DAY, -1, @CurrentDate)
-		FROM @ExtraPTGroup eg
+		FROM #ExtraPTGroup eg
 			INNER JOIN (
 				SELECT e.SuperId, e.GroupName, MIN(e.FromDate) AS FromDate
 				FROM dbo.Acc_GroupExtraPTSetting e WITH (NOLOCK)
@@ -545,27 +557,27 @@ BEGIN
 				GROUP BY e.SuperId, e.GroupName
 			) e ON eg.CustId = e.SuperId AND eg.GroupName = e.GroupName
 
-		DELETE @ExtraPTGroup WHERE ToDate >= @CurrentDate
+		DELETE #ExtraPTGroup WHERE ToDate >= @CurrentDate
 
-		MERGE @ExtraPTGroup AS t
-		USING (
-			SELECT e.SuperId, e.GroupId, e.GroupName, MIN(e.FromDate) AS FromDate, MAX(e.ToDate) AS ToDate
-			FROM dbo.Acc_GroupExtraPTSetting e WITH (NOLOCK)
-				INNER JOIN (SELECT DISTINCT CustId FROM #Super) s ON e.SuperId = s.CustId
-			WHERE e.ToDate >= @CurrentDate
-			GROUP BY e.SuperId, e.GroupId, e.GroupName
-		) AS s ON t.CustId = s.SuperId AND t.GroupId = s.GroupId AND t.GroupName = s.GroupName
-		WHEN MATCHED THEN UPDATE
-			SET t.FromDate = s.FromDate, t.ToDate = s.ToDate
-		WHEN NOT MATCHED THEN INSERT
-			(CustId, GroupId, GroupName, FromDate, ToDate)
-			VALUES (s.SuperId, s.GroupId, s.GroupName, s.FromDate, s.ToDate);
+		INSERT INTO #ExtraPTGroup (CustId, GroupId, GroupName, FromDate, ToDate)
+		SELECT e.SuperId, e.GroupId, e.GroupName, MIN(e.FromDate), MAX(e.ToDate)
+		FROM dbo.Acc_GroupExtraPTSetting e WITH (NOLOCK)
+			INNER JOIN (SELECT DISTINCT CustId FROM #Super) s ON e.SuperId = s.CustId
+		WHERE e.ToDate >= @CurrentDate
+		GROUP BY e.SuperId, e.GroupId, e.GroupName
+
+		DELETE e
+		FROM (
+			SELECT CustId, GroupName, ROW_NUMBER() OVER(PARTITION BY CustId, GroupName ORDER BY FromDate DESC) AS RN
+			FROM #ExtraPTGroup e
+		) e
+		WHERE RN > 1
 
 		WHILE 1 = 1
 		BEGIN
 			UPDATE eg
 			SET eg.FromDate = e.FromDate
-			FROM @ExtraPTGroup eg
+			FROM #ExtraPTGroup eg
 				CROSS APPLY (
 					SELECT MIN(e.FromDate) AS FromDate
 					FROM dbo.Acc_GroupExtraPTSetting e WITH (NOLOCK)
@@ -578,33 +590,38 @@ BEGIN
 				BREAK
 		END
 
-		;WITH CTE_ExtraPTLog (CustId, TrackingValue) AS
+		INSERT INTO #ExtraPTLog (CustId, TrackingValue)
+		SELECT CustId, '<Acc_ExternalGroupHeadline_Upd ExternalGroups="' + COALESCE(ExternalGroups, SPACE(1)) + '" ' + 'PrimaryGroup="' + COALESCE(PrimaryExtraGroup, SPACE(1)) + '" />'
+		FROM
 		(
-			SELECT CustId, '<Acc_ExternalGroupHeadline_Upd ExternalGroups="' + COALESCE(ExternalGroups, SPACE(1)) + '" ' + 'PrimaryGroup="' + COALESCE(PrimaryExtraGroup, SPACE(1)) + '" />'
-			FROM (
-				SELECT c.CustId
-					,STUFF((
-						SELECT ', ' + cg.GroupName
-						FROM dbo.Acc_CustGroup cg WITH (NOLOCK)
-							INNER JOIN NAP_UserControl.dbo.EaGroup eg WITH (NOLOCK) ON cg.GroupName = eg.GroupName AND eg.ParentId = 0
-						WHERE cg.CustId = c.CustId
-						FOR XML PATH ('')), 1, 2, '') AS ExternalGroups
-					,STUFF((
-						SELECT ', ' + e.GroupName + ': ' + CONVERT(VARCHAR(10), e.FromDate, 120) + ' - ' + CONVERT(VARCHAR(10), e.ToDate, 120)
-						FROM @ExtraPTGroup e
-						WHERE e.CustId = c.CustId
-						FOR XML PATH ('')), 1, 2, '') AS PrimaryExtraGroup
-				FROM (SELECT DISTINCT CustId FROM #Super) c
-				GROUP BY c.CustId
-			) t
-		)
-		MERGE @ExtraPTLog AS s
-		USING CTE_ExtraPTLog AS t ON s.CustId = t.CustId
-		WHEN MATCHED THEN UPDATE
-			SET s.TrackingValue = t.TrackingValue
-		WHEN NOT MATCHED THEN INSERT
-			(CustId, TrackingValue)
-			VALUES (t.CustId, t.TrackingValue);
+			SELECT c.CustId
+				,STUFF((
+					SELECT ', ' + cg.GroupName
+					FROM dbo.Acc_CustGroup cg WITH (NOLOCK)
+						INNER JOIN NAP_UserControl.dbo.EaGroup eg WITH (NOLOCK) ON cg.GroupName = eg.GroupName AND eg.ParentId = 0
+						LEFT JOIN dbo.Acc_CustGroup_Queue q WITH (NOLOCK) ON cg.CustId = q.CustId AND cg.GroupName = q.GroupName
+					WHERE cg.CustId = c.CustId AND q.CustId IS NULL
+					FOR XML PATH ('')), 1, 2, '') AS ExternalGroups
+				,STUFF((
+					SELECT ', ' + e.GroupName + ': ' + CONVERT(VARCHAR(10), e.FromDate, 120) + ' - ' + CONVERT(VARCHAR(10), e.ToDate, 120)
+					FROM #ExtraPTGroup e
+					WHERE e.CustId = c.CustId
+					FOR XML PATH ('')), 1, 2, '') AS PrimaryExtraGroup
+			FROM (SELECT DISTINCT CustId FROM #Super) c
+			GROUP BY c.CustId
+		) t
+
+		UPDATE e1
+		SET e1.TrackingValue = e2.TrackingValue
+		FROM #ExtraPTLog e1
+			INNER JOIN #ExtraPTLog e2 ON e1.CustId = e2.CustId
+
+		DELETE e
+		FROM (
+			SELECT CustId, ROW_NUMBER() OVER(PARTITION BY CustId ORDER BY CASE WHEN TrackingValue IS NOT NULL AND TrackingValue2 IS NOT NULL THEN 0 ELSE 1 END) AS RN
+			FROM #ExtraPTLog
+		) e
+		WHERE RN > 1
 	END
 
 	-- Write log
@@ -642,21 +659,27 @@ BEGIN
 		,@Duration			= @Duration
 
 	-- Extra PT for Super
-	WHILE EXISTS (SELECT 1 FROM @ExtraPTLog)
+	WHILE EXISTS (SELECT 1 FROM #ExtraPTLog)
 	BEGIN
-		SELECT TOP 1 @CustId = CustId, @TrackingValue = ISNULL(TrackingValue, ''), @TrackingValue2 = ISNULL(TrackingValue2, '') FROM @ExtraPTLog
+		SELECT TOP 1 @CustId = CustId, @TrackingValue = ISNULL(TrackingValue, ''), @TrackingValue2 = ISNULL(TrackingValue2, '') FROM #ExtraPTLog
 
-		EXEC dbo.Acc_WriteLog_UserLog_RunSP_Wrapper
-			@UserId				= @UserId
-			,@CustId			= @CustId
-			,@ActionId			= 95051
-			,@TrackingValue		= @TrackingValue
-			,@TrackingValue2	= @TrackingValue2
-			,@Duration			= @Duration
+		IF ISNULL(@TrackingValue, '') = ''
+			SELECT @TrackingValue = @TrackingValue2, @TrackingValue2 = ''
+
+		IF ISNULL(@TrackingValue, '') <> ''
+			EXEC dbo.Acc_WriteLog_UserLog_RunSP_Wrapper
+				@UserId				= @UserId
+				,@CustId			= @CustId
+				,@ActionId			= 95051
+				,@TrackingValue		= @TrackingValue
+				,@TrackingValue2	= @TrackingValue2
+				,@Duration			= @Duration
 		
-		DELETE @ExtraPTLog WHERE CustId = @CustId
+		DELETE #ExtraPTLog WHERE CustId = @CustId
 	END
 
+	DROP TABLE #ExtraPTGroup
+	DROP TABLE #ExtraPTLog
 	DROP TABLE #Super
 	DROP TABLE #OldSuper
 END

@@ -22,9 +22,10 @@ AS
 BEGIN
 	SET NOCOUNT ON
 	
-	SELECT GroupId, GroupName
-	FROM dbo.Acc_DWLList_ExtraPT WITH (NOLOCK)
-	WHERE IsDisabled = 0
+	SELECT DISTINCT GroupId, GroupName
+	FROM dbo.Acc_DWLList_ExtraPT e WITH (NOLOCK)
+		CROSS APPLY dbo.f_SiteBySystem(e.GroupName) s
+	WHERE s.SiteId <> 329 -- CN88
 	ORDER BY GroupName
 END
 GO
