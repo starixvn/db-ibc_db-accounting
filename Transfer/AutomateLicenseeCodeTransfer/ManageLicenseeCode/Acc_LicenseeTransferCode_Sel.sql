@@ -186,7 +186,7 @@ BEGIN
 			lc.LicenseeID IN (SELECT val FROM dbo.strSplit(@LicenseeIds,',') t)
 			OR @LicenseeIds = 'ALL'
 		)
-		AND lc.LicenseeName NOT IN ('Saba789','Athena000','Sabademo')
+		AND lc.LicenseeName NOT IN ('Saba789','Athena000','Sabademo','spondemo')
 
 	--return data
 	SELECT @TotalRows = MAX(RowNumber) FROM #LicenseeCodeFinal

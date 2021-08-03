@@ -23,7 +23,7 @@ BEGIN
 	WHERE 
 		l.IsActive = 1
 		AND cs.currency <> 20
-		AND l.LicenseeName NOT IN ('Saba789','Athena000','Sabademo')
+		AND l.LicenseeName NOT IN ('Saba789','Athena000','Sabademo','spondemo')
 	ORDER BY l.LicenseeName
 
 END
