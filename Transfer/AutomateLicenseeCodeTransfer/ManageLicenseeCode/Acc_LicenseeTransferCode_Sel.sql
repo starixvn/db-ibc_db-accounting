@@ -21,6 +21,7 @@ AS
 		- 20210315@Sol: NAP - show from date - to date cols - [Redmine: #151607]
 		- 20210330@Sol: NAP - Enhance Manage Licensee Code to support change base currency of licensees - Phase 2 - [Redmine: #152056]
 		- 20210506@Sol: NAP - Remove Saba789 from auto mail informing the code needed - [Redmine: #154676]
+		- 20210802@Sol: NAP - Remove Athena000 and Sabademo from auto mail informing the code needed - [Redmine: #159565]
 
 	Param Info:
 		- @MoveBetsDay: movebet get from sp [age_SelBalanceUpDay]
@@ -185,7 +186,7 @@ BEGIN
 			lc.LicenseeID IN (SELECT val FROM dbo.strSplit(@LicenseeIds,',') t)
 			OR @LicenseeIds = 'ALL'
 		)
-		AND lc.LicenseeName <> 'Saba789'
+		AND lc.LicenseeName NOT IN ('Saba789','Athena000','Sabademo')
 
 	--return data
 	SELECT @TotalRows = MAX(RowNumber) FROM #LicenseeCodeFinal
