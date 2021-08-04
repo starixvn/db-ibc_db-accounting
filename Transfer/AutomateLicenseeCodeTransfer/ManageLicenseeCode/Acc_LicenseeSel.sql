@@ -9,6 +9,7 @@ AS
 	Revisions:
 		- 20200615@Sol: NAP - Auto Assign Licensee code to the Licensee accordingly - [Redmine: #120670]
 		- 20210506@Sol: NAP - Remove Saba789 from auto mail informing the code needed - [Redmine: #154676]
+		- 20210802@Sol: NAP - Remove Athena000 and Sabademo from auto mail informing the code needed - [Redmine: #159565]
 
 */
 BEGIN
@@ -22,7 +23,7 @@ BEGIN
 	WHERE 
 		l.IsActive = 1
 		AND cs.currency <> 20
-		AND l.LicenseeName <> 'Saba789'
+		AND l.LicenseeName NOT IN ('Saba789','Athena000','Sabademo','spondemo')
 	ORDER BY l.LicenseeName
 
 END
