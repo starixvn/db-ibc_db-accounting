@@ -14,6 +14,7 @@ AS
 		- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
 		- 20160118@Kathy: get balance from bettransRNG & bettransLC [Redmine:#50674]
 		- 20180515@Percy: Add waiting tickets on translog table [RedmineID: #95219]
+		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 */
 BEGIN	
 	DECLARE @totalAmt_bettransRNG	MONEY = 0
@@ -22,6 +23,15 @@ BEGIN
 			,@yesterday				DATE
 	
 	SET @yesterday = CONVERT(DATE,GETDATE() - 1)
+
+	----get movebetday
+	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+	
+	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 	
 	-- translog
     SELECT	@totalAmt_translog = SUM(-actual_stake)
@@ -50,6 +60,10 @@ BEGIN
 					AND ruben =0) 
 					OR ruben <> 0
 					)
+			AND 1 = CASE 
+						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+					ELSE 1 END
     
 	SET @TotalAmt = ISNULL(@TotalAmt,0)
 					+ ISNULL(@totalAmt_translog,0) 
