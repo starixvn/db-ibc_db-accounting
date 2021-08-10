@@ -22,25 +22,36 @@ BEGIN
 	DECLARE @today DATETIME
 	SELECT  @today = CONVERT(DATE, GETDATE())
 
-	DECLARE @GroupExtraPT TABLE (GroupId INT, GroupName VARCHAR(50), EffectiveDate DATETIME, [Primary] BIT)
+	DECLARE @GroupExtraPT TABLE (OrderId TINYINT, GroupName VARCHAR(50), EffectiveDate DATETIME, IsPrimary BIT)
 
-	INSERT INTO @GroupExtraPT (GroupId, GroupName, EffectiveDate, [Primary])
-	SELECT GroupId, GroupName, EffectiveDate, [Primary]
-	FROM dbo.f_GetAllGroupExtraPTByCustId(@CustID)
+	-- No Extra PT
+	INSERT INTO @GroupExtraPT (OrderId, GroupName, EffectiveDate, IsPrimary)
+	SELECT 1 AS OrderId, 'No Extra PT', NULL, 0
+
+	-- Extra PT Group
+	INSERT INTO @GroupExtraPT (OrderId, GroupName, EffectiveDate, IsPrimary)
+	SELECT 2 AS OrderId, GroupName, MIN(FromDate), CASE WHEN FromDate <= @today THEN 1 ELSE 0 END
+	FROM dbo.Acc_GroupExtraPTSetting WITH (NOLOCK)
+	WHERE SuperId = @CustID
+		AND ToDate >= @today
+	GROUP BY GroupName, CASE WHEN FromDate <= @today THEN 1 ELSE 0 END
+
+	IF NOT EXISTS (SELECT 1 FROM @GroupExtraPT WHERE IsPrimary = 1)
+	BEGIN
+		DECLARE @NoExtraPTDate DATETIME
+		SELECT  @NoExtraPTDate = DATEADD(DAY, 1, MAX(ToDate)) FROM dbo.Acc_GroupExtraPTSetting WITH (NOLOCK) WHERE SuperId = @CustID AND ToDate < @today
+		
+		IF @NoExtraPTDate IS NULL
+			SELECT @NoExtraPTDate = CONVERT(DATE, CreatDate) FROM dbo.Customer WITH (NOLOCK) WHERE CustId = @CustID
+
+		UPDATE @GroupExtraPT SET EffectiveDate = @NoExtraPTDate	WHERE GroupName = 'No Extra PT'
+	END
 
 	-- Get number of members belong to super
-	SELECT  @NoOfMember = COUNT(1) FROM dbo.Customer WITH (NOLOCK) WHERE srecommend = @CustID AND roleid = 1
+	SELECT @NoOfMember = COUNT(1) FROM dbo.Customer WITH (NOLOCK) WHERE srecommend = @CustID AND roleid = 1
 
-	SELECT
-		c.GroupName,
-		CASE WHEN e.[Primary] = 1 THEN e.EffectiveDate ELSE NULL END AS EffectiveDate,
-		e.[Primary] AS IsPrimary
-	FROM
-		(
-			SELECT GroupName FROM dbo.Acc_CustGroup WITH(NOLOCK) WHERE CustID = @CustID
-			UNION SELECT 'No Extra PT'
-		) c
-		INNER JOIN @GroupExtraPT e ON c.GroupName = e.GroupName
-	ORDER BY CASE WHEN e.GroupId = 0 THEN 0 ELSE 1 END, e.GroupName
+	SELECT OrderId, GroupName, EffectiveDate, IsPrimary
+	FROM @GroupExtraPT
+	ORDER BY OrderId, GroupName
 END
 GO

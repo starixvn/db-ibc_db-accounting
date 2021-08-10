@@ -1,4 +1,4 @@
-/*<info serverAlias="DBACC-bodb02" executers="" viewers="" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBACC-bodb02" executers="" isFunction="1" isNested="1"></info>*/
 USE [bodb02]
 GO
 
@@ -16,6 +16,7 @@ ALTER FUNCTION [dbo].[f_GetAllGroupExtraPTByCustId]
 	Revisions:
 		- 20170926@Percy: Move this function from DBACC.bodb_ACC to DBACC.bodb02 [RedmineID: #83600]
 		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
+		- 20210602@Percy: Change BC to real Extra PT Group [RedmineID: #146710]
 */
 
 RETURNS @CustExtraPTGroup TABLE (GroupId INT, GroupName VARCHAR(50), EffectiveDate DATETIME, [Primary] TINYINT, OrderId TINYINT)
@@ -31,7 +32,6 @@ BEGIN
 			WHERE SuperID = @CustID AND (CONVERT(DATE, GETDATE()) BETWEEN FromDate AND ToDate OR FromDate > CONVERT(DATE, GETDATE()))
 			GROUP BY GroupName
 		) s ON d.GroupName = s.GroupName
-	WHERE d.GroupName <> 'BC'
 	
 	IF NOT EXISTS (SELECT TOP 1 1 FROM @CustExtraPTGroup WHERE [Primary] = 1)
 	BEGIN

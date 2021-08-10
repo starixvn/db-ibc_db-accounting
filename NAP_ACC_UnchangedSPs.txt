@@ -1,1 +1,2 @@
-Admin\ManageProductSporttypeBettype\Acc_Sporttype_Sel.sql
+ExternalSite\Group\ManageExtraPTGroup\dbo.Acc_CustGroupSelExtraPTGroupByCustID.sql
+ExternalSite\Group\ManageExtraPTGroup\dbo.Acc_CustGroupUpdPrimaryExtraPTGroup.sql
