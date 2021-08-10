@@ -1,7 +1,4 @@
 ﻿/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
 ALTER PROCEDURE  [dbo].[Acc_AllStatement_UsersList]
     @UserList		VARCHAR(6000),
     @FromDate		SMALLDATETIME,
@@ -20,11 +17,21 @@ AS
 		- 20101224@Lukas: Re-arrange bettype
 		- 20180628@Percy: Fix issue duplicated data [RedmineID: #97316]
 		- 20180731@Percy: Expand column transdesc [RedmineID: #92841]
+		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
        
 */
 
 BEGIN
 	SET NOCOUNT ON
+
+	-- get move bet date
+	DECLARE @moveBetsDay SMALLDATETIME
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	SELECT @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 
     DECLARE @tempUsername TABLE (username VARCHAR(50))
     CREATE TABLE #TEMP_USER_LIST (custid INT PRIMARY KEY, username VARCHAR(50), roleid INT, currency INT )
@@ -67,6 +74,10 @@ BEGIN
                 bettype between 1 and 19999
                 and custid IN (SELECT custid FROM #TEMP_USER_LIST WHERE roleid=1)
                 and winlostdate between @fromdate and @todate
+				AND 1 = CASE 
+							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+						ELSE 1 END
             GROUP BY winlostdate, username, currency
            
             INSERT INTO #StatementTable (accdate, totalamt, transtype, transdesc, roleid, username, currency)
@@ -82,6 +93,10 @@ BEGIN
                 bettype between 1 and 19999            
                 and winlostdate between @fromdate and @todate
                 and playercomm<>0
+				AND 1 = CASE 
+							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+						ELSE 1 END
             GROUP BY winlostdate, t.username, t.currency
 
             INSERT INTO #StatementTable (accdate, totalamt, transtype, transdesc, roleid, username, currency)
@@ -165,7 +180,11 @@ BEGIN
             WHERE
                 bettype between 1 and 19999
                 and winlostdate between @fromdate and @todate
-                GROUP BY winlostdate,  t.currency, t.username
+				AND 1 = CASE 
+							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+						ELSE 1 END
+            GROUP BY winlostdate,  t.currency, t.username
             HAVING SUM(awinlost) <> 0
            
             INSERT INTO #StatementTable (accdate, totalamt, transtype, transdesc, roleid, username, currency)
@@ -180,6 +199,10 @@ BEGIN
             WHERE
                 bettype between 1 and 19999            
                 and winlostdate between @fromdate and @todate
+				AND 1 = CASE 
+							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+						ELSE 1 END
             GROUP BY winlostdate,  t.currency , t.username
             HAVING SUM(comm-playercomm) <> 0
         END
@@ -215,7 +238,11 @@ BEGIN
                 bettype between 1 and 19999
                 and mrecommend IN (SELECT custid FROM #TEMP_USER_LIST WHERE roleid=3)
                 and winlostdate between @fromdate and @todate
-                GROUP BY winlostdate , t.currency, t.username
+				AND 1 = CASE 
+							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+						ELSE 1 END
+            GROUP BY winlostdate , t.currency, t.username
             HAVING SUM(mwinlost) <> 0
        
             INSERT INTO #StatementTable (accdate, totalamt, transtype, transdesc, roleid, username, currency)
@@ -231,7 +258,11 @@ BEGIN
                 bettype between 1 and 19999
                 and mrecommend IN (SELECT custid FROM #TEMP_USER_LIST WHERE roleid=3)
                 and winlostdate between @fromdate and @todate
-                GROUP BY winlostdate ,  t.currency, t.username
+				AND 1 = CASE 
+							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+						ELSE 1 END
+            GROUP BY winlostdate ,  t.currency, t.username
             HAVING SUM(acomm-comm) <> 0
         END
    
@@ -266,8 +297,12 @@ BEGIN
                 bettype between 1 and 19999
                 and srecommend IN (SELECT custid FROM #TEMP_USER_LIST WHERE roleid=4)       
                 and winlostdate between @fromdate and @todate
-                GROUP BY winlostdate, t.currency, t.username
-                HAVING SUM(swinlost) <> 0
+				AND 1 = CASE 
+							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+						ELSE 1 END
+            GROUP BY winlostdate, t.currency, t.username
+            HAVING SUM(swinlost) <> 0
        
             INSERT INTO #StatementTable (accdate, totalamt, transtype, transdesc, roleid, username, currency)
             SELECT
@@ -282,7 +317,11 @@ BEGIN
                 bettype between 1 and 19999
                 and srecommend IN (SELECT custid FROM #TEMP_USER_LIST WHERE roleid=4)       
                 and winlostdate between @fromdate and @todate
-                GROUP BY winlostdate,  t.currency , t.username
+				AND 1 = CASE 
+							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+						ELSE 1 END
+            GROUP BY winlostdate,  t.currency , t.username
             HAVING SUM(scomm-acomm) <> 0
         END
 	END
