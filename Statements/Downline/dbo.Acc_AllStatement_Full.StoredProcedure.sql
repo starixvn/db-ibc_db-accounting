@@ -68,6 +68,7 @@ AS
 		- 20190917@Bobby: Implement headline - Statement [Redmine: #119289]
 		- 20190918@Percy: Remove inactive products [RedmineID: #118699]
 		- 20200414@Sophia: Add BBIN bettype [Redmine: #131358]
+		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		
 	Param explanation : 
 		- Transtypeid = 4 - GrandPrize
@@ -84,6 +85,8 @@ BEGIN
 
 	DECLARE @tblCustid TABLE (custid INT) -- using index on custid for bettrans level SMA
 	DECLARE @tblRecommend TABLE (recommend INT) -- using index on recommend for bettransLC/RnG level master, super
+
+	DECLARE @_moveBetsDay SMALLDATETIME
 
 	IF @roleid = 2 -- agent
 	BEGIN
@@ -132,6 +135,7 @@ BEGIN
 
 	DECLARE @_FromDate DATETIME, @_ToDate DATETIME, @_BalanceUpDay DATETIME, @Fromdate_bk DATETIME, @_IncludeAccBal BIT
 	SELECT  @_FromDate = @Fromdate, @_ToDate = @todate, @_BalanceUpDay = @BalanceUpDay, @Fromdate_bk = @Fromdate, @_IncludeAccBal = @IncludeAccBal
+			, @_moveBetsDay = CAST(@MoveBetDay AS SMALLDATETIME)
 
 	DECLARE @Yesterday DATETIME 
 	SELECT  @Yesterday = CONVERT(DATE, DATEADD(DAY, -1, GETDATE()))
@@ -145,7 +149,7 @@ BEGIN
 	SELECT ProductID, Bettype, RefTable FROM dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest)
 	WHERE RefTable <> 0 -- get bettype in translog, bettransRnG, bettransLC (exclude bettype on bettrans)
 	-- RefTable: 0-bettrans, 1-bettransRnG, 2-bettransLC, 3-translog
-
+	
 	IF @_ToDate >= @_BalanceUpDay
 	BEGIN
 		-- always get all data from latest BUDate -> @todate for calculating ACCUMULATED BALANCE row
@@ -191,6 +195,10 @@ BEGIN
 						statusID NOT IN (0, 1)
 						OR (statusID IN (0, 1) AND s.RefTable IS NULL) -- exclude running ticket on bettransRnG/LC, translog
 					)
+					AND 1 = CASE 
+								WHEN b.bettype = 19999 and winlostdate > @_moveBetsDay THEN 0 --> get data from ticket detail
+								WHEN b.bettype < 19999 and winlostdate <= @_moveBetsDay THEN 0 --> get data from sum record
+							ELSE 1 END
 				GROUP BY winlostdate, b.bettype,
 					CASE
 						WHEN statusID IN (102, 101) THEN 102
@@ -201,7 +209,7 @@ BEGIN
 						WHEN b.bettype <= 19999 THEN '' 
 						WHEN b.oddsId = 0 THEN transdesc
 						ELSE 'Coll' 
-					END			
+					END				
 			
 				---- 1.2 translog
 				UNION ALL
@@ -345,6 +353,10 @@ BEGIN
 					winlostdate < @Yesterday 
 					OR (winlostdate >= @Yesterday AND (s.RefTable IS NULL OR s.RefTable = 3)) -- exclude ticket on bettransRnG/LC today, yesterday
 				)
+				AND 1 = CASE 
+							WHEN b.bettype = 19999 and winlostdate > @_moveBetsDay THEN 0 --> get data from ticket detail
+							WHEN b.bettype < 19999 and winlostdate <= @_moveBetsDay THEN 0 --> get data from sum record
+						ELSE 1 END
 			GROUP BY winlostdate
 
 			INSERT INTO @StatementTable -- transfer
@@ -560,6 +572,10 @@ BEGIN
 					winlostdate < @Yesterday
 					OR (winlostdate >= @Yesterday AND (s.RefTable IS NULL OR s.RefTable = 3)) -- exclude ticket on bettransRnG/LC today, yesterday
 				)
+				AND 1 = CASE 
+							WHEN b.bettype = 19999 and winlostdate > @_moveBetsDay THEN 0 --> get data from ticket detail
+							WHEN b.bettype < 19999 and winlostdate <= @_moveBetsDay THEN 0 --> get data from sum record
+						ELSE 1 END
 			GROUP BY winlostdate
 
 				---- 2.2 bettransLC
@@ -585,7 +601,7 @@ BEGIN
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate
 				AND winlostdate >= @Yesterday
 			GROUP BY winlostdate
-		
+
 			INSERT INTO @StatementTable -- position
 			SELECT
 				accdate,
@@ -650,7 +666,7 @@ BEGIN
 	
 			---------------2. POS, COM
 			INSERT INTO @Pos_Com
-				--- 2.1. Bettrans
+			--- 2.1. Bettrans
 			SELECT
 				winlostdate accdate,
 				SUM(mwinlost) pos_totalamt,
@@ -666,6 +682,10 @@ BEGIN
 					winlostdate < @Yesterday
 					OR (winlostdate >= @Yesterday AND (s.RefTable IS NULL OR s.RefTable = 3)) -- exclude ticket on bettransRnG/LC today, yesterday
 				)
+				AND 1 = CASE 
+							WHEN b.bettype = 19999 and winlostdate > @_moveBetsDay THEN 0 --> get data from ticket detail
+							WHEN b.bettype < 19999 and winlostdate <= @_moveBetsDay THEN 0 --> get data from sum record
+						ELSE 1 END
 			GROUP BY winlostdate
 
 				---- 2.2 bettransLC
@@ -772,6 +792,10 @@ BEGIN
 					winlostdate < @Yesterday
 					OR (winlostdate >= @Yesterday AND (s.RefTable IS NULL OR s.RefTable = 3)) -- exclude ticket on bettransRnG/LC today, yesterday
 				)
+				AND 1 = CASE 
+							WHEN b.bettype = 19999 and winlostdate > @_moveBetsDay THEN 0 --> get data from ticket detail
+							WHEN b.bettype < 19999 and winlostdate <= @_moveBetsDay THEN 0 --> get data from sum record
+						ELSE 1 END
 			GROUP BY winlostdate
 
 				---- 2.2 bettransLC

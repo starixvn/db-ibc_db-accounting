@@ -37,6 +37,7 @@ AS
 		- 20200730@Sophia: prevent duplicated transfer [Redmine: #137141]
 		- 20200730@Sophia: Check UM Transfer Function [Redmine: #136992]
 		- 20210310@Danny: Capture total cash before transfering  [Redmine: #146038]
+		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		
 	Param's Explanation:
 */ 
@@ -99,6 +100,22 @@ BEGIN
 	if @ErrCode <>0 return
 	--end
 	*/
+
+	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+	
+	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
+
+	-- create temp table for member balance sum detail
+	CREATE TABLE #MemberBalance
+	(
+		CustId		INT PRIMARY KEY,
+		MemBalance	MONEY
+	)
+
 	 -- CREATE TEMP TABLE CONTAIN MEMBER'S BALANCE @Phuong20080915
 	 CREATE TABLE #Member(	custid		int PRIMARY KEY,
 							recommend	int,
@@ -171,6 +188,12 @@ BEGIN
 		WHERE	b.ruben = 1
 				AND bettype NOT IN (21008, 21009)
 				AND b.custid IN (SELECT custid FROM #Member)
+				AND 
+				1 = CASE 
+						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+					ELSE 1 END
+
 		UNION ALL
 		SELECT	r.custid, r.gameID, r.winlostdate, r.winlost, r.actual_stake, r.playercomm
 		FROM	dbo.bettransRnG r WITH(NOLOCK)
@@ -184,19 +207,66 @@ BEGIN
 				AND l.IsSum = 0
 				AND l.statusID NOT IN (0,1)
 	  )
+	  INSERT INTO #MemberBalance(CustId, MemBalance)
+	  SELECT custid,
+			 isnull(SUM(isnull(case when bettype < 19001 and winlostdate < @WinlostDate then winlost-actual_stake+playercomm 
+									when bettype > 19000 then winlost-actual_stake +playercomm 
+									else 0 
+									end , 0)), 0) memBal	
+	  FROM cteBalanceMember 
+	  GROUP BY custid
+
+	  ----check move bet date again to make sure it is not changed
+	  DECLARE @IsDiff BIT = 0, @NewMoveBetDate SMALLDATETIME = NULL
+	  EXEC bodb02.dbo.Acc_Transfer_CheckMoveBetDate @moveBetsDay, @IsDiff = @IsDiff OUTPUT, @NewMoveBetDate = @NewMoveBetDate OUTPUT
+
+	  IF (@IsDiff = 1)
+	  BEGIN 
+			
+			DELETE FROM #MemberBalance
+
+			;WITH cteBalanceMember
+			  AS(
+				SELECT	b.custid, b.bettype, b.winlostdate, b.winlost, b.actual_stake, b.playercomm
+				FROM	dbo.bettrans b WITH(NOLOCK)
+				WHERE	b.ruben = 1
+						AND bettype NOT IN (21008, 21009)
+						AND b.custid IN (SELECT custid FROM #Member)
+						AND 
+						1 = CASE 
+								WHEN bettype = 19999 and winlostdate > @NewMoveBetDate THEN 0 --> get data from ticket detail
+								WHEN bettype < 19999 and winlostdate <= @NewMoveBetDate THEN 0 --> get data from sum record
+							ELSE 1 END
+
+				UNION ALL
+				SELECT	r.custid, r.gameID, r.winlostdate, r.winlost, r.actual_stake, r.playercomm
+				FROM	dbo.bettransRnG r WITH(NOLOCK)
+				WHERE	r.custid IN (SELECT custid FROM #Member)
+						AND r.IsSum = 0
+						AND r.statusID NOT IN (0,1)
+				UNION ALL
+				SELECT	l.custid, l.gameID, l.winlostdate, l.winlost, l.actual_stake, l.playercomm
+				FROM	dbo.bettransLC l WITH(NOLOCK)
+				WHERE	custid IN (SELECT custid FROM #Member)
+						AND l.IsSum = 0
+						AND l.statusID NOT IN (0,1)
+			  )
+			  INSERT INTO #MemberBalance(CustId, MemBalance)
+			  SELECT custid,
+					 isnull(SUM(isnull(case when bettype < 19001 and winlostdate < @WinlostDate then winlost-actual_stake+playercomm 
+											when bettype > 19000 then winlost-actual_stake +playercomm 
+											else 0 
+											end , 0)), 0) memBal	
+			  FROM cteBalanceMember 
+			  GROUP BY custid
+		
+	  END
+
 	  UPDATE #Member 
-	  SET memBalance = b.memBal 
+	  SET memBalance = b.MemBalance 
 	  FROM #Member 
-		INNER JOIN ( 
-				SELECT custid,
-					   isnull(SUM(isnull(case when bettype < 19001 and winlostdate < @WinlostDate then winlost-actual_stake+playercomm 
-											  when bettype > 19000 then winlost-actual_stake +playercomm 
-											  else 0 
-											  end , 0)), 0) memBal	
-				FROM cteBalanceMember 
-				GROUP BY custid
-			)b 
-			ON #Member.custid = b.custid 
+			INNER JOIN #MemberBalance b 
+				ON #Member.custid = b.custid 
 	 
 	  DELETE FROM #Member WHERE memBalance =0
 	  IF not exists (SELECT 1 FROM #Member)

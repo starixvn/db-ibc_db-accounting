@@ -31,6 +31,7 @@ AS
 		- 20210203@Malcolm : Add Saba.club (Amount due to Jackpot Pool) into reset winning [RedmineId : #149409]
 		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
 		- 20210512@Malcolm : Add VGaming (Amount due to Jackpot Pool) into Reset winning [RedmineId : #154643]
+		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 
 	Param's explain:
 		@mode:  0 _ view report
@@ -45,6 +46,23 @@ AS
 */
 BEGIN
 	SET NOCOUNT ON
+
+	-- get move bet date
+	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
+
+	--validate movebet date
+	IF (@fromdate < DATEADD(DAY, 1, @moveBetsDay))
+	BEGIN
+		SELECT @ErrMsg = 'The Move Bets Day is changed. Please click on OK button to reload this page.',
+               @ErrCode = 1
+		RETURN
+	END
 
 	DECLARE @dummy TABLE (CustID INT, GroupID TINYINT, GroupName VARCHAR(50), Winlostdate SMALLDATETIME)
 	CREATE TABLE #winning (ProductID TINYINT, Sporttype INT, SubProduct VARCHAR(500), eWinlost MONEY, Winlostdate SMALLDATETIME, GroupId TINYINT)

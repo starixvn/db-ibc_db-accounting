@@ -13,6 +13,7 @@ AS
 
 	Revisions:
 		- 20181122@Percy: Initialize SP [RedmineID: #105106]
+		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 */
 
 BEGIN
@@ -28,6 +29,15 @@ BEGIN
 		,@CreditTransfer MONEY, @DebitTransfer MONEY -- BalCreditTransfer/BalDebitTransfer
 		,@CreditNetPosition MONEY, @DebitNetPosition MONEY -- BalNetPosition (credit/debit)
 		,@CreditBonusWallet MONEY, @DebitBonusWallet MONEY -- BonusWalletCredit/BonusWalletDebit
+
+	----get movebetday
+	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+	
+	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 
 	SELECT @CustId = custid FROM CustDB.dbo.custInfo WITH (NOLOCK) WHERE username = @Username AND roleId = 1
 
@@ -62,7 +72,12 @@ BEGIN
 		INSERT INTO #BalanceInfo (winlostdate, bettype, statusId, winlost, actual_stake, playercomm)
 		SELECT winlostdate, bettype, statusId, SUM(winlost), SUM(actual_stake), SUM(playercomm)
 		FROM dbo.bettrans WITH (NOLOCK)
-		WHERE custid = @CustId
+		WHERE 
+			custid = @CustId
+			AND 1 = CASE 
+						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+					ELSE 1 END
 		GROUP BY winlostdate, bettype, statusId
 
 		DELETE b

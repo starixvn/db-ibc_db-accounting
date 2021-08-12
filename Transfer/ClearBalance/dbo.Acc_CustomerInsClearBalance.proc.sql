@@ -48,6 +48,7 @@ Revisions:
 	- 20200821@Sophia: Check UM Transfer Function [Redmine: #136992]
 	- 20201005@Danny: Convert Ipv6 to dummy IPv4 [Redmine: #142511]
 	- 20210310@Danny: Capture total cash before transfering  [Redmine: #146038]
+	- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 	
 Param's Explanation:
 */ 
@@ -90,6 +91,15 @@ BEGIN
 
 	DECLARE @count int, @batch int
 	SELECT @batch=200, @count=0 
+
+	-- get move bet date
+	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 
 	CREATE TABLE #Member (	custid int PRIMARY KEY,
 							memberName nvarchar(50),	
@@ -170,6 +180,10 @@ BEGIN
 			FROM  Bettrans AS b with (NOLOCK)
 			INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
 			WHERE c.recommend = @AgentID and c.roleid = 1 and b.ruben = 1 and b.bettype not in (21008, 21009)
+				AND 1 = CASE 
+							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+						ELSE 1 END
 			GROUP BY b.custid 
 
 			UNION ALL 
@@ -221,6 +235,10 @@ BEGIN
 			INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
 			WHERE EXISTS (SELECT 1 FROM #ToCustIDs WHERE custid = b.custid)
 				  and c.recommend = @AgentID and b.ruben = 1 and b.bettype not in (21008, 21009)
+				  AND 1 = CASE 
+							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+						ELSE 1 END
 			GROUP BY b.custid ,c.username
 
 			UNION ALL 
@@ -245,6 +263,97 @@ BEGIN
 		GROUP BY b.custid, b.username 
 
 	END 
+
+	----check move bet date again to make sure it is not changed
+	DECLARE @IsDiff BIT = 0, @NewMoveBetDate SMALLDATETIME = NULL
+	EXEC bodb02.dbo.Acc_Transfer_CheckMoveBetDate @moveBetsDay, @IsDiff = @IsDiff OUTPUT, @NewMoveBetDate = @NewMoveBetDate OUTPUT
+
+	IF (@IsDiff = 1)
+	BEGIN
+		
+		DELETE FROM #Member
+
+		IF( @CusStatus <> '' or @CusStatus <> null)
+		BEGIN
+
+			;WITH cte_Balance AS (
+				SELECT
+					b.custid,
+					isnull(SUM(isnull(case when bettype < 19001 and b.winlostdate < @WinlostDate then winlost-actual_stake+playercomm 
+											  when bettype > 19000 then winlost-actual_stake +playercomm 
+											  else 0 
+											  end , 0)), 0) memberBal
+				FROM  Bettrans AS b with (NOLOCK)
+				INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
+				WHERE c.recommend = @AgentID and c.roleid = 1 and b.ruben = 1 and b.bettype not in (21008, 21009)
+					AND 1 = CASE 
+								WHEN bettype = 19999 and winlostdate > @NewMoveBetDate THEN 0 --> get data from ticket detail
+								WHEN bettype < 19999 and winlostdate <= @NewMoveBetDate THEN 0 --> get data from sum record
+							ELSE 1 END
+				GROUP BY b.custid 
+
+				UNION ALL 
+				SELECT b.custid, SUM(winlost - actual_stake + playercomm) memberBal
+				FROM bettransRNG b WITH (NOLOCK)
+				WHERE b.recommend = @AgentID AND statusID NOT IN (0,1) AND IsSum = 0 AND winlostdate < @WinlostDate
+				GROUP BY b.custid
+
+				UNION ALL 
+				SELECT b.custid, SUM(winlost - actual_stake + playercomm) memberBal
+				FROM bettransLC b WITH (NOLOCK)
+				WHERE b.recommend = @AgentID AND statusID NOT IN (0,1) AND IsSum = 0 AND winlostdate < @WinlostDate
+				GROUP BY b.custid
+				)
+
+			INSERT INTO #Member(custid,memberName,memberBalance)
+			SELECT b.custid, c.username, SUM(memberBal)
+			FROM cte_Balance b
+				INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
+			GROUP BY b.custid, c.username 
+		END 
+		ELSE 
+		BEGIN
+
+			;WITH cte_Balance AS (
+				SELECT b.custid ,c.username,
+					  isnull(SUM(isnull(case when bettype < 19001 and b.winlostdate < @WinlostDate then winlost-actual_stake+playercomm 
+											 when bettype > 19000 then winlost-actual_stake +playercomm
+											 else 0 
+											 end , 0)), 0) memberBal
+				FROM  Bettrans AS b with (NOLOCK)
+				INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
+				WHERE EXISTS (SELECT 1 FROM #ToCustIDs WHERE custid = b.custid)
+					  and c.recommend = @AgentID and b.ruben = 1 and b.bettype not in (21008, 21009)
+					  AND 1 = CASE 
+								WHEN bettype = 19999 and winlostdate > @NewMoveBetDate THEN 0 --> get data from ticket detail
+								WHEN bettype < 19999 and winlostdate <= @NewMoveBetDate THEN 0 --> get data from sum record
+							ELSE 1 END
+				GROUP BY b.custid ,c.username
+
+				UNION ALL 
+				SELECT b.custid, c.username, SUM(winlost - actual_stake + playercomm) memberBal
+				FROM bettransRNG b WITH (NOLOCK)
+					INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
+				WHERE EXISTS (SELECT 1 FROM #ToCustIDs WHERE custid = b.custid)
+					AND c.recommend = @AgentID AND statusID NOT IN (0,1) AND IsSum = 0 AND winlostdate < @WinlostDate
+				GROUP BY b.custid, c.username
+
+				UNION ALL 
+				SELECT b.custid, c.username, SUM(winlost - actual_stake + playercomm) memberBal
+				FROM bettransLC b WITH (NOLOCK)
+					INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
+				WHERE EXISTS (SELECT 1 FROM #ToCustIDs WHERE custid = b.custid)
+					AND c.recommend = @AgentID AND statusID NOT IN (0,1) AND IsSum = 0 AND winlostdate < @WinlostDate
+				GROUP BY b.custid, c.username
+			)
+			INSERT INTO #Member(custid,memberName,memberBalance)
+			SELECT b.custid, b.username, SUM(memberBal)
+			FROM cte_Balance b
+			GROUP BY b.custid, b.username 
+
+		END 
+
+	END
 
 	DELETE FROM #Member WHERE memberBalance = 0
 	 

@@ -43,6 +43,7 @@ AS
 		- 20201006@sophia: Comment SP Server_IsHeavyLoadPermitted due to cannot transfer [Redmine: #136992]
 		- 20201217@Sol: Optimize - mofidied code to get index seek on IX_ProductID_Issum_StatuaID [RedmineID: #147335]
 		- 20210310@Danny: Capture total cash before transfering  [Redmine: #146038]
+		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		 				       
 	Param's Explanation:
 		@AgentName: username of agent/master/super to clear his all downlines' balance
@@ -125,6 +126,13 @@ BEGIN
 		END
 	END
 	
+	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+	
+	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 
 	/*--20091017@Thien: not check this function so that upline can get back the used credit  
 	--Check disable user  
@@ -208,7 +216,63 @@ BEGIN
 	WHERE (winlostdate < @winlostdate OR (winlostdate >= @winlostdate AND bettype > 20000))
 		AND ruben = 1
 		AND bettype NOT IN (21008, 21009)
+		AND 
+			1 = CASE 
+					WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+					WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+				ELSE 1 END
 	GROUP BY b.custid, b.recommend, b.mrecommend
+
+	----check move bet date again to make sure it is not changed
+	DECLARE @IsDiff BIT = 0, @NewMoveBetDate SMALLDATETIME = NULL
+	EXEC bodb02.dbo.Acc_Transfer_CheckMoveBetDate @moveBetsDay, @IsDiff = @IsDiff OUTPUT, @NewMoveBetDate = @NewMoveBetDate OUTPUT
+
+	IF (@IsDiff = 1)
+	BEGIN
+		DELETE FROM #tempdata
+
+		IF (@roleid = 4)
+		BEGIN
+			-- master data		
+			INSERT INTO #tempdata (custid, recommend, mrecommend, winlost, actual_stake, playercomm, awinlost, comm, mwinlost, acomm)
+			SELECT b.custid, b.recommend, b.mrecommend
+				,SUM(winlost) winlost
+				,SUM(actual_stake) actual_stake
+				,SUM(playercomm) playercomm
+				,SUM(awinlost) awinlost
+				,SUM(comm) comm
+				,SUM(mwinlost) mwinlost
+				,SUM(acomm) acomm
+			FROM @masterlist c
+				INNER JOIN dbo.bettrans b WITH(NOLOCK) ON c.custid = b.custid
+			WHERE (winlostdate < @winlostdate OR (winlostdate >= @winlostdate AND bettype > 20000))
+				AND ruben = 1
+				AND bettype NOT IN (21008, 21009)
+			GROUP BY b.custid, b.recommend, b.mrecommend
+		END
+
+		-- member & agent data	
+		INSERT INTO #tempdata (custid, recommend, mrecommend, winlost, actual_stake, playercomm, awinlost, comm, mwinlost, acomm)
+		SELECT b.custid, b.recommend, b.mrecommend	
+			,SUM(winlost) winlost
+			,SUM(actual_stake) actual_stake
+			,SUM(playercomm) playercomm
+			,SUM(awinlost) awinlost
+			,SUM(comm) comm
+			,SUM(mwinlost) mwinlost
+			,SUM(acomm) acomm
+		FROM @agList ag
+			INNER JOIN dbo.bettrans b WITH(NOLOCK, INDEX=IX_Recommend) ON ag.custid = b.recommend
+		WHERE (winlostdate < @winlostdate OR (winlostdate >= @winlostdate AND bettype > 20000))
+			AND ruben = 1
+			AND bettype NOT IN (21008, 21009)
+			AND 
+				1 = CASE 
+						WHEN bettype = 19999 and winlostdate > @NewMoveBetDate THEN 0 --> get data from ticket detail
+						WHEN bettype < 19999 and winlostdate <= @NewMoveBetDate THEN 0 --> get data from sum record
+					ELSE 1 END
+		GROUP BY b.custid, b.recommend, b.mrecommend
+	END
 
 	INSERT INTO #tempdata (custid, recommend, mrecommend, winlost, actual_stake, playercomm, awinlost, comm, mwinlost, acomm)
 	SELECT b.custid, b.recommend, b.mrecommend	

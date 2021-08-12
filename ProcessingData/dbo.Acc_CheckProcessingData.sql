@@ -18,6 +18,7 @@ AS
 		- 20180518@Percy: also check data ready on DB054 [RedmineID: #89953]
 		- 20181003@Sophia: Correct linked server DBLIC to DBEXT.bodb02 [Redmine: #99855]
 		- 20191126@Patrick: Remove check MB done or not on DB054 [Redmine: #124104]
+		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 */
 
 BEGIN
@@ -31,40 +32,31 @@ BEGIN
 	DECLARE @CurrentDateTime DATETIME
 	SELECT  @CurrentDateTime = GETDATE()
 
-	DECLARE @Config_EndTime VARCHAR(50), @IsArchivingBet VARCHAR(1), @IsMovingBet VARCHAR(1)
-		, @IsArchivingBet_Local_DB053 VARCHAR(1), @IsMovingBet_Local_DB053 VARCHAR(1)
-		, @IsArchivingBet_Local_DB052 VARCHAR(1), @IsMovingBet_Local_DB052 VARCHAR(1)
-		, @IsArchivingBet_Local_DB06 VARCHAR(1), @IsMovingBet_Local_DB06 VARCHAR(1)
+	DECLARE @Config_EndTime VARCHAR(50), @IsArchivingBet VARCHAR(1)
+		, @IsArchivingBet_Local_DB053 VARCHAR(1)
+		, @IsArchivingBet_Local_DB052 VARCHAR(1)
+		, @IsArchivingBet_Local_DB06 VARCHAR(1)
 
 	SELECT  @IsArchivingBet = VValue FROM dbo.SystemSettings WITH(NOLOCK) WHERE VName = 'isArchivingBet' -- BU flags
 	SELECT  @IsArchivingBet = ISNULL(@IsArchivingBet, '0')
 
-	SELECT  @IsMovingBet = VValue FROM dbo.SystemSettings WITH(NOLOCK) WHERE VName = 'isMovingBet' -- MB flags
-	SELECT  @IsMovingBet = ISNULL(@IsMovingBet, '0')
-
-	--//DB053
+		--//DB053
 	SELECT @IsArchivingBet_Local_DB053 = VValue FROM DBAGE.bodb02.dbo.SystemSettings WITH(NOLOCK) WHERE VName = 'isArchivingBet_Local'
 	SELECT @IsArchivingBet_Local_DB053 = ISNULL(@IsArchivingBet_Local_DB053, '0')
-	SELECT @IsMovingBet_Local_DB053 = VValue FROM DBAGE.bodb02.dbo.SystemSettings WITH(NOLOCK) WHERE VName = 'isMovingBet_Local'
-	SELECT @IsMovingBet_Local_DB053 = ISNULL(@IsMovingBet_Local_DB053, '0')
 
 	--//DB06
 	SELECT @IsArchivingBet_Local_DB06 = VValue FROM DBACC.bodb02.dbo.SystemSettings WITH(NOLOCK) WHERE VName = 'isArchivingBet_Local'
 	SELECT @IsArchivingBet_Local_DB06 = ISNULL(@IsArchivingBet_Local_DB06, '0')
-	SELECT @IsMovingBet_Local_DB06 = VValue FROM DBACC.bodb02.dbo.SystemSettings WITH(NOLOCK) WHERE VName = 'isMovingBet_Local'
-	SELECT @IsMovingBet_Local_DB06 = ISNULL(@IsMovingBet_Local_DB06, '0')
-
+	
 	--//DB052
 	SELECT @IsArchivingBet_Local_DB052 = VValue FROM DBEXT.bodb02.dbo.SystemSettings WITH(NOLOCK) WHERE VName = 'isArchivingBet_Local'
 	SELECT @IsArchivingBet_Local_DB052 = ISNULL(@IsArchivingBet_Local_DB052, '0')
-	SELECT @IsMovingBet_Local_DB052 = VValue FROM DBEXT.bodb02.dbo.SystemSettings WITH(NOLOCK) WHERE VName = 'isMovingBet_Local'
-	SELECT @IsMovingBet_Local_DB052 = ISNULL(@IsMovingBet_Local_DB052, '0')
-
+	
 	-- checking condition
-	IF @IsArchivingBet = '0' AND @IsMovingBet = '0'
-		AND @IsArchivingBet_Local_DB053 = '0' AND @IsMovingBet_Local_DB053 = '0'
-		AND @IsArchivingBet_Local_DB052 = '0' AND @IsMovingBet_Local_DB052 = '0'
-		AND @IsArchivingBet_Local_DB06 = '0' AND @IsMovingBet_Local_DB06 = '0'
+	IF @IsArchivingBet = '0'
+		AND @IsArchivingBet_Local_DB053 = '0' 
+		AND @IsArchivingBet_Local_DB052 = '0' 
+		AND @IsArchivingBet_Local_DB06 = '0'
 	BEGIN -- done MB/BU process
 		SELECT @EndProcessingTime = NULL
 	END
