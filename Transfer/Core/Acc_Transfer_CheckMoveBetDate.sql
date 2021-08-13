@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbExtAccNet,bodbDownlineNetView" isFunction="0"></info>*/
+﻿/*<info serverAlias="DBTXN-bodb02,DBAGE-bodb02,DBEXT-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbExtAccNet,bodbDownlineNetView" isFunction="0"></info>*/
 CREATE PROCEDURE [dbo].[Acc_Transfer_CheckMoveBetDate] 
 	@MoveBetDate SMALLDATETIME,
 	@IsDiff BIT = 0 OUTPUT,
@@ -10,6 +10,7 @@ AS
 	DB: DBTXN.bodb02/DBAGE.bodb02
 	Revisions:	
 		- 20210512@Sol: Check move bet date - [Redmine: #149927]
+		- 20210812@Sol: Enhance sps of setting related to new MB core - [Redmine: #160074]
 
 	Param explaination:
 		@IsDiff: 0 - the same value
