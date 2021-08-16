@@ -11,12 +11,12 @@ Revisions:
 Param's Explanation:
 */
 
-begin tran
+BEGIN TRAN
 
 UPDATE ref 
 SET  @refno=refno=refno+1
 WHERE refid='refno'
 
-commit tran
+COMMIT TRAN
 
 GO
