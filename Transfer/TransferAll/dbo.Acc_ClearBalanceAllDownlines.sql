@@ -44,6 +44,8 @@ AS
 		- 20201217@Sol: Optimize - mofidied code to get index seek on IX_ProductID_Issum_StatuaID [RedmineID: #147335]
 		- 20210310@Danny: Capture total cash before transfering  [Redmine: #146038]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
+		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
+		- 20210817@Sophia: Fix overflow Refno [Redmine: #160262]
 		 				       
 	Param's Explanation:
 		@AgentName: username of agent/master/super to clear his all downlines' balance
@@ -75,7 +77,7 @@ BEGIN
 
 	DECLARE @roleid INT, @AgentID INT, @Amount MONEY, @custid INT, @recommend INT, @mrecommend INT, @srecommend INT, @currency INT, @actualrate FLOAT, @currencyName NVARCHAR(10), @membername VARCHAR(50), @agentusername VARCHAR(50), @mastername VARCHAR(50), @supername VARCHAR(50), @memberBalance MONEY, @agentBalance MONEY, @masterBalance MONEY, @ABSmemberBalance MONEY
 	DECLARE @LogData VARCHAR(1000)
-	DECLARE @refno BIGINT, @grefno INT, @Now DATETIME
+	DECLARE @refno BIGINT, @grefno BIGINT, @Now DATETIME
 	DECLARE @ErrItems NVARCHAR(max), @SkipTransfer BIT, @isSucc VARCHAR(10)
 
 	SELECT @isSucc = 'false', @ErrItems = ''

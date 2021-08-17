@@ -38,6 +38,7 @@ AS
 		- 20200730@Sophia: Check UM Transfer Function [Redmine: #136992]
 		- 20210310@Danny: Capture total cash before transfering  [Redmine: #146038]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
+		- 20210817@Sophia: Fix overflow Refno [Redmine: #160262]
 		
 	Param's Explanation:
 */ 
@@ -279,7 +280,7 @@ BEGIN
 	  DECLARE @custid int, @recommend int, @mrecommend int, @srecommend int
 	  DECLARE @memberName nvarchar(50), @agName nvarchar(50)
 	  DECLARE @currency int, @currName nvarchar(10),@actualrate float,@amount money
-	  DECLARE @refno bigint, @grefno int
+	  DECLARE @refno bigint, @grefno BIGINT
 	  
 	  SELECT @currency = ci.currency, @actualrate = e.actualrate ,@currName = e.currency 
 	  from CustDB.dbo.Custinfo ci with (NOLOCK) 
