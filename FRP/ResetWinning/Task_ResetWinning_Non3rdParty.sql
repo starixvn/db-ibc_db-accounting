@@ -5,6 +5,7 @@ ALTER PROCEDURE [dbo].[Task_ResetWinning_Non3rdParty]
 	@mode     tinyint = 0,
 	@creator  INT = 5838421,
 	@ip       VARCHAR(20) = '',
+	@MoveBetDay SMALLDATETIME = NULL,
 	@ErrCode  INT = 0 output,
     @ErrMsg   VARCHAR(100) = '' output
 AS 
@@ -69,6 +70,7 @@ AS
 		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
 		- 20210512@Malcolm : Add VGaming (Amount due to Jackpot Pool) into Reset winning [RedmineId : #154643]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
+		- 20210816@Sol: fix nested insert exec - [Redmine: #160212]
 
 	Param Explanation:
 	    @mode:  0 _ view report
@@ -85,11 +87,18 @@ BEGIN
 	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
 	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
 
-	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
-	EXEC bodb02.dbo.Age_SelBalanceUpDay
+	IF (@MoveBetDay IS NULL)
+	BEGIN
+		INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+		EXEC bodb02.dbo.Age_SelBalanceUpDay
 
-	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
-
+		SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
+	END
+	ELSE
+	BEGIN
+		SELECT @moveBetsDay = @MoveBetDay
+	END
+	
 	--validate movebet date
 	IF (@fromdate < DATEADD(DAY, 1, @moveBetsDay))
 	BEGIN
