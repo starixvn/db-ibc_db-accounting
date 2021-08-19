@@ -31,6 +31,7 @@ AS
 		- 20200316@Elodie: Remove from Hardcode list finance permission for Nova [Redmine: #130499]
 		- 20200317@Malcolm: Grant permission for finance account [Redmine : #128128]
 		- 20200414@Sophia: add BBIN bettype [Redmine: #131358]
+		- 20210819@Evan: NAP - Prevent reversal near BU [Redmine: #160439]
 
     Param's Explanation:
         - @FilterBy: 1:winlostdate - 2:transdate
@@ -39,6 +40,8 @@ AS
     Sample:
 				EXEC [dbo].[Acc_StatementFinance] @RefNo = -1,@Username = 'DWLSPNL',@FilterBy = 1,@FromDate = '2012-07-21',@ToDate = '2012-08-04',@BalanceUpDay = '',@IncludeAccBal = 1
 
+	Note: 
+		- IF (winlostdate > BU && not in 7 days Moving && IsReverse = 0) => show reversal button 
  */
 BEGIN
 	SET NOCOUNT ON
@@ -433,6 +436,20 @@ BEGIN
 				)
 		END
 	END
+	--Check to not allow to transfer before balance up date
+	DECLARE @ArchivedDay		SMALLDATETIME
+		, @ConstraintDay	SMALLDATETIME
+
+	SELECT @ArchivedDay	= MAX(winlostdate)
+	FROM DBTXN.bodb02.dbo.Task_ArchiveDate WITH (NOLOCK)
+
+	SELECT @ConstraintDay =  CASE 
+									WHEN @ArchivedDay > @_BalanceUpDay THEN @_BalanceUpDay+7 -- new BU
+									ELSE @_BalanceUpDay -- old BU
+								END
+	UPDATE #StatementTable
+	SET IsReversal = 1 
+	WHERE WinlostDate < @ConstraintDay
 
 	-- Result
 	IF @CustID > 0
