@@ -444,7 +444,7 @@ BEGIN
 	FROM DBTXN.bodb02.dbo.Task_ArchiveDate WITH (NOLOCK)
 
 	SELECT @ConstraintDay =  CASE 
-									WHEN @ArchivedDay > @_BalanceUpDay THEN @_BalanceUpDay+7 -- new BU
+									WHEN @ArchivedDay > @_BalanceUpDay THEN DATEADD(DAY,7,@_BalanceUpDay) -- new BU
 									ELSE @_BalanceUpDay -- old BU
 								END
 	UPDATE #StatementTable
