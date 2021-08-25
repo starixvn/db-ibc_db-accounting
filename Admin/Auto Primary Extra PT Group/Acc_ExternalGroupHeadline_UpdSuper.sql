@@ -281,6 +281,18 @@ BEGIN
 			SET @AffectedSupers = @UserName
 	END
 
+	-- CustSuperProfile
+	IF EXISTS (
+		SELECT 1
+		FROM dbo.EaGroupHeadline WITH (NOLOCK)
+		WHERE GroupHeadlineId = @GroupHeadlineId AND SiteId = @SiteId AND ExchangeId = @ExchangeId AND GroupName <> '' AND @RoleId = 4
+	)
+	BEGIN
+		IF NOT EXISTS (SELECT 1 FROM dbo.CustSuperProfile WITH (NOLOCK) WHERE CustId = @CustId)
+			INSERT INTO dbo.CustSuperProfile (CustId)
+			VALUES (@CustId)
+	END
+
 	-- Log for Extra PT
 	IF @RoleId = 4
 	BEGIN

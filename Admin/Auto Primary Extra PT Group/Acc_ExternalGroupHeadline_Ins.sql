@@ -22,6 +22,7 @@ AS
 
 	Revisions:
 		- 20210302@Percy: Initialize SP [RemineID: #146710]
+		- 20210825@Percy: Add data into CustSuperProfile [RemineID: #160682]
 */
 
 BEGIN
@@ -359,6 +360,15 @@ BEGIN
 			LEFT JOIN dbo.Acc_CustGroup_Queue q WITH (NOLOCK) ON cg.CustId = q.CustId AND cg.GroupName = q.GroupName
 		WHERE NOT EXISTS (SELECT 1 FROM #Super s WHERE cg.CustId = s.CustId AND cg.GroupName = s.GroupName)
 			AND q.CustId IS NULL
+	END
+
+	-- CustSuperProfile
+	BEGIN
+		INSERT INTO dbo.CustSuperProfile (CustId)
+		SELECT s.CustId
+		FROM (SELECT DISTINCT CustId FROM #Super) s
+			LEFT JOIN dbo.CustSuperProfile csp WITH (NOLOCK) ON s.CustId = csp.CustId
+		WHERE csp.CustId IS NULL
 	END
 
 	-- Log Extra PT
