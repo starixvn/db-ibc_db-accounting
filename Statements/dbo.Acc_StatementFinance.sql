@@ -1,5 +1,4 @@
 /*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet,bodbExtAccNet" isFunction="0" isNested="0"></info>*/
-
 ALTER PROCEDURE [dbo].[Acc_StatementFinance]
     @RefNo BIGINT = 0,
 	@Username VARCHAR(30) = null,
@@ -10,36 +9,39 @@ ALTER PROCEDURE [dbo].[Acc_StatementFinance]
 	@BalanceUpDay DATETIME = null,
 	@IncludeAccBal BIT = 0
 AS
- /*
-	Created by: 20120730@Don
-	Task: Get Statement of Finance report
-	DB: DBACC/bodb02 
-	
-	Revisions:
-		- 20130724@Jamie: Change Alias 
-			+ DB052 --> DBEXT 
-			+ DB053/bodb_Summary --> DBSUM
-			+ bodb_Report --> DBRPT/bodb_Report
-		- 20160602@Percy: Hotfix - Opening balance is shown wrongly [Redmine: #58410]
-		- 20160824@Lukas: add param @UserId for checking permission before query data
-		- 20180731@Percy: Expand column transdesc [RedmineID: #92841]
-		- 20181107@Louis: Credit Collection [Redmine: #98621]
-		- 20190114@Sophia: Move table transfer_fi from DBSUM.bodb_summary to DBARC.bodb_archive [Redmine: #105415]
-		- 20190502@Percy: Fix issue duplicate data when BU process (copy data) [RedmineID: #112525]
-		- 20191113@Louis: Hot Fix Credit Collection BK [Redmine: #123812]
-		- 20200305@Elodie: Hardcode list finance permission [Redmine: #129890]
-		- 20200316@Elodie: Remove from Hardcode list finance permission for Nova [Redmine: #130499]
-		- 20200317@Malcolm: Grant permission for finance account [Redmine : #128128]
-		- 20200414@Sophia: add BBIN bettype [Redmine: #131358]
-
-    Param's Explanation:
-        - @FilterBy: 1:winlostdate - 2:transdate
-        - @IncludeAccBal: 1:include - 0:exclude
-        
-    Sample:
-				EXEC [dbo].[Acc_StatementFinance] @RefNo = -1,@Username = 'DWLSPNL',@FilterBy = 1,@FromDate = '2012-07-21',@ToDate = '2012-08-04',@BalanceUpDay = '',@IncludeAccBal = 1
-
- */
+ /*  
+ Created by: 20120730@Don  
+ Task: Get Statement of Finance report  
+ DB: DBACC/bodb02   
+   
+ Revisions:  
+  - 20130724@Jamie: Change Alias   
+   + DB052 --> DBEXT   
+   + DB053/bodb_Summary --> DBSUM  
+   + bodb_Report --> DBRPT/bodb_Report  
+  - 20160602@Percy: Hotfix - Opening balance is shown wrongly [Redmine: #58410]  
+  - 20160824@Lukas: add param @UserId for checking permission before query data  
+  - 20180731@Percy: Expand column transdesc [RedmineID: #92841]  
+  - 20181107@Louis: Credit Collection [Redmine: #98621]  
+  - 20190114@Sophia: Move table transfer_fi from DBSUM.bodb_summary to DBARC.bodb_archive [Redmine: #105415]  
+  - 20190502@Percy: Fix issue duplicate data when BU process (copy data) [RedmineID: #112525]  
+  - 20191113@Louis: Hot Fix Credit Collection BK [Redmine: #123812]  
+  - 20200305@Elodie: Hardcode list finance permission [Redmine: #129890]  
+  - 20200316@Elodie: Remove from Hardcode list finance permission for Nova [Redmine: #130499]  
+  - 20200317@Malcolm: Grant permission for finance account [Redmine : #128128]  
+  - 20200414@Sophia: add BBIN bettype [Redmine: #131358]  
+  - 20210819@Evan: NAP - Prevent reversal near BU [Redmine: #160439]  
+  
+    Param's Explanation:  
+        - @FilterBy: 1:winlostdate - 2:transdate  
+        - @IncludeAccBal: 1:include - 0:exclude  
+          
+    Sample:  
+    EXEC [dbo].[Acc_StatementFinance_xtest] @RefNo = -1,@Username = 'DWLSPNL',@FilterBy = 1,@FromDate = '2012-07-21',@ToDate = '2012-08-04',@BalanceUpDay = '',@IncludeAccBal = 1  
+  
+ Note:   
+  - IF (winlostdate > BU && not in 7 days Moving && IsReverse = 0 && IsMoving = 0) => show reversal button   
+ */  
 BEGIN
 	SET NOCOUNT ON
 	
@@ -57,7 +59,8 @@ BEGIN
 		CheckTime DATETIME NULL,
 		IsAllowVerify BIT DEFAULT 0,
 		IsReversal BIT DEFAULT 0,
-		IsExpand BIT DEFAULT 0
+		IsExpand BIT DEFAULT 0,
+		IsMoving BIT DEFAULT 0
 	)
 
 	DECLARE @CustomerId INT, @srecommend INT
@@ -433,6 +436,20 @@ BEGIN
 				)
 		END
 	END
+	--Check to not allow to transfer before balance up date
+	DECLARE @ArchivedDay		SMALLDATETIME
+		, @ConstraintDay	SMALLDATETIME
+
+	SELECT @ArchivedDay	= MAX(winlostdate)
+	FROM DBTXN.bodb02.dbo.Task_ArchiveDate WITH (NOLOCK)
+
+	SELECT @ConstraintDay =  CASE 
+									WHEN @ArchivedDay > @_BalanceUpDay THEN DATEADD(DAY,7,@_BalanceUpDay) -- new BU
+									ELSE @_BalanceUpDay -- old BU
+								END
+	UPDATE #StatementTable
+	SET IsMoving = 1 
+	WHERE WinlostDate < @ConstraintDay
 
 	-- Result
 	IF @CustID > 0
@@ -475,7 +492,8 @@ BEGIN
 			tmp.CheckTime [CheckTime],
 			tmp.IsAllowVerify [IsAllowVerify],
 			tmp.IsReversal [IsReversal],
-			tmp.IsExpand [IsExpand]
+			tmp.IsExpand [IsExpand],
+			tmp.IsMoving [IsMoving]
 		FROM #StatementTable tmp
 			LEFT JOIN dbo.Customer c (NOLOCK) ON tmp.creator = c.custid
 		WHERE 
@@ -503,7 +521,8 @@ BEGIN
 			tmp.CheckTime [CheckTime],
 			tmp.IsAllowVerify [IsAllowVerify],
 			tmp.IsReversal [IsReversal],
-			tmp.IsExpand [IsExpand]
+			tmp.IsExpand [IsExpand],
+			tmp.IsMoving [IsMoving]
 		FROM #StatementTable tmp
 			LEFT JOIN dbo.Customer c (NOLOCK) ON tmp.creator = c.custid
 		ORDER BY 
