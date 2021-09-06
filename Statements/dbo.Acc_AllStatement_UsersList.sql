@@ -35,7 +35,7 @@ BEGIN
 	----
 
 	---- To avoid parametter sniffing
-	DECLARE @FDate SMALLDATETIME, @TDate SMALLDATETIME, @FDate14 SMALLDATETIME, @TDate14 SMALLDATETIME;
+	DECLARE @FDate SMALLDATETIME, @TDate SMALLDATETIME
 	SELECT @FDate = @fromdate, @TDate = @todate;
 
     DECLARE @tempUsername TABLE (username VARCHAR(50))
@@ -83,7 +83,7 @@ BEGIN
             WHERE
                 bettype between 1 and 19999
                 and custid IN (SELECT custid FROM #TEMP_USER_LIST WHERE roleid=1)
-                and winlostdate between @FDate and @TDate
+                and winlostdate between @FromDate and @ToDate
 				AND 1 = CASE 
 							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
 							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
@@ -101,7 +101,7 @@ BEGIN
             FROM bettrans b WITH (NOLOCK) INNER JOIN #TEMP_USER_LIST t ON b.custid = t.custid AND t.roleid = 1
             WHERE
                 bettype between 1 and 19999            
-                and winlostdate between @FDate and @TDate
+                and winlostdate between @FromDate and @ToDate
                 and playercomm<>0
 				AND 1 = CASE 
 							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
@@ -120,7 +120,7 @@ BEGIN
             FROM bettrans b WITH (NOLOCK) INNER JOIN #TEMP_USER_LIST t ON b.custid = t.custid AND t.roleid = 1
             WHERE
                 bettype >= 20000            
-                and winlostdate between @FDate and @TDate
+                and winlostdate between @FromDate and @ToDate
             GROUP BY bettype,transdesc,transdate,t.username,t.currency
 
             -- customer deleted/void ticket
@@ -144,16 +144,16 @@ BEGIN
             --Remove All
 			IF @BalanceUpDay < @FromDate
 			BEGIN
-				SET @FDate14 = @FromDate;
+				SET @FDate = @FromDate;
 			END
 			ELSE
 			BEGIN
-				SET @FDate14 = @BalanceUpDay;
+				SET @FDate = @BalanceUpDay;
 			END
 		
 			IF @ToDate > @MoveBetsDay
 			BEGIN
-				SET @TDate14 = @MoveBetsDay;
+				SET @TDate = @MoveBetsDay;
 			END
 
             INSERT INTO #StatementTable (accdate, totalamt, transtype, transdesc, roleid, username, currency)
@@ -170,7 +170,7 @@ BEGIN
                 INNER join #TEMP_USER_LIST t ON b.custid = t.custid AND t.roleid = 1
             WHERE
                 bettype between 1 and 19999
-                and eventdate between @FDate14 and @TDate14
+                and eventdate between @FDate and @TDate
             GROUP BY eventdate, t.username, t. currency
         END
 
@@ -189,7 +189,7 @@ BEGIN
             WHERE
                 bettype >= 20000
                 and custid IN (SELECT custid FROM #TEMP_USER_LIST WHERE roleid=2)
-                and winlostdate between @FDate and @TDate
+                and winlostdate between @FromDate and @ToDate
                 GROUP BY bettype,transdesc,transdate,username,currency
                
             INSERT INTO #StatementTable (accdate, totalamt, transtype, transdesc, roleid, username, currency)
@@ -203,7 +203,7 @@ BEGIN
             FROM bettrans b WITH (NOLOCK) INNER JOIN #TEMP_USER_LIST t ON b.recommend = t.custid and roleid=2
             WHERE
                 bettype between 1 and 19999
-                and winlostdate between @FDate and @TDate
+                and winlostdate between @FromDate and @ToDate
 				AND 1 = CASE 
 							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
 							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
@@ -222,7 +222,7 @@ BEGIN
             FROM bettrans b WITH (NOLOCK) INNER JOIN #TEMP_USER_LIST t ON b.recommend = t.custid and roleid=2
             WHERE
                 bettype between 1 and 19999            
-                and winlostdate between @FDate and @TDate
+                and winlostdate between @FromDate and @ToDate
 				AND 1 = CASE 
 							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
 							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
@@ -246,7 +246,7 @@ BEGIN
             WHERE
                 bettype >= 20000
                 and bettrans.custid IN (SELECT custid FROM #TEMP_USER_LIST WHERE roleid=3)
-                and winlostdate between @FDate and @TDate
+                and winlostdate between @FromDate and @ToDate
                 GROUP BY bettype,transdesc,transdate,username, currency
        
             INSERT INTO #StatementTable (accdate, totalamt, transtype, transdesc, roleid, username, currency)
@@ -261,7 +261,7 @@ BEGIN
             WHERE
                 bettype between 1 and 19999
                 and mrecommend IN (SELECT custid FROM #TEMP_USER_LIST WHERE roleid=3)
-                and winlostdate between @FDate and @TDate
+                and winlostdate between @FromDate and @ToDate
 				AND 1 = CASE 
 							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
 							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
@@ -281,7 +281,7 @@ BEGIN
             WHERE
                 bettype between 1 and 19999
                 and mrecommend IN (SELECT custid FROM #TEMP_USER_LIST WHERE roleid=3)
-                and winlostdate between @FDate and @TDate
+                and winlostdate between @FromDate and @ToDate
 				AND 1 = CASE 
 							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
 							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
@@ -305,7 +305,7 @@ BEGIN
             WHERE
             bettype >= 20000
             and  b.custid IN (SELECT custid FROM #TEMP_USER_LIST WHERE roleid=4)       
-            and winlostdate between @FDate and @TDate
+            and winlostdate between @FromDate and @ToDate
             GROUP BY bettype,transdesc,transdate, t.username, t.currency
        
             INSERT INTO #StatementTable (accdate, totalamt, transtype, transdesc, roleid, username, currency)
@@ -320,7 +320,7 @@ BEGIN
             WHERE
                 bettype between 1 and 19999
                 and srecommend IN (SELECT custid FROM #TEMP_USER_LIST WHERE roleid=4)       
-                and winlostdate between @FDate and @TDate
+                and winlostdate between @FromDate and @ToDate
 				AND 1 = CASE 
 							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
 							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
@@ -340,7 +340,7 @@ BEGIN
             WHERE
                 bettype between 1 and 19999
                 and srecommend IN (SELECT custid FROM #TEMP_USER_LIST WHERE roleid=4)       
-                and winlostdate between @FDate and @TDate
+                and winlostdate between @FromDate and @ToDate
 				AND 1 = CASE 
 							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
 							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
