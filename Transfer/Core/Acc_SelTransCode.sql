@@ -7,7 +7,7 @@ AS
 Created: 
 DB: DBTXN/bodb02
 Revisions:
-	- 20210816@Sophia: Fix data Overflow 
+	- 20210816@Sophia: Fix data Overflow [Redmine: #160262]
 Param's Explanation:
 */
 
