@@ -49,6 +49,7 @@ Revisions:
 	- 20201005@Danny: Convert Ipv6 to dummy IPv4 [Redmine: #142511]
 	- 20210310@Danny: Capture total cash before transfering  [Redmine: #146038]
 	- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
+	- 20210817@Sophia: Fix overflow Refno [Redmine: #160262]
 	
 Param's Explanation:
 */ 
@@ -82,7 +83,7 @@ BEGIN
 	Declare @agentid int, @custid int
 	DECLARE @currency int , @currName nvarchar(10), @actualrate float 
 	DECLARE @agUser nvarchar(50), @User nvarchar(50)
-	Declare @refno bigint, @ToCustID int, @Amount float, @Recommend1 int, @MRecommend1 int, @grefno int, @srecommend1 int
+	Declare @refno bigint, @ToCustID int, @Amount float, @Recommend1 int, @MRecommend1 int, @grefno bigint, @srecommend1 int
 	DECLARE @WinlostDate datetime, @ABSamount MONEY
 	DECLARE @ErrItems nvarchar(max), @SkipTransfer bit
 
