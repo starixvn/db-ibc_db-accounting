@@ -185,8 +185,7 @@ BEGIN
 		SET t.Product = s.Product, t.Winlost = s.Winlost, t.RealWinlost = s.RealWinlost
 	WHEN NOT MATCHED BY SOURCE THEN DELETE;
 
-	---------------------------------------------------------------------------------------------------------
-	--------------------------------------------Extra PT ---------------------------------------------------
+	--------------------------------------------------------------------------------------------------------- 
 	/* Get bet tickets*/
 	CREATE TABLE #tmpData (
 		winlostdate		smalldatetime
@@ -219,49 +218,61 @@ BEGIN
 	INSERT INTO #tmpData (winlostdate, bettype, MatchId, liveindicator
 		,winlost, eWinlost, WinlostDueToRNG, WinlostDueToPP, WinlostDueToSaba, WinlostDueToVgaming
 		,RealWinlost, eRealWinlost, RealWinlostDueToRNG, RealWinlostDueToPP, RealWinlostDueToSaba, RealWinlostDueToVgaming)
+	---------Jackpot contribution tickets --------------
 	SELECT winlostdate, bettype, 0 AS MatchId, 0 AS liveindicator,
 		-- Base Currency
 		SUM(CASE
 				-- Jackpot Prize
 				WHEN bettype IN (1699, 2199, 2399, 2999, 3899, 4298) THEN 0
 				-- Jackpot full Contribution
-				WHEN bettype IN (1698, 2198, 2398, 2998, 3898, 4297) THEN winlost - actual_stake + awinlost + mwinlost + swinlost + scomm + ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
-				ELSE 0 END * CASE WHEN @Istest = 1 THEN 1 ELSE actualrate END) AS winlost,
+				WHEN bettype IN (1698, 2198, 2398, 2998, 3898, 4297) 
+					THEN winlost - actual_stake + awinlost + mwinlost + swinlost + scomm + ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
+				ELSE 0 END 
+				* CASE WHEN @Istest = 1 THEN 1 ELSE actualrate END) AS winlost,
 		SUM(CASE
 				-- Jackpot Prize
 				WHEN bettype IN (1699, 2199, 2399, 2999, 3899, 4298) THEN 0
 				-- Jackpot full Contribution
-				WHEN bettype IN (1698, 2198, 2398, 2998, 3898, 4297) THEN ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
-				ELSE 0 END * CASE WHEN @Istest = 1 THEN 1 ELSE actualrate END * ISNULL(epositiontaking, 0)) AS eWinlost,
+				WHEN bettype IN (1698, 2198, 2398, 2998, 3898, 4297) 
+					THEN ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
+				ELSE 0 END 
+				* CASE WHEN @Istest = 1 THEN 1 ELSE actualrate END 
+				* ISNULL(epositiontaking, 0)) AS eWinlost,
 		SUM(CASE
 				WHEN bettype IN (2198, 2398, 2998) THEN -ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
 				WHEN bettype IN (2199, 2399, 2999) THEN winlost - actual_stake
-				ELSE 0 END * CASE WHEN @Istest = 1 THEN 1 ELSE actualrate END) AS WinlostDueToRNG,
+				ELSE 0 END 
+				* CASE WHEN @Istest = 1 THEN 1 ELSE actualrate END) AS WinlostDueToRNG,
 		SUM(CASE
 				WHEN bettype IN (4297) THEN -ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
 				WHEN bettype IN (4298) THEN winlost - actual_stake
-				ELSE 0 END * CASE WHEN @Istest = 1 THEN 1 ELSE actualrate END) AS WinlostDueToPP,
+				ELSE 0 END 
+				* CASE WHEN @Istest = 1 THEN 1 ELSE actualrate END) AS WinlostDueToPP,
 		SUM(CASE
 				WHEN bettype IN (1698) THEN -ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
 				WHEN bettype IN (1699) THEN winlost - actual_stake
-				ELSE 0 END * CASE WHEN @Istest = 1 THEN 1 ELSE actualrate END) AS WinlostDueToSaba,
+				ELSE 0 END 
+				* CASE WHEN @Istest = 1 THEN 1 ELSE actualrate END) AS WinlostDueToSaba,
 		SUM(CASE
 				WHEN bettype IN (3898) THEN -ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
 				WHEN bettype IN (3899) THEN winlost - actual_stake
-				ELSE 0 END * CASE WHEN @Istest = 1 THEN 1 ELSE actualrate END) AS WinlostDueToVgaming,
+				ELSE 0 END 
+				* CASE WHEN @Istest = 1 THEN 1 ELSE actualrate END) AS WinlostDueToVgaming,
 		-- Real Currency
 		SUM(CASE
 				-- Jackpot Prize
 				WHEN bettype IN (1699, 2199, 2399, 2999, 3899, 4298) THEN 0
 				-- Jackpot full Contribution
-				WHEN bettype IN (1698, 2198, 2398, 2998, 3898, 4297) THEN winlost - actual_stake + awinlost + mwinlost + swinlost + scomm + ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
+				WHEN bettype IN (1698, 2198, 2398, 2998, 3898, 4297) 
+					THEN winlost - actual_stake + awinlost + mwinlost + swinlost + scomm + ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
 				ELSE 0 END) AS winlost,
 		SUM(CASE
 				-- Jackpot Prize
 				WHEN bettype IN (1699, 2199, 2399, 2999, 3899, 4298) THEN 0
 				-- Jackpot full Contribution
 				WHEN bettype IN (1698, 2198, 2398, 2998, 3898, 4297) THEN ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
-				ELSE 0 END * ISNULL(epositiontaking, 0)) AS eWinlost,
+				ELSE 0 END 
+				* ISNULL(epositiontaking, 0)) AS eWinlost,
 		SUM(CASE
 				WHEN bettype IN (2198, 2398, 2998) THEN -ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
 				WHEN bettype IN (2199, 2399, 2999) THEN winlost - actual_stake
@@ -282,12 +293,15 @@ BEGIN
 	WHERE bettype IN (1698, 1699, 2198, 2199, 2398, 2399, 2998, 2999, 3898, 3899, 4297, 4298)
 	GROUP BY winlostdate, bettype
 	
-	UNION ALL
+	--------Normal bet tickets ---------------
+	UNION ALL	
 	SELECT winlostdate, bettype, matchId, liveindicator,
 		-- Base Currency
-		SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * CASE WHEN @Istest = 1 THEN 1 ELSE actualrate END) AS winlost,
+		SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) 
+				* CASE WHEN @Istest = 1 THEN 1 ELSE actualrate END) AS winlost,
 		SUM(CASE WHEN tpositiontaking = 1 THEN 0 ELSE (winlost - actual_stake + scomm / (1 - tpositiontaking)) END
-				* CASE WHEN @Istest = 1 THEN 1 ELSE actualrate END * ISNULL(epositiontaking, 0)) AS eWinlost, 0, 0, 0, 0,
+				* CASE WHEN @Istest = 1 THEN 1 ELSE actualrate END 
+				* ISNULL(epositiontaking, 0)) AS eWinlost, 0, 0, 0, 0,
 		-- Real Currency
 		SUM(winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) AS RealWinlost,
 		SUM(CASE WHEN tpositiontaking = 1 THEN 0 ELSE (winlost - actual_stake + scomm / (1 - tpositiontaking)) END
@@ -296,7 +310,7 @@ BEGIN
 	WHERE bettype NOT IN (1698, 1699, 2198, 2199, 2398, 2399, 2998, 2999, 3898, 3899, 4297, 4298)
 	GROUP BY winlostdate, bettype, matchId, liveindicator
 
-	/* Sum WL data */
+	/* Get MatchID for MuayThai */
 	DECLARE @FDate DATETIME = @fromdate, @TDate DATETIME = @todate
 	
 	CREATE TABLE #tmpMatch (matchid INT PRIMARY KEY, sporttype INT) -- current use for MuayThai
@@ -552,12 +566,18 @@ BEGIN
         BEGIN
             SET @variance = 0
 
+            ; WITH CTE_Date AS (
+			SELECT @fromdate AS WinlostDate
+			UNION ALL SELECT DATEADD(DAY, 1, WinlostDate) FROM CTE_Date WHERE WinlostDate < @todate
+				)
             SELECT @variance = ROUND(r.LatestReset, 2),
-                   @custid = d.custid,
-				   @Product = d.Product
+                   @custid = dm.custid,
+				   @Product = dm.Product
             FROM #reset r
-				INNER JOIN @dummyBalance d on r.product = d.product AND r.WinlostDate = d.WinlostDate
+				CROSS JOIN CTE_Date d
+				INNER JOIN @dummyBalance dm on r.product = dm.product AND r.WinlostDate = d.WinlostDate
             WHERE r.seq = @seq
+			OPTION (MAXRECURSION 0);
 
             IF (@variance <> 0) 
             BEGIN
