@@ -18,7 +18,7 @@ AS
 		- 20180628@Percy: Fix issue duplicated data [RedmineID: #97316]
 		- 20180731@Percy: Expand column transdesc [RedmineID: #92841]
 		- 20210817@Sol: Allow more time to transfer (phase 2) - [RedmineID: #160019]
-        - 20210823@Sol: Alpha - Allow more time to transfer (phase 2b) + fix duplicated date - [RedmineID: #160440]
+        - 20210823@Sol: Alpha - Allow more time to transfer (phase 2b) - [RedmineID: #160440]
 */
 
 BEGIN
@@ -352,14 +352,14 @@ BEGIN
 
 	IF @FromDate < @BalanceUpDay
 	BEGIN
-		IF @ToDate >= @BalanceUpDay
-			SELECT @ToDate = @BalanceUpDay
+		IF @ToDate >= DATEADD(DAY, -1, @BalanceUpDay)
+			SELECT @ToDate = DATEADD(DAY, -1, @BalanceUpDay) + ' 23:59:59'
 
 		INSERT INTO #StatementTable (accdate, totalamt, transtype, transdesc, roleid, username, currency)
 		SELECT accdate, totalamt, transtype, transdesc, t.roleid, t.username, t.currency
 		FROM bodb_Report.dbo.Statement s WITH (NOLOCK)
 			INNER JOIN #TEMP_USER_LIST t ON s.custid = t.custid
-		WHERE accdate >= @fromdate and s.accdate < @todate
+		WHERE accdate between @fromdate and @todate
 	END
 
 	SELECT
