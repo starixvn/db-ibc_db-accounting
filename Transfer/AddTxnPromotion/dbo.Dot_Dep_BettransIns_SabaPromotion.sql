@@ -160,7 +160,7 @@ BEGIN
 			, @Creator	AS creator
 			, @ip AS [ip]
 			, @Balance AS balance
-			, CAST(@transdate AS DATE) AS winlostdate
+			, @winlostdate AS winlostdate
 			, @transdate AS transdate
 			, @bettype AS bettype
 			, @sporttype AS matchid
