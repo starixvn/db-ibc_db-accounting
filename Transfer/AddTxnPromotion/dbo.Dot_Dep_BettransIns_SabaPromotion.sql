@@ -8,7 +8,8 @@ CREATE PROCEDURE dbo.Dot_Dep_BettransIns_SabaPromotion
 	, @Betfrom		NVARCHAR(1)		= 'd'
 	, @TransDesc	NVARCHAR(1000)	= ''
 	, @IP			NVARCHAR(15)	= ''
-	, @Creator		INT				= NULL  
+	, @Creator		INT				= NULL 
+	, @WinlostDate 	SMALLDATETIME 	= NULL
 	------------------------------------------
 	, @TransID 		BIGINT			= 0 OUTPUT
 	, @TransDate	DATETIME		= NULL OUTPUT
@@ -25,6 +26,7 @@ AS
 
 	Revisions:
 		- 20210617@Sophia: Initialize SP [RedmineID: #155337]
+		- 20211103@Sophia: Add Param Winlostdate [Redmine: #164198]
 		
 	Example: 
 			DECLARE 
@@ -103,6 +105,9 @@ BEGIN
 		, @winlost		= 0
 		, @awinlost		= @Amount
 		, @Creator		= ISNULL(@Creator, @CustID)
+	
+
+	SELECT 	@Winlostdate = ISNULL (@Winlostdate, CAST(@transdate AS DATE))
 
 
 	SELECT @startTime	= CURRENT_TIMESTAMP
@@ -155,7 +160,7 @@ BEGIN
 			, @Creator	AS creator
 			, @ip AS [ip]
 			, @Balance AS balance
-			, CAST(@transdate AS DATE) AS winlostdate
+			, @winlostdate AS winlostdate
 			, @transdate AS transdate
 			, @bettype AS bettype
 			, @sporttype AS matchid
