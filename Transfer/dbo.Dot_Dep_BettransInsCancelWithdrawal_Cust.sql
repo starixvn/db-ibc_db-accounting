@@ -15,7 +15,7 @@ Date : 2007-12-05
 Task : withdrawal for Cancel  (in case, withdraw request been rejected , Action: record "deposit" to make balance equal)
 User: NON API Licensee/12Bet
 
-History:
+Revisions:
 	- 20080924: Update actualrate, Username, @currencyName for bettrans
 	- 20080926: Get winlostdate as today date
 	- 20090702(vivi): check transid exist or not
