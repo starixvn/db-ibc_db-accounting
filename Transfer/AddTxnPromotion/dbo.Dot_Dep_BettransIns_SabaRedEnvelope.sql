@@ -8,7 +8,7 @@ CREATE PROCEDURE dbo.Dot_Dep_BettransIns_SabaRedEnvelope
 	, @TransDesc	NVARCHAR(1000)	= ''
 	, @Total		MONEY			= NULL
 	, @TransID2		BIGINT			= NULL
-	, @IP			NVARCHAR(15)	= ''
+	, @IP			VARCHAR(45)		= ''
 	, @Creator		INT				= NULL
 	, @Ugroup		NVARCHAR(12)	= ''
 	, @Site			nvarchar(50)	= ''
@@ -29,6 +29,7 @@ AS
 
 	Revisions:
 		- 20210202@Sophia: Initialize SP [RedmineID: #149923]
+		- 20211112@Sol: Support IPv6 - Phase 2 - [Redmine: #163963]
 		
 	Example: 
 			DECLARE 

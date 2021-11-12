@@ -7,7 +7,7 @@ CREATE PROCEDURE dbo.Dot_Dep_BettransIns_SabaPromotion
 	, @sporttype	INT 			= 246	
 	, @Betfrom		NVARCHAR(1)		= 'd'
 	, @TransDesc	NVARCHAR(1000)	= ''
-	, @IP			NVARCHAR(15)	= ''
+	, @IP			VARCHAR(45)		= ''
 	, @Creator		INT				= NULL 
 	, @WinlostDate 	SMALLDATETIME 	= NULL
 	------------------------------------------
@@ -27,6 +27,7 @@ AS
 	Revisions:
 		- 20210617@Sophia: Initialize SP [RedmineID: #155337]
 		- 20211103@Sophia: Add Param Winlostdate [Redmine: #164198]
+		- 20211112@Sol: Support IPv6 - Phase 2 - [Redmine: #163963]
 		
 	Example: 
 			DECLARE 
