@@ -30,7 +30,8 @@ AS
   - 20200316@Elodie: Remove from Hardcode list finance permission for Nova [Redmine: #130499]  
   - 20200317@Malcolm: Grant permission for finance account [Redmine : #128128]  
   - 20200414@Sophia: add BBIN bettype [Redmine: #131358]  
-  - 20210819@Evan: NAP - Prevent reversal near BU [Redmine: #160439]  
+  - 20210819@Evan: NAP - Prevent reversal near BU [Redmine: #160439]
+  - 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
   
     Param's Explanation:  
         - @FilterBy: 1:winlostdate - 2:transdate  
@@ -125,16 +126,16 @@ BEGIN
 				b.winlostdate,
 				b.refno,
 				(b.winlost - b.actual_stake) totalamt,
-				CASE WHEN b.oddsId = 0 THEN bettype.typenamee ELSE 'Coll' END transtype,
+				CASE WHEN ISNULL(ti.IsCollection, 0) = 0 THEN bettype.typenamee ELSE 'Coll' END transtype,
 				b.transdesc + ' - Ex.Rate: ' + CAST(b.actualrate AS VARCHAR(10)) transdesc, 
 				b.creator,
 				CASE 
 					WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL 
-					ELSE b.betid 
+					ELSE ti.CheckerId
 				END checkerID, --BalanceUP AND Transfer to Casino/Bingo/P2P
 				CASE 
 					WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN '0' 
-					ELSE b.betcheck 
+					ELSE ti.CheckerName
 				END checkerName,
 				CASE 
 					WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL 
@@ -144,8 +145,9 @@ BEGIN
 					WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN 0 
 					ELSE 1 
 				END isAllowVerify,
-				CASE b.bettype WHEN 20000 THEN 1 ELSE b.liveindicator END isReversal
-			FROM bodb02.dbo.bettrans b WITH(NOLOCK) 
+				CASE b.bettype WHEN 20000 THEN 1 ELSE ISNULL(ti.IsDel,0) END isReversal
+			FROM bodb02.dbo.transfer b WITH(NOLOCK) 
+				 LEFT JOIN dbo.TransferInfo ti WITH(NOLOCK) ON b.TransId = ti.TransId
                  LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = b.bettype
 				 LEFT JOIN dbo.Customer s WITH(NOLOCK) ON b.srecommend = s.custid
 				 LEFT JOIN dbo.Customer m WITH(NOLOCK) ON b.mrecommend = m.custid
@@ -170,9 +172,7 @@ BEGIN
 							   AND @GroupId NOT IN (-1, 1)
 						ORDER BY f.RoleId ASC
 				 ) cr			 
-			WHERE 
-				b.matchid = 0
-				AND b.refno = @_RefNo
+			WHERE  b.refno = @_RefNo
 				AND b.bettype >= 20000 
 				AND (@GroupId = 1 OR ISNULL(cr.IsView, ~l.IsInternal) = 1 OR (@GroupId = 0 AND ISNULL(cr.IsView, 1) = 1))
 
@@ -266,16 +266,16 @@ BEGIN
 				b.winlostdate,
 				b.refno,
 				(b.winlost - b.actual_stake) totalamt,
-				CASE WHEN b.oddsId = 0 THEN bettype.typenamee ELSE 'Coll' END transtype,
+				CASE WHEN ISNULL(ti.IsCollection,0) = 0 THEN bettype.typenamee ELSE 'Coll' END transtype,
 				b.transdesc + ' - Ex.Rate: ' + CAST(b.actualrate AS VARCHAR(10)) transdesc, 
 				b.creator,
 				CASE 
 					WHEN bettype.typeid IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL 
-					ELSE b.betid 
+					ELSE ti.CheckerId
 				END checkerID, --BalanceUP AND Transfer to Casino/Bingo/P2P
 				CASE 
 					WHEN bettype.typeid IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN '0' 
-					ELSE b.betcheck 
+					ELSE ti.CheckerName
 				END checkerName,
 				CASE 
 					WHEN bettype.typeid IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL 
@@ -285,12 +285,11 @@ BEGIN
 					WHEN bettype.typeid IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN 0 
 					ELSE 1 
 				END isAllowVerify,
-				CASE b.bettype WHEN 20000 THEN 1 ELSE b.liveindicator END isReversal
-			FROM dbo.bettrans b (NOLOCK) 
+				CASE b.bettype WHEN 20000 THEN 1 ELSE ISNULL(ti.IsDel,0) END isReversal
+			FROM dbo.transfer b (NOLOCK)
+				LEFT JOIN dbo.TransferInfo ti WITH(NOLOCK) ON b.TransId = ti.TransId
 				LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = b.bettype 
-			WHERE 
-				b.matchid = 0
-				AND b.custid = @CustID
+			WHERE b.custid = @CustID
 				AND b.bettype >= 20000 
 				AND 
 					( (@FilterBy = 1 AND b.winlostdate >= @_FromDate AND b.winlostdate < @_ToDate)
@@ -300,8 +299,8 @@ BEGIN
 		;WITH CTE_Statement AS (
 			SELECT s.refno
 			FROM #StatementTable s
-				LEFT JOIN dbo.bettrans b (NOLOCK) ON s.refno = b.refno
-			WHERE b.matchid = 0 AND b.bettype>20000
+				LEFT JOIN dbo.transfer b (NOLOCK) ON s.refno = b.refno
+			WHERE b.bettype>20000
 			GROUP BY s.refno
 			HAVING COUNT(*) > 1
 		)

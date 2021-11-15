@@ -6,7 +6,7 @@ ALTER PROCEDURE [dbo].[Acc_FinanceTransferBettransIns]
 	@ExchangeRate float,
 	@Remark nvarchar(200),
 	@UserID int, --custid of Admin
-	@IP nvarchar(15)='',
+	@IP varchar(45)='',
 	@ErrCode int = 0 OUTPUT,
 	@ErrMsg nvarchar(200) = '' OUTPUT,
 	@Language varchar(2)= 'E',
@@ -34,6 +34,7 @@ Revisions:
 	- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 	- 20181112@Sophia: Add Transfer Collection [redmine: #98621]
 	- 20190801@Sophia: fix wrong statusID [redmine: #117995]
+	- 20211115@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 	
 
 Param's Explanation:
@@ -50,6 +51,7 @@ BEGIN
 
 	Declare @refno bigint, @winlostdate datetime, @transdate datetime, @BalanceAmount MONEY
 	DECLARE @TransIDs AS TABLE (transID BIGINT)	
+
 
 	select  @RemarkFromCurr='',  @RemarkToCurr=''
 	select @Amt = @Amount 
@@ -139,14 +141,14 @@ BEGIN
 		BEGIN
 			DELETE @TransIDs
 		
-			INSERT INTO bettrans 
-				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
-				 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
-				 scomm, swinlost,ip,statusID, OddsID)
+			INSERT INTO dbo.Transfer 
+				(creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
+				winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
+				 scomm, swinlost,ip,statusID, RepUpdateTime)
 			OUTPUT INSERTED.TransID INTO @TransIDs
-			VALUES (@UserID, @FromCustID, @FromUsername, @refno, @Transdate, 0, 21003, 'To Customer: ' + @ToUserName + '('+ @Remark +')' + @RemarkToCurr, @amount, 0, 
-				 'Completed', 1, @winlostdate, @FromCurr, @FromActualrate, @FromCurrName, @FromRecommend, @FromMrecommend, @FromSrecommend, 
-				 0, 0,@ip,131, @IsCollection)
+			VALUES (@UserID, @FromCustID, @FromUsername, @refno, @Transdate, 21003, 'To Customer: ' + @ToUserName + '('+ @Remark +')' + @RemarkToCurr, @amount, 0, 
+				 @winlostdate, @FromCurr, @FromActualrate, @FromCurrName, @FromRecommend, @FromMrecommend, @FromSrecommend, 
+				 0, 0,@ip,131, SYSDATETIME())
 						
 			if @@Error <> 0
 			BEGIN
@@ -157,14 +159,17 @@ BEGIN
 							else N'Transfer failed. Please try again.'
 						end, @ErrCode = 103		
 				
-				DELETE dbo.bettrans WITH (ROWLOCK) 
+				DELETE dbo.Transfer WITH (ROWLOCK) 
 				WHERE custid in (@FromCustID, @ToCustID)
-					and matchid = 0 and bettype = 21003 and refno = @refno
+					and bettype = 21003 and refno = @refno
 					
 				DELETE Transfer_Coll WITH (ROWLOCK) 
 				WHERE  custid in (@FromCustID, @ToCustID)
 					AND refno = @refno 
 					AND bettype = 21003
+
+				DELETE TransferInfo WITH(ROWLOCK)
+				WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 					
 				return
 			END
@@ -178,7 +183,7 @@ BEGIN
 			SELECT 	CustId, WinlostDate, TransDate, Bettype, Actual_Stake, Winlost, Currency, ActualRate, 
 					TransID, RefNo, Username, Recommend, MRecommend, SRecommend, 
 					Creator ,TransDesc, IP
-			FROM dbo.Bettrans WITH (NOLOCK) 
+			FROM dbo.Transfer WITH (NOLOCK) 
 			WHERE TransID IN (SELECT TransID FROM @TransIDs)
 			
 			if @@Error <> 0
@@ -190,17 +195,51 @@ BEGIN
 							else N'Transfer failed. Please try again.'
 						end, @ErrCode = 103		
 				
-				DELETE dbo.bettrans WITH (ROWLOCK) 
+				DELETE dbo.Transfer WITH (ROWLOCK) 
 				WHERE custid in (@FromCustID, @ToCustID)
-					and matchid = 0 and bettype = 21003 and refno = @refno
+					AND bettype = 21003 and refno = @refno
 					
 				DELETE Transfer_Coll WITH (ROWLOCK) 
 				WHERE  custid in (@FromCustID, @ToCustID)
 					AND refno = @refno 
 					AND bettype = 21003
+
+				DELETE TransferInfo WITH(ROWLOCK)
+				WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 					
 				return
 			END
+
+			---Insert into Transfer_Info
+			INSERT INTO TransferInfo (TransId, IsCollection, RepUpdateTime)
+			SELECT TransId, @isCollection, SYSDATETIME()
+			FROM dbo.Transfer WITH (NOLOCK) 
+			WHERE TransID IN (SELECT TransID FROM @TransIDs)
+
+			if @@Error <> 0
+			BEGIN
+				Select @ErrMsg = case @Language 
+							when 'E' then 'Transfer failed. Please try again.'
+							when 'CS' then N'Transfer failed. Please try again.'
+							when 'J' then N'払戻処理上にエラーが発生しました。もう一度確認してください。'
+							else N'Transfer failed. Please try again.'
+						end, @ErrCode = 103		
+				
+				delete dbo.Transfer WITH(ROWLOCK)
+				where custid in (@FromCustID, @ToCustID)
+					and refno = @refno 
+					and bettype = 21003
+				
+				delete Transfer_Coll WITH(ROWLOCK)
+				where  custid in (@FromCustID, @ToCustID)
+					and refno = @refno  
+					and bettype = 21003
+
+				DELETE TransferInfo WITH(ROWLOCK)
+				WHERE  TransID IN (SELECT TransID FROM @TransIDs)
+
+				RETURN
+			END		
 			
 		
 			--update credit balance of @FromCustID
@@ -219,14 +258,17 @@ BEGIN
 							EXEC Dot_BalanceDebitUpd @CustID = @ToCustID, @balance = @BalanceAmount, @type = 2, @IsForced = 1, @errCode = @ErrCode OUTPUT
 				IF @ErrCode <> 0
 				BEGIN
-					DELETE dbo.bettrans WITH (ROWLOCK) 
+					DELETE dbo.Transfer WITH (ROWLOCK) 
 					WHERE custid in (@FromCustID, @ToCustID)
-						and matchid = 0 and bettype = 21003 and refno = @refno
+						and bettype = 21003 and refno = @refno
 					
 					DELETE Transfer_Coll WITH (ROWLOCK) 
 					WHERE  custid in (@FromCustID, @ToCustID)
 						AND refno = @refno 
 						AND bettype = 21003
+
+					DELETE TransferInfo WITH(ROWLOCK)
+					WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 					
 					IF @FromRoleID  = 1
 											EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @amount, @type = 2, @IsForced = 1
@@ -235,14 +277,14 @@ BEGIN
 			
 			DELETE @TransIDs
 			
-			INSERT INTO bettrans 
-				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
-				 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
-				 scomm, swinlost,ip,statusID,OddsID)
+			INSERT INTO dbo.Transfer 
+				(creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
+				 winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
+				 scomm, swinlost,ip,statusID,RepUpdateTime)
 			OUTPUT INSERTED.TransID INTO @TransIDs
-			VALUES (@UserID, @ToCustID, @ToUsername, @refno, @Transdate, 0, 21003, 'From Customer: ' + @FromUserName + '('+ @Remark +')' + @RemarkFromCurr, 0, @amount * @ExchangeRate, 
-				 'Completed', 1, @winlostdate, @ToCurr, @ToActualrate, @ToCurrName, @ToRecommend, @ToMrecommend, @ToSrecommend, 
-				 0, 0,@ip,131,@IsCollection)
+			VALUES (@UserID, @ToCustID, @ToUsername, @refno, @Transdate, 21003, 'From Customer: ' + @FromUserName + '('+ @Remark +')' + @RemarkFromCurr, 0, @amount * @ExchangeRate, 
+				@winlostdate, @ToCurr, @ToActualrate, @ToCurrName, @ToRecommend, @ToMrecommend, @ToSrecommend, 
+				 0, 0,@ip,131,SYSDATETIME())
 			
 		
 			if @@Error <> 0
@@ -254,14 +296,17 @@ BEGIN
 							else N'Transfer failed. Please try again.'
 						end, @ErrCode = 104
 				
-				DELETE dbo.bettrans WITH (ROWLOCK) 
+				DELETE dbo.Transfer WITH (ROWLOCK) 
 				WHERE custid in (@FromCustID, @ToCustID)
-					and matchid = 0 and bettype = 21003 and refno = @refno
+					and bettype = 21003 and refno = @refno
 				
 				DELETE Transfer_Coll WITH (ROWLOCK) 
 				WHERE  custid in (@FromCustID, @ToCustID)
 					AND refno = @refno 
 					AND bettype = 21003
+
+				DELETE TransferInfo WITH(ROWLOCK)
+				WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 				
 				--rollback balance of @FromCustID
 				IF @FromRoleID  = 1
@@ -289,7 +334,7 @@ BEGIN
 			SELECT 	CustId, WinlostDate, TransDate, Bettype, Actual_Stake, Winlost, Currency, ActualRate, 
 					TransID, RefNo, Username, Recommend, MRecommend, SRecommend, 
 					Creator ,TransDesc, IP
-			FROM dbo.Bettrans WITH (NOLOCK) 
+			FROM dbo.Transfer WITH (NOLOCK) 
 			WHERE TransID IN (SELECT TransID FROM @TransIDs)
 			
 			if @@Error <> 0
@@ -301,14 +346,17 @@ BEGIN
 							else N'Transfer failed. Please try again.'
 						end, @ErrCode = 104
 				
-				DELETE dbo.bettrans WITH (ROWLOCK) 
+				DELETE dbo.Transfer WITH (ROWLOCK) 
 				WHERE custid in (@FromCustID, @ToCustID)
-					and matchid = 0 and bettype = 21003 and refno = @refno
+					 and bettype = 21003 and refno = @refno
 				
 				DELETE Transfer_Coll WITH (ROWLOCK) 
 				WHERE  custid in (@FromCustID, @ToCustID)
 					AND refno = @refno 
 					AND bettype = 21003
+
+				DELETE TransferInfo WITH(ROWLOCK)
+				WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 				
 				--rollback balance of @FromCustID
 				IF @FromRoleID  = 1
@@ -326,6 +374,51 @@ BEGIN
 				END		
 				return
 			END
+
+			---Insert into Transfer_Info
+			INSERT INTO TransferInfo (TransId, IsCollection, RepUpdateTime)
+			SELECT TransId, @isCollection, SYSDATETIME()
+			FROM dbo.Transfer WITH (NOLOCK) 
+			WHERE TransID IN (SELECT TransID FROM @TransIDs)
+
+			if @@Error <> 0
+			BEGIN
+				Select @ErrMsg = case @Language 
+							when 'E' then 'Transfer failed. Please try again.'
+							when 'CS' then N'Transfer failed. Please try again.'
+							when 'J' then N'払戻処理上にエラーが発生しました。もう一度確認してください。'
+							else N'Transfer failed. Please try again.'
+						end, @ErrCode = 103		
+				
+				delete dbo.Transfer WITH(ROWLOCK)
+				where custid in (@FromCustID, @ToCustID)
+					and refno = @refno 
+					and bettype = 21003
+				
+				delete Transfer_Coll WITH(ROWLOCK)
+				where  custid in (@FromCustID, @ToCustID)
+					and refno = @refno  
+					and bettype = 21003
+
+				DELETE TransferInfo WITH(ROWLOCK)
+				WHERE  TransID IN (SELECT TransID FROM @TransIDs)
+
+				--rollback balance of @FromCustID
+				IF @FromRoleID  = 1
+				BEGIN
+					--EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @amount 
+									EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @amount, @type = 2, @IsForced = 1
+				END 
+			
+				--rollback balance of @ToCustID
+				IF @ToRoleID  = 1
+				BEGIN
+					SELECT @BalanceAmount = @amount * @ExchangeRate
+					--EXEC Dot_BalanceUpdCredit @CustID = @ToCustID, @balance = @BalanceAmount 
+					EXEC Dot_BalanceCreditUpd @CustID = @ToCustID, @balance = @BalanceAmount, @type = 2
+				END		
+				RETURN
+			END		
 			
 
 			Select @LogData = 'Finance Transfer from Customer ' + @FromUserName + ' to Customer ' + @ToUserName + ' with amount ' + convert(varchar(20), @Amt) + ' Ref.No ' + convert(varchar(20), @refno)		
@@ -354,14 +447,14 @@ BEGIN
 			
 			DELETE @TransIDs
 			
-			INSERT INTO bettrans 
-				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
-				 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
-				 scomm, swinlost,ip,statusID,OddsID)
+			INSERT INTO dbo.Transfer 
+				(creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
+				 winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
+				 scomm, swinlost,ip,statusID,RepUpdateTime)
 			OUTPUT INSERTED.TransID INTO @TransIDs
-			VALUES (@UserID, @FromCustID, @FromUsername, @refno, @Transdate, 0, 21003, 'To Customer: ' + @ToUserName + '('+ @Remark +')'+@RemarkToCurr, 0, @amount, 
-				 'Completed', 1, @winlostdate, @FromCurr, @FromActualrate, @FromCurrName, @FromRecommend, @FromMrecommend, @FromSrecommend, 
-				 0, 0,@ip,131, @IsCollection)
+			VALUES (@UserID, @FromCustID, @FromUsername, @refno, @Transdate, 21003, 'To Customer: ' + @ToUserName + '('+ @Remark +')'+@RemarkToCurr, 0, @amount, 
+				 @winlostdate, @FromCurr, @FromActualrate, @FromCurrName, @FromRecommend, @FromMrecommend, @FromSrecommend, 
+				 0, 0,@ip,131,SYSDATETIME())
 						
 			
 			if @@Error <> 0
@@ -373,14 +466,17 @@ BEGIN
 							else N'Transfer failed. Please try again.'
 						end, @ErrCode = 105
 				
-				DELETE dbo.bettrans WITH (ROWLOCK) 
+				DELETE dbo.Transfer WITH (ROWLOCK) 
 				WHERE custid in (@FromCustID, @ToCustID)
-					and matchid = 0 and bettype = 21003 and refno = @refno
+					and bettype = 21003 and refno = @refno
 					
 				DELETE Transfer_Coll WITH (ROWLOCK) 
 				WHERE  custid in (@FromCustID, @ToCustID)
 					AND refno = @refno 
 					AND bettype = 21003
+
+				DELETE TransferInfo WITH(ROWLOCK)
+				WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 				
 				--rollback balance @FromCustID
 				IF @FromRoleID  = 1
@@ -400,7 +496,7 @@ BEGIN
 			SELECT 	CustId, WinlostDate, TransDate, Bettype, Actual_Stake, Winlost, Currency, ActualRate, 
 					TransID, RefNo, Username, Recommend, MRecommend, SRecommend, 
 					Creator ,TransDesc, IP
-			FROM dbo.Bettrans WITH (NOLOCK) 
+			FROM dbo.Transfer WITH (NOLOCK) 
 			WHERE TransID IN (SELECT TransID FROM @TransIDs)
 			
 			if @@Error <> 0
@@ -412,14 +508,17 @@ BEGIN
 							else N'Transfer failed. Please try again.'
 						end, @ErrCode = 105
 				
-				DELETE dbo.bettrans WITH (ROWLOCK) 
+				DELETE dbo.Transfer WITH (ROWLOCK) 
 				WHERE custid in (@FromCustID, @ToCustID)
-					and matchid = 0 and bettype = 21003 and refno = @refno
+					and bettype = 21003 and refno = @refno
 					
 				DELETE Transfer_Coll WITH (ROWLOCK) 
 				WHERE  custid in (@FromCustID, @ToCustID)
 					AND refno = @refno 
 					AND bettype = 21003
+
+				DELETE TransferInfo WITH(ROWLOCK)
+				WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 				
 				--rollback balance @FromCustID
 				IF @FromRoleID  = 1
@@ -429,18 +528,55 @@ BEGIN
 				END
 				return
 			END
+
+			---Insert into Transfer_Info
+			INSERT INTO TransferInfo (TransId, IsCollection, RepUpdateTime)
+			SELECT TransId, @isCollection, SYSDATETIME()
+			FROM dbo.Transfer WITH (NOLOCK) 
+			WHERE TransID IN (SELECT TransID FROM @TransIDs)
+
+			if @@Error <> 0
+			BEGIN
+				Select @ErrMsg = case @Language 
+							when 'E' then 'Transfer failed. Please try again.'
+							when 'CS' then N'Transfer failed. Please try again.'
+							when 'J' then N'払戻処理上にエラーが発生しました。もう一度確認してください。'
+							else N'Transfer failed. Please try again.'
+						end, @ErrCode = 103		
+				
+				delete dbo.Transfer WITH(ROWLOCK)
+				where custid in (@FromCustID, @ToCustID)
+					and refno = @refno 
+					and bettype = 21003
+				
+				delete Transfer_Coll WITH(ROWLOCK)
+				where  custid in (@FromCustID, @ToCustID)
+					and refno = @refno  
+					and bettype = 21003
+
+				DELETE TransferInfo WITH(ROWLOCK)
+				WHERE  TransID IN (SELECT TransID FROM @TransIDs)
+
+				--rollback balance @FromCustID
+				IF @FromRoleID  = 1
+				BEGIN
+					--EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @amount 
+					EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @amount, @type = 2
+				END
+				RETURN
+			END		
 			
 			-----------------------------------------------
 			DELETE @TransIDs
 			
-			INSERT INTO bettrans 
-				(creator, custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
-				 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
-				 scomm, swinlost,ip,statusID,OddsID)
+			INSERT INTO dbo.Transfer 
+				(creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
+				 winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
+				 scomm, swinlost,ip,statusID,RepUpdateTime)
 			OUTPUT INSERTED.TransID INTO @TransIDs
-			VALUES (@UserID, @ToCustID, @ToUsername, @refno, @Transdate, 0, 21003, 'From Customer: ' + @FromUserName + '('+ @Remark +')' + @RemarkFromCurr, @amount * @ExchangeRate, 0, 
-				 'Completed', 1, @winlostdate, @ToCurr, @ToActualrate, @ToCurrName, @ToRecommend, @ToMrecommend, @ToSrecommend, 
-				 0, 0,@ip,131,@IsCollection)
+			VALUES (@UserID, @ToCustID, @ToUsername, @refno, @Transdate, 21003, 'From Customer: ' + @FromUserName + '('+ @Remark +')' + @RemarkFromCurr, @amount * @ExchangeRate, 0, 
+				 @winlostdate, @ToCurr, @ToActualrate, @ToCurrName, @ToRecommend, @ToMrecommend, @ToSrecommend, 
+				 0, 0,@ip,131,SYSDATETIME())
 			
 			if @@Error <> 0
 			BEGIN
@@ -451,14 +587,17 @@ BEGIN
 							else N'Transfer failed. Please try again.'
 						end, @ErrCode = 106
 				
-				DELETE dbo.bettrans WITH (ROWLOCK) 
+				DELETE dbo.Transfer WITH (ROWLOCK) 
 				WHERE custid in (@FromCustID, @ToCustID)
-					and matchid = 0 and bettype = 21003 and refno = @refno
+					and bettype = 21003 and refno = @refno
 					
 				DELETE Transfer_Coll WITH (ROWLOCK) 
 				WHERE  custid in (@FromCustID, @ToCustID)
 					AND refno = @refno 
 					AND bettype = 21003
+
+				DELETE TransferInfo WITH(ROWLOCK)
+				WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 					
 				--rollback balance @FromCustID
 				IF @FromRoleID  = 1
@@ -478,7 +617,7 @@ BEGIN
 			SELECT 	CustId, WinlostDate, TransDate, Bettype, Actual_Stake, Winlost, Currency, ActualRate, 
 					TransID, RefNo, Username, Recommend, MRecommend, SRecommend, 
 					Creator ,TransDesc, IP
-			FROM dbo.Bettrans WITH (NOLOCK) 
+			FROM dbo.Transfer WITH (NOLOCK) 
 			WHERE TransID IN (SELECT TransID FROM @TransIDs)
 			
 			if @@Error <> 0
@@ -490,14 +629,17 @@ BEGIN
 							else N'Transfer failed. Please try again.'
 						end, @ErrCode = 106
 				
-				DELETE dbo.bettrans WITH (ROWLOCK) 
+				DELETE dbo.Transfer WITH (ROWLOCK) 
 				WHERE custid in (@FromCustID, @ToCustID)
-					and matchid = 0 and bettype = 21003 and refno = @refno
+					and bettype = 21003 and refno = @refno
 					
 				DELETE Transfer_Coll WITH (ROWLOCK) 
 				WHERE  custid in (@FromCustID, @ToCustID)
 					AND refno = @refno 
 					AND bettype = 21003
+
+				DELETE TransferInfo WITH(ROWLOCK)
+				WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 					
 				--rollback balance @FromCustID
 				IF @FromRoleID  = 1
@@ -507,6 +649,43 @@ BEGIN
 				END
 				return
 			END	
+
+			---Insert into Transfer_Info
+			INSERT INTO TransferInfo (TransId, IsCollection, RepUpdateTime)
+			SELECT TransId, @isCollection, SYSDATETIME()
+			FROM dbo.Transfer WITH (NOLOCK) 
+			WHERE TransID IN (SELECT TransID FROM @TransIDs)
+
+			if @@Error <> 0
+			BEGIN
+				Select @ErrMsg = case @Language 
+							when 'E' then 'Transfer failed. Please try again.'
+							when 'CS' then N'Transfer failed. Please try again.'
+							when 'J' then N'払戻処理上にエラーが発生しました。もう一度確認してください。'
+							else N'Transfer failed. Please try again.'
+						end, @ErrCode = 103		
+				
+				delete dbo.Transfer WITH(ROWLOCK)
+				where custid in (@FromCustID, @ToCustID)
+					and refno = @refno 
+					and bettype = 21003
+				
+				delete Transfer_Coll WITH(ROWLOCK)
+				where  custid in (@FromCustID, @ToCustID)
+					and refno = @refno  
+					and bettype = 21003
+
+				DELETE TransferInfo WITH(ROWLOCK)
+				WHERE  TransID IN (SELECT TransID FROM @TransIDs)
+
+				--rollback balance @FromCustID
+				IF @FromRoleID  = 1
+				BEGIN
+					--EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @amount 
+					EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @amount, @type = 2
+				END
+				RETURN
+			END		
 			
 			---update credit balance of @ToCustID
 			IF @ToRoleID  = 1

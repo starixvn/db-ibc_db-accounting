@@ -14,6 +14,7 @@ AS
 	Revisions:
 		- 20181122@Percy: Initialize SP [RedmineID: #105106]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
+		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 */
 
 BEGIN
@@ -68,16 +69,26 @@ BEGIN
 		DECLARE @yesterday SMALLDATETIME
 		SELECT  @yesterday = DATEADD(DAY, -1, CONVERT(DATE, GETDATE()))
 		
-			-- bettrans
+		-- bettrans
 		INSERT INTO #BalanceInfo (winlostdate, bettype, statusId, winlost, actual_stake, playercomm)
 		SELECT winlostdate, bettype, statusId, SUM(winlost), SUM(actual_stake), SUM(playercomm)
 		FROM dbo.bettrans WITH (NOLOCK)
 		WHERE 
 			custid = @CustId
-			AND 1 = CASE 
-						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-					ELSE 1 END
+			AND bettype < 19999
+			AND winlostdate > @moveBetsDay
+		GROUP BY winlostdate, bettype, statusId
+
+		-- transfer
+		INSERT INTO #BalanceInfo (winlostdate, bettype, statusId, winlost, actual_stake, playercomm)
+		SELECT winlostdate, bettype, 131 AS statusId, SUM(winlost), SUM(actual_stake), SUM(playercomm) -- hard statusID for removing key lookup
+		FROM dbo.transfer WITH (NOLOCK)
+		WHERE 
+			custid = @CustId AND
+			(
+				(bettype = 19999 AND winlostdate <= @moveBetsDay) 
+				OR (bettype > 19999)
+			)
 		GROUP BY winlostdate, bettype, statusId
 
 		DELETE b

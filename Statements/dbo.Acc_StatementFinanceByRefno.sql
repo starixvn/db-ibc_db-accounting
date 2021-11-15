@@ -21,6 +21,7 @@ AS
 		- 20181107@Louis: Credit Collection [Redmine: #98621]
 		- 20190114@Sophia: Move table transfer_fi from DBSUM.bodb_summary to DBARC.bodb_archive [Redmine: #105415]
 		- 20191113@Louis: Hot Fix Credit Collection BK [Redmine: #123812]
+		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 
     Param's Explanation:
     
@@ -61,16 +62,15 @@ INSERT INTO @StatementTable(TransID, TransDate, TransType, TransDesc, TotalAmt, 
     SELECT 
         b.transid,
         b.transdate,
-        CASE WHEN b.oddsId = 0 THEN bettype.typenamee ELSE 'Coll' END transtype,
+        CASE WHEN ISNULL(ti.IsCollection,0) = 0 THEN bettype.typenamee ELSE 'Coll' END transtype,
         b.transdesc + ' - Ex.Rate: ' + CAST(b.actualrate AS VARCHAR(10)) transdesc,
         (b.winlost - b.actual_stake),
         CASE WHEN b.custid = @CustID THEN 1 ELSE 0 END IsOwner,
         (b.winlost - b.actual_stake) * b.actualrate
-    FROM dbo.bettrans b (NOLOCK) 
+    FROM dbo.transfer b (NOLOCK) 
+		LEFT JOIN dbo.TransferInfo ti WITH(NOLOCK) ON b.TransId = ti.TransId
         LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = b.bettype 
-    WHERE 
-        b.matchid = 0
-        AND b.bettype > 20000 
+    WHERE b.bettype > 20000 
         AND b.refno = @_RefNo
 
 IF NOT EXISTS( SELECT 1 FROM @StatementTable )

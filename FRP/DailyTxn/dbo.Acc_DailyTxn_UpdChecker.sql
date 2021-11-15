@@ -4,7 +4,7 @@ ALTER PROCEDURE [dbo].[Acc_DailyTxn_UpdChecker]
 @CheckerName	VARCHAR(50),
 @Refnos			VARCHAR(8000),
 @IsVerified		BIT = 0, 
-@IP				VARCHAR(15),
+@IP				VARCHAR(45),
 @ErrCode		INT = 0 OUTPUT,
 @ErrMsg			NVARCHAR(200) = '' OUTPUT
 AS
@@ -19,6 +19,7 @@ Revisions:
 	- 20130201@Elodie: Change link server DB03 to DBPOLICY
 					   Write more log on DBTXN server in case of DBLOG server failure
 	- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
+	- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 	
 Param's Explanation:
 	@TransIDs   : '1111,2341,...'
@@ -34,28 +35,58 @@ BEGIN
 	DECLARE	@UserID INT, @ActionID INT, @UserName VARCHAR(50)
 	SELECT	@UserID = @CheckerID, @Username = @CheckerName , @ActionID = 1600 
 
-	DECLARE	@tmpTransID TABLE (transID BIGINT)
+	DECLARE	@tmpTransID TABLE (transID BIGINT, checktime DATETIME, RepUpdateTime DATETIME2(7))
+	DECLARE	@tmpTransferInfoID TABLE (transID BIGINT)
 
-	INSERT INTO @tmpTransID(transID)
-	SELECT	transID	FROM Bettrans WITH (NOLOCK) 
+	INSERT INTO @tmpTransID(transID, checktime, RepUpdateTime)
+	SELECT	transID, checktime, RepUpdateTime	FROM dbo.transfer WITH (NOLOCK) 
 	WHERE	refno IN (	SELECT	CONVERT(bigint, val)
 						FROM	dbo.strSplit (@Refnos, ',' ))
-			AND matchid = 0
 			AND bettype > 20000 
+
+	INSERT INTO @tmpTransferInfoID(transID) 
+	SELECT transID	FROM dbo.Transfer WITH (NOLOCK) 
+	WHERE transid IN (SELECT x.transID FROM @tmpTransID x)
 
 	IF @IsVerified = 0 
 	BEGIN
 		SELECT	@ActionID = 1601, @CheckerID = NULL, @CheckerName ='0'
 	END
 
-
-	UPDATE	Bettrans WITH (UPDLOCK,ROWLOCK)
-	SET		betid = @CheckerID, betcheck = @CheckerName, checkTime = GETDATE()	
+	UPDATE	dbo.transfer WITH (UPDLOCK,ROWLOCK)
+	SET		checkTime = GETDATE(),
+			RepUpdateTime = SYSDATETIME()
 	WHERE	transID IN (SELECT transID FROM @tmpTransID) 
+
 	IF @@ERROR <> 0
 	BEGIN
 		SELECT	@ErrMsg = 'Update failed. Please try again.'
 				,@ErrCode = 100
+			
+		RETURN
+	END
+
+	MERGE dbo.TransferInfo t
+	USING @tmpTransferInfoID s ON t.transid=s.transid
+	WHEN MATCHED THEN
+		UPDATE SET	CheckerId = @CheckerID, 
+					CheckerName = @CheckerName,
+					RepUpdateTime = SYSDATETIME()
+	WHEN NOT MATCHED THEN
+		INSERT (Transid, CheckerId, CheckerName, RepUpdateTime)
+		VALUES (s.Transid, @CheckerID, @CheckerName, SYSDATETIME());
+
+	IF @@ERROR <> 0
+	BEGIN
+		SELECT	@ErrMsg = 'Update failed. Please try again.'
+				,@ErrCode = 100
+
+		UPDATE	t
+		SET		t.CheckTime = u.CheckTime,
+				t.RepUpdateTime = u.RepUpdateTime
+		FROM dbo.transfer t WITH (UPDLOCK,ROWLOCK)
+		INNER JOIN @tmpTransID u ON t.transID = u.TransID
+		
 		RETURN
 	END
 

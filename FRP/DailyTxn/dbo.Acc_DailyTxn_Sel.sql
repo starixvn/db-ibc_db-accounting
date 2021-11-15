@@ -20,6 +20,7 @@ Revisions:
 	- 20101225@Lukas: Re-arrange bettype
 	- 20111015@Lukas: remove paging
 	- 20181105@Louis: Credit Collection Summary  [RedmineID: #98621]
+	- 20211115@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 
 Param's Explanation: Daily transaction
 	@Type   : Dep, Trac, ..
@@ -51,31 +52,34 @@ begin
 	SELECT	b.transid,
 			b.refno,
 			b.username,
-			b.betid, --checkerID 
-			b.betcheck, --checkerName
+			t.CheckerId betid, --checkerID      
+			t.CheckerName betcheck,--checkerName
 			b.checkTime, 
 			b.transdate,
 			b.winlost-b.actual_stake amount,
 			b.transdesc, 
-			CASE WHEN bt.typeId = 21003 AND b.OddsId = 1 THEN 'Coll' ELSE bt.typenamee END typenamee,
+			CASE WHEN bt.typeId = 21003 AND ISNULL(t.IsCollection,0) = 1 THEN 'Coll' ELSE bt.typenamee END typenamee,
 			creator.username creator
-	FROM bettrans b with (nolock)
+	FROM dbo.Transfer b with (nolock)
 		inner join CustSuper s with (nolock) on b.srecommend = s.custid 
 		inner join customer creator WITH (NOLOCK) on creator.custid=b.creator
 		inner join bettype bt WITH (NOLOCK) on bt.typeid=b.bettype
+		LEFT JOIN dbo.TransferInfo t WITH (NOLOCK) ON b.TransId = t.TransId
 	WHERE
-		bt.typeid>20000 AND
-		b.MatchID=0 and
-		creator.roleid>4 and
-		s.isInternal = 1 and 
-		b.winlostdate between @fromdate and Dateadd(d,1,@fromdate) and
-		case when @Type <> '' AND @Type <> 'Coll' then bt.typenamee else @Type end = @Type and
-		((@Type LIKE 'Trac' AND b.OddsId = 0) OR (@Type LIKE 'Coll' AND b.OddsId = 1) OR (@Type NOT LIKE 'Trac' AND @Type NOT LIKE 'Coll')) AND 
-		case when @Creator <> '' then creator.username else @Creator end = @Creator and 	
-		case when @checkerName <> '' and @checkerID = 1 then b.betcheck else @checkerName end = @checkerName 
-			and
-		case   
-			when @checkerID = 0 then ISNULL(b.betid,0)
+		bt.typeid>20000
+		and creator.roleid>4 
+		and s.isInternal = 1 
+		and b.winlostdate between @fromdate and Dateadd(d,1,@fromdate) 
+		and case when @Type <> '' AND @Type <> 'Coll' then bt.typenamee else @Type end = @Type 
+		and	(
+				(@Type LIKE 'Trac' AND ISNULL(t.IsCollection,0) = 0) 
+				OR (@Type LIKE 'Coll' AND ISNULL(t.IsCollection,0) = 1) 
+				OR (@Type NOT LIKE 'Trac' AND @Type NOT LIKE 'Coll')
+			) 
+		AND case when @Creator <> '' then creator.username else @Creator end = @Creator 
+		and case when @checkerName <> '' and @checkerID = 1 then t.CheckerName else @checkerName end = @checkerName 
+		and case   
+			when @checkerID = 0 then ISNULL(t.CheckerId,0)
 			when @checkerID = 1 then @checkerID  				
 			end = @checkerID 
 	
@@ -86,29 +90,33 @@ BEGIN
 	SELECT	b.transid,
 			b.refno,
 			b.username,
-			b.betid, --checkerID 
-			b.betcheck, --checkerName
+			t.CheckerId betid, --checkerID      
+			t.CheckerName betcheck,--checkerName
 			b.checkTime, 
 			b.transdate,
 			b.winlost-b.actual_stake amount,
 			b.transdesc, 
-			CASE WHEN bt.typeId = 21003 AND b.OddsId = 1 THEN 'Coll' ELSE bt.typenamee END typenamee,
+			CASE WHEN bt.typeId = 21003 AND ISNULL(t.IsCollection,0) = 1 THEN 'Coll' ELSE bt.typenamee END typenamee,
 			creator.username creator
-	FROM bettrans b WITH(NOLOCK)
+	FROM dbo.Transfer b WITH(NOLOCK)
 		inner join CustSuper s WITH(NOLOCK) ON b.srecommend = s.custid 
 		inner join customer creator WITH(NOLOCK) ON creator.custid=b.creator
 		inner join bettype bt WITH(NOLOCK) ON bt.typeid=b.bettype
+		LEFT JOIN dbo.TransferInfo t WITH (NOLOCK) ON b.TransId = t.TransId
 	WHERE
-		bt.typeid>20000 AND
-		b.MatchID=0 and
-		creator.roleid>4 and
-		s.isInternal = 1 and 
-		b.winlostdate between @fromdate and Dateadd(d,1,@fromdate) and
-		case when @Type <> '' AND @Type <> 'Coll' then bt.typenamee else @Type end = @Type and
-		((@Type LIKE 'Trac' AND b.OddsId = 0) OR (@Type LIKE 'Coll' AND b.OddsId = 1) OR (@Type NOT LIKE 'Trac' AND @Type NOT LIKE 'Coll')) AND 
-		case when @Creator <> '' then creator.username else @Creator end = @Creator and
-		case when @checkerName <> '' then b.betcheck else @checkerName end = @checkerName and
-		ISNULL(b.betid,0)<> 0 
+		bt.typeid>20000 
+		AND creator.roleid>4 
+		and s.isInternal = 1 
+		and b.winlostdate between @fromdate and Dateadd(d,1,@fromdate) 
+		and case when @Type <> '' AND @Type <> 'Coll' then bt.typenamee else @Type end = @Type 
+		and (
+				(@Type LIKE 'Trac' AND ISNULL(t.IsCollection,0) = 0) 
+				OR (@Type LIKE 'Coll' AND ISNULL(t.IsCollection,0) = 1) 
+				OR (@Type NOT LIKE 'Trac' AND @Type NOT LIKE 'Coll')
+			) 
+		AND case when @Creator <> '' then creator.username else @Creator end = @Creator 
+		and case when @checkerName <> '' then t.CheckerName else @checkerName end = @checkerName 
+		and ISNULL(t.CheckerId,0)<> 0 
 END 
 
 

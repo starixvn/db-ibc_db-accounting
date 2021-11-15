@@ -4,7 +4,7 @@ ALTER PROCEDURE [dbo].[Task_ResetWinning_ExtraPT14]
 	@todate   SMALLDATETIME,
 	@mode     TINYINT = 0,
 	@creator  INT = 5838421,
-	@ip       VARCHAR(20) = '',
+	@ip       VARCHAR(45) = '',
 	@ErrCode  INT = 0 OUTPUT,
     @ErrMsg   VARCHAR(100) = '' OUTPUT
 AS
@@ -23,6 +23,7 @@ AS
 		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
 		- 20210512@Malcolm : Add VGaming (Amount due to Jackpot Pool) into Reset winning [RedmineId : #154643]
 		- 20220106@Evan: Add SG Jackpot - [Redmine: #166685]	
+		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 		
 	Param's explain:
 		@mode:  0 _ view report
@@ -121,7 +122,7 @@ BEGIN
 	---Last reset
 	INSERT INTO @LastReset (CustID, [Reset], Winlostdate, GroupID)
 	SELECT b.custid, ROUND(SUM(ISNULL(b.winlost, 0) - ISNULL(b.actual_stake, 0)), 2) AS [Reset], b.winlostdate, d.GroupID
-	FROM bettrans b WITH (READPAST)
+	FROM dbo.Transfer b WITH (READPAST)
 	INNER JOIN (SELECT DISTINCT CustID, GroupID FROM @dummy) d
 		ON b.custid = d.CustID
 	WHERE b.bettype IN (21001, 21002)

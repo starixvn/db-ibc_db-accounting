@@ -15,11 +15,13 @@ AS
 		- 20160118@Kathy: get balance from bettransRNG & bettransLC [Redmine:#50674]
 		- 20180515@Percy: Add waiting tickets on translog table [RedmineID: #95219]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
+		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 */
 BEGIN	
 	DECLARE @totalAmt_bettransRNG	MONEY = 0
 			,@totalAmt_bettransLC	MONEY = 0
 			,@totalAmt_translog		MONEY = 0
+			,@totalAmt_transfer		MONEY = 0
 			,@yesterday				DATE
 	
 	SET @yesterday = CONVERT(DATE,GETDATE() - 1)
@@ -50,22 +52,28 @@ BEGIN
 	FROM	dbo.bettransLC WITH(NOLOCK)
 	WHERE	custid = @custID 
 			AND IsSum=0
+
+	-- transfer
+	SELECT  @totalAmt_transfer = sum(winlost-actual_stake+playercomm)
+    FROM	dbo.transfer b WITH(NOLOCK)
+    WHERE	custid = @CustID
+			AND ((bettype = 19999 AND winlostdate <= @moveBetsDay) OR (bettype > 19999))
   
+	
 	-- bettrans
 	SELECT  @TotalAmt = sum(winlost-actual_stake+playercomm)
     FROM	dbo.bettrans b WITH(NOLOCK)
     WHERE	custid = @CustID
 			AND (
-					(b.bettype NOT IN (801,802,803,804,805,806)
-					AND ruben =0) 
+					(b.bettype NOT IN (801,802,803,804,805,806) AND ruben =0) 
 					OR ruben <> 0
-					)
-			AND 1 = CASE 
-						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-					ELSE 1 END
+				)
+			AND bettype < 19999
+			AND winlostdate > @moveBetsDay
+
     
 	SET @TotalAmt = ISNULL(@TotalAmt,0)
+					+ ISNULL(@totalAmt_transfer,0) 
 					+ ISNULL(@totalAmt_translog,0) 
 					+ ISNULL(@totalAmt_bettransRNG,0) 
 					+ ISNULL(@totalAmt_bettransLC,0) 

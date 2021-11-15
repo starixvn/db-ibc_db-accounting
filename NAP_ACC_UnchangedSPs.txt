@@ -1,1 +1,3 @@
-FRP\ResetWinning\Letstalk\Acc_ResetWinning_MarginByNonSport_Lic.sql
+Task\Balance\Clear Balance\dbo.Task_ClearBalanceAllDownlines.sql
+Transfer\AutomateLicenseeCodeTransfer\dbo.Acc_LicenseeTransfer_CompanyWinlossByBatch
+Transfer\AutomateLicenseeCodeTransfer\dbo.Acc_LicenseeTransfer_Job.sql

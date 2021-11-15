@@ -71,6 +71,7 @@ AS
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20211202@Malcolm: exclude record with 'ComStatus' = 'CO'for Cashout - [Redmine: #164902]
 		- 20220110@Malcolm: show Void/Cancelled Bet for parlay tickets [Redmine: #165850]
+		- 20211115@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 		
 	Param explanation : 
 		- Transtypeid = 4 - GrandPrize
@@ -175,9 +176,9 @@ BEGIN
 						WHEN statusID IN (102, 101) THEN 102 -- 'VOID', 'REJECT'
 						WHEN statusID IN (0, 1) THEN 0 -- 'running', 'waiting'
 						ELSE 131 END AS statusID,
-					CASE WHEN b.bettype <= 19999 THEN NULL ELSE transdate END AS transdate,
+					CASE WHEN b.bettype < 19999 THEN NULL ELSE transdate END AS transdate,
 					CASE 
-						WHEN b.bettype <= 19999 THEN '' 
+						WHEN b.bettype < 19999 THEN '' 
 						WHEN b.oddsId = 0 THEN transdesc 						
 						ELSE 'Coll' 
 					END transdesc,
@@ -197,21 +198,40 @@ BEGIN
 						statusID NOT IN (0, 1)
 						OR (statusID IN (0, 1) AND s.RefTable IS NULL) -- exclude running ticket on bettransRnG/LC, translog
 					)
-					AND 1 = CASE 
-								WHEN b.bettype = 19999 and winlostdate > @_moveBetsDay THEN 0 --> get data from ticket detail
-								WHEN b.bettype < 19999 and winlostdate <= @_moveBetsDay THEN 0 --> get data from sum record
-							ELSE 1 END
+					AND b.bettype < 19999 
+					AND b.winlostdate > @_moveBetsDay
 				GROUP BY winlostdate, b.bettype,
 					CASE
 						WHEN statusID IN (102, 101) THEN 102
 						WHEN statusID IN (0, 1) THEN 0
 						ELSE 131 END,
-					CASE WHEN b.bettype <= 19999 THEN NULL ELSE transdate END,
+					CASE WHEN b.bettype < 19999 THEN NULL ELSE transdate END,
 					CASE 
-						WHEN b.bettype <= 19999 THEN '' 
+						WHEN b.bettype < 19999 THEN '' 
 						WHEN b.oddsId = 0 THEN transdesc
 						ELSE 'Coll' 
-					END				
+					END		
+					
+				---- 1.1  bettype = 19999
+				UNION ALL
+				SELECT
+					winlostdate,
+					b.bettype,
+					131 statusID,
+					NULL AS transdate,
+					'' transdesc,
+					SUM(actual_stake) AS actual_stake,
+					SUM(winlost) AS winlost
+				FROM
+					dbo.transfer b WITH (NOLOCK)
+					LEFT JOIN dbo.transferInfo ti ON b.TransID = ti.TransId
+				WHERE
+					custid = @CID
+					AND winlostdate BETWEEN @_FromDate AND @_ToDate
+					AND b.bettype = 19999
+					AND b.winlostdate <= @_moveBetsDay
+
+				GROUP BY winlostdate, b.bettype
 			
 				---- 1.2 translog
 				UNION ALL
@@ -331,11 +351,52 @@ BEGIN
 
 			---------------3. Comm, Transfer
 			---- 3.1 bettrans
+		
+			;WITH cte_comm AS
+			(
+				SELECT
+				winlostdate accdate,
+				SUM(playercomm) totalamt,
+				'COM' transtype,
+				'Commission' transdesc
+			
+				FROM bettrans b WITH (NOLOCK)  
+					LEFT JOIN #SportBettype s ON s.bettype = b.bettype 
+				WHERE 
+					b.bettype < 19999 
+					AND custid = @CID 
+					AND winlostdate BETWEEN @_FromDate AND @_ToDate
+					AND playercomm <> 0 
+					AND (
+						winlostdate < @Yesterday 
+						OR (winlostdate >= @Yesterday AND (s.RefTable IS NULL OR s.RefTable = 3)) -- exclude ticket on bettransRnG/LC today, yesterday
+					)
+					AND winlostdate > @_moveBetsDay
+				GROUP BY winlostdate
+
+				UNION ALL
+
+				SELECT
+				winlostdate accdate,
+				SUM(playercomm) totalamt,
+				'COM' transtype,
+				'Commission' transdesc
+			
+				FROM dbo.Transfer b WITH (NOLOCK)  
+				WHERE 
+					b.bettype = 19999 
+					AND custid = @CID 
+					AND winlostdate BETWEEN @_FromDate AND @_ToDate
+					AND playercomm <> 0 
+					AND b.bettype = 19999
+					AND b.winlostdate <= @_moveBetsDay
+				GROUP BY winlostdate
+			)
 			INSERT INTO @StatementTable -- comm
 			SELECT
-				winlostdate accdate,
+				accdate accdate,
 				0,
-				SUM(playercomm) totalamt,
+				SUM(totalamt) totalamt,
 				'COM' transtype,
 				0,
 				'Commission' transdesc,
@@ -344,39 +405,26 @@ BEGIN
 				'',
 				NULL,
 				0  
-			FROM bettrans b WITH (NOLOCK)  
-				LEFT JOIN #SportBettype s ON s.bettype = b.bettype 
-			WHERE 
-				b.bettype <= 19999 
-				AND custid = @CID 
-				AND winlostdate BETWEEN @_FromDate AND @_ToDate
-				AND playercomm <> 0 
-				AND (
-					winlostdate < @Yesterday 
-					OR (winlostdate >= @Yesterday AND (s.RefTable IS NULL OR s.RefTable = 3)) -- exclude ticket on bettransRnG/LC today, yesterday
-				)
-				AND 1 = CASE 
-							WHEN b.bettype = 19999 and winlostdate > @_moveBetsDay THEN 0 --> get data from ticket detail
-							WHEN b.bettype < 19999 and winlostdate <= @_moveBetsDay THEN 0 --> get data from sum record
-						ELSE 1 END
-			GROUP BY winlostdate
+			FROM cte_comm
+			GROUP BY accdate
 
 			INSERT INTO @StatementTable -- transfer
 			SELECT 
 				transdate accdate,
 				refno,
 				(winlost-actual_stake) totalamt,
-				CASE WHEN b.oddsId = 0 THEN bt.typenamee ELSE 'Coll' END transtype,
+				CASE WHEN ISNULL(ti.IsCollection,0) = 0 THEN bt.typenamee ELSE 'Coll' END transtype,
 				0,
 				transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END transdesc, 
 				b.creator AS creatorID,
-				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE b.betid END, --BalanceUP AND Transfer to Casino/Bingo/P2P
-				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN '0' ELSE b.betcheck END,
+				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE ti.CheckerId END, --BalanceUP AND Transfer to Casino/Bingo/P2P
+				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN '0' ELSE ti.CheckerName END,
 				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE b.checkTime END,
 				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN 0 ELSE 1 END   
 			FROM
-				bettrans b WITH (NOLOCK)
+				dbo.Transfer b WITH (NOLOCK)
 				INNER JOIN bettype bt WITH (NOLOCK) ON b.bettype = bt.typeid 
+				LEFT JOIN dbo.TransferInfo ti WITH(NOLOCK) ON b.TransId = ti.TransId
 			WHERE 
 				bettype >= 20000 
 				AND b.custid=@CID 
@@ -384,7 +432,6 @@ BEGIN
 				AND (winlost-actual_stake) <> 0 
 				AND winlostdate BETWEEN @_FromDate and @_ToDate 
 			
-
 			---- 3.2 bettransLC
 			INSERT INTO @StatementTable
 			SELECT
@@ -563,17 +610,18 @@ BEGIN
 				transdate accdate,
 				refno,
 				(winlost-actual_stake) totalamt,
-				CASE WHEN oddsId = 0 THEN typenamee ELSE 'Coll' END transtype,
+				CASE WHEN ISNULL(ti.IsCollection,0) = 0 THEN typenamee ELSE 'Coll' END transtype,
 				0,
 				transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END transdesc, 			
 				b.creator AS creatorID,
-				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE b.betid END,
-				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN '0' ELSE b.betcheck END,
+				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE ti.CheckerId END,
+				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN '0' ELSE ti.CheckerName END,
 				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE b.checkTime END,
 				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN 0 ELSE 1 END   
 			FROM
-				bettrans b WITH (NOLOCK) 
+				dbo.Transfer b WITH (NOLOCK) 
 				INNER JOIN bettype bt WITH (NOLOCK) ON b.bettype = bt.typeid 
+				LEFT JOIN dbo.TransferInfo ti WITH (NOLOCK) ON b.TransId = ti.TransId
 			WHERE 
 				bettype >= 20000
 				AND b.custid = @CID
@@ -582,7 +630,7 @@ BEGIN
 			
 			---------------2. POS, COM
 			INSERT INTO @Pos_Com
-				--- 2.1. Bettrans
+			--- 2.1. Bettrans
 			SELECT
 				winlostdate accdate,
 				SUM(awinlost) pos_totalamt,
@@ -591,20 +639,32 @@ BEGIN
 				dbo.bettrans b WITH (NOLOCK)
 				LEFT JOIN #SportBettype s ON b.bettype = s.Bettype
 			WHERE
-				b.bettype <= 19999
+				b.bettype < 19999
 				AND custid IN (SELECT * FROM @tblCustid) -- using index on custid
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate
 				AND (
 					winlostdate < @Yesterday
 					OR (winlostdate >= @Yesterday AND (s.RefTable IS NULL OR s.RefTable = 3)) -- exclude ticket on bettransRnG/LC today, yesterday
 				)
-				AND 1 = CASE 
-							WHEN b.bettype = 19999 and winlostdate > @_moveBetsDay THEN 0 --> get data from ticket detail
-							WHEN b.bettype < 19999 and winlostdate <= @_moveBetsDay THEN 0 --> get data from sum record
-						ELSE 1 END
+				AND  winlostdate > @_moveBetsDay
 			GROUP BY winlostdate
 
-				---- 2.2 bettransLC
+			UNION ALL
+			--- 2.1. bettype 19999
+			SELECT
+				winlostdate accdate,
+				SUM(awinlost) pos_totalamt,
+				SUM(comm-playercomm) com_totalamt
+			FROM
+				dbo.transfer b WITH (NOLOCK)
+			WHERE
+				b.bettype = 19999
+				AND custid IN (SELECT * FROM @tblCustid) -- using index on custid
+				AND winlostdate BETWEEN @_FromDate AND @_ToDate
+				AND winlostdate <= @_moveBetsDay
+			GROUP BY winlostdate
+
+			---- 2.2 bettransLC
 			UNION ALL
 			SELECT
 				winlostdate accdate,
@@ -673,23 +733,23 @@ BEGIN
 				transdate accdate,
 				refno,
 				(winlost-actual_stake) totalamt,
-				CASE WHEN oddsId = 0 THEN bt.typenamee ELSE 'Coll' END transtype,
+				CASE WHEN ISNULL(ti.IsCollection,0) = 0 THEN bt.typenamee ELSE 'Coll' END transtype,
 				0,
 				transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END transdesc, 
 				b.creator AS creatorID,
-				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE b.betid END,
-				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN '0' ELSE b.betcheck END,
+				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE ti.CheckerId END,
+				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN '0' ELSE ti.CheckerName END,
 				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE b.checkTime END,
 				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN 0 ELSE 1 END    
 			FROM
-				bettrans b WITH (NOLOCK) 
+				dbo.transfer b WITH (NOLOCK) 
 				INNER JOIN bettype bt WITH (NOLOCK) ON b.bettype = bt.typeid 
+				LEFT JOIN dbo.transferInfo ti WITH (NOLOCK) ON b.TransId = ti.TransId 
 			WHERE 
 				bettype >= 20000 
 				AND b.custid = @CID 
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate 
 				
-	
 			---------------2. POS, COM
 			INSERT INTO @Pos_Com
 			--- 2.1. Bettrans
@@ -701,20 +761,32 @@ BEGIN
 				dbo.bettrans b WITH (NOLOCK)
 				LEFT JOIN #SportBettype s ON b.bettype = s.Bettype
 			WHERE
-				b.bettype <= 19999
+				b.bettype < 19999
 				AND custid IN (SELECT custid FROM @tblCustid) -- using index on custid
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate
 				AND (
 					winlostdate < @Yesterday
 					OR (winlostdate >= @Yesterday AND (s.RefTable IS NULL OR s.RefTable = 3)) -- exclude ticket on bettransRnG/LC today, yesterday
 				)
-				AND 1 = CASE 
-							WHEN b.bettype = 19999 and winlostdate > @_moveBetsDay THEN 0 --> get data from ticket detail
-							WHEN b.bettype < 19999 and winlostdate <= @_moveBetsDay THEN 0 --> get data from sum record
-						ELSE 1 END
+				AND winlostdate > @_moveBetsDay
 			GROUP BY winlostdate
 
-				---- 2.2 bettransLC
+			UNION ALL
+			--- 2.1. bettype = 19999
+			SELECT
+				winlostdate accdate,
+				SUM(mwinlost) pos_totalamt,
+				SUM(acomm-comm) com_totalamt
+			FROM
+				dbo.transfer b WITH (NOLOCK)
+			WHERE
+				b.bettype = 19999
+				AND custid IN (SELECT custid FROM @tblCustid) -- using index on custid
+				AND winlostdate BETWEEN @_FromDate AND @_ToDate
+				AND winlostdate <= @_moveBetsDay
+			GROUP BY winlostdate
+
+			---- 2.2 bettransLC
 			UNION ALL
 			SELECT
 				winlostdate accdate,
@@ -785,17 +857,18 @@ BEGIN
 				transdate accdate,
 				refno,
 				(winlost-actual_stake) totalamt,
-				CASE WHEN oddsId = 0 THEN bt.typenamee ELSE 'Coll' END transtype,
+				CASE WHEN ISNULL(ti.IsCollection,0) = 0 THEN bt.typenamee ELSE 'Coll' END transtype,
 				0,
 				transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END transdesc,
 				b.creator AS creatorID,
-				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE b.betid END,
-				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN '0' ELSE b.betcheck END,
+				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE ti.CheckerId END,
+				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN '0' ELSE ti.CheckerName END,
 				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE b.checkTime END,
 				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN 0 ELSE 1 END  
 			FROM
-				bettrans b WITH (NOLOCK) 
+				dbo.Transfer b WITH (NOLOCK) 
 				INNER JOIN bettype bt WITH (NOLOCK) ON b.bettype=bt.typeid  
+				LEFT JOIN dbo.TransferInfo ti WITH (NOLOCK) ON b.TransID = ti.TransId
 			WHERE 
 				bettype >= 20000 
 				AND b.custid=@CID 
@@ -811,17 +884,28 @@ BEGIN
 			FROM
 				dbo.bettrans b WITH (NOLOCK)
 				LEFT JOIN #SportBettype s ON b.bettype = s.Bettype
-			WHERE b.bettype <= 19999
+			WHERE b.bettype < 19999
 				AND EXISTS (SELECT TOP 1 1 FROM @tblCustid c WHERE c.custid = b.custid) -- using index on custid
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate
 				AND (
 					winlostdate < @Yesterday
 					OR (winlostdate >= @Yesterday AND (s.RefTable IS NULL OR s.RefTable = 3)) -- exclude ticket on bettransRnG/LC today, yesterday
 				)
-				AND 1 = CASE 
-							WHEN b.bettype = 19999 and winlostdate > @_moveBetsDay THEN 0 --> get data from ticket detail
-							WHEN b.bettype < 19999 and winlostdate <= @_moveBetsDay THEN 0 --> get data from sum record
-						ELSE 1 END
+				AND winlostdate > @_moveBetsDay
+			GROUP BY winlostdate
+
+			UNION ALL
+				---- bettype 19999
+			SELECT
+				winlostdate accdate,
+				SUM(swinlost) pos_totalamt,
+				SUM(scomm-acomm) com_totalamt
+			FROM dbo.transfer b WITH (NOLOCK)	
+			WHERE b.bettype = 19999
+				AND EXISTS (SELECT TOP 1 1 FROM @tblCustid c WHERE c.custid = b.custid) -- using index on custid
+				AND winlostdate BETWEEN @_FromDate AND @_ToDate
+				AND winlostdate <= @_moveBetsDay
+			
 			GROUP BY winlostdate
 
 				---- 2.2 bettransLC
@@ -895,19 +979,19 @@ BEGIN
 				transdate accdate,
 				refno,
 				(winlost-actual_stake) totalamt,
-				CASE WHEN oddsId = 0 THEN bt.typenamee ELSE 'Coll' END transtype,
+				CASE WHEN ISNULL(ti.IsCollection,0) = 0 THEN bt.typenamee ELSE 'Coll' END transtype,
 				0,
 				transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END transdesc,
 				b.creator AS creatorID,
-				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21007,21008,21009) THEN NULL ELSE b.betid END,
-				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21007,21008,21009) THEN '0' ELSE b.betcheck END,
+				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21007,21008,21009) THEN NULL ELSE ti.CheckerId END,
+				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21007,21008,21009) THEN '0' ELSE ti.CheckerName END,
 				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21007,21008,21009) THEN NULL ELSE b.checkTime END,
 				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21007,21008,21009) THEN 0 ELSE 1 END  
 			FROM
-				dbo.bettrans b WITH (NOLOCK) 
+				dbo.transfer b WITH (NOLOCK) 
 				INNER JOIN bettype bt WITH (NOLOCK) ON b.bettype=bt.typeid  
-			WHERE b.matchid = 0
-				AND bettype >= 20000 
+				LEFT JOIN dbo.transferInfo ti WITH (NOLOCK) ON b.TransId = ti.TransId
+			WHERE bettype >= 20000 
 				AND b.custid=@CID 
 				AND b.winlostdate BETWEEN @_FromDate AND @_ToDate
 		END
