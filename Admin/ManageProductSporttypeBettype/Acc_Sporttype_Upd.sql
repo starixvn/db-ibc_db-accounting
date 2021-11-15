@@ -16,6 +16,7 @@ Original:
 
 	Revisions:
 		- 20200328@Malcolm: NAP Manage Products/Sporttype/Bettype [Redmine: #131241]
+		- 20211115@Malcolm: Add RepUpdateTime column [Redmine: #164321]
 		
 */
 BEGIN
@@ -259,8 +260,9 @@ BEGIN
 				f.SportNameFR     = t.SportNameFR,
 				f.SportNameMMR    = t.SportNameMMR, 
 				f.SportNamePL     = t.SportNamePL,
-				f.SportNameHI     = t.SportNameHI 
-			FROM Sports f
+				f.SportNameHI     = t.SportNameHI,
+				f.RepUpdateTime   = GETDATE()
+			FROM Sports f WITH(ROWLOCK)
 				INNER JOIN #input t ON  f.SportType = t.SportType		
 	   	    WHERE t.ID = @CurrentRow
 		END TRY

@@ -17,6 +17,7 @@ Original:
 		- 20200328@Malcolm: NAP Manage Products/Sporttype/Bettype [Redmine: #131241]
 		- 20200917@Danny: NAP Manage Bettype add column LicSpreadBetTypeGroupId [Redmine: #131241]
 		- 20200930@Danny: NAP Manage Bettype add column Is3rdParty [Redmine: #131241]
+		- 20211115@Malcolm: Add RepUpdateTime column [Redmine: #164321]
 		
 */
 
@@ -330,8 +331,9 @@ BEGIN
 				t.typenameHI	  = i.typenameHI,
 				t.DisplayedTypeID = i.DisplayedTypeID,
 				t.LicSpreadBetTypeGroupId = i.LicSpreadBetTypeGroupId,
-				t.Is3rdParty	  = i.Is3rdParty
-			FROM bettype t
+				t.Is3rdParty	  = i.Is3rdParty,
+				t.RepUpdateTime   = SYSDATETIME()
+			FROM bettype t WITH(ROWLOCK)
 				INNER JOIN  #input i ON  t.typeid = i.typeid
 			WHERE ID = @CurrentRow
 		END TRY

@@ -16,6 +16,7 @@ Original:
 
 	Revisions:
 		- 20200703@Malcolm:  NAP-Manage RefResource [Redmine: #131241]
+		- 20211115@Malcolm: Add RepUpdateTime column [Redmine: #164321]
 	Param's Explanation:
 	- @Fie:		
 		<ROOT>
@@ -81,7 +82,7 @@ BEGIN
 		Resource_fr		NVARCHAR(50),	
 		Resource_ru		NVARCHAR(64),	
 		Resource_pt		NVARCHAR(50),	
-		Resource_de		NVARCHAR(50)	
+		Resource_de		NVARCHAR(50)
 	)
 
 	CREATE TABLE #inputTmp
@@ -317,7 +318,7 @@ BEGIN
 				Resource_fr,
 				Resource_ru,
 				Resource_pt,
-				Resource_de	
+				Resource_de
 	)
 		SELECT  RefId,		
 				ResourceId,
@@ -400,8 +401,9 @@ BEGIN
 				f.Resource_fr = t.Resource_fr,
 				f.Resource_ru = t.Resource_ru,
 				f.Resource_pt = t.Resource_pt,
-				f.Resource_de = t.Resource_de	 
-			FROM dbo.RefResource f
+				f.Resource_de = t.Resource_de,	 
+				f.RepUpdateTime = GETDATE()
+			FROM dbo.RefResource f WITH(ROWLOCK)
 				INNER JOIN #input t ON  f.RefId = t.RefId AND f.ResourceId = t.ResourceId		
 		END TRY
 
