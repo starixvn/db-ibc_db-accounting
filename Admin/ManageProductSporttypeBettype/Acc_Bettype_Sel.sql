@@ -18,8 +18,6 @@ Original:
 		- 20200917@Danny: NAP Manage Bettype add column LicSpreadBetTypeGroupId [Redmine: #131241]
 		- 20200930@Danny: NAP Manage Bettype add column Is3rdParty [Redmine: #131241]
 		- 20210526@EVan: NAP Manage VendorGlobal Setting  [Redmine: #153521]  
-		- 20211115@Malcolm: Add RepUpdateTime column [Redmine: #164321]
-
 		
 */
 BEGIN
@@ -56,7 +54,6 @@ BEGIN
 		DisplayedTypeID INT,
 		LicSpreadBetTypeGroupId TINYINT,
 		Is3rdParty		BIT,
-		RepUpdateTime	DATETIME2(7),
 		RowNum INT)
 
 	INSERT INTO #Tmp(
@@ -86,7 +83,6 @@ BEGIN
 			DisplayedTypeID,
 			LicSpreadBetTypeGroupId,
 			Is3rdParty,
-			RepUpdateTime,
 			RowNum
 	)
     SELECT	typeid,
@@ -115,7 +111,6 @@ BEGIN
 			DisplayedTypeID, 
 			LicSpreadBetTypeGroupId,
 			Is3rdParty,
-			RepUpdateTime,
 			ROW_NUMBER() OVER(ORDER BY TypeID) AS RowNum   
 	FROM bettype WITH(NOLOCK)
 	WHERE (typeid = @TypeId OR @TypeId IS NULL) 
@@ -123,7 +118,7 @@ BEGIN
 
 	ORDER BY typeid
 
-	SELECT @TotalRows = COUNT(1) FROM #Tmp
+	SELECT @TotalRows = COUNT(*) FROM #Tmp
 
 	SELECT  typeid, 
 		    ParentTypeid,
@@ -151,7 +146,6 @@ BEGIN
 			typenameHI,
 			LicSpreadBetTypeGroupId,
 			Is3rdParty,
-			RepUpdateTime,
 			RowNum
 	FROM #Tmp
 	WHERE @PageIndex < 0 OR @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd) 

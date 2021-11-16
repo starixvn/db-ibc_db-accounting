@@ -16,7 +16,6 @@ Original:
 
 	Revisions:
 		- 20200703@Malcolm: NAP-Manage RefResource [Redmine: #131241]
-		- 20211115@Malcolm: Add RepUpdateTime, IsDeleted column [Redmine: #164321]
 		
 */
 
@@ -26,9 +25,9 @@ BEGIN
 	DECLARE @startRun DATETIME = GETDATE(), @endRun DATETIME, @duration INT, @LogSPData NVARCHAR(MAX)
 
 	BEGIN TRY
-		UPDATE dbo.RefResource
-			SET IsDeleted = 1
-		WHERE RefId = @RefId AND ResourceId =  @ResourceId
+		DELETE m
+		FROM dbo.RefResource m
+		WHERE m.RefId = @RefId AND m.ResourceId =  @ResourceId
 	END TRY
 	BEGIN CATCH
 		SELECT @ErrCode = @@ERROR, @ErrMsg = ERROR_MESSAGE()

@@ -15,7 +15,6 @@ Original:
 
 	Revisions:
 		- 20200328@Malcolm: NAP Manage Products/Sporttype/Bettype [Redmine: #131241]
-		- 20211115@Malcolm: Add RepUpdateTime Column [Redmine: #164321]
 		
 */
 
@@ -46,7 +45,6 @@ BEGIN
 		SportNameMMR	NVARCHAR(50),
 		SportNamePL		NVARCHAR(50),
 		SportNameHI		NVARCHAR(50),
-		RepUpdateTime   DATETIME2(7),
 		RowNum          INT
 	)
 
@@ -70,7 +68,6 @@ BEGIN
 			   SportNameMMR,
 			   SportNamePL,
 			   SportNameHI,
-			   RepUpdateTime,
 			   RowNum
 	)
     SELECT     SportType,
@@ -92,7 +89,6 @@ BEGIN
 			   SportNameMMR,
 			   SportNamePL,
 			   SportNameHI,
-			   RepUpdateTime,
 			   ROW_NUMBER() OVER(ORDER BY SportType) AS RowNum
 	FROM Sports WITH(NOLOCK)
 	WHERE (SportType = @Sporttype OR @Sporttype IS NULL) 
@@ -100,7 +96,7 @@ BEGIN
 
 	ORDER BY SportType
 
-	SELECT @TotalRows = COUNT(1) FROM #Tmp 
+	SELECT @TotalRows = COUNT(*) FROM #Tmp 
 	
 	SELECT  SportType,
 		    ParlayMaxPayout,
@@ -121,7 +117,6 @@ BEGIN
 			SportNameMMR,
 			SportNamePL,
 			SportNameHI,
-			RepUpdateTime,
 			RowNum
 	FROM #Tmp
 	WHERE @PageIndex < 0 OR @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd)

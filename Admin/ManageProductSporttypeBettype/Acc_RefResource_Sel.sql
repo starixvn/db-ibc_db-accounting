@@ -51,8 +51,6 @@ BEGIN
 		Resource_ru		NVARCHAR(64),	
 		Resource_pt		NVARCHAR(50),	
 		Resource_de		NVARCHAR(50),
-		IsDeleted       BIT,
-		RepUpdateTime   DATETIME2(7),
 		RowNum          INT
 	)
 
@@ -80,8 +78,6 @@ BEGIN
 			   Resource_ru,
 			   Resource_pt,
 			   Resource_de,
-			   IsDeleted,
-			   RepUpdateTime,
 			   RowNum   	
 	)
     SELECT     RefId,		
@@ -106,15 +102,13 @@ BEGIN
 			   Resource_ru,
 			   Resource_pt,
 			   Resource_de,
-			   IsDeleted,
-			   RepUpdateTime,
 			   ROW_NUMBER() OVER(ORDER BY RefId, ResourceId) AS RowNum
 	FROM dbo.RefResource WITH(NOLOCK)
 	WHERE (RefId LIKE '%' + @RefId + '%' OR ISNULL(@RefId,'') = '') 
 		  AND (ResourceId = @ResourceId OR ISNULL(@ResourceId,'') = '')
 		  AND (Resource_en LIKE '%' + @ResourceEN + '%' OR ISNULL(@ResourceEN,'') = '')
 		  AND (RefId <> 'N7_Bettype')
-		  AND IsDeleted = 0
+		  AND ISNULL(IsDeleted, 0) <> 1
 
 	ORDER BY RefId, ResourceId
 
@@ -142,8 +136,6 @@ BEGIN
 			Resource_ru,
 			Resource_pt,
 			Resource_de,
-			IsDeleted,
-			RepUpdateTime,
 			RowNum   	
 	FROM #Tmp
 	WHERE @PageIndex < 0 OR @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd)

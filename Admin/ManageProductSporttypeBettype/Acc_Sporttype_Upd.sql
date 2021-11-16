@@ -261,7 +261,7 @@ BEGIN
 				f.SportNameMMR    = t.SportNameMMR, 
 				f.SportNamePL     = t.SportNamePL,
 				f.SportNameHI     = t.SportNameHI,
-				f.RepUpdateTime   = GETDATE()
+				f.RepUpdateTime   = SYSDATETIME()
 			FROM Sports f WITH(ROWLOCK)
 				INNER JOIN #input t ON  f.SportType = t.SportType		
 	   	    WHERE t.ID = @CurrentRow

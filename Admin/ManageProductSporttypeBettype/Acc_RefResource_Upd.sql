@@ -402,7 +402,7 @@ BEGIN
 				f.Resource_ru = t.Resource_ru,
 				f.Resource_pt = t.Resource_pt,
 				f.Resource_de = t.Resource_de,	 
-				f.RepUpdateTime = GETDATE()
+				f.RepUpdateTime = SYSDATETIME()
 			FROM dbo.RefResource f WITH(ROWLOCK)
 				INNER JOIN #input t ON  f.RefId = t.RefId AND f.ResourceId = t.ResourceId		
 		END TRY

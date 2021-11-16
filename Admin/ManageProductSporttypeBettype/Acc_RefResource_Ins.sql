@@ -15,7 +15,6 @@ Original:
 
 	Revisions:
 		- 20200703@Malcolm: NAP-Manage RefResource [Redmine: #131241]
-		- 20211115@Malcolm: Add IsDeleted column [Redmine: #164321]
 		Param's Explanation:
 	- @Fie:		
 		<ROOT>
@@ -424,9 +423,7 @@ BEGIN
 								Resource_fr,
 								Resource_ru,
 								Resource_pt,
-								Resource_de,
-								IsDeleted,
-								RepUpdateTime
+								Resource_de
 			)
 
 			SELECT              RefId,		 
@@ -450,9 +447,7 @@ BEGIN
 								Resource_fr,
 								Resource_ru,
 								Resource_pt,
-								Resource_de,
-								0 AS IsDeleted,
-								NULL AS RepUpdateTime
+								Resource_de
 
 			FROM #input
 			WHERE ID = @CurrentRow
@@ -485,7 +480,6 @@ BEGIN
 									   Resource_ru AS '@Resource_ru', 
 									   Resource_pt AS '@Resource_pt', 
 									   Resource_de AS '@Resource_de', 
-									   0		   AS '@IsDeleted',
 									   @LoginIP    AS '@LoginIP'
 							 FROM #input
 							 WHERE ID = @CurrentRow
