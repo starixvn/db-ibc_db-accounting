@@ -3,7 +3,7 @@ ALTER PROCEDURE [dbo].[Dot_Int_BettransInsCancelTransfer_Cust]
 	@custid				INT,
 	@transid			BIGINT,	
 	@transdesc			NVARCHAR(300)		=	'',
-	@ip					NVARCHAR(15)		=	'',
+	@ip					VARCHAR(45)		=	'',
 	@NewTransID			BIGINT				=	0			OUTPUT,	
 	@ErrCode			INT					=	0			OUTPUT,
 	@ErrMsg				NVARCHAR(200)		=	''			OUTPUT,
@@ -37,6 +37,7 @@ Revisions:
 	- 20160203@Chun: Add new parameter 'betcheck' for 12BET
 	- 20210518@Percy: Change way to get MoveBetsDay [RedmineID: #154866]
 	- 20211112@Sol: Support IPv6 - Phase 2 - Add [Convert Ipv6 to dummy IPv4] - [Redmine: #163963]
+	- 20211111@Sol: Split Transfer out of bettrans/Support IPv6 - [RedmineID: #164301]
 
 Input 
     1) CustID (For Double check) 

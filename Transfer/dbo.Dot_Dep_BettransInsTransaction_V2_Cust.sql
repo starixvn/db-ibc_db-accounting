@@ -193,8 +193,8 @@ BEGIN
 		,@srecommend = srecommend
 		,@roleid = roleid
 		,@BonusWalletFlag = ISNULL(ci.BonusWalletFlag,0)
-	FROM CustDB.dbo.custinfo AS ci WITH (NOLOCK)
-	INNER JOIN CustDB.dbo.exchange AS e WITH (NOLOCK) ON ci.currency = e.exchangeid
+	FROM CustDB.dbo.custinfo AS ci WITH(NOLOCK)
+	INNER JOIN CustDB.dbo.exchange AS e WITH(NOLOCK) ON ci.currency = e.exchangeid
 	WHERE ci.custid = @custid
 
 	
@@ -209,8 +209,8 @@ BEGIN
 			,@srecommend = srecommend
 			,@roleid = roleid
 			,@BonusWalletFlag = ISNULL(ci.BonusWalletFlag,0)
-		FROM DBCUST.CustDB.dbo.custinfo AS ci WITH (NOLOCK)
-		INNER JOIN DBCUST.CustDB.dbo.exchange AS e WITH (NOLOCK) ON ci.currency = e.exchangeid
+		FROM DBCUST.CustDB.dbo.custinfo AS ci WITH(NOLOCK)
+		INNER JOIN DBCUST.CustDB.dbo.exchange AS e WITH(NOLOCK) ON ci.currency = e.exchangeid
 		WHERE ci.custid = @custid
 
 		END
@@ -271,7 +271,7 @@ BEGIN
 			SELECT @balance = 0, @translogCredit = 0, @balance_bettransRNG = 0, @balance_bettransLC = 0
 
 			SELECT @balance = SUM(winlost-actual_stake+playercomm)
-			FROM dbo.bettrans WITH (NOLOCK)
+			FROM dbo.bettrans b WITH(NOLOCK)
 			WHERE custid = @custid
 				AND 1 = CASE
 							WHEN bettype < 19999 AND winlostdate <= @MoveBetsDay THEN 0
@@ -280,21 +280,25 @@ BEGIN
 
 			---get data of transfer ticket from new table [transfer]
 			SELECT @balance = @balance + SUM(winlost-actual_stake+playercomm)
-			FROM dbo.Transfer WITH (NOLOCK)
+			FROM dbo.Transfer t WITH(NOLOCK)
 			WHERE custid = @custid
+				AND 1 = CASE
+							WHEN bettype = 19999 AND winlostdate > @MoveBetsDay THEN 0
+							ELSE 1 
+						END
 			---
 
 			SELECT @translogCredit = SUM(ISNULL(actual_stake, 0))
-			FROM dbo.translog WITH (NOLOCK)
+			FROM dbo.translog t WITH(NOLOCK)
 			WHERE custid = @custid AND statusId = 0
 		
 			SELECT	@balance_bettransRNG = SUM(winlost - actual_stake + playercomm)
-			FROM	dbo.bettransRnG WITH (NOLOCK)
+			FROM	dbo.bettransRnG b WITH(NOLOCK)
 			WHERE	custid = @custID
 					AND IsSum=0
 				
 			SELECT	@balance_bettransLC = SUM(winlost - actual_stake + playercomm)
-			FROM	dbo.bettransLC WITH (NOLOCK)
+			FROM	dbo.bettransLC b WITH(NOLOCK)
 			WHERE	custid = @custID
 					AND IsSum=0
 		
@@ -324,7 +328,7 @@ BEGIN
 				SELECT @balance = 0, @translogCredit = 0, @balance_bettransRNG = 0, @balance_bettransLC = 0
 
 				SELECT @balance = SUM(winlost-actual_stake+playercomm)
-				FROM dbo.bettrans WITH (NOLOCK)
+				FROM dbo.bettrans b WITH(NOLOCK)
 				WHERE custid = @custid
 					AND 1 = CASE
 								WHEN bettype < 19999 AND winlostdate <= @NewMoveBetsDay THEN 0
@@ -333,21 +337,25 @@ BEGIN
 
 				---get data of transfer ticket from new table [transfer]
 				SELECT @balance = @balance + SUM(winlost-actual_stake+playercomm)
-				FROM dbo.Transfer WITH (NOLOCK)
+				FROM dbo.Transfer t WITH(NOLOCK)
 				WHERE custid = @custid
+					AND 1 = CASE
+							WHEN bettype = 19999 AND winlostdate > @NewMoveBetsDay THEN 0
+							ELSE 1 
+						END
 				---
 
 				SELECT @translogCredit = SUM(ISNULL(actual_stake, 0))
-				FROM dbo.translog WITH (NOLOCK)
+				FROM dbo.translog t WITH(NOLOCK)
 				WHERE custid = @custid AND statusId = 0
 		
 				SELECT	@balance_bettransRNG = SUM(winlost - actual_stake + playercomm)
-				FROM	dbo.bettransRnG WITH (NOLOCK)
+				FROM	dbo.bettransRnG b WITH(NOLOCK)
 				WHERE	custid = @custID
 						AND IsSum=0
 				
 				SELECT	@balance_bettransLC = SUM(winlost - actual_stake + playercomm)
-				FROM	dbo.bettransLC WITH (NOLOCK)
+				FROM	dbo.bettransLC b WITH(NOLOCK)
 				WHERE	custid = @custID
 						AND IsSum=0
 
@@ -410,8 +418,8 @@ BEGIN
 		,@bal_currency = c.currency
 		,@bal_actualrate = e.actualrate
 		,@bal_currencyName = e.currency
-	FROM CustDB.dbo.customer c WITH (NOLOCK)
-	INNER JOIN CustDB.dbo.exchange AS e WITH (NOLOCK) ON c.currency = e.exchangeid
+	FROM CustDB.dbo.customer c WITH(NOLOCK)
+	INNER JOIN CustDB.dbo.exchange AS e WITH(NOLOCK) ON c.currency = e.exchangeid
 	WHERE c.custid = @bal_custid
 
 		IF @@rowcount = 0
@@ -475,12 +483,23 @@ BEGIN
 
 		select @transdate = current_timestamp
 
+		---get transid into table variable
+		DECLARE @Transfer TABLE(TransId BIGINT)
+		--DECLARE @TransId BIGINT
+
 		INSERT INTO dbo.transfer
 			(custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, 
-			 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID, ip, CheckerName, WalletType,BonusID)
+			 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID, ip, SerialNo)
+		OUTPUT INSERTED.TransId INTO @Transfer(TransId)
 		VALUES 
 			(@CustID, @username, @RefNo, @transdate, @bettype, @transdesc,@winlost, @actual_stake, convert(nvarchar(10), @transdate, 120), 
-			 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency,@actualrate, @currencyName, 131, @ip, @BetCheck,@WalletType,@BonusID)
+			 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency,@actualrate, @currencyName, 131, @ip, @BetCheck)
+
+		---insert into new table transferinfo
+		SELECT TOP 1 @TransId = TransId FROM @Transfer
+
+		INSERT INTO dbo.TransferInfo(TransId, WalletType, BonusID)
+		VALUES (@TransId, @WalletType, @BonusID)
 
 		if @@ERROR <> 0
 		BEGIN						
@@ -498,7 +517,7 @@ BEGIN
 			END  
 			return
 		END
-		Select @TransID = @@IDENTITY
+		--Select @TransID = @@IDENTITY
 	
 		---Update Credit Balance	
 		IF @Cust_balance > 0 
@@ -507,13 +526,22 @@ BEGIN
 			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_balance, @type = 2
 		END 
 
+		---clear table variable
+		DELETE FROM @Transfer
 
 		INSERT INTO dbo.Transfer 
 			(custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, 
-			 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID, ip, WalletType,BonusID)
+			 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID, ip)
+		OUTPUT INSERTED.TransId INTO @Transfer(TransId)
 		VALUES 
 			(@bal_custID, @bal_Username, @RefNo, @transdate, @bettype, @transdesc, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, convert(nvarchar(10), @transdate, 120), 
-			 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 131, @ip,@WalletType,@BonusID)
+			 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 131, @ip)
+
+		---insert into new table transferinfo
+		SELECT TOP 1 @bal_transid = TransId FROM @Transfer
+
+		INSERT INTO dbo.TransferInfo(TransId, WalletType, BonusID)
+		VALUES (@bal_transid, @WalletType, @BonusID)
 
 		if @@ERROR <> 0
 		BEGIN
@@ -536,7 +564,7 @@ BEGIN
 			END 	
 			return
 		END
-		Select @bal_transid = @@IDENTITY
+		--Select @bal_transid = @@IDENTITY
 		SET @transdate = CONVERT(CHAR(30),@transdate, 121)
 	
 		declare @LogData varchar(300)

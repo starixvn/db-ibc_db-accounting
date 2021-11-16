@@ -16,7 +16,7 @@ ALTER PROCEDURE [dbo].[Dot_BBIN_TransferIns]
 	@ADiscount			DECIMAL(9,8),
 	@SDiscount			DECIMAL(9,8),
 	@TransDesc			NVARCHAR(1000) = '',
-	@IP					NVARCHAR(15) = '',
+	@IP					VARCHAR(45) = '',
 	@GivenCredit 		MONEY = NULL,
 	@RefNo		BIGINT = 0 			OUTPUT,
 	@TransID	BIGINT = 0 			OUTPUT,
@@ -32,7 +32,9 @@ AS
 	Revision: 
 		- 20200411@Sophia.Nguyen: Initial SP [Redmine: #131347]
 		- 20200519@Sophia: add param GivenCredit [Redmine: #131347]
+
 		- 20211112@Sol: Support IPv6 - Phase 2 - Add [Convert Ipv6 to dummy IPv4] - [Redmine: #163963]
+		- 20211111@Sol: Split Transfer out of bettrans/Support IPv6 - [RedmineID: #164301]
 	
 	Param's Explanation:
 	
@@ -301,7 +303,7 @@ BEGIN
 						   'Discount="'+ COALESCE(CAST(@Discount AS VARCHAR(20)), SPACE(1)) + '" ' +
 						   'ADiscount="'+ COALESCE(CAST(@ADiscount AS VARCHAR(20)), SPACE(1)) + '" ' +
 						   'SDiscount="'+ COALESCE(CAST(@SDiscount AS VARCHAR(20)), SPACE(1)) + '" ' +						  
-						   'IP="'+ COALESCE(CAST(@IP AS VARCHAR(20)), SPACE(1)) + '" ' +
+						   'IP="'+ COALESCE(CAST(@IP AS VARCHAR(45)), SPACE(1)) + '" ' +
 						   'GivenCredit="'+ COALESCE(CAST(@GivenCredit AS VARCHAR(20)), SPACE(1)) + '" ' +								   
 						   'ErrCode="'+ COALESCE(CAST(@ErrCode AS VARCHAR(20)), SPACE(1)) + '" ' +						   
 						   'ErrMsg="'+ COALESCE(CAST(@ErrMsg as NVARCHAR(200)),SPACE(1)) + '" ' +
