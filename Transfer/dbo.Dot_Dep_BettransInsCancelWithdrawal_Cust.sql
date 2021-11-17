@@ -204,9 +204,9 @@ select @transdate = current_timestamp
 	
 INSERT INTO dbo.Transfer 
 	(custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, 
-	 creator,recommend,mrecommend,srecommend,currency, actualrate, currencyName, statusID, ip)
+	 creator,recommend,mrecommend,srecommend,currency, actualrate, currencyName, statusID, ip, RepUpdateTime)
 select custid, username, @refno, @transdate, @DCAN, @transdesc, actual_stake, winlost, @winlostdate,
-	 creator, recommend, mrecommend, srecommend, currency, @actualrate, currencyname, 131, @ip
+	 creator, recommend, mrecommend, srecommend, currency, @actualrate, currencyname, 131, @ip, SYSDATETIME()
 from dbo.Transfer t WITH(nolock) where transid in (select transid from @TransID_TEMP)
 
 if @@ERROR <> 0
@@ -237,10 +237,9 @@ END
 Select @NewTransID = @@IDENTITY
 
 Update dbo.Transfer WITH(ROWLOCK, UPDLOCK)
-SET transdesc = transdesc + ' (withdrawal cancelled)'
+	SET transdesc = transdesc + ' (withdrawal cancelled)',
+		RepUpdateTime = SYSDATETIME()
 WHERE transid in (select transid from @TransID_TEMP)
-
-
 	
 ---update credit balance		
 	DECLARE CUR CURSOR FOR	SELECT	CustID, Balance 

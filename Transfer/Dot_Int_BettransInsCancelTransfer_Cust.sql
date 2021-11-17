@@ -144,7 +144,7 @@ BEGIN
 			@winlostdate		= winlostdate,
 			@currency			= currency,
 			@currencyName		= currencyName 
-	FROM dbo.bettrans WITH(NOLOCK)
+	FROM dbo.Transfer t WITH(NOLOCK)
 	WHERE transid = @transid
 
 	SELECT @actualrate = actualrate
@@ -172,18 +172,16 @@ BEGIN
 
 	--Get balance custid
 	SELECT @bal_custid = custid
-	FROM dbo.bettrans WITH(NOLOCK)
-	WHERE matchid = 0 
-		AND bettype = @bettype
+	FROM dbo.Transfer t WITH(NOLOCK)
+	WHERE bettype = @bettype
 		AND refno = @RefNo 
 		AND transid <> @transid
 		AND winlostdate = @winlostdate	
 
 	IF EXISTS (
 			SELECT TOP 1 1 
-			FROM dbo.bettrans WITH(NOLOCK) 
-			WHERE matchid = 0 
-				AND refno = @RefNo 
+			FROM dbo.Transfer t WITH(NOLOCK) 
+			WHERE refno = @RefNo 
 				AND bettype = @DCAN
 				AND custid IN (@custid, @bal_custid)
 		)
@@ -252,7 +250,8 @@ BEGIN
 		BEGIN 
 			SELECT @Cust_balance_ABS = ABS(@Cust_balance)
 			--EXEC dbo.Dot_BalanceUpdDebit @custid = @CustID, @Balance = @Cust_balance_ABS
-												EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_balance_ABS, @type = @BalanceType, @errCode = @ErrCode OUTPUT
+			EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_balance_ABS, @type = @BalanceType, @errCode = @ErrCode OUTPUT
+
 			IF @ErrCode <> 0
 			BEGIN
 				SELECT @ErrMsg = 'Update balance failed.', @ErrCode = 106
@@ -262,12 +261,12 @@ BEGIN
 		
 	SELECT @transdate = CURRENT_TIMESTAMP
 	
-	INSERT INTO dbo.bettrans 
-		(custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, winlostdate, 
-		 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, ruben, status, statusID, ip, betcheck)
+	INSERT INTO dbo.Transfer 
+		(custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, 
+		 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID, ip, SerialNo)
 	VALUES 
-		(@CustID, @username, @RefNo, @transdate, 0, @DCAN, @transdesc, @actual_stake, @winlost, @winlostdate, 
-		 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency, @actualrate, @currencyName, 1, 'Completed', 131, @ip, @betcheck)
+		(@CustID, @username, @RefNo, @transdate, @DCAN, @transdesc, @actual_stake, @winlost, @winlostdate, 
+		 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency, @actualrate, @currencyName, 131, @ip, @betcheck)
 		 
 	SELECT @NewTransID = @@IDENTITY
 
@@ -330,9 +329,8 @@ BEGIN
 	BEGIN
 		
 		--Manually rollback
-		DELETE FROM dbo.bettrans 
+		DELETE FROM dbo.Transfer 
 		WHERE refno = @RefNo 
-			AND matchid = 0 
 			AND bettype = @DCAN 
 			AND custid IN (@custid, @bal_custid)
 		
@@ -348,7 +346,7 @@ BEGIN
 		BEGIN 
 			SELECT @Cust_balance_ABS = ABS(@Cust_balance)
 			--EXEC dbo.Dot_BalanceUpdCredit @custid = @CustID, @Balance = @Cust_balance_ABS
-						EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_balance_ABS, @type = @BalanceType
+			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_balance_ABS, @type = @BalanceType
 		END 
 		
 		RETURN
@@ -358,7 +356,7 @@ BEGIN
 	IF @Cust_balance > 0 
 	BEGIN 
 		--EXEC dbo.Dot_BalanceUpdCredit @custid = @CustID, @Balance = @Cust_balance
-				EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_balance, @type = @BalanceType
+		EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_balance, @type = @BalanceType
 	END
 		
 	--------------------------------------------------------------------------------------	
@@ -397,19 +395,18 @@ BEGIN
 	--	END
 	--END 
 		
-	INSERT INTO dbo.bettrans 
-		(custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, winlostdate, 
-		 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, ruben, status, statusID, ip, betcheck)
+	INSERT INTO dbo.Transfer 
+		(custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, 
+		 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID, ip, SerialNo)
 	VALUES 
-		(@bal_custID, @bal_Username, @RefNo, @transdate, 0, @DCAN, @transdesc, @winlost , @actual_stake, @winlostdate, 
-		 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @Currency, @actualrate, @currencyName, 1, 'Completed', 131, @ip, @betcheck)
+		(@bal_custID, @bal_Username, @RefNo, @transdate, @DCAN, @transdesc, @winlost , @actual_stake, @winlostdate, 
+		 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @Currency, @actualrate, @currencyName, 131, @ip, @betcheck)
 
 	IF @@ERROR <> 0
 	BEGIN
 		--Manually rollbackDot_Dep_BettransInsTransaction_V2
-		DELETE FROM dbo.bettrans 
+		DELETE FROM dbo.Transfer 
 		WHERE refno = @RefNo 
-			AND matchid = 0 
 			AND bettype = @DCAN 
 			AND custid IN (@custid, @bal_custid)
 		
@@ -426,7 +423,7 @@ BEGIN
 		IF @Cust_balance > 0 
 		BEGIN 
 			--EXEC dbo.Dot_BalanceUpdDebit @custid = @CustID, @Balance = @Cust_balance
-						EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_balance, @type = @BalanceType, @IsForced = 1
+			EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_balance, @type = @BalanceType, @IsForced = 1
 		END 	
 		----rollback balance @bal_custID
 		--IF @bal_balance < 0 
@@ -469,7 +466,7 @@ BEGIN
 	--			EXEC Dot_BalanceCreditUpd @CustID = @bal_custID, @balance = @bal_balance, @type = @BalanceType
 	--END
 
-	UPDATE Bettrans 
+	UPDATE dbo.Transfer 
 	SET transdesc = transdesc + ' (transfer cancelled)'
 	WHERE transid = @transid
 

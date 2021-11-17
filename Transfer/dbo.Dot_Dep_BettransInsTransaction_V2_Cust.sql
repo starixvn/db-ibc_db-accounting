@@ -485,21 +485,20 @@ BEGIN
 
 		---get transid into table variable
 		DECLARE @Transfer TABLE(TransId BIGINT)
-		--DECLARE @TransId BIGINT
 
 		INSERT INTO dbo.transfer
 			(custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, 
-			 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID, ip, SerialNo)
+			 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID, ip, SerialNo, RepUpdateTime)
 		OUTPUT INSERTED.TransId INTO @Transfer(TransId)
 		VALUES 
 			(@CustID, @username, @RefNo, @transdate, @bettype, @transdesc,@winlost, @actual_stake, convert(nvarchar(10), @transdate, 120), 
-			 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency,@actualrate, @currencyName, 131, @ip, @BetCheck)
+			 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency,@actualrate, @currencyName, 131, @ip, @BetCheck, SYSDATETIME())
 
 		---insert into new table transferinfo
 		SELECT TOP 1 @TransId = TransId FROM @Transfer
 
-		INSERT INTO dbo.TransferInfo(TransId, WalletType, BonusID)
-		VALUES (@TransId, @WalletType, @BonusID)
+		INSERT INTO dbo.TransferInfo(TransId, WalletType, BonusID, RepUpdateTime)
+		VALUES (@TransId, @WalletType, @BonusID, SYSDATETIME())
 
 		if @@ERROR <> 0
 		BEGIN						
@@ -531,17 +530,17 @@ BEGIN
 
 		INSERT INTO dbo.Transfer 
 			(custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, 
-			 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID, ip)
+			 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID, ip, RepUpdateTime)
 		OUTPUT INSERTED.TransId INTO @Transfer(TransId)
 		VALUES 
 			(@bal_custID, @bal_Username, @RefNo, @transdate, @bettype, @transdesc, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, convert(nvarchar(10), @transdate, 120), 
-			 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 131, @ip)
+			 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 131, @ip, SYSDATETIME())
 
 		---insert into new table transferinfo
 		SELECT TOP 1 @bal_transid = TransId FROM @Transfer
 
-		INSERT INTO dbo.TransferInfo(TransId, WalletType, BonusID)
-		VALUES (@bal_transid, @WalletType, @BonusID)
+		INSERT INTO dbo.TransferInfo(TransId, WalletType, BonusID, RepUpdateTime)
+		VALUES (@bal_transid, @WalletType, @BonusID, SYSDATETIME())
 
 		if @@ERROR <> 0
 		BEGIN

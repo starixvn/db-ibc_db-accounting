@@ -332,6 +332,10 @@ BEGIN
 	SELECT @balance = @balance + SUM(winlost-actual_stake+playercomm)
 	FROM dbo.Transfer t WITH(NOLOCK)
 	WHERE custid = @custid
+		AND 1 = CASE
+					WHEN bettype = 19999 AND winlostdate > @MoveBetsDay THEN 0
+					ELSE 1 
+				END
 	---
 
 	SELECT @translogCredit = SUM(ISNULL(actual_stake, 0))
@@ -388,6 +392,10 @@ BEGIN
 		SELECT @balance = @balance + SUM(winlost-actual_stake+playercomm)
 		FROM dbo.Transfer t WITH(NOLOCK)
 		WHERE custid = @custid
+			AND 1 = CASE
+						WHEN bettype = 19999 AND winlostdate > @NewMoveBetsDay THEN 0
+						ELSE 1 
+					END
 		---
 
 		SELECT @translogCredit = SUM(ISNULL(actual_stake, 0))
@@ -537,14 +545,25 @@ BEGIN
 		END 
 
 		SELECT @transdate = CURRENT_TIMESTAMP
+
+		---get transid into table variable
+		DECLARE @Transfer TABLE(TransId BIGINT)
 		
 		SELECT @Count = 2
 		INSERT INTO dbo.Transfer 
 			(custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, balance,
-			 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID,ip, SerialNo, WalletType,BonusID)
+			 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID,ip, SerialNo)
+		OUTPUT INSERTED.TransId INTO @Transfer(TransId)
 		VALUES 
 			(@CustID, @username, @RefNo, @transdate, @bettype, @transdesc,@winlost, @actual_stake, CONVERT(NVARCHAR(10), @transdate, 120), @beforebalance,
-			 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency,@actualrate, @currencyName, 131,@ip, @betcheck,@WalletType,@BonusID)
+			 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency,@actualrate, @currencyName, 131,@ip, @betcheck)
+
+		---insert into new table transferinfo
+		SELECT TOP 1 @TransId = TransId FROM @Transfer
+
+		INSERT INTO dbo.TransferInfo(TransId, WalletType, BonusID)
+		VALUES (@TransId, @WalletType,@BonusID)
+
 	END TRY
 	BEGIN CATCH
 		--Manually rollback
@@ -565,8 +584,6 @@ BEGIN
 		END 
 		RETURN
 	END CATCH
-	
-	SELECT @TransID = @@IDENTITY
 
 	IF @Cust_Balance > 0  --Update BalanceCredit 
 	BEGIN
@@ -574,14 +591,24 @@ BEGIN
 		EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_Balance, @type = @BalanceType
 	END 
 
+	---clear table variable
+	DELETE FROM @Transfer
+
 	----ADD DUMMY TRANSACTION
 	INSERT INTO dbo.Transfer 
 		(custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, balance,
-		 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID,ip, WalletType,BonusID)
+		 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID,ip)
+	OUTPUT INSERTED.TransId INTO @Transfer(TransId)
 	VALUES 
 		(@bal_custID, @bal_Username, @RefNo, @transdate, @bettype, @transdesc, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, CONVERT(NVARCHAR(10), @transdate, 120), @beforebalance,
-		 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 131,@ip,@WalletType,@BonusID)
+		 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 131,@ip)
 		 
+	---insert into new table transferinfo
+	SELECT TOP 1 @bal_transid = TransId FROM @Transfer
+
+	INSERT INTO dbo.TransferInfo(TransId, WalletType, BonusID)
+	VALUES (@bal_transid, @WalletType, @BonusID)
+
 	IF @@ERROR <> 0
 	BEGIN
 		SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 106
@@ -610,7 +637,6 @@ BEGIN
 		SELECT @balance = @postbalance
 	END
 	
-	SELECT @bal_transid = @@IDENTITY
 	SET @transdate = CONVERT(CHAR(8),@transdate,112)
 	---------------------------------------------------------------------------------------------------
 
