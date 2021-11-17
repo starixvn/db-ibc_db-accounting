@@ -263,10 +263,10 @@ BEGIN
 	
 	INSERT INTO dbo.Transfer 
 		(custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, 
-		 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID, ip, SerialNo)
+		 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID, ip, SerialNo, RepUpdateTime)
 	VALUES 
 		(@CustID, @username, @RefNo, @transdate, @DCAN, @transdesc, @actual_stake, @winlost, @winlostdate, 
-		 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency, @actualrate, @currencyName, 131, @ip, @betcheck)
+		 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency, @actualrate, @currencyName, 131, @ip, @betcheck, SYSDATETIME())
 		 
 	SELECT @NewTransID = @@IDENTITY
 
@@ -397,10 +397,10 @@ BEGIN
 		
 	INSERT INTO dbo.Transfer 
 		(custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, 
-		 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID, ip, SerialNo)
+		 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID, ip, SerialNo, RepUpdateTime)
 	VALUES 
 		(@bal_custID, @bal_Username, @RefNo, @transdate, @DCAN, @transdesc, @winlost , @actual_stake, @winlostdate, 
-		 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @Currency, @actualrate, @currencyName, 131, @ip, @betcheck)
+		 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @Currency, @actualrate, @currencyName, 131, @ip, @betcheck, SYSDATETIME())
 
 	IF @@ERROR <> 0
 	BEGIN
@@ -467,7 +467,8 @@ BEGIN
 	--END
 
 	UPDATE dbo.Transfer 
-	SET transdesc = transdesc + ' (transfer cancelled)'
+		SET transdesc = transdesc + ' (transfer cancelled)',
+			RepUpdateTime = SYSDATETIME()
 	WHERE transid = @transid
 
 	---------------------------------------------------------------------------------------------------

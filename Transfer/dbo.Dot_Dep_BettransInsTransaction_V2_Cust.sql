@@ -506,6 +506,7 @@ BEGIN
 		
 			--Manually rollback
 			DELETE FROM dbo.transfer where refno = @RefNo and bettype = @bettype and custid in (@custid, @bal_custID)
+			DELETE FROM dbo.TransferInfo WHERE TransId = @TransId
 		
 			--rollback balance
 			IF @Cust_balance < 0 
@@ -548,6 +549,8 @@ BEGIN
 		
 			--Manually rollback
 			DELETE FROM dbo.Transfer where refno = @RefNo and bettype = @bettype and custid in (@custid, @bal_custID)
+			DELETE FROM dbo.TransferInfo WHERE TransId = @bal_transid
+
 			--rollback balance @CustID
 			IF @Cust_balance < 0 
 			BEGIN 

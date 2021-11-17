@@ -216,19 +216,31 @@ BEGIN
 
 		SELECT @TransDate = CURRENT_TIMESTAMP
 		
-		INSERT INTO dbo.bettrans 
-			(custid, username, refno, transdate, matchid, bettype, transdesc,winlost, actual_stake, winlostdate, 
-			 creator, recommend, mrecommend, srecommend, currency, actualrate, currencyName, ruben, status, statusID, ip, betcheck, betid, 
-			 APositiontaking, MPositiontaking, SPositiontaking, TPositiontaking, EPositiontaking, PlayerDiscount, Discount, ADiscount, SDiscount)
+		---get transid into table variable
+		DECLARE @Transfer TABLE(TransId BIGINT)
+
+		INSERT INTO dbo.Transfer 
+			(custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, 
+			 creator, recommend, mrecommend, srecommend, currency, actualrate, currencyName, statusID, ip, SerialNo, RepUpdateTime)
+		OUTPUT INSERTED.TransId INTO @Transfer(TransId)
 		VALUES 
-			(@CustID, @username, @RefNo, @transdate, 0, @bettype, @transdesc, @winlost, @actual_stake, convert(nvarchar(10), @transdate, 120), 
-			 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency, @ActualRate, @CurrencyName, 1, 'Completed', 131, @ip, @BetCheck, 0, 
-			 @APositiontaking, @MPositiontaking, @SPositiontaking, @TPositiontaking, @EPositiontaking, @PlayerDiscount, @Discount, @ADiscount, @SDiscount)
+			(@CustID, @username, @RefNo, @transdate, @bettype, @transdesc, @winlost, @actual_stake, convert(nvarchar(10), @transdate, 120), 
+			 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency, @ActualRate, @CurrencyName, 131, @ip, @BetCheck, SYSDATETIME())
+
+		---insert into new table transferinfo
+		SELECT TOP 1 @TransId = TransId FROM @Transfer
+
+		INSERT INTO dbo.TransferInfo
+			(TransId, CheckerId, APositiontaking, MPositiontaking, SPositiontaking, EPositiontaking, 
+			PlayerDiscount, Discount, ADiscount, SDiscount, RepUpdateTime)
+		VALUES (@TransId, 0, @APositiontaking, @MPositiontaking, @SPositiontaking, @EPositiontaking,
+				@PlayerDiscount, @Discount, @ADiscount, @SDiscount, SYSDATETIME())
 
 		IF @@ERROR <> 0
 		BEGIN						
 			SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 107	
-			
+			SELECT @TransID = 0
+
 			--rollback balance
 			IF @Amount < 0 
 			BEGIN	
@@ -243,18 +255,15 @@ BEGIN
 			
 			RETURN
 		END
-		ELSE
-		BEGIN 
-			SELECT @TransID = @@IDENTITY
-		END
- 
+		 
 		SET @TransDate = CONVERT(CHAR(30),@TransDate, 121)
 		
 		----- Mark Transfer in ticket which is cancelled------
 		IF @Bettype = 21009 AND ISNULL(@RefTransId ,0) <> 0
 		BEGIN 
-			UPDATE 	dbo.Bettrans WITH (ROWLOCK)
-			SET   	betId = 1
+			UPDATE 	dbo.TransferInfo WITH (ROWLOCK)
+				SET betId = 1,
+					RepUpdateTime = SYSDATETIME()
 			WHERE 	TransID = @RefTransID					
 		END
 		
@@ -263,8 +272,8 @@ BEGIN
 			SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 108	
 			
 			--Rollback transaction
-			DELETE dbo.Bettrans WITH (ROWLOCK)
-			WHERE TransID = @TransID
+			DELETE dbo.Transfer WITH (ROWLOCK) WHERE TransID = @TransID
+			DELETE dbo.TransferInfo WITH (ROWLOCK) WHERE TransID = @TransID
 
 			--rollback balance
 			IF @Amount < 0 

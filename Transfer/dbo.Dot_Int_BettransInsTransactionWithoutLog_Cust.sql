@@ -552,17 +552,17 @@ BEGIN
 		SELECT @Count = 2
 		INSERT INTO dbo.Transfer 
 			(custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, balance,
-			 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID,ip, SerialNo)
+			 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID,ip, SerialNo, RepUpdateTime)
 		OUTPUT INSERTED.TransId INTO @Transfer(TransId)
 		VALUES 
 			(@CustID, @username, @RefNo, @transdate, @bettype, @transdesc,@winlost, @actual_stake, CONVERT(NVARCHAR(10), @transdate, 120), @beforebalance,
-			 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency,@actualrate, @currencyName, 131,@ip, @betcheck)
+			 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency,@actualrate, @currencyName, 131,@ip, @betcheck, SYSDATETIME())
 
 		---insert into new table transferinfo
 		SELECT TOP 1 @TransId = TransId FROM @Transfer
 
-		INSERT INTO dbo.TransferInfo(TransId, WalletType, BonusID)
-		VALUES (@TransId, @WalletType,@BonusID)
+		INSERT INTO dbo.TransferInfo(TransId, WalletType, BonusID, RepUpdateTime)
+		VALUES (@TransId, @WalletType,@BonusID, SYSDATETIME())
 
 	END TRY
 	BEGIN CATCH
@@ -571,6 +571,8 @@ BEGIN
 		WHERE custid = @custid 
 			AND refno = @RefNo 
 			AND bettype = @bettype
+
+		DELETE FROM dbo.TransferInfo WHERE TransId = @TransId
 		
 		SELECT 
 			@ErrCode = 105	
@@ -597,17 +599,17 @@ BEGIN
 	----ADD DUMMY TRANSACTION
 	INSERT INTO dbo.Transfer 
 		(custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, balance,
-		 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID,ip)
+		 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID,ip, RepUpdateTime)
 	OUTPUT INSERTED.TransId INTO @Transfer(TransId)
 	VALUES 
 		(@bal_custID, @bal_Username, @RefNo, @transdate, @bettype, @transdesc, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, CONVERT(NVARCHAR(10), @transdate, 120), @beforebalance,
-		 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 131,@ip)
+		 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 131,@ip, SYSDATETIME())
 		 
 	---insert into new table transferinfo
 	SELECT TOP 1 @bal_transid = TransId FROM @Transfer
 
-	INSERT INTO dbo.TransferInfo(TransId, WalletType, BonusID)
-	VALUES (@bal_transid, @WalletType, @BonusID)
+	INSERT INTO dbo.TransferInfo(TransId, WalletType, BonusID, RepUpdateTime)
+	VALUES (@bal_transid, @WalletType, @BonusID, SYSDATETIME())
 
 	IF @@ERROR <> 0
 	BEGIN
@@ -618,6 +620,8 @@ BEGIN
 		WHERE custid IN (@custid, @bal_custID) 
 			AND refno = @RefNo 
 			AND bettype = @bettype
+
+		DELETE FROM dbo.TransferInfo WHERE TransId = @bal_transid
 
 		--Rollback Balance Table  
 		IF @Cust_balance < 0  --Rollback BalanceDebit 
