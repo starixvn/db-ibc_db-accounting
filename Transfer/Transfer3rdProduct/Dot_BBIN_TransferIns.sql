@@ -32,7 +32,7 @@ AS
 	Revision: 
 		- 20200411@Sophia.Nguyen: Initial SP [Redmine: #131347]
 		- 20200519@Sophia: add param GivenCredit [Redmine: #131347]
-
+		- 20211112@Sol: Support IPv6 - Phase 2 - Add [Convert Ipv6 to dummy IPv4] - [Redmine: #163963]
 	
 	Param's Explanation:
 	
@@ -100,6 +100,8 @@ BEGIN
 		SELECT @ErrMsg = 'Sorry, amount is invalid.', @ErrCode = 101	
 		RETURN		
 	END
+
+	SELECT @IP = dbo.f_ConvertIPv6ToDummy(@IP)
 
 	SELECT	 @Username = Username
 			,@Currency = ci.Currency

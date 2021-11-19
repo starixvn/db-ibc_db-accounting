@@ -1,7 +1,4 @@
 /*<info serverAlias="DBTXN-bodb02" executers="Dot_Member" isFunction="0" isNested="0"></info>*/
-USE bodb02
-GO
-
 ALTER PROCEDURE [dbo].[Dot_Int_BettransInsCancelTransfer_Cust]
 	@custid				INT,
 	@transid			BIGINT,	
@@ -39,6 +36,7 @@ Revisions:
 	- 20151022@Elodie: Don't update balance for dummy account
 	- 20160203@Chun: Add new parameter 'betcheck' for 12BET
 	- 20210518@Percy: Change way to get MoveBetsDay [RedmineID: #154866]
+	- 20211112@Sol: Support IPv6 - Phase 2 - Add [Convert Ipv6 to dummy IPv4] - [Redmine: #163963]
 
 Input 
     1) CustID (For Double check) 
@@ -90,6 +88,8 @@ BEGIN
 
 	SELECT @ErrCode = 0,
 		@ErrMsg = ''
+
+	SELECT @ip = dbo.f_ConvertIPv6ToDummy(@ip)
 
 	/*
 	22006  Playtech casino transfer

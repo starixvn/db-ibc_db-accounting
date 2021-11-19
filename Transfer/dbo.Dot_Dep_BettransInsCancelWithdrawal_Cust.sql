@@ -15,7 +15,7 @@ Date : 2007-12-05
 Task : withdrawal for Cancel  (in case, withdraw request been rejected , Action: record "deposit" to make balance equal)
 User: NON API Licensee/12Bet
 
-History:
+Revisions:
 	- 20080924: Update actualrate, Username, @currencyName for bettrans
 	- 20080926: Get winlostdate as today date
 	- 20090702(vivi): check transid exist or not
@@ -32,6 +32,7 @@ History:
 	- 20150606@Kathy: Migrate custDB to new server DBCust. Get cust info from DBCust.CustDB in case of replication problem  [Redmine:#36216]		
 	- 20150808@Elodie: Balance Improvement [Redmine:#40125]	
 	- 20151230@Cooper: add  @IsForced = 1  for execute sp Dot_BalanceDebitUpd
+	- 20211112@Sol: Support IPv6 - Phase 2 - Add [Convert Ipv6 to dummy IPv4] - [Redmine: #163963]
 
 Input 
     1) CustID (For Double check) 
@@ -79,6 +80,8 @@ declare @trans_custid int,
 	@DDEP int,
 	@DWIT int,
 	@DCAN int
+
+SELECT @ip = dbo.f_ConvertIPv6ToDummy(@ip)
 
 Select @ErrCode = 0,
 	@ErrMsg = '',

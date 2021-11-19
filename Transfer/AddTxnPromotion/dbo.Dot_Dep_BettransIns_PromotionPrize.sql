@@ -8,7 +8,7 @@ ALTER PROCEDURE dbo.Dot_Dep_BettransIns_PromotionPrize
 	, @TransDesc	NVARCHAR(1000)	= ''
 	, @Total		MONEY			= NULL
 	, @TransID2		BIGINT			= NULL
-	, @IP			NVARCHAR(15)	= ''
+	, @IP			VARCHAR(45)		= ''
 	, @Creator		INT				= NULL
 	, @Ugroup		NVARCHAR(12)	= ''
 	, @Site			nvarchar(50)	= ''
@@ -28,6 +28,7 @@ AS
 
 	Revisions:
 		- 20191003@Bobby: Initialize SP [RedmineID: #121453]
+		- 20211112@Sol: Support IPv6 - Phase 2 - [Redmine: #163963]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -268,7 +269,7 @@ BEGIN
             + N' ' + (select dbo.f_GetBetfromType(@betfrom))
             + N' betting custid:' + cast(isnull( @custid,0) as varchar(10))
             + N' insert bet' +  ISNULL(@insertData,'')
-            + N' ip:' + cast(isnull(@IP,'x') as varchar(16)) 
+            + N' ip:' + cast(isnull(@IP,'x') as varchar(45)) 
             + N' NBC:' + CAST(IsNull(@balance - @actual_stake,0) as varchar(50)) 
             + N' NBT:' + CAST(isnull(@total,-1) as varchar(50)) 
             + N' (' + CAST(IsNull(DATEDIFF(millisecond, @StartTime, @doneinsert),0) as varchar(50)) + ':' + CAST(IsNull(DATEDIFF(millisecond, @StartTime, CURRENT_TIMESTAMP),0) as varchar(50)) + ' ms) ' + @site
