@@ -53,6 +53,18 @@ Input
 BEGIN
 	SET NOCOUNT ON
 
+	---- #1 CHECK UM TRANSFER FUNCTION
+	EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckUM  
+		@CustID = @SAgID
+		,@Language = @Language
+		,@ErrMsg = @ErrMsg OUTPUT 
+		,@ErrCode = @ErrCode OUTPUT
+	 
+	IF @ErrCode <> 0  -- Function Transfer is under UM 
+	BEGIN
+		RETURN		
+	END
+
 	DECLARE @trans_custid		INT,
 		@username				VARCHAR(50),
 		@currency				TINYINT,
