@@ -93,8 +93,6 @@ declare @trans_custid int,
 	@DWIT int,
 	@DCAN int
 
-SELECT @ip = dbo.f_ConvertIPv6ToDummy(@ip)
-
 Select @ErrCode = 0,
 	@ErrMsg = '',
 	@DDEP = 22001,

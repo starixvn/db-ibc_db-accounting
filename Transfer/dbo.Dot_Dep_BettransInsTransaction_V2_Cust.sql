@@ -177,7 +177,7 @@ BEGIN
 			@WalletType = CASE	WHEN @bettype IN (@DBONRTRA, @DBONRADJ) THEN 1 -- Rebate bonus
 								WHEN @BonusID > 0 THEN 2
 								ELSE NULL END,
-		@BonusWalletFlag = 0
+			@BonusWalletFlag = 0
 
 	select @bettype = 
 		case @bettype when 103 then 21003 

@@ -114,8 +114,6 @@ BEGIN
 		RETURN		
 	END
 
-	SELECT @IP = dbo.f_ConvertIPv6ToDummy(@IP)
-
 	SELECT	 @Username = Username
 			,@Currency = ci.Currency
 			,@CurrencyName = e.Currency

@@ -102,8 +102,6 @@ BEGIN
 	SELECT @ErrCode = 0,
 		@ErrMsg = ''
 
-	SELECT @ip = dbo.f_ConvertIPv6ToDummy(@ip)
-
 	/*
 	22006  Playtech casino transfer
 	22007  Playtech casino cancel transfer
