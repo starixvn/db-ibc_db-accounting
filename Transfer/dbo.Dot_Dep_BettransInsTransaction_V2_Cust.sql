@@ -105,8 +105,8 @@ BEGIN
 
 	---- #1 CHECK UM TRANSFER FUNCTION
 	EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckUM  
-		@CustID = @SAgID
-		,@Language = @Language
+		@CustID = @custid
+		,@Language = 'E'
 		,@ErrMsg = @ErrMsg OUTPUT 
 		,@ErrCode = @ErrCode OUTPUT
 	 
@@ -284,19 +284,13 @@ BEGIN
 			SELECT @balance = SUM(winlost-actual_stake+playercomm)
 			FROM dbo.bettrans b WITH(NOLOCK)
 			WHERE custid = @custid
-				AND 1 = CASE
-							WHEN bettype < 19999 AND winlostdate <= @MoveBetsDay THEN 0
-							ELSE 1 
-						END
+				AND	bettype < 19999 AND winlostdate > @MoveBetsDay
 
 			---get data of transfer ticket from new table [transfer]
-			SELECT @balance = @balance + SUM(winlost-actual_stake+playercomm)
+			SELECT @balance = ISNULL(@balance, 0) + SUM(winlost-actual_stake+playercomm)
 			FROM dbo.Transfer t WITH(NOLOCK)
 			WHERE custid = @custid
-				AND 1 = CASE
-							WHEN bettype = 19999 AND winlostdate > @MoveBetsDay THEN 0
-							ELSE 1 
-						END
+				AND (bettype = 19999 AND winlostdate <= @MoveBetsDay OR t.Bettype > 19999)
 			---
 
 			SELECT @translogCredit = SUM(ISNULL(actual_stake, 0))
@@ -341,19 +335,13 @@ BEGIN
 				SELECT @balance = SUM(winlost-actual_stake+playercomm)
 				FROM dbo.bettrans b WITH(NOLOCK)
 				WHERE custid = @custid
-					AND 1 = CASE
-								WHEN bettype < 19999 AND winlostdate <= @NewMoveBetsDay THEN 0
-								ELSE 1 
-							END
+					AND	bettype < 19999 AND winlostdate > @NewMoveBetsDay
 
 				---get data of transfer ticket from new table [transfer]
-				SELECT @balance = @balance + SUM(winlost-actual_stake+playercomm)
+				SELECT @balance = ISNULL(@balance, 0) + SUM(winlost-actual_stake+playercomm)
 				FROM dbo.Transfer t WITH(NOLOCK)
 				WHERE custid = @custid
-					AND 1 = CASE
-							WHEN bettype = 19999 AND winlostdate > @NewMoveBetsDay THEN 0
-							ELSE 1 
-						END
+					AND (bettype = 19999 AND winlostdate <= @NewMoveBetsDay OR t.Bettype > 19999)
 				---
 
 				SELECT @translogCredit = SUM(ISNULL(actual_stake, 0))
@@ -560,7 +548,7 @@ BEGIN
 		
 			--Manually rollback
 			DELETE FROM dbo.Transfer where refno = @RefNo and bettype = @bettype and custid in (@custid, @bal_custID)
-			DELETE FROM dbo.TransferInfo WHERE TransId = @bal_transid
+			DELETE FROM dbo.TransferInfo WHERE TransId IN (@transid, @bal_transid)
 
 			--rollback balance @CustID
 			IF @Cust_balance < 0 

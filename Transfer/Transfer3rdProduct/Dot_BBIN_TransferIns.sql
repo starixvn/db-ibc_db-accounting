@@ -78,18 +78,6 @@ AS
 BEGIN 
 	SET NOCOUNT ON 
 
-	---- #1 CHECK UM TRANSFER FUNCTION
-	EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckUM  
-		@CustID = @SAgID
-		,@Language = @Language
-		,@ErrMsg = @ErrMsg OUTPUT 
-		,@ErrCode = @ErrCode OUTPUT
-	 
-	IF @ErrCode <> 0  -- Function Transfer is under UM 
-	BEGIN
-		RETURN		
-	END
-
 	DECLARE 
 		@Username 		VARCHAR(50),
 		@Currency 		TINYINT,
@@ -271,7 +259,7 @@ BEGIN
 		IF @Bettype = 21009 AND ISNULL(@RefTransId ,0) <> 0
 		BEGIN 
 			UPDATE 	dbo.TransferInfo WITH (ROWLOCK)
-				SET betId = 1,
+				SET CheckerId = 1,
 					RepUpdateTime = SYSDATETIME()
 			WHERE 	TransID = @RefTransID					
 		END

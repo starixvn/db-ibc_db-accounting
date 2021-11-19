@@ -51,8 +51,8 @@ SET NOCOUNT ON
 
 ---- #1 CHECK UM TRANSFER FUNCTION
 EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckUM  
-	@CustID = @SAgID
-	,@Language = @Language
+	@CustID = @custid
+	,@Language = 'E'
 	,@ErrMsg = @ErrMsg OUTPUT 
 	,@ErrCode = @ErrCode OUTPUT
 	 
