@@ -69,6 +69,7 @@ AS
 		- 20190918@Percy: Remove inactive products [RedmineID: #118699]
 		- 20200414@Sophia: Add BBIN bettype [Redmine: #131358]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
+		- 20211202@Malcolm: exclude record with 'ComStatus' = 'CO'for Cashout - [Redmine: #164902]
 		
 	Param explanation : 
 		- Transtypeid = 4 - GrandPrize
@@ -499,6 +500,7 @@ BEGIN
 					AND eventdate BETWEEN @_Fromdate AND @MoveBetDay
 					AND (s.VoidRejectGroup IS NULL OR s.VoidRejectGroup = 3) -- zzzbettrans inner join match/match14
 					AND custid = @CID
+					AND b.comstatus <> 'CO'
 				GROUP BY eventdate
 				UNION ALL
 				SELECT DISTINCT
@@ -523,6 +525,7 @@ BEGIN
 					AND eventdate BETWEEN @_Fromdate AND @MoveBetDay
 					AND (s.VoidRejectGroup IS NULL OR s.VoidRejectGroup = 3) -- zzzbettrans inner join match/match14
 					AND custid = @CID
+					AND b.comstatus <> 'CO'
 				GROUP BY eventdate
 			END
 		END
