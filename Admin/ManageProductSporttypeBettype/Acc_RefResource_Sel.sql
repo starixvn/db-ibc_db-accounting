@@ -108,7 +108,7 @@ BEGIN
 		  AND (ResourceId = @ResourceId OR ISNULL(@ResourceId,'') = '')
 		  AND (Resource_en LIKE '%' + @ResourceEN + '%' OR ISNULL(@ResourceEN,'') = '')
 		  AND (RefId <> 'N7_Bettype')
-		  AND ISNULL(IsDeleted, 0) <> 1
+		  AND IsDeleted <> 1
 
 	ORDER BY RefId, ResourceId
 
