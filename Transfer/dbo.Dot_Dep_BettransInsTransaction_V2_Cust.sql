@@ -59,7 +59,6 @@ Revisions:
 	- 20190710@Jamie: Check Bonus wallet if a member is joining a Bonus campaign [Redmine:#116273]
 	- 20201014@Danny: Convert Ipv6 to dummy IPv4 [Redmine: #143323]
 	- 20210518@Percy: Change code to adapt new Move Bets flow [RedmineID: #154866]
-
 	- 20211021@Benson: add update betcheck for balance accounts(@bal_custid)
 	- 20211111@Sol: Split Transfer out of bettrans/Support IPv6 - [RedmineID: #164301]
 
@@ -374,42 +373,39 @@ BEGIN
 				END
 			END
 
-		/*
-			Check Member's Balance for Withdrawal 
-		*/
+			/*
+				Check Member's Balance for Withdrawal 
+			*/
 
-		IF (ISNULL(@balance, 0) + ISNULL(@balance_Transfer, 0) + ISNULL(@balance_bettransRNG, 0) + ISNULL(@balance_bettransLC, 0) - ISNULL(@translogCredit, 0)
-			 + @winlost - @actual_stake) < 0
-		BEGIN
-			SELECT @ErrMsg = 'Sorry, you do not have enough money to withdraw.', @ErrCode = 103				
-			RETURN		
-		END
-
-		----------------------------------
-		-- Check Bonus Wallet 
-		----------------------------------
-		DECLARE @FinalBalance	MONEY
-		DECLARE @BonusAmount	MONEY
-		SELECT	@FinalBalance	= 0,
-				@BonusAmount	= 0  
-		IF @BonusWalletFlag = 1
-		BEGIN
-			EXEC dbo.Dot_BalanceMemberSel @CustID = @CustID, @Balance = @FinalBalance OUT, @BonusWalletFlag = @BonusWalletFlag, @Amount = @BonusAmount OUT 
-
-			IF (ISNULL(@balance, 0) + ISNULL(@balance_Transfer, 0) + ISNULL(@balance_bettransRNG, 0) + ISNULL(@balance_bettransLC, 0) + @winlost - @actual_stake - ISNULL(@translogCredit, 0) - @BonusAmount) <0 
+			IF (ISNULL(@balance, 0) + ISNULL(@balance_Transfer, 0) + ISNULL(@balance_bettransRNG, 0) + ISNULL(@balance_bettransLC, 0) - ISNULL(@translogCredit, 0)
+				 + @winlost - @actual_stake) < 0
 			BEGIN
-				SELECT	@ErrMsg = 'Sorry, you do not have enough money to withdraw.', @ErrCode = 201	
-				RETURN
+				SELECT @ErrMsg = 'Sorry, you do not have enough money to withdraw.', @ErrCode = 103				
+				RETURN		
 			END
-		END
-		----------------------------------
+
+			----------------------------------
+			-- Check Bonus Wallet 
+			----------------------------------
+			DECLARE @FinalBalance	MONEY
+			DECLARE @BonusAmount	MONEY
+			SELECT	@FinalBalance	= 0,
+					@BonusAmount	= 0  
+			IF @BonusWalletFlag = 1
+			BEGIN
+				EXEC dbo.Dot_BalanceMemberSel @CustID = @CustID, @Balance = @FinalBalance OUT, @BonusWalletFlag = @BonusWalletFlag, @Amount = @BonusAmount OUT 
+
+				IF (ISNULL(@balance, 0) + ISNULL(@balance_Transfer, 0) + ISNULL(@balance_bettransRNG, 0) + ISNULL(@balance_bettransLC, 0) + @winlost - @actual_stake - ISNULL(@translogCredit, 0) - @BonusAmount) <0 
+				BEGIN
+					SELECT	@ErrMsg = 'Sorry, you do not have enough money to withdraw.', @ErrCode = 201	
+					RETURN
+				END
+			END
 
 		END
 		----------------------------------
 
-		----------------------------------
-		--Check balance Account
-
+	--Check balance Account
 	SELECT @bal_custid = c.custid
 		,@bal_Username = c.username
 		,@bal_mrecommend = c.mrecommend
@@ -505,7 +501,7 @@ BEGIN
 			Select @ErrMsg = 'Insert transaction failed.', @ErrCode = 105	
 		
 			--Manually rollback
-			DELETE FROM dbo.transfer where refno = @RefNo and bettype = @bettype and custid in (@custid, @bal_custID)
+			DELETE FROM dbo.transfer where refno = @RefNo and bettype = @bettype and custid = @custid
 			DELETE FROM dbo.TransferInfo WHERE TransId = @TransId
 		
 			--rollback balance
@@ -531,11 +527,11 @@ BEGIN
 
 		INSERT INTO dbo.Transfer 
 			(custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, 
-			 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID, ip, RepUpdateTime)
+			 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID, ip, SerialNo, RepUpdateTime)
 		OUTPUT INSERTED.TransId INTO @Transfer(TransId)
 		VALUES 
 			(@bal_custID, @bal_Username, @RefNo, @transdate, @bettype, @transdesc, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, convert(nvarchar(10), @transdate, 120), 
-			 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 131, @ip, SYSDATETIME())
+			 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 131, @ip, @BetCheck, SYSDATETIME())
 
 		---insert into new table transferinfo
 		SELECT TOP 1 @bal_transid = TransId FROM @Transfer
