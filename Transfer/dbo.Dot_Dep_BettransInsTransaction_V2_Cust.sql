@@ -59,7 +59,7 @@ Revisions:
 	- 20190710@Jamie: Check Bonus wallet if a member is joining a Bonus campaign [Redmine:#116273]
 	- 20201014@Danny: Convert Ipv6 to dummy IPv4 [Redmine: #143323]
 	- 20210518@Percy: Change code to adapt new Move Bets flow [RedmineID: #154866]
-
+	- 20211021@Benson: add update betcheck for balance accounts(@bal_custid)
 Param's Explanation:
 ? @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction
 				For ex: 12BetManilaBankUS$, 12BetNetellerGBP
@@ -499,10 +499,10 @@ BEGIN
 
 		INSERT INTO bettrans 
 			(custid, username, refno, transdate, matchid, bettype, transdesc,winlost, actual_stake, winlostdate, 
-			 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, ruben, status, statusID, ip, WalletType,BonusID)
+			 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, ruben, status, statusID, ip, WalletType,BonusID, betcheck)
 		VALUES 
 			(@bal_custID, @bal_Username, @RefNo, @transdate, 0, @bettype, @transdesc, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, convert(nvarchar(10), @transdate, 120), 
-			 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 1, 'Completed', 131, @ip,@WalletType,@BonusID)
+			 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 1, 'Completed', 131, @ip,@WalletType,@BonusID, @BetCheck)
 
 		if @@ERROR <> 0
 		BEGIN
@@ -541,3 +541,5 @@ BEGIN
 	END CATCH
 END
 GO
+
+
