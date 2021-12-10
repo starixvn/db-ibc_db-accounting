@@ -151,6 +151,7 @@ BEGIN
 		@IsForced BIT,
 		@balance_bettransRNG	MONEY,
 		@balance_bettransLC		MONEY,
+		@balance_Transfer		MONEY,
 		@WalletType TINYINT,
 		@BonusWalletFlag BIT, 
 		-- Rebate bonus
@@ -279,7 +280,7 @@ BEGIN
 			EXEC dbo.Age_SelBalanceUpDay
 			SELECT @MoveBetsDay = MoveBetsDay FROM @MBBU
 
-			SELECT @balance = 0, @translogCredit = 0, @balance_bettransRNG = 0, @balance_bettransLC = 0
+			SELECT @balance = 0, @translogCredit = 0, @balance_bettransRNG = 0, @balance_bettransLC = 0, @balance_Transfer = 0
 
 			SELECT @balance = SUM(winlost-actual_stake+playercomm)
 			FROM dbo.bettrans b WITH(NOLOCK)
@@ -287,7 +288,7 @@ BEGIN
 				AND	bettype < 19999 AND winlostdate > @MoveBetsDay
 
 			---get data of transfer ticket from new table [transfer]
-			SELECT @balance = ISNULL(@balance, 0) + SUM(winlost-actual_stake+playercomm)
+			SELECT @balance_Transfer = SUM(winlost-actual_stake+playercomm)
 			FROM dbo.Transfer t WITH(NOLOCK)
 			WHERE custid = @custid
 				AND (bettype = 19999 AND winlostdate <= @MoveBetsDay OR t.Bettype > 19999)
@@ -330,7 +331,7 @@ BEGIN
 
 			IF @NewMoveBetsDay <> @MoveBetsDay
 			BEGIN
-				SELECT @balance = 0, @translogCredit = 0, @balance_bettransRNG = 0, @balance_bettransLC = 0
+				SELECT @balance = 0, @translogCredit = 0, @balance_bettransRNG = 0, @balance_bettransLC = 0, @balance_Transfer = 0
 
 				SELECT @balance = SUM(winlost-actual_stake+playercomm)
 				FROM dbo.bettrans b WITH(NOLOCK)
@@ -338,7 +339,7 @@ BEGIN
 					AND	bettype < 19999 AND winlostdate > @NewMoveBetsDay
 
 				---get data of transfer ticket from new table [transfer]
-				SELECT @balance = ISNULL(@balance, 0) + SUM(winlost-actual_stake+playercomm)
+				SELECT @balance_Transfer = SUM(winlost-actual_stake+playercomm)
 				FROM dbo.Transfer t WITH(NOLOCK)
 				WHERE custid = @custid
 					AND (bettype = 19999 AND winlostdate <= @NewMoveBetsDay OR t.Bettype > 19999)
@@ -377,7 +378,7 @@ BEGIN
 			Check Member's Balance for Withdrawal 
 		*/
 
-		IF (ISNULL(@balance, 0) + ISNULL(@balance_bettransRNG, 0) + ISNULL(@balance_bettransLC, 0) - ISNULL(@translogCredit, 0)
+		IF (ISNULL(@balance, 0) + ISNULL(@balance_Transfer, 0) + ISNULL(@balance_bettransRNG, 0) + ISNULL(@balance_bettransLC, 0) - ISNULL(@translogCredit, 0)
 			 + @winlost - @actual_stake) < 0
 		BEGIN
 			SELECT @ErrMsg = 'Sorry, you do not have enough money to withdraw.', @ErrCode = 103				
@@ -395,7 +396,7 @@ BEGIN
 		BEGIN
 			EXEC dbo.Dot_BalanceMemberSel @CustID = @CustID, @Balance = @FinalBalance OUT, @BonusWalletFlag = @BonusWalletFlag, @Amount = @BonusAmount OUT 
 
-			IF (@balance + @balance_bettransRNG + @balance_bettransLC + @winlost-@actual_stake-@translogCredit-@BonusAmount) <0 
+			IF (ISNULL(@balance, 0) + ISNULL(@balance_Transfer, 0) + ISNULL(@balance_bettransRNG, 0) + ISNULL(@balance_bettransLC, 0) + @winlost - @actual_stake - ISNULL(@translogCredit, 0) - @BonusAmount) <0 
 			BEGIN
 				SELECT	@ErrMsg = 'Sorry, you do not have enough money to withdraw.', @ErrCode = 201	
 				RETURN
