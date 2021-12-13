@@ -342,7 +342,7 @@ BEGIN
 		DELETE FROM dbo.Transfer 
 		WHERE refno = @RefNo 
 			AND bettype = @DCAN 
-			AND custid IN (@custid, @bal_custid)
+			AND custid = @custid
 		
 		SELECT @ErrMsg = 'Insert transaction failed.'
 		

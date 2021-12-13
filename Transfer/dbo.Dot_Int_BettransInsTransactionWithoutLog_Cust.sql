@@ -597,23 +597,25 @@ BEGIN
 	---clear table variable
 	DELETE FROM @Transfer
 
-	----ADD DUMMY TRANSACTION
-	INSERT INTO dbo.Transfer 
-		(custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, balance,
-		 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID,ip, RepUpdateTime)
-	OUTPUT INSERTED.TransId INTO @Transfer(TransId)
-	VALUES 
-		(@bal_custID, @bal_Username, @RefNo, @transdate, @bettype, @transdesc, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, CONVERT(NVARCHAR(10), @transdate, 120), @beforebalance,
-		 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 131,@ip, SYSDATETIME())
+	BEGIN TRY
+		----ADD DUMMY TRANSACTION
+		INSERT INTO dbo.Transfer 
+			(custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, balance,
+			 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID,ip, RepUpdateTime)
+		OUTPUT INSERTED.TransId INTO @Transfer(TransId)
+		VALUES 
+			(@bal_custID, @bal_Username, @RefNo, @transdate, @bettype, @transdesc, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, CONVERT(NVARCHAR(10), @transdate, 120), @beforebalance,
+			 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 131,@ip, SYSDATETIME())
 		 
-	---insert into new table transferinfo
-	SELECT TOP 1 @bal_transid = TransId FROM @Transfer
+		---insert into new table transferinfo
+		SELECT TOP 1 @bal_transid = TransId FROM @Transfer
 
-	INSERT INTO dbo.TransferInfo(TransId, WalletType, BonusID, RepUpdateTime)
-	VALUES (@bal_transid, @WalletType, @BonusID, SYSDATETIME())
+		INSERT INTO dbo.TransferInfo(TransId, WalletType, BonusID, RepUpdateTime)
+		VALUES (@bal_transid, @WalletType, @BonusID, SYSDATETIME())
 
-	IF @@ERROR <> 0
-	BEGIN
+	END TRY
+	BEGIN CATCH
+	
 		SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 106
 		
 		--Manually rollback
@@ -636,11 +638,10 @@ BEGIN
 			EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_Balance, @type = @BalanceType, @IsForced = 1
 		END	
 		RETURN
-	END
-	ELSE
-	BEGIN
-		SELECT @balance = @postbalance
-	END
+	END CATCH
+	
+	SELECT @balance = @postbalance
+	
 	
 	SET @transdate = CONVERT(CHAR(8),@transdate,112)
 	---------------------------------------------------------------------------------------------------

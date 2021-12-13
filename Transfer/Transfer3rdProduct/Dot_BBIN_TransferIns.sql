@@ -213,29 +213,37 @@ BEGIN
 
 		SELECT @TransDate = CURRENT_TIMESTAMP
 		
-		---get transid into table variable
-		DECLARE @Transfer TABLE(TransId BIGINT)
+		BEGIN TRY
+			---get transid into table variable
+			DECLARE @Transfer TABLE(TransId BIGINT)
 
-		INSERT INTO dbo.Transfer 
-			(custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, 
-			 creator, recommend, mrecommend, srecommend, currency, actualrate, currencyName, statusID, ip, SerialNo, RepUpdateTime)
-		OUTPUT INSERTED.TransId INTO @Transfer(TransId)
-		VALUES 
-			(@CustID, @username, @RefNo, @transdate, @bettype, @transdesc, @winlost, @actual_stake, convert(nvarchar(10), @transdate, 120), 
-			 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency, @ActualRate, @CurrencyName, 131, @ip, @BetCheck, SYSDATETIME())
+			INSERT INTO dbo.Transfer 
+				(custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, 
+				 creator, recommend, mrecommend, srecommend, currency, actualrate, currencyName, statusID, ip, SerialNo, RepUpdateTime)
+			OUTPUT INSERTED.TransId INTO @Transfer(TransId)
+			VALUES 
+				(@CustID, @username, @RefNo, @transdate, @bettype, @transdesc, @winlost, @actual_stake, convert(nvarchar(10), @transdate, 120), 
+				 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency, @ActualRate, @CurrencyName, 131, @ip, @BetCheck, SYSDATETIME())
 
-		---insert into new table transferinfo
-		SELECT TOP 1 @TransId = TransId FROM @Transfer
+			---insert into new table transferinfo
+			SELECT TOP 1 @TransId = TransId FROM @Transfer
 
-		INSERT INTO dbo.TransferInfo
-			(TransId, CheckerId, APositiontaking, MPositiontaking, SPositiontaking, EPositiontaking, 
-			PlayerDiscount, Discount, ADiscount, SDiscount, RepUpdateTime)
-		VALUES (@TransId, 0, @APositiontaking, @MPositiontaking, @SPositiontaking, @EPositiontaking,
-				@PlayerDiscount, @Discount, @ADiscount, @SDiscount, SYSDATETIME())
+			INSERT INTO dbo.TransferInfo
+				(TransId, CheckerId, APositiontaking, MPositiontaking, SPositiontaking, EPositiontaking, 
+				PlayerDiscount, Discount, ADiscount, SDiscount, RepUpdateTime)
+			VALUES (@TransId, 0, @APositiontaking, @MPositiontaking, @SPositiontaking, @EPositiontaking,
+					@PlayerDiscount, @Discount, @ADiscount, @SDiscount, SYSDATETIME())
 
-		IF @@ERROR <> 0
-		BEGIN						
+		END TRY
+		BEGIN CATCH
+		
+			
 			SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 107	
+
+			--Rollback transaction
+			DELETE dbo.Transfer WITH (ROWLOCK) WHERE TransID = @TransID
+			DELETE dbo.TransferInfo WITH (ROWLOCK) WHERE TransID = @TransID
+
 			SELECT @TransID = 0
 
 			--rollback balance
@@ -251,7 +259,8 @@ BEGIN
 			END 
 			
 			RETURN
-		END
+
+		END CATCH
 		 
 		SET @TransDate = CONVERT(CHAR(30),@TransDate, 121)
 		

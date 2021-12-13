@@ -479,25 +479,27 @@ BEGIN
 
 		select @transdate = current_timestamp
 
-		---get transid into table variable
-		DECLARE @Transfer TABLE(TransId BIGINT)
+		BEGIN TRY
+			---get transid into table variable
+			DECLARE @Transfer TABLE(TransId BIGINT)
 
-		INSERT INTO dbo.transfer
-			(custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, 
-			 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID, ip, SerialNo, RepUpdateTime)
-		OUTPUT INSERTED.TransId INTO @Transfer(TransId)
-		VALUES 
-			(@CustID, @username, @RefNo, @transdate, @bettype, @transdesc,@winlost, @actual_stake, convert(nvarchar(10), @transdate, 120), 
-			 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency,@actualrate, @currencyName, 131, @ip, @BetCheck, SYSDATETIME())
+			INSERT INTO dbo.transfer
+				(custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, 
+				 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID, ip, SerialNo, RepUpdateTime)
+			OUTPUT INSERTED.TransId INTO @Transfer(TransId)
+			VALUES 
+				(@CustID, @username, @RefNo, @transdate, @bettype, @transdesc,@winlost, @actual_stake, convert(nvarchar(10), @transdate, 120), 
+				 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency,@actualrate, @currencyName, 131, @ip, @BetCheck, SYSDATETIME())
 
-		---insert into new table transferinfo
-		SELECT TOP 1 @TransId = TransId FROM @Transfer
+			---insert into new table transferinfo
+			SELECT TOP 1 @TransId = TransId FROM @Transfer
 
-		INSERT INTO dbo.TransferInfo(TransId, WalletType, BonusID, RepUpdateTime)
-		VALUES (@TransId, @WalletType, @BonusID, SYSDATETIME())
+			INSERT INTO dbo.TransferInfo(TransId, WalletType, BonusID, RepUpdateTime)
+			VALUES (@TransId, @WalletType, @BonusID, SYSDATETIME())
 
-		if @@ERROR <> 0
-		BEGIN						
+		END TRY
+		BEGIN CATCH
+							
 			Select @ErrMsg = 'Insert transaction failed.', @ErrCode = 105	
 		
 			--Manually rollback
@@ -511,8 +513,11 @@ BEGIN
 				--EXEC Dot_BalanceUpdCredit @custid = @CustID, @Balance = @Cust_balance_ABS
 				EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_balance_ABS, @type = 2
 			END  
-			return
-		END
+
+			RETURN
+
+		END CATCH
+
 		--Select @TransID = @@IDENTITY
 	
 		---Update Credit Balance	
@@ -525,22 +530,25 @@ BEGIN
 		---clear table variable
 		DELETE FROM @Transfer
 
-		INSERT INTO dbo.Transfer 
-			(custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, 
-			 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID, ip, SerialNo, RepUpdateTime)
-		OUTPUT INSERTED.TransId INTO @Transfer(TransId)
-		VALUES 
-			(@bal_custID, @bal_Username, @RefNo, @transdate, @bettype, @transdesc, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, convert(nvarchar(10), @transdate, 120), 
-			 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 131, @ip, @BetCheck, SYSDATETIME())
+		BEGIN TRY
 
-		---insert into new table transferinfo
-		SELECT TOP 1 @bal_transid = TransId FROM @Transfer
+			INSERT INTO dbo.Transfer 
+				(custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, 
+				 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID, ip, SerialNo, RepUpdateTime)
+			OUTPUT INSERTED.TransId INTO @Transfer(TransId)
+			VALUES 
+				(@bal_custID, @bal_Username, @RefNo, @transdate, @bettype, @transdesc, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, convert(nvarchar(10), @transdate, 120), 
+				 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 131, @ip, @BetCheck, SYSDATETIME())
 
-		INSERT INTO dbo.TransferInfo(TransId, WalletType, BonusID, RepUpdateTime)
-		VALUES (@bal_transid, @WalletType, @BonusID, SYSDATETIME())
+			---insert into new table transferinfo
+			SELECT TOP 1 @bal_transid = TransId FROM @Transfer
 
-		if @@ERROR <> 0
-		BEGIN
+			INSERT INTO dbo.TransferInfo(TransId, WalletType, BonusID, RepUpdateTime)
+			VALUES (@bal_transid, @WalletType, @BonusID, SYSDATETIME())
+
+		END TRY
+		BEGIN CATCH
+		
 			Select @ErrMsg = 'Insert transaction failed.', @ErrCode = 106
 		
 			--Manually rollback
@@ -560,8 +568,11 @@ BEGIN
 				--EXEC Dot_BalanceUpdDebit @custid = @CustID, @Balance = @Cust_balance
 				EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_balance, @type = 2, @isForced = 1
 			END 	
-			return
-		END
+
+			RETURN
+
+		END CATCH
+
 		--Select @bal_transid = @@IDENTITY
 		SET @transdate = CONVERT(CHAR(30),@transdate, 121)
 	

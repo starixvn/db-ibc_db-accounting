@@ -221,7 +221,8 @@ from dbo.Transfer t WITH(nolock) where transid in (select transid from @TransID_
 if @@ERROR <> 0
 BEGIN
 	--Manually rollback
-	--DELETE FROM bettrans where refno = @RefNo and matchid = 0 and bettype = 108
+	DELETE FROM dbo.Transfer WHERE refno = @RefNo and bettype = @DCAN AND CustId IN (select custid from @TransID_TEMP)
+
 	Select @ErrMsg = 'Insert transaction failed.', @ErrCode = 106
 	--rollback balance
 			
