@@ -36,6 +36,7 @@ AS
 		- 20190912@Bobby: Implement headline - Statement [Redmine: #119289]
 		- 20190918@Percy: Remove inactive products [RedmineID: #118699]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
+		- 20211215@Sophia: Add Order by [Redmine: #166149] 
 */
  
 BEGIN
@@ -748,6 +749,8 @@ BEGIN
 		OR SUM(VoidCount) <> 0 
 		OR SUM(TransCount) <> 0
 		OR SUM(PayoutCount) <> 0
+	ORDER BY winlostdate
+	
 
 	DROP TABLE #rptStatementTable
 	DROP TABLE #Sportbettype
