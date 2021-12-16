@@ -16,6 +16,7 @@ Original:
 
 	Revisions:
 		- 20200703@Malcolm: NAP-Manage RefResource [Redmine: #131241]
+		- 20211115@Malcolm: Add RepUpdateTime, IsDeleted column [Redmine: #164321]
 		
 */
 
@@ -107,6 +108,7 @@ BEGIN
 		  AND (ResourceId = @ResourceId OR ISNULL(@ResourceId,'') = '')
 		  AND (Resource_en LIKE '%' + @ResourceEN + '%' OR ISNULL(@ResourceEN,'') = '')
 		  AND (RefId <> 'N7_Bettype')
+		  AND IsDeleted <> 1
 
 	ORDER BY RefId, ResourceId
 
