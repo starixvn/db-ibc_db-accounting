@@ -562,8 +562,11 @@ BEGIN
 		---insert into new table transferinfo
 		SELECT TOP 1 @TransId = TransId FROM @Transfer
 
-		INSERT INTO dbo.TransferInfo(TransId, WalletType, BonusID, RepUpdateTime)
-		VALUES (@TransId, @WalletType,@BonusID, SYSDATETIME())
+		IF NOT (@WalletType IS NULL AND @BonusID IS NULL)
+		BEGIN
+			INSERT INTO dbo.TransferInfo(TransId, WalletType, BonusID, RepUpdateTime)
+			VALUES (@TransId, @WalletType,@BonusID, SYSDATETIME())
+		END
 
 	END TRY
 	BEGIN CATCH
@@ -610,8 +613,11 @@ BEGIN
 		---insert into new table transferinfo
 		SELECT TOP 1 @bal_transid = TransId FROM @Transfer
 
-		INSERT INTO dbo.TransferInfo(TransId, WalletType, BonusID, RepUpdateTime)
-		VALUES (@bal_transid, @WalletType, @BonusID, SYSDATETIME())
+		IF NOT (@WalletType IS NULL AND @BonusID IS NULL)
+		BEGIN
+			INSERT INTO dbo.TransferInfo(TransId, WalletType, BonusID, RepUpdateTime)
+			VALUES (@bal_transid, @WalletType, @BonusID, SYSDATETIME())
+		END
 
 	END TRY
 	BEGIN CATCH
