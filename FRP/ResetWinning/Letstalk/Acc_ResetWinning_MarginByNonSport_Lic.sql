@@ -13,6 +13,7 @@ AS
 		- 20210422@Sophia: Initial SP [Redmine: #153868]
 		- 20210524@Sophia: Add VGaming (Amount due to Jackpot Pool) [RedmineId: #155697]
 		- 20200531@Sophia: Use base currency CNY and Licensee Rate of LA [Redmind: #155697]
+		- 20211224@Sophia: Remove Saba Promotion products [Redmine: #166556]
 		 
 	Param Explanation:
 		 
@@ -63,7 +64,7 @@ BEGIN
 	LEFT JOIN bodb_Licensee.dbo.Product3rd d WITH (NOLOCK) 
 			ON p.ProductPrefix = d.ProductPrefix
 	WHERE  (p.Enabled = 1 OR d.Enabled = 1)
-		AND (s.ProductID <> 1 
+		AND (s.ProductID NOT IN (1,37)  ---exclude Sportsbook and Saba Promotion 
 			OR s.Bettype BETWEEN 801 and 806  ---'MG-SuperLive'
 			OR s.Bettype = 38    ----'Bet Builder' 
 			)

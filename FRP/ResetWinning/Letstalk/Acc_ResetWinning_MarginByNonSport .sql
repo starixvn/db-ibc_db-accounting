@@ -13,6 +13,7 @@ AS
 		- 20200714@Sophia: Add PP Jackpot[Redmine: #137270]
 		- 20210226@Sophia: Exclude Saba.club (Amount due to Jackpot Pool)[RedmineId: #149409] 
 		- 20210524@Sophia: Add VGaming (Amount due to Jackpot Pool) [RedmineId: #155697]
+		- 20211224@Sophia: Remove Saba Promotion products [Redmine: #166556]
 		 
 	Param Explanation:
 		 
@@ -45,7 +46,7 @@ BEGIN
 	FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', 0) s
 	LEFT JOIN dbo.Products p WITH (NOLOCK) 
 			ON p.ProductID = s.ProductID
-	WHERE  s.ProductID <> 1 
+	WHERE  s.ProductID NOT IN (1,37) ---exclude Sportsbook and Saba Promotion 
 		OR s.Bettype BETWEEN 801 and 806  ---'MG-SuperLive'
 		OR s.Bettype = 38    ----'Bet Builder' 
 			
