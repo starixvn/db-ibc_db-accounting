@@ -19,6 +19,7 @@ AS
 		- 20210524@Sophia: Add VGaming (Amount due to Jackpot Pool) [RedmineId: #155697]
 		- 20210614@Sophia: Do not separate Exchange Product anymore [Redmine: #156908]
 		- 20210917@Sophia: Remove Cashout and Exchange product[Redmine: #161826]
+		- 20211224@Sophia: Remove Saba Promotion products [Redmine: #166556]
 	Param Explanation:
 		 
 	   
@@ -50,7 +51,7 @@ BEGIN
 	FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', 0) s
 	LEFT JOIN dbo.Products p WITH (NOLOCK) 
 			ON p.ProductID = s.ProductID
-	WHERE  s.ProductID NOT IN (25,31)    ---  exclude exchange product and cashout
+	WHERE  s.ProductID NOT IN (25,31, 37)    ---  exclude exchange product, cashout, Saba Promotion
 						
 	 
 	----- End get sport bettype 
