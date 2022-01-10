@@ -70,6 +70,7 @@ AS
 		- 20200414@Sophia: Add BBIN bettype [Redmine: #131358]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20211202@Malcolm: exclude record with 'ComStatus' = 'CO'for Cashout - [Redmine: #164902]
+		- 20220110@Malcolm: show void of parly [Redmine: #165850]
 		
 	Param explanation : 
 		- Transtypeid = 4 - GrandPrize
