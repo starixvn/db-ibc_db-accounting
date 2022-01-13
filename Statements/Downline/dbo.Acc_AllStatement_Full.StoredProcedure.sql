@@ -70,6 +70,7 @@ AS
 		- 20200414@Sophia: Add BBIN bettype [Redmine: #131358]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20211202@Malcolm: exclude record with 'ComStatus' = 'CO'for Cashout - [Redmine: #164902]
+		- 20220110@Malcolm: show Void/Cancelled Bet for parlay tickets [Redmine: #165850]
 		
 	Param explanation : 
 		- Transtypeid = 4 - GrandPrize
@@ -500,7 +501,7 @@ BEGIN
 					AND eventdate BETWEEN @_Fromdate AND @MoveBetDay
 					AND (s.VoidRejectGroup IS NULL OR s.VoidRejectGroup = 3) -- zzzbettrans inner join match/match14
 					AND custid = @CID
-					AND b.comstatus <> 'CO'
+					AND ISNULL(b.comstatus, '') <> 'CO'
 				GROUP BY eventdate
 				UNION ALL
 				SELECT DISTINCT
@@ -525,8 +526,30 @@ BEGIN
 					AND eventdate BETWEEN @_Fromdate AND @MoveBetDay
 					AND (s.VoidRejectGroup IS NULL OR s.VoidRejectGroup = 3) -- zzzbettrans inner join match/match14
 					AND custid = @CID
-					AND b.comstatus <> 'CO'
+					AND ISNULL(b.comstatus, '') <> 'CO'
 				GROUP BY eventdate
+				UNION
+				SELECT DISTINCT
+					winlostdate accdate,
+					0,
+					0 totalamt,
+					'BET' transtype,
+					2,
+					'Void/Cancelled Bet' transdesc,
+					'' Creator,
+					NULL,
+					'',
+					NULL,
+					0 
+				FROM
+					zzzbettrans b WITH (NOLOCK)
+				WHERE
+					b.bettype IN (9, 29)
+					AND b.winlostdate BETWEEN @_Fromdate AND @MoveBetDay			
+					AND custid = @CID
+					AND ISNULL(b.comstatus, '') <> 'CO'
+				GROUP BY winlostdate
+
 			END
 		END
 		-- End Customer --
