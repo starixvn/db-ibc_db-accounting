@@ -1,7 +1,7 @@
 /*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_FinanceGroupsConfig_FinanceGroupInsValidation]
-	@FinanceCode VARCHAR(MAX)
-	,@FinanceUser VARCHAR(MAX)
+	@FinanceCode VARCHAR(MAX) = ''
+	,@FinanceUser VARCHAR(MAX) = ''
 	,@ErrCode		INT = 0 OUTPUT
 	,@ErrMsg		NVARCHAR(2000) = '' OUTPUT
 	
@@ -56,7 +56,7 @@ BEGIN
 	FROM dbo.f_StringSplit(@FinanceCode, ',') f
 	OPTION (MAXRECURSION 0)
 
-	DECLARE @FinanceUserTmp TABLE (CustId INT, UserName VARCHAR(30), GroupId INT, Status VARCHAR(20) DEFAULT ('Invalid'))
+	DECLARE @FinanceUserTmp TABLE (CustId INT, UserName VARCHAR(30), GroupId INT, Status VARCHAR(20) DEFAULT ('Invalid'), RoleId INT)
 
 	INSERT INTO @FinanceUserTmp (UserName)
 	SELECT DISTINCT LTRIM(RTRIM(f.val)) AS UserName
@@ -80,10 +80,10 @@ BEGIN
 	-- Check finance User
 	BEGIN 
 		UPDATE u
-			SET u.CustId =n.custid, u.Status = CASE WHEN ISNULL(n.closed, 0) = 1 THEN 'Closed' ELSE 'Active' END
+			SET u.CustId =n.custid, u.Status = CASE WHEN ISNULL(n.closed, 0) = 1 THEN 'Closed' ELSE 'Active' END, u.RoleId = n.roleid
 		FROM @FinanceUserTmp u
 		CROSS APPLY (
-			SELECT c.custid, c.closed FROM dbo.custInfo c WITH(NOLOCK) WHERE c.username = u.UserName AND c.roleid >= 5
+			SELECT c.custid, c.closed, c.roleid FROM dbo.custInfo c WITH(NOLOCK) WHERE c.username = u.UserName AND c.roleid >= 5
 		) AS n
 
 		UPDATE u
@@ -140,10 +140,10 @@ BEGIN
 		WHERE f.RoleId = 1
 	END
 	
-	SELECT CustId, UserName, Status, GroupId, 5 AS [RoleId]
+	SELECT CustId, UserName, Status, GroupId, RoleId
 	FROM @FinanceUserTmp 
 
-	SELECT CustId, UserName, CASE WHEN ISNULL(IsInternal, 0) = 0 THEN 'Invalid' ELSE NULL END AS Status, 1 AS [RoleId]
+	SELECT CustId, UserName, CASE WHEN ISNULL(IsInternal, 0) = 0 THEN 'Invalid' ELSE 'Valid' END AS Status, RoleId
 	FROM @FinanceCodeTmp
 
 END

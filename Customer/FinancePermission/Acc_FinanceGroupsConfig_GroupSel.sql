@@ -19,7 +19,6 @@ BEGIN
 
 	SELECT DISTINCT GroupId
 	FROM Acc_FinancePermission WITH(NOLOCK)
-	WHERE GroupId NOT IN (0, 1)
 	ORDER BY GroupId DESC
 END
 GO

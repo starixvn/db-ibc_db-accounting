@@ -1,6 +1,6 @@
 /*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE [dbo].[Acc_FinanceGroupsConfig_UsersInsValidation]
-	@UsernameList	VARCHAR(MAX)
+	@UsernameList	VARCHAR(MAX) = ''
 	,@ErrCode		INT = 0 OUTPUT
 	,@ErrMsg		NVARCHAR(2000) = '' OUTPUT
 AS
@@ -89,6 +89,7 @@ BEGIN
 	SELECT @NRows = COUNT(1), @NRowInValid = COUNT(CASE WHEN Status = 'Invalid' THEN 1 ELSE NULL END)  FROM @FinanceUserTmp 
 
 	SELECT CustId, UserName, Status, GroupId, roleid FROM @FinanceUserTmp 
+	ORDER BY Status ASC, UserName ASC
 
 	SELECT @NRows AS NRows, @NRowInValid AS NRowInValid
 END

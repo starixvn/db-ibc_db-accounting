@@ -46,13 +46,16 @@ BEGIN
 	FROM dbo.Acc_FinancePermission WITH(NOLOCK)
 
 	BEGIN TRY
+		DELETE f WITH(ROWLOCK, UPDLOCK)
+		FROM dbo.Acc_FinancePermission f
+		WHERE EXISTS (SELECT 1 FROM #Finance e WHERE e.UserName = f.FinanceCode AND e.RoleId >= 5)
+
 		INSERT INTO dbo.Acc_FinancePermission (GroupId, FinanceCode, RoleId, IsView)
 		SELECT @GroupId, f.UserName, f.RoleId, f.IsView
 		FROM #Finance f
-		WHERE NOT EXISTS (SELECT 1 FROM dbo.Acc_FinancePermission a WITH(NOLOCK) WHERE a.GroupId = @GroupId)
 	END TRY
 	BEGIN CATCH 
-		SELECT @ErrCode = 100, @ErrMsg = ''
+		SELECT @ErrCode = 100, @ErrMsg = 'Cannot create new Finance Group.'
 		RETURN
 	END CATCH
 	
@@ -68,7 +71,7 @@ BEGIN
 
 		SELECT @UserName = UserName, @RoleId = RoleId, @IsView = IsView, @CustId = CustId FROM #Finance WITH(NOLOCK) WHERE ID = @Id
 
-		SELECT @LogSPData = '<R GroupId="'+ COALESCE(CAST(@GroupId AS VARCHAR(10)), SPACE(1)) + '" ' +
+		SELECT @LogSPData = '<Acc_FinanceGroupsConfig_FinanceGroupIns GroupId="'+ COALESCE(CAST(@GroupId AS VARCHAR(10)), SPACE(1)) + '" ' +
 							   'CustId="'+ COALESCE(CAST(@CustId AS VARCHAR(20)), SPACE(1)) + '" ' +
 							   'Username="'+ COALESCE(CAST(@Username AS VARCHAR(50)), SPACE(1)) + '" ' +
 							   'RoleId="'+ COALESCE(CAST(@RoleId AS VARCHAR(5)), SPACE(1)) + '" ' +

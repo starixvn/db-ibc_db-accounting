@@ -30,7 +30,7 @@ BEGIN
 
 	DECLARE @RowStart INT, @RowEnd INT, @SuperName VARCHAR(30), @MasterName VARCHAR(30), @AgentName VARCHAR(30), @UserName VARCHAR(30)
 
-	SELECT @RowStart = (@PageIndex - 1)* @PageSize + 1, @RowEnd = @RowStart + @PageSize - 1
+	SELECT @RowStart = (@PageIndex - 1) * @PageSize + 1, @RowEnd = @RowStart + @PageSize - 1
 
 	DECLARE @GroupList TABLE (GroupId INT)
 
@@ -115,7 +115,7 @@ BEGIN
 		(	
 			SELECT CustId, UserName, GroupId, ROW_NUMBER() OVER(ORDER BY UserName ASC) AS rn
 			FROM @FinanceUser
-			WHERE (GroupId IN (SELECT GroupId FROM @GroupList) OR @GroupIds = '') AND ISNULL(GroupId, -1) NOT IN (0, 1)
+			WHERE (GroupId IN (SELECT GroupId FROM @GroupList) OR @GroupIds = '')
 		) AS n
 		WHERE n.rn BETWEEN @RowStart AND @RowEnd
 	END
@@ -165,16 +165,15 @@ BEGIN
 			) AS n
 
 			UPDATE u
-				SET @SuperName		= CASE WHEN u.Srecommend = n.custid		  THEN n.username  ELSE @SuperName  END
-					,@MasterName	= CASE WHEN u.Mrecommend = n.custid		  THEN n.username  ELSE @MasterName END
-					,@AgentName		= CASE WHEN u.Recommend = n.custid		  THEN n.username  ELSE @AgentName  END
-					,@UserName		= CASE WHEN u.CustId = n.custid			  THEN n.username  ELSE @UserName   END
-					,u.SuperName	= CASE WHEN ISNULL(u.SuperName, '') = ''  THEN @SuperName  ELSE u.SuperName END
-					,u.MasterName	= CASE WHEN ISNULL(u.MasterName, '') = '' THEN @MasterName ELSE u.MasterName END
-					,u.AgentName	= CASE WHEN ISNULL(u.AgentName, '') = ''  THEN @AgentName  ELSE u.AgentName END
-					,u.UserName		= CASE WHEN ISNULL(u.UserName, '') = ''	  THEN @UserName   ELSE u.UserName  END
+				SET u.SuperName = s.username
+					,u.MasterName = m.username
+					,u.AgentName = r.username
+					,u.UserName = p.username
 			FROM @FinanceCode u
-			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid IN (u.CustId, u.Recommend, u.Mrecommend, u.Srecommend)) AS n
+			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = U.CustId) AS p
+			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = U.Recommend) AS r
+			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = U.Mrecommend) AS m
+			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = U.Srecommend) AS s
 			
 		END	
 		ELSE IF @UsernameList <> ''
@@ -194,16 +193,15 @@ BEGIN
 			) n
 
 			UPDATE u
-				SET @SuperName		= CASE WHEN u.Srecommend = n.custid		  THEN n.username  ELSE @SuperName  END
-					,@MasterName	= CASE WHEN u.Mrecommend = n.custid		  THEN n.username  ELSE @MasterName END
-					,@AgentName		= CASE WHEN u.Recommend = n.custid		  THEN n.username  ELSE @AgentName  END
-					,@UserName		= CASE WHEN u.CustId = n.custid			  THEN n.username  ELSE @UserName   END
-					,u.SuperName	= CASE WHEN ISNULL(u.SuperName, '') = ''  THEN @SuperName  ELSE u.SuperName END
-					,u.MasterName	= CASE WHEN ISNULL(u.MasterName, '') = '' THEN @MasterName ELSE u.MasterName END
-					,u.AgentName	= CASE WHEN ISNULL(u.AgentName, '') = ''  THEN @AgentName  ELSE u.AgentName END
-					,u.UserName		= CASE WHEN ISNULL(u.UserName, '') = ''	  THEN @UserName   ELSE u.UserName  END
+				SET u.SuperName = s.username
+					,u.MasterName = m.username
+					,u.AgentName = r.username
+					,u.UserName = p.username
 			FROM @FinanceCode u
-			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid IN (u.CustId, u.Recommend, u.Mrecommend, u.Srecommend)) AS n
+			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = U.CustId) AS p
+			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = U.Recommend) AS r
+			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = U.Mrecommend) AS m
+			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = U.Srecommend) AS s
 
 			INSERT INTO @FinanceCode 
 			(

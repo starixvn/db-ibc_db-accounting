@@ -44,14 +44,14 @@ BEGIN
 	BEGIN TRY
 		DELETE f WITH(ROWLOCK, UPDLOCK)
 		FROM dbo.Acc_FinancePermission f 
-		WHERE EXISTS (SELECT 1 FROM #Finance c WHERE c.Username = f.FinanceCode AND f.GroupId <> @GroupId)
+		WHERE EXISTS (SELECT 1 FROM #Finance c WHERE c.Username = f.FinanceCode AND f.RoleId >= 5)
 
 		INSERT INTO dbo.Acc_FinancePermission (GroupId, FinanceCode, RoleId, IsView)
 		SELECT @GroupId, f.Username, f.RoleId, 0
 		FROM #Finance f
 	END TRY
 	BEGIN CATCH 
-		SELECT @ErrCode = 100, @ErrMsg = ''
+		SELECT @ErrCode = 100, @ErrMsg = 'Cannot add Finance Users to Group.'
 		RETURN
 	END CATCH
 
@@ -67,7 +67,7 @@ BEGIN
 
 		SELECT @UserName = UserName, @RoleId = RoleId, @CustId = CustId FROM #Finance WITH(NOLOCK) WHERE ID = @Id
 
-		SELECT @LogSPData = '<R GroupId="'+ COALESCE(CAST(@GroupId AS VARCHAR(10)), SPACE(1)) + '" ' +
+		SELECT @LogSPData = '<Acc_FinanceGroupsConfig_UsersIns GroupId="'+ COALESCE(CAST(@GroupId AS VARCHAR(10)), SPACE(1)) + '" ' +
 							   'CustId="'+ COALESCE(CAST(@CustId AS VARCHAR(20)), SPACE(1)) + '" ' +
 							   'Username="'+ COALESCE(CAST(@Username AS VARCHAR(50)), SPACE(1)) + '" ' +
 							   'RoleId="'+ COALESCE(CAST(@RoleId AS VARCHAR(5)), SPACE(1)) + '" ' +			   

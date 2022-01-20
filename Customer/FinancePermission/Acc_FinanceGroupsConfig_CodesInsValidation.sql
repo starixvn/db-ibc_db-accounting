@@ -1,6 +1,6 @@
 /*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_FinanceGroupsConfig_CodesInsValidation]
-	@UsernameList	NVARCHAR(MAX)
+	@UsernameList	NVARCHAR(MAX) = ''
 	,@ErrCode		INT = 0 OUTPUT
 	,@ErrMsg		NVARCHAR(2000) = '' OUTPUT
 	
@@ -28,7 +28,7 @@ BEGIN
 		RETURN
 	END
 
-	DECLARE @FinanceCodeTmp TABLE (CustId INT, UserName VARCHAR(30), RoleId INT)
+	DECLARE @FinanceCodeTmp TABLE (CustId INT, UserName VARCHAR(30), Recommend INT, Mrecommend INT,  Srecommend INT, IsInternal BIT DEFAULT(0), RoleId INT)
 
 	INSERT INTO @FinanceCodeTmp (UserName)
 	SELECT DISTINCT LTRIM(RTRIM(f.val)) AS UserName
@@ -42,16 +42,40 @@ BEGIN
 	END
 
 	UPDATE u
-		SET u.CustId = n.Custid, u.RoleId = n.Roleid
+		SET u.CustId = n.Custid, u.RoleId = n.Roleid, u.Recommend = n.recommend, u.Mrecommend = n.mrecommend, u.Srecommend = n.srecommend
 	FROM @FinanceCodeTmp u
 	CROSS APPLY (
-		SELECT c.Custid, c.Roleid FROM dbo.Customer c WITH(NOLOCK) WHERE c.username = u.UserName AND c.roleid <= 4
+		SELECT c.Custid, c.Roleid, c.recommend, c.mrecommend, c.srecommend FROM dbo.Customer c WITH(NOLOCK) WHERE c.username = u.UserName AND c.roleid <= 4
 	) AS n
 
-	SELECT @NRows = COUNT(1), @NRowInValid = COUNT(CASE WHEN CustId IS NULL THEN 1 ELSE NULL END) FROM @FinanceCodeTmp
+	UPDATE f
+		SET f.IsInternal = n.IsInternal
+	FROM @FinanceCodeTmp f
+	CROSS APPLY(SELECT s.IsInternal FROM dbo.CustSuper s WITH(NOLOCK)WHERE s.custid = f.CustId) AS n
 
-	SELECT CustId, UserName, CASE WHEN CustId IS NULL THEN 'Invalid' ELSE '' END AS [Status], roleid
+	UPDATE f
+		SET f.IsInternal = n.IsInternal
+	FROM @FinanceCodeTmp f
+	CROSS APPLY(SELECT s.IsInternal FROM dbo.CustMaster s WITH(NOLOCK)WHERE s.custid = f.CustId) AS n
+	WHERE f.IsInternal IS NULL
+
+	UPDATE f
+		SET f.IsInternal = n.IsInternal
+	FROM @FinanceCodeTmp f
+	CROSS APPLY(SELECT s.IsInternal FROM dbo.CustAgent s WITH(NOLOCK) WHERE s.custid = f.CustId) AS n
+	WHERE f.IsInternal IS NULL
+
+	UPDATE f
+		SET f.IsInternal = n.IsInternal
+	FROM @FinanceCodeTmp f
+	CROSS APPLY(SELECT s.IsInternal FROM dbo.CustAgent s WITH(NOLOCK)WHERE s.custid = f.Recommend) AS n
+	WHERE f.RoleId = 1
+
+	SELECT @NRows = COUNT(1), @NRowInValid = COUNT(CASE WHEN ISNULL(IsInternal, 0) = 0 THEN 1 ELSE NULL END) FROM @FinanceCodeTmp
+
+	SELECT CustId, UserName, CASE WHEN ISNULL(IsInternal, 0) = 0 THEN 'Invalid' ELSE 'Valid' END AS Status, roleid
 	FROM @FinanceCodeTmp 
+	ORDER BY ISNULL(IsInternal, 0) DESC, UserName ASC
 
 	SELECT @NRows AS [NRows], @NRowInValid AS [NRowInValid]
 

@@ -17,7 +17,7 @@ AS
 	Param's Explanation:
 		 @XmlData
 			<root>
-				<r GroupId="1" UserName="5" IsView=""/>
+				<r GroupId="1" UserName="5" IsView="" RoleId=""/>
 			</root>	               
 */
 
@@ -26,16 +26,17 @@ BEGIN
 
 	DECLARE @Xml XML = CONVERT(XML, @XmlData)
 
-	DECLARE @startRun DATETIME, @endRun DATETIME, @duration INT, @LogSPData NVARCHAR(MAX), @CustId INT = NULL, @UserName VARCHAR(50), @IsView BIT, @GroupId INT
+	DECLARE @startRun DATETIME, @endRun DATETIME, @duration INT, @LogSPData NVARCHAR(MAX), @CustId INT = NULL, @UserName VARCHAR(50), @IsView BIT, @GroupId INT, @RoleId TINYINT
 
 	SET @startRun = GETDATE();
 
-	CREATE TABLE #Finance(ID INT IDENTITY(1, 1), GroupId SMALLINT, UserName VARCHAR(50), CustId INT, IsView BIT)
-	INSERT INTO #Finance (GroupId , UserName, IsView)
+	CREATE TABLE #Finance(ID INT IDENTITY(1, 1), GroupId SMALLINT, UserName VARCHAR(50), CustId INT, IsView BIT, RoleId TINYINT)
+	INSERT INTO #Finance (GroupId , UserName, IsView, RoleId)
 	SELECT 
 		t.c.value('@GroupId', 'SMALLINT') AS GroupId
 		,t.c.value('@UserName', 'VARCHAR(50)') AS UserName
 		,t.c.value('@IsView', 'BIT') AS IsView
+		,t.c.value('@RoleId', 'TINYINT') AS RoleId
 	FROM @Xml.nodes('root/r') t(c)
 	OPTION (OPTIMIZE FOR (@Xml = NULL))
 
@@ -66,11 +67,12 @@ BEGIN
 		IF NOT EXISTS (SELECT 1 FROM #Finance f WHERE f.ID = @Id)
 			BREAK
 
-		SELECT @UserName = UserName, @IsView = IsView, @CustId = CustId, @GroupId = GroupId FROM #Finance WITH(NOLOCK) WHERE ID = @Id
+		SELECT @UserName = UserName, @IsView = IsView, @CustId = CustId, @GroupId = GroupId, @RoleId = RoleId FROM #Finance WITH(NOLOCK) WHERE ID = @Id
 
-		SELECT @LogSPData = '<R GroupId="'+ COALESCE(CAST(@GroupId AS VARCHAR(10)), SPACE(1)) + '" ' +
+		SELECT @LogSPData = '<Acc_FinanceGroupsConfig_FinanceGroupDel GroupId="'+ COALESCE(CAST(@GroupId AS VARCHAR(10)), SPACE(1)) + '" ' +
 							   'CustId="'+ COALESCE(CAST(@CustId AS VARCHAR(20)), SPACE(1)) + '" ' +
 							   'Username="'+ COALESCE(CAST(@Username AS VARCHAR(50)), SPACE(1)) + '" ' +
+							   'RoleId="'+ COALESCE(CAST(@RoleId AS VARCHAR(10)), SPACE(1)) + '" ' +
 							   'IsView="'+ COALESCE(CAST(ISNULL(@IsView, 0) AS VARCHAR(2)), SPACE(1)) + '" ' +				   
 							   'ErrCode="'+ COALESCE(CAST(@ErrCode AS VARCHAR(10)), SPACE(1)) + '" ' +
 							   'ErrMsg="'+ COALESCE(CAST(@ErrMsg as VARCHAR(4000)),SPACE(1)) + '" />'

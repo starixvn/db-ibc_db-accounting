@@ -26,16 +26,30 @@ BEGIN
 	IF @NewGroupId = @OldGroupId
 		RETURN
 
-	DECLARE @startRun DATETIME, @endRun DATETIME, @duration INT, @LogSPData NVARCHAR(MAX), @CustId INT = NULL, @LogSPData2 NVARCHAR(MAX)
+	DECLARE @startRun DATETIME, @endRun DATETIME, @duration INT, @LogSPData NVARCHAR(MAX), @CustId INT = NULL, @LogSPData2 NVARCHAR(MAX), @RoleId INT
 	SET @startRun = GETDATE();
 	
-	SELECT @CustId = custid FROM dbo.Customer c WITH(NOLOCK) WHERE username = @UserName
+	SELECT @CustId = custid, @RoleId = roleid FROM dbo.Customer c WITH(NOLOCK) WHERE username = @UserName
 
 	BEGIN TRY 
-		UPDATE f WITH(ROWLOCK)
-			SET f.GroupId = @NewGroupId
-		FROM dbo.Acc_FinancePermission f
-		WHERE f.FinanceCode = @UserName AND f.RoleId >= 5
+		IF @OldGroupId = -1
+		BEGIN
+			INSERT INTO dbo.Acc_FinancePermission (GroupId, FinanceCode, RoleId, IsView)
+			VALUES (@NewGroupId, @UserName, @RoleId, 0)
+		END
+		ELSE IF @NewGroupId = -1
+		BEGIN
+			DELETE f WITH(ROWLOCK, UPDLOCK)
+			FROM dbo.Acc_FinancePermission f 
+			WHERE f.FinanceCode = @UserName AND f.RoleId >= 5
+		END
+		ELSE 
+		BEGIN
+			UPDATE f WITH(ROWLOCK)
+				SET f.GroupId = @NewGroupId
+			FROM dbo.Acc_FinancePermission f
+			WHERE f.FinanceCode = @UserName AND f.RoleId >= 5
+		END
 	END TRY
 	BEGIN CATCH
 		SELECT @ErrCode = 100, @ErrMsg = '' 
@@ -45,13 +59,13 @@ BEGIN
 	SET @endRun = GETDATE()
 	SET @duration = DATEDIFF (MILLISECOND,@startRun,@endRun)
 
-	SELECT @LogSPData = '<R GroupId="'+ COALESCE(CAST(@NewGroupId AS VARCHAR(10)), SPACE(1)) + '" ' +
+	SELECT @LogSPData = '<Acc_FinanceGroupsConfig_FinanceGroup_GroupUpd GroupId="'+ COALESCE(CAST(@NewGroupId AS VARCHAR(10)), SPACE(1)) + '" ' +
 							   'CustId="'+ COALESCE(CAST(@CustId AS VARCHAR(20)), SPACE(1)) + '" ' +
 							   'Username="'+ COALESCE(CAST(@Username AS VARCHAR(50)), SPACE(1)) + '" ' +		   
 							   'ErrCode="'+ COALESCE(CAST(@ErrCode AS VARCHAR(10)), SPACE(1)) + '" ' +
 							   'ErrMsg="'+ COALESCE(CAST(@ErrMsg as VARCHAR(4000)),SPACE(1)) + '" />'
 
-	SELECT @LogSPData2 = '<R GroupId="'+ COALESCE(CAST(@OldGroupId AS VARCHAR(10)), SPACE(1)) + '" ' +
+	SELECT @LogSPData2 = '<Acc_FinanceGroupsConfig_FinanceGroup_GroupUpd GroupId="'+ COALESCE(CAST(@OldGroupId AS VARCHAR(10)), SPACE(1)) + '" ' +
 							   'CustId="'+ COALESCE(CAST(@CustId AS VARCHAR(20)), SPACE(1)) + '" ' +
 							   'Username="'+ COALESCE(CAST(@Username AS VARCHAR(50)), SPACE(1)) + '" ' +		   
 							   'ErrCode="'+ COALESCE(CAST(@ErrCode AS VARCHAR(10)), SPACE(1)) + '" ' +

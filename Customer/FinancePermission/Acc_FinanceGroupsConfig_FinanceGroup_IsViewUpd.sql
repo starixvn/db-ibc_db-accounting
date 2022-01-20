@@ -1,6 +1,6 @@
 /*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_FinanceGroupsConfig_FinanceGroup_IsViewUpd]
-	@XmlData NVARCHAR(MAX) 
+	@XmlData 	NVARCHAR(MAX) 
 	,@UserID	INT
 	,@IP		VARCHAR(50) = ''
 	,@ErrCode	INT = 0 OUTPUT
@@ -55,7 +55,7 @@ BEGIN
 			INNER JOIN #Finance c ON c.UserName = f.FinanceCode AND c.GroupId = f.GroupId
 	END TRY
 	BEGIN CATCH
-		SELECT @ErrCode = 100, @ErrMsg = '' 
+		SELECT @ErrCode = 100, @ErrMsg = 'Update unsuccessfully, please check again.' 
 		RETURN
 	END CATCH
 
@@ -71,7 +71,7 @@ BEGIN
 
 		SELECT @UserName = UserName, @IsView = IsView, @CustId = CustId, @GroupId = GroupId FROM #Finance WITH(NOLOCK) WHERE ID = @Id
 
-		SELECT @LogSPData = '<R GroupId="'+ COALESCE(CAST(@GroupId AS VARCHAR(10)), SPACE(1)) + '" ' +
+		SELECT @LogSPData = '<Acc_FinanceGroupsConfig_FinanceGroup_IsViewUpd GroupId="'+ COALESCE(CAST(@GroupId AS VARCHAR(10)), SPACE(1)) + '" ' +
 							   'CustId="'+ COALESCE(CAST(@CustId AS VARCHAR(20)), SPACE(1)) + '" ' +
 							   'Username="'+ COALESCE(CAST(@Username AS VARCHAR(50)), SPACE(1)) + '" ' +
 							   'IsView="'+ COALESCE(CAST(ISNULL(@IsView, 0) AS VARCHAR(2)), SPACE(1)) + '" ' +				   
