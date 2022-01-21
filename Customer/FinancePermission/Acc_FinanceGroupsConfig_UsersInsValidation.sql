@@ -3,6 +3,8 @@ CREATE PROCEDURE [dbo].[Acc_FinanceGroupsConfig_UsersInsValidation]
 	@UsernameList	VARCHAR(MAX) = ''
 	,@ErrCode		INT = 0 OUTPUT
 	,@ErrMsg		NVARCHAR(2000) = '' OUTPUT
+	,@IsAssignUsers BIT OUTPUT
+	,@NRows         INT OUTPUT
 AS
 /*
 	Created: 20220114@Malcolm
@@ -25,7 +27,7 @@ BEGIN
 		RETURN
 	END
 
-	DECLARE @NRows INT, @NRowInValid INT, @DepartmentGroupId INT
+	DECLARE @NRowInValid INT = 0, @DepartmentGroupId INT
 
 	DECLARE @ABS TABLE (custid int)
 
@@ -88,9 +90,14 @@ BEGIN
 
 	SELECT @NRows = COUNT(1), @NRowInValid = COUNT(CASE WHEN Status = 'Invalid' THEN 1 ELSE NULL END)  FROM @FinanceUserTmp 
 
+	SET @IsAssignUsers = 1
+
+	IF @NRows = @NRowInValid
+	BEGIN
+		SET @IsAssignUsers = 0
+	END
+
 	SELECT CustId, UserName, Status, GroupId, roleid FROM @FinanceUserTmp 
 	ORDER BY Status ASC, UserName ASC
-
-	SELECT @NRows AS NRows, @NRowInValid AS NRowInValid
 END
 GO

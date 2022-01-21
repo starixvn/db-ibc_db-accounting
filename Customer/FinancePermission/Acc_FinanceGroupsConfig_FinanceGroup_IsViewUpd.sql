@@ -29,7 +29,7 @@ BEGIN
 	DECLARE @Xml XML = CONVERT(XML, @XmlData)
 
 	DECLARE @startRun DATETIME, @endRun DATETIME, @duration INT, @LogSPData NVARCHAR(MAX), @CustId INT = NULL
-			, @UserName VARCHAR(50), @IsView BIT, @GroupId SMALLINT
+			, @UserName VARCHAR(50), @IsView BIT, @GroupId SMALLINT, @LogSPData2 NVARCHAR(MAX)
 	SET @startRun = GETDATE();
 
 	CREATE TABLE #Finance(ID INT IDENTITY(1, 1), GroupId SMALLINT, UserName VARCHAR(50), CustId INT, IsView BIT)
@@ -77,12 +77,20 @@ BEGIN
 							   'IsView="'+ COALESCE(CAST(ISNULL(@IsView, 0) AS VARCHAR(2)), SPACE(1)) + '" ' +				   
 							   'ErrCode="'+ COALESCE(CAST(@ErrCode AS VARCHAR(10)), SPACE(1)) + '" ' +
 							   'ErrMsg="'+ COALESCE(CAST(@ErrMsg as VARCHAR(4000)),SPACE(1)) + '" />'
+
+		SELECT @LogSPData2 = '<Acc_FinanceGroupsConfig_FinanceGroup_IsViewUpd GroupId="'+ COALESCE(CAST(@GroupId AS VARCHAR(10)), SPACE(1)) + '" ' +
+							   'CustId="'+ COALESCE(CAST(@CustId AS VARCHAR(20)), SPACE(1)) + '" ' +
+							   'Username="'+ COALESCE(CAST(@Username AS VARCHAR(50)), SPACE(1)) + '" ' +
+							   'IsView="'+ COALESCE(CAST(ISNULL(~@IsView, 0) AS VARCHAR(2)), SPACE(1)) + '" ' +				   
+							   'ErrCode="'+ COALESCE(CAST(@ErrCode AS VARCHAR(10)), SPACE(1)) + '" ' +
+							   'ErrMsg="'+ COALESCE(CAST(@ErrMsg as VARCHAR(4000)),SPACE(1)) + '" />'
 		
 		EXEC  DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 					 @UserID = @UserID, 
 					 @CustID = @CustId,
-					 @ActionID = 95004,
+					 @ActionID = 95059,
 					 @TrackingValue = @LogSPData,
+					 @TrackingValue2 = @LogSPData2,
 					 @duration = @duration
 					 
 		SET @Id = @Id + 1

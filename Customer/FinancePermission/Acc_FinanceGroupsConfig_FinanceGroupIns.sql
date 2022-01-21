@@ -5,6 +5,9 @@ ALTER PROCEDURE [dbo].[Acc_FinanceGroupsConfig_FinanceGroupIns]
 	,@IP		VARCHAR(50) = ''
 	,@ErrCode	INT = 0 OUTPUT
 	,@ErrMsg	NVARCHAR(2000) = '' OUTPUT
+	,@GroupId	INT OUTPUT
+	,@NUsers    INT OUT
+	,@NCodes    INT OUT
 	
 AS
 /*
@@ -26,7 +29,7 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	DECLARE @GroupId INT, @startRun DATETIME, @endRun DATETIME, @duration INT, @LogSPData NVARCHAR(MAX), @CustId INT = NULL
+	DECLARE @startRun DATETIME, @endRun DATETIME, @duration INT, @LogSPData NVARCHAR(MAX), @CustId INT = NULL
 			,@RoleId TINYINT, @UserName VARCHAR(50), @IsView BIT
 	SET @startRun = GETDATE();
 
@@ -41,6 +44,10 @@ BEGIN
 		,t.c.value('@IsView', 'BIT') AS IsView
 	FROM @Xml.nodes('root/r') t(c)
 	OPTION (OPTIMIZE FOR (@Xml = NULL))
+
+	SELECT @NUsers = COUNT(CASE WHEN RoleId >= 5 THEN 1 ELSE NULL END)
+		  ,@NCodes =  COUNT(CASE WHEN RoleId <= 4 THEN 1 ELSE NULL END)
+	FROM #Finance 
 
 	SELECT @GroupId = MAX(GroupId) + 1
 	FROM dbo.Acc_FinancePermission WITH(NOLOCK)
@@ -82,7 +89,7 @@ BEGIN
 		EXEC  DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 					 @UserID = @UserID, 
 					 @CustID = @CustId,
-					 @ActionID = 95004,
+					 @ActionID = 95061,
 					 @TrackingValue = @LogSPData,
 					 @duration = @duration
 					 

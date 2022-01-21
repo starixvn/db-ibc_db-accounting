@@ -1,9 +1,10 @@
 /*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_FinanceGroupsConfig_FinanceGroupInsValidation]
-	@FinanceCode VARCHAR(MAX) = ''
-	,@FinanceUser VARCHAR(MAX) = ''
+	@FinanceCode	VARCHAR(MAX) = ''
+	,@FinanceUser	VARCHAR(MAX) = ''
 	,@ErrCode		INT = 0 OUTPUT
 	,@ErrMsg		NVARCHAR(2000) = '' OUTPUT
+	,@IsCreateGroup BIT OUTPUT
 	
 AS
 /*
@@ -140,6 +141,14 @@ BEGIN
 		WHERE f.RoleId = 1
 	END
 	
+	SET @IsCreateGroup = 0
+
+	IF EXISTS(SELECT 1 FROM @FinanceUserTmp WHERE Status <> 'Invalid')
+		OR EXISTS(SELECT 1 FROM @FinanceCodeTmp WHERE ISNULL(IsInternal, 0) = 1)
+	BEGIN
+		SET @IsCreateGroup = 1
+	END 
+
 	SELECT CustId, UserName, Status, GroupId, RoleId
 	FROM @FinanceUserTmp 
 

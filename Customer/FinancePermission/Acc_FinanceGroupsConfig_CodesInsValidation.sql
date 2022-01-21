@@ -3,6 +3,8 @@ ALTER PROCEDURE [dbo].[Acc_FinanceGroupsConfig_CodesInsValidation]
 	@UsernameList	NVARCHAR(MAX) = ''
 	,@ErrCode		INT = 0 OUTPUT
 	,@ErrMsg		NVARCHAR(2000) = '' OUTPUT
+	,@NRows			INT OUTPUT
+	,@IsAddCodes    BIT OUTPUT
 	
 AS
 /*
@@ -20,7 +22,7 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	DECLARE @NRows INT, @NRowInValid INT
+	DECLARE @NRowInValid INT = 0
 
 	IF ISNULL(@UsernameList, '') = ''
 	BEGIN
@@ -73,11 +75,15 @@ BEGIN
 
 	SELECT @NRows = COUNT(1), @NRowInValid = COUNT(CASE WHEN ISNULL(IsInternal, 0) = 0 THEN 1 ELSE NULL END) FROM @FinanceCodeTmp
 
+	SET @IsAddCodes = 1
+	
+	IF @NRows = @NRowInValid 
+	BEGIN
+		SET @IsAddCodes = 0
+	END
+
 	SELECT CustId, UserName, CASE WHEN ISNULL(IsInternal, 0) = 0 THEN 'Invalid' ELSE 'Valid' END AS Status, roleid
 	FROM @FinanceCodeTmp 
 	ORDER BY ISNULL(IsInternal, 0) DESC, UserName ASC
-
-	SELECT @NRows AS [NRows], @NRowInValid AS [NRowInValid]
-
 END
 GO

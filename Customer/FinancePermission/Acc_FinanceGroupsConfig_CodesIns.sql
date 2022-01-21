@@ -6,7 +6,7 @@ CREATE PROCEDURE [dbo].[Acc_FinanceGroupsConfig_CodesIns]
 	,@GroupId	SMALLINT
 	,@ErrCode	INT = 0 OUTPUT
 	,@ErrMsg	NVARCHAR(2000) = '' OUTPUT
-	
+	,@NRows     INT OUTPUT
 AS
 /*
 	Created: 20220114@Malcolm
@@ -44,6 +44,8 @@ BEGIN
 	FROM @Xml.nodes('root/r') t(c)
 	OPTION (OPTIMIZE FOR (@Xml = NULL))
 
+	SELECT @NRows = COUNT(1) FROM #Finance
+
 	BEGIN TRY
 		DELETE f WITH(ROWLOCK, UPDLOCK)
 		FROM dbo.Acc_FinancePermission f 
@@ -80,7 +82,7 @@ BEGIN
 		EXEC  DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
 					 @UserID = @UserID, 
 					 @CustID = @CustId,
-					 @ActionID = 95004,
+					 @ActionID = 95063,
 					 @TrackingValue = @LogSPData,
 					 @duration = @duration
 		SET @ID = @ID + 1
