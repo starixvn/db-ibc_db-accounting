@@ -1,7 +1,7 @@
 /*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_FinanceGroupsConfig_FinanceGroup_GroupUpd]
-	@NewGroupId		SMALLINT
-	,@OldGroupId	SMALLINT
+	@NewGroupId		SMALLINT = NULL
+	,@OldGroupId	SMALLINT = NULL
 	,@UserID		INT
 	,@IP			VARCHAR(50) = ''
 	,@UserName      VARCHAR(50)

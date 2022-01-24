@@ -4,7 +4,6 @@ CREATE PROCEDURE [dbo].[Acc_FinanceGroupsConfig_UsersInsValidation]
 	,@ErrCode		INT = 0 OUTPUT
 	,@ErrMsg		NVARCHAR(2000) = '' OUTPUT
 	,@IsAssignUsers BIT OUTPUT
-	,@NRows         INT OUTPUT
 AS
 /*
 	Created: 20220114@Malcolm
@@ -27,7 +26,7 @@ BEGIN
 		RETURN
 	END
 
-	DECLARE @NRowInValid INT = 0, @DepartmentGroupId INT
+	DECLARE @NRowInValid INT = 0, @DepartmentGroupId INT, @NRows INT = 0
 
 	DECLARE @ABS TABLE (custid int)
 

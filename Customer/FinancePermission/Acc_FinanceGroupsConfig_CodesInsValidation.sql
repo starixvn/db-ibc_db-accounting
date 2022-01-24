@@ -3,7 +3,6 @@ ALTER PROCEDURE [dbo].[Acc_FinanceGroupsConfig_CodesInsValidation]
 	@UsernameList	NVARCHAR(MAX) = ''
 	,@ErrCode		INT = 0 OUTPUT
 	,@ErrMsg		NVARCHAR(2000) = '' OUTPUT
-	,@NRows			INT OUTPUT
 	,@IsAddCodes    BIT OUTPUT
 	
 AS
@@ -22,7 +21,7 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	DECLARE @NRowInValid INT = 0
+	DECLARE @NRowInValid INT = 0, @NRows INT = 0
 
 	IF ISNULL(@UsernameList, '') = ''
 	BEGIN
