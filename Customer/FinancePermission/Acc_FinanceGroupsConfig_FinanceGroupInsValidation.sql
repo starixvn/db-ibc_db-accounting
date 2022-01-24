@@ -151,9 +151,11 @@ BEGIN
 
 	SELECT CustId, UserName, Status, GroupId, RoleId
 	FROM @FinanceUserTmp 
+	ORDER BY Status ASC, UserName ASC
 
 	SELECT CustId, UserName, CASE WHEN ISNULL(IsInternal, 0) = 0 THEN 'Invalid' ELSE 'Valid' END AS Status, RoleId
 	FROM @FinanceCodeTmp
+	ORDER BY ISNULL(IsInternal, 0) DESC, UserName ASC
 
 END
 GO
