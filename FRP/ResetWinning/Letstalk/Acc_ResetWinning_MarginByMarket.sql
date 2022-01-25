@@ -14,6 +14,7 @@ AS
 		- 20201116@Sophia: Add Time machine [redmind: #145405]
 		- 20210422@Sophia: Add new bettype 229 Saba Time machine [Redmind: #153777]		
 		- 20210504@Sophia: Separate TimeM HDP & OU [Redmine: #154465]
+		- 20220125@Sophia: Separate TimeM Corner HDP & TimeM Corner OU [Redmine: #167982]
 		
 	Param Explanation:
 		 
@@ -38,29 +39,34 @@ BEGIN
 	------Get Match ------	
 	CREATE TABLE #Match
                      (MatchId   INT, 
-                      type      VARCHAR(10)
+                      type      VARCHAR(10),
+					  ChildMatchType tinyint
                       PRIMARY KEY(MatchId, type)
                      );
     INSERT INTO #Match
                SELECT DISTINCT 
                       m.MatchId, 
-                      m.type
+                      m.type,
+					  m.ChildMatchType
                FROM
                (
 					SELECT MatchId, 
-						  'match' AS type
+						  'match' AS type,
+						   ChildMatchType
 					FROM Match WITH(NOLOCK)
 					WHERE EventDate = @WinlostDate
 					UNION ALL
 					SELECT orid,  
-						  'outright' AS type
+						  'outright' AS type,
+						  0 AS ChildMatchType
 					FROM outright o WITH(NOLOCK)
 					INNER JOIN league l WITH (NOLOCK) 
 						ON l.leagueID = o.LeagueId					
 					WHERE o.EventDate = @WinlostDate
 					UNION ALL
 					SELECT 29 AS MatchId,
-						   'Parlay' AS type						
+						   'Parlay' AS type,
+						   0 AS ChildMatchType						   
                ) m              
 			   
 	------End Get Match ------			   
@@ -75,7 +81,9 @@ BEGIN
 			ExtraWinlost	MONEY
 		) 	 
 		INSERT INTO #WL (Market, TurnOver, winlost, ExtraWinlost)
-		SELECT  s.Market,  	 						
+		SELECT  CASE WHEN m.ChildMatchType = 204 THEN CASE s.Bettype WHEN 228 THEN 'TimeM_cOU' 
+																     WHEN 229 THEN 'TimeM_cHDP' ELSE s.Market END
+				ELSE s.Market END AS Market,   	 						
 				---Base currency
 				SUM (   CASE WHEN b.StatusID = 111 THEN 0 ELSE 
 						CASE WHEN ABS(modds) = 0.25 AND b.Bettype <> 29 THEN ABS(Stake) / 2 ELSE  ABS(Stake) END END
@@ -105,12 +113,15 @@ BEGIN
 			AND b.MatchID >= 0
 			AND b.Recommend NOT IN (52466,5707545)  --- Exclude 8RM, BARM
 			AND NOT EXISTS (SELECT 1 FROM CS_CustSuper c WITH (NOLOCK) WHERE c.CustID = b.Srecommend)
-		GROUP BY s.Market
+		GROUP BY CASE WHEN m.ChildMatchType = 204 THEN CASE s.Bettype WHEN 228 THEN 'TimeM_cOU' 
+																     WHEN 229 THEN 'TimeM_cHDP' ELSE s.Market END
+				 ELSE s.Market END  
 	
 		-----------------------------------------------------------------------------------------------
 		----- Get Data -----
 		SELECT	w.Market, w.TurnOver, CASE WHEN w.TurnOver = 0 THEN 0 ELSE (w.winlost - ExtraWinlost) / w.TurnOver * 100 END AS Margin , (w.winlost - ExtraWinlost) AS HouseWinlost
-		FROM 	#WL w 				
+		FROM 	#WL w 	
+		ORDER BY Market			
 	
 
 	DROP TABLE #Bettype 
