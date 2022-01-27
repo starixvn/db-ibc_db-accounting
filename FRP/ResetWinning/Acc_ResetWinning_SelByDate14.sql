@@ -256,16 +256,16 @@ BEGIN
 		-- Real Currency
 		SUM(CASE
 				-- Jackpot Prize
-				WHEN bettype IN (1699, 2199, 2399, 2999, 3899, 4298) THEN 0
+				WHEN bettype IN (1699, 2199, 2399, 2999, 3899, 4298, 4600) THEN 0
 				-- Jackpot full Contribution
-				WHEN bettype IN (1698, 2198, 2398, 2998, 3898, 4297) 
+				WHEN bettype IN (1698, 2198, 2398, 2998, 3898, 4297, 4599) 
 				THEN winlost - actual_stake + awinlost + mwinlost + swinlost + scomm + ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
 				ELSE 0 END) AS winlost,
 		SUM(CASE
 				-- Jackpot Prize
-				WHEN bettype IN (1699, 2199, 2399, 2999, 3899, 4298) THEN 0
+				WHEN bettype IN (1699, 2199, 2399, 2999, 3899, 4298, 4600) THEN 0
 				-- Jackpot full Contribution
-				WHEN bettype IN (1698, 2198, 2398, 2998, 3898, 4297) THEN ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
+				WHEN bettype IN (1698, 2198, 2398, 2998, 3898, 4297, 4599) THEN ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
 				ELSE 0 END 
 				* ISNULL(epositiontaking, 0)) AS eWinlost,
 		SUM(CASE
@@ -345,18 +345,20 @@ BEGIN
 				WHEN b.liveindicator = 0 AND s.ProductID = 1 THEN 'SPNL'     
 				ELSE '' END AS ProductName  
 			,CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss','Bet Builder') THEN s.SubProduct ELSE '' END AS SubProduct  
-			,SUM(b.Winlost)  AS Winlost  
-			,SUM(b.eWinlost) AS eWinlost  
-			,SUM(b.WinlostDueToRNG)  AS WinlostDueToRNG  
-			,SUM(b.WinlostDueToPP)  AS WinlostDueToPP  
-			,SUM(b.WinlostDueToSaba) AS WinlostDueToSaba  
-			,SUM(b.WinlostDueToVgaming) AS WinlostDueToVgaming  
-			,SUM(b.RealWinlost)  AS RealWinlost  
-			,SUM(b.eRealWinlost) AS eRealWinlost  
-			,SUM(b.RealWinlostDueToRNG)  AS RealWinlostDueToRNG  
-			,SUM(b.RealWinlostDueToPP)  AS RealWinlostDueToPP  
-			,SUM(b.RealWinlostDueToSaba) AS RealWinlostDueToSaba  
-			,SUM(b.RealWinlostDueToVgaming) AS RealWinlostDueToVgaming  
+			,SUM(b.Winlost)  AS Winlost
+			,SUM(b.eWinlost) AS eWinlost
+			,SUM(b.WinlostDueToRNG)  AS WinlostDueToRNG
+			,SUM(b.WinlostDueToPP)  AS WinlostDueToPP
+			,SUM(b.WinlostDueToSaba) AS WinlostDueToSaba
+			,SUM(b.WinlostDueToVgaming) AS WinlostDueToVgaming
+			,SUM(b.WinlostDueToSG) AS WinlostDueToSG
+			,SUM(b.RealWinlost)  AS RealWinlost
+			,SUM(b.eRealWinlost) AS eRealWinlost
+			,SUM(b.RealWinlostDueToRNG)  AS RealWinlostDueToRNG
+			,SUM(b.RealWinlostDueToPP)  AS RealWinlostDueToPP
+			,SUM(b.RealWinlostDueToSaba) AS RealWinlostDueToSaba
+			,SUM(b.RealWinlostDueToVgaming) AS RealWinlostDueToVgaming
+			,SUM(b.RealWinlostDueToSG) AS RealWinlostDueToSG
 	FROM #tmpData b  
 	INNER JOIN #SportBettype s ON s.BetType = b.bettype  
 	LEFT JOIN #tmpMatch m ON m.MatchId = b.MatchId  
