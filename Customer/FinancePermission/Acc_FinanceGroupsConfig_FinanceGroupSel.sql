@@ -159,15 +159,20 @@ BEGIN
 			) AS n
 
 			UPDATE u
-				SET u.SuperName 	= ISNULL(s.username, '')
-					,u.MasterName 	= ISNULL(m.username, '')
-					,u.AgentName 	= ISNULL(r.username, '')
-					,u.UserName 	= ISNULL(p.username, '')
+				SET u.SuperName 	= ISNULL(n.SuperName, '')
+					,u.MasterName 	= ISNULL(n.MasterName, '')
+					,u.AgentName 	= ISNULL(n.AgentName, '')
+					,u.UserName 	= ISNULL(n.username, '')
 			FROM @FinanceCode u
-			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = u.CustId) AS p
-			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = u.Recommend) AS r
-			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = u.Mrecommend) AS m
-			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = u.Srecommend) AS s
+			CROSS APPLY (
+				SELECT 
+					MAX(CASE WHEN c.roleid = 1 THEN c.username ELSE '' END) AS UserName
+					,MAX(CASE WHEN c.roleid = 2 THEN c.username ELSE '' END) AS AgentName
+					,MAX(CASE WHEN c.roleid = 3 THEN c.username ELSE '' END) AS MasterName
+					,MAX(CASE WHEN c.roleid = 4 THEN c.username ELSE '' END) AS SuperName
+				FROM dbo.Customer c WITH(NOLOCK)
+				WHERE c.custid IN (u.CustId, u.Recommend, u.Mrecommend, u.Srecommend)
+			) AS n
 			
 		END	
 		ELSE IF @UsernameList <> ''
@@ -187,15 +192,20 @@ BEGIN
 			) n
 
 			UPDATE u
-				SET u.SuperName 	= ISNULL(s.username, '')
-					,u.MasterName 	= ISNULL(m.username, '')
-					,u.AgentName 	= ISNULL(r.username, '')
-					,u.UserName 	= ISNULL(p.username, '')
+				SET u.SuperName 	= ISNULL(n.SuperName, '')
+					,u.MasterName 	= ISNULL(n.MasterName, '')
+					,u.AgentName 	= ISNULL(n.AgentName, '')
+					,u.UserName 	= ISNULL(n.username, '')
 			FROM @FinanceCode u
-			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = u.CustId) AS p
-			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = u.Recommend) AS r
-			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = u.Mrecommend) AS m
-			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = u.Srecommend) AS s
+			CROSS APPLY (
+				SELECT 
+					MAX(CASE WHEN c.roleid = 1 THEN c.username ELSE '' END) AS UserName
+					,MAX(CASE WHEN c.roleid = 2 THEN c.username ELSE '' END) AS AgentName
+					,MAX(CASE WHEN c.roleid = 3 THEN c.username ELSE '' END) AS MasterName
+					,MAX(CASE WHEN c.roleid = 4 THEN c.username ELSE '' END) AS SuperName
+				FROM dbo.Customer c WITH(NOLOCK)
+				WHERE c.custid IN (u.CustId, u.Recommend, u.Mrecommend, u.Srecommend)
+			) AS n
 
 			INSERT INTO @FinanceCode 
 			(
