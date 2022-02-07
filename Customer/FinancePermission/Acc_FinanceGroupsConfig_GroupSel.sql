@@ -3,7 +3,7 @@ CREATE PROCEDURE [dbo].[Acc_FinanceGroupsConfig_GroupSel]
 AS
 /*
 	Created: 20220114@Malcolm
-	Task :  NAP - Admin - Finance Groups Config 
+	Task :  NAP - Admin - Finance Groups Config - Finance Group
 	DB: DBCUST/CUSTDB
 
 	Revisions:

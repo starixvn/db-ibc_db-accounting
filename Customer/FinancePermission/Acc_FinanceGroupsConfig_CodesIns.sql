@@ -10,7 +10,7 @@ CREATE PROCEDURE [dbo].[Acc_FinanceGroupsConfig_CodesIns]
 AS
 /*
 	Created: 20220114@Malcolm
-	Task :  NAP - Admin - Finance Groups Config - Add Users to Group
+	Task :  NAP - Admin - Finance Groups Config - Add Codes to Group
 	DB: DBCUST/CUSTDB
 
 	Revisions:
@@ -19,7 +19,7 @@ AS
 	Param's Explanation:
 		 @XmlData
 			<root>
-				<r CustId="1" UserName="Supertest1" RoleId="5" IsView="0"/>
+				<r CustId="1" UserName="Supertest1" RoleId="4" IsView="0"/>
 			</root>	
 		               
 */

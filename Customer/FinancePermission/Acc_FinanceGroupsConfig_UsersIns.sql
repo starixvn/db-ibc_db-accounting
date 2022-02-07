@@ -19,7 +19,7 @@ AS
 	Param's Explanation:
 		 @XmlData
 			<root>
-				<r CustId="" Username="Supertest1" RoleId="5"/>
+				<r CustId="123" Username="Supertest1" RoleId="5"/>
 			</root>	
 		               
 */

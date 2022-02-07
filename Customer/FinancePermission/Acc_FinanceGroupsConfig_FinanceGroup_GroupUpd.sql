@@ -10,7 +10,7 @@ ALTER PROCEDURE [dbo].[Acc_FinanceGroupsConfig_FinanceGroup_GroupUpd]
 AS
 /*
 	Created: 20220114@Malcolm
-	Task :  NAP - Admin - Finance Groups Config
+	Task :  NAP - Admin - Finance Groups Config - Finance User - Edit
 	DB: DBCUST/CUSTDB
 
 	Revisions:

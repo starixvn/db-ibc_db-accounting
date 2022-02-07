@@ -9,7 +9,7 @@ ALTER PROCEDURE [dbo].[Acc_FinanceGroupsConfig_FinanceGroupInsValidation]
 AS
 /*
 	Created: 20220114@Malcolm
-	Task :  NAP - Admin - Finance Groups Config - Add new Finance Group
+	Task :  NAP - Admin - Finance Groups Config - Add new Finance Group - Validation
 	DB: DBCUST/CUSTDB
 
 	Revisions:

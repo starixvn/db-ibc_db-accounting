@@ -8,7 +8,7 @@ ALTER PROCEDURE [dbo].[Acc_FinanceGroupsConfig_FinanceGroup_IsViewUpd]
 AS
 /*
 	Created: 20220114@Malcolm
-	Task :  NAP - Admin - Finance Groups Config
+	Task :  NAP - Admin - Finance Groups Config - Finance Code - Update Allow Viewing
 	DB: DBCUST/CUSTDB
 
 	Revisions:

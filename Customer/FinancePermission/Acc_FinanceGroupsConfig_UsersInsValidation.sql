@@ -7,7 +7,7 @@ CREATE PROCEDURE [dbo].[Acc_FinanceGroupsConfig_UsersInsValidation]
 AS
 /*
 	Created: 20220114@Malcolm
-	Task :  NAP - Admin - Finance Groups Config - Add Users to Group
+	Task :  NAP - Admin - Finance Groups Config - Add Users to Group - Validation
 	DB: DBCUST/CUSTDB
 
 	Revisions:

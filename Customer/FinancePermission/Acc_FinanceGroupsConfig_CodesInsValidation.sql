@@ -8,7 +8,7 @@ ALTER PROCEDURE [dbo].[Acc_FinanceGroupsConfig_CodesInsValidation]
 AS
 /*
 	Created: 20220114@Malcolm
-	Task :  NAP - Admin - Finance Groups Config - Add Codes to Group
+	Task :  NAP - Admin - Finance Groups Config - Add Codes to Group - Validation
 	DB: DBCUST/CUSTDB
 
 	Revisions:

@@ -8,7 +8,7 @@ CREATE PROCEDURE [dbo].[Acc_FinanceGroupsConfig_FinanceGroupDel]
 AS
 /*
 	Created: 20220114@Malcolm
-	Task :  NAP - Admin - Finance Groups Config
+	Task :  NAP - Admin - Finance Groups Config - Finance Code - Remove
 	DB: DBCUST/CUSTDB
 
 	Revisions:
@@ -17,7 +17,7 @@ AS
 	Param's Explanation:
 		 @XmlData
 			<root>
-				<r GroupId="1" UserName="5" IsView="" RoleId=""/>
+				<r GroupId="2" UserName="XD1" IsView="0" RoleId="2"/>
 			</root>	               
 */
 
@@ -53,7 +53,7 @@ BEGIN
 			INNER JOIN #Finance e ON e.UserName = f.FinanceCode AND e.GroupId = f.GroupId
 	END TRY
 	BEGIN CATCH
-		SELECT @ErrCode = 100, @ErrMsg = '' 
+		SELECT @ErrCode = 100, @ErrMsg = 'Delete unsuccessfully, please check again.' 
 		RETURN
 	END CATCH
 		
