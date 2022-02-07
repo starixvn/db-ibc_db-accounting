@@ -200,11 +200,7 @@ BEGIN
 
 			INSERT INTO @FinanceCode 
 			(
-				CustId		
-				,UserName	
-				,Recommend	
-				,Mrecommend	
-				,Srecommend	
+				UserName	
 				,AgentName   
 				,MasterName  
 				,SuperName   
@@ -214,38 +210,23 @@ BEGIN
 				,GroupId		
 			)
 			SELECT DISTINCT
-				 u.CustId		
-				,u.UserName	
-				,u.Recommend	
-				,u.Mrecommend	
-				,u.Srecommend	
-				,u.AgentName   
-				,u.MasterName  
+				 CASE WHEN n.RoleId >= 2 THEN '' ELSE u.UserName   END
+				,CASE WHEN n.RoleId >= 3 THEN '' ELSE u.AgentName  END   
+				,CASE WHEN n.RoleId >= 4 THEN '' ELSE u.MasterName END
 				,u.SuperName   
-				,u.IsView			
-				,u.FinanceCode 
-				,u.RoleId      
+				,n.IsView			
+				,n.FinanceCode 
+				,n.RoleId      
 				,n.GroupId
 			FROM @FinanceCode u
 			CROSS APPLY (
-				SELECT a.GroupId
+				SELECT TOP(1) a.GroupId, a.RoleId, a.IsView, a.FinanceCode
 				FROM dbo.Acc_FinancePermission a WITH(NOLOCK)
 				WHERE a.FinanceCode IN (u.UserName, u.AgentName, u.MasterName, u.SuperName) AND a.GroupId NOT IN (0, 1) AND (GroupId IN (SELECT GroupId FROM @GroupList) OR @GroupIds = '')
+				ORDER BY a.RoleId ASC
 			) AS n
 
 			DELETE @FinanceCode WHERE GroupId IS NULL
-
-			UPDATE u
-				SET u.FinanceCode =  n.FinanceCode 
-					,u.RoleId     =  n.RoleId    
-					,u.IsView     =  n.IsView    
-			FROM @FinanceCode u  
-			CROSS APPLY (
-				SELECT TOP(1) a.FinanceCode, a.RoleId, a.IsView
-				FROM dbo.Acc_FinancePermission a WITH(NOLOCK)
-				WHERE a.FinanceCode IN (u.UserName, u.AgentName, u.MasterName, u.SuperName) AND u.GroupId = a.GroupId
-				ORDER BY a.RoleId ASC
-			) AS n
 
 			IF @Level IS NOT NULL 
 			BEGIN
@@ -257,12 +238,6 @@ BEGIN
 				DELETE u FROM @FinanceCode u WHERE u.IsView <> @IsView
 			END
 		END
-
-		UPDATE u
-			SET MasterName = CASE WHEN RoleId = 4 THEN '' ELSE  MasterName END
-				,AgentName = CASE WHEN RoleId >= 3 THEN '' ELSE  AgentName END
-				,Username = CASE WHEN RoleId >= 2 THEN '' ELSE  Username END
-		FROM @FinanceCode u
 		
 		SELECT @NRows = COUNT(1) FROM @FinanceCode
 
