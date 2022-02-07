@@ -34,6 +34,12 @@ BEGIN
 
 	SET @startRun = GETDATE()
 
+	IF @GroupId IN (0, 1)
+	BEGIN
+		SELECT @ErrCode = 101, @ErrMsg = 'Cannot add Finance Codes to Group 1 or Group 0.'
+		RETURN
+	END
+
 	CREATE TABLE #Finance(ID INT IDENTITY(1, 1), CustId INT, UserName VARCHAR(50), RoleId INT, IsView BIT)
 	INSERT INTO #Finance (CustId, UserName ,RoleId ,IsView)
 	SELECT 

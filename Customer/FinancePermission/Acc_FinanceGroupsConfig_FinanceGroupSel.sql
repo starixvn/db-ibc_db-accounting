@@ -67,17 +67,11 @@ BEGIN
 
 	    IF @UsernameList = ''
 		BEGIN
-			INSERT INTO @FinanceUser (CustId)
-			SELECT a.custid
+			INSERT INTO @FinanceUser (CustId, UserName)
+			SELECT a.custid, c.Username
 			FROM NAP_UserControl.dbo.acccustomer a WITH(NOLOCK)
-			WHERE a.GroupID = @DepartmentGroupId AND a.custid NOT IN (SELECT custid FROM @ABS)
-
-		    UPDATE u
-				SET u.UserName = N.username
-			FROM @FinanceUser u
-			CROSS APPLY (
-				SELECT Username FROM dbo.Customer c WHERE c.custid = u.CustId 
-			) AS n
+				INNER JOIN dbo.Customer c WITH(NOLOCK) ON c.custid = a.custid 
+			WHERE (a.GroupID = @DepartmentGroupId OR c.username LIKE 'Starix%') AND a.custid NOT IN (SELECT custid FROM @ABS)
 		END
 		ELSE
 		BEGIN
@@ -98,9 +92,10 @@ BEGIN
 			WHERE NOT EXISTS (
 				SELECT 1 
 				FROM NAP_UserControl.dbo.acccustomer a WITH(NOLOCK) 
-				WHERE a.GroupID = @DepartmentGroupId AND a.custid NOT IN (SELECT custid FROM @ABS) 
+				WHERE (a.GroupID = @DepartmentGroupId OR u.UserName LIKE 'Starix%') AND a.custid NOT IN (SELECT custid FROM @ABS) 
 				AND a.custid = u.CustId
 			)
+
 		END
 		
 		UPDATE f

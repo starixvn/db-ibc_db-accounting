@@ -29,7 +29,7 @@ BEGIN
 		RETURN
 	END
 
-	DECLARE @FinanceCodeTmp TABLE (CustId INT, UserName VARCHAR(30), Recommend INT, Mrecommend INT,  Srecommend INT, IsInternal BIT DEFAULT(0), RoleId INT)
+	DECLARE @FinanceCodeTmp TABLE (CustId INT, UserName VARCHAR(30), Recommend INT, Mrecommend INT,  Srecommend INT, IsInternal BIT, RoleId INT)
 
 	INSERT INTO @FinanceCodeTmp (UserName)
 	SELECT DISTINCT LTRIM(RTRIM(f.val)) AS UserName

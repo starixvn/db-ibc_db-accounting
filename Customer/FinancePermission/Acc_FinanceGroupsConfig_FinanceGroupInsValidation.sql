@@ -93,9 +93,9 @@ BEGIN
 		WHERE NOT EXISTS (
 			SELECT 1 FROM NAP_UserControl.dbo.acccustomer a WITH(NOLOCK) 
 			WHERE a.custid = u.CustId 
-				AND a.GroupID = @DepartmentGroupId 
+				AND (a.GroupID = @DepartmentGroupId OR u.UserName LIKE 'Starix%')
 				AND a.custid NOT IN (SELECT Custid FROM @ABS)
-			) 
+		) 
 
 		UPDATE u
 			SET u.GroupId = n.GroupId
