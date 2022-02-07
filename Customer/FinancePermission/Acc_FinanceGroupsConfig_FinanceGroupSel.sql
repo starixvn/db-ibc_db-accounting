@@ -95,7 +95,6 @@ BEGIN
 				WHERE (a.GroupID = @DepartmentGroupId OR u.UserName LIKE 'Starix%') AND a.custid NOT IN (SELECT custid FROM @ABS) 
 				AND a.custid = u.CustId
 			)
-
 		END
 		
 		UPDATE f
@@ -160,15 +159,15 @@ BEGIN
 			) AS n
 
 			UPDATE u
-				SET u.SuperName = s.username
-					,u.MasterName = m.username
-					,u.AgentName = r.username
-					,u.UserName = p.username
+				SET u.SuperName 	= ISNULL(s.username, '')
+					,u.MasterName 	= ISNULL(m.username, '')
+					,u.AgentName 	= ISNULL(r.username, '')
+					,u.UserName 	= ISNULL(p.username, '')
 			FROM @FinanceCode u
-			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = U.CustId) AS p
-			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = U.Recommend) AS r
-			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = U.Mrecommend) AS m
-			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = U.Srecommend) AS s
+			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = u.CustId) AS p
+			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = u.Recommend) AS r
+			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = u.Mrecommend) AS m
+			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = u.Srecommend) AS s
 			
 		END	
 		ELSE IF @UsernameList <> ''
@@ -188,15 +187,15 @@ BEGIN
 			) n
 
 			UPDATE u
-				SET u.SuperName = s.username
-					,u.MasterName = m.username
-					,u.AgentName = r.username
-					,u.UserName = p.username
+				SET u.SuperName 	= ISNULL(s.username, '')
+					,u.MasterName 	= ISNULL(m.username, '')
+					,u.AgentName 	= ISNULL(r.username, '')
+					,u.UserName 	= ISNULL(p.username, '')
 			FROM @FinanceCode u
-			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = U.CustId) AS p
-			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = U.Recommend) AS r
-			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = U.Mrecommend) AS m
-			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = U.Srecommend) AS s
+			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = u.CustId) AS p
+			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = u.Recommend) AS r
+			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = u.Mrecommend) AS m
+			OUTER APPLY (SELECT c.CustId, c.UserName FROM dbo.Customer c WITH(NOLOCK) WHERE c.custid = u.Srecommend) AS s
 
 			INSERT INTO @FinanceCode 
 			(
@@ -214,15 +213,15 @@ BEGIN
 				,k.FinanceCode
 				,k.RoleId
 				,k.IsView
-				,CASE WHEN k.RoleId >= 2 THEN '' ELSE Username END
-				,CASE WHEN k.RoleId >= 3 THEN '' ELSE AgentName END
-				,CASE WHEN k.RoleId >= 4 THEN '' ELSE MasterName END
+				,CASE WHEN k.RoleId >= 2 THEN '' ELSE u.Username END
+				,CASE WHEN k.RoleId >= 3 THEN '' ELSE u.AgentName END
+				,CASE WHEN k.RoleId >= 4 THEN '' ELSE u.MasterName END
 				,SuperName	
 			FROM @FinanceCode u
 			CROSS APPLY (
 				SELECT a.GroupId
 				FROM dbo.Acc_FinancePermission a WITH(NOLOCK)
-				WHERE a.FinanceCode IN (u.UserName, u.AgentName, u.MasterName, u.SuperName) AND a.GroupId NOT IN (0, 1) AND (GroupId IN (SELECT GroupId FROM @GroupList) OR @GroupIds = '')
+				WHERE a.FinanceCode IN (u.UserName, u.AgentName, u.MasterName, u.SuperName) AND a.GroupId NOT IN (0, 1) AND (a.GroupId IN (SELECT GroupId FROM @GroupList) OR @GroupIds = '')
 			) AS n
 			CROSS APPLY (
 				SELECT TOP(1) a.FinanceCode, a.RoleId, a.IsView
@@ -243,12 +242,6 @@ BEGIN
 				DELETE u FROM @FinanceCode u WHERE u.IsView <> @IsView
 			END
 		END
-
-		UPDATE u
-			SET MasterName = CASE WHEN RoleId = 4 THEN '' ELSE  MasterName END
-				,AgentName = CASE WHEN RoleId >= 3 THEN '' ELSE  AgentName END
-				,Username = CASE WHEN RoleId >= 2 THEN '' ELSE  Username END
-		FROM @FinanceCode u
 		
 		SELECT @NRows = COUNT(1) FROM @FinanceCode
 
