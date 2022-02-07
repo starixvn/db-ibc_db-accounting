@@ -200,52 +200,38 @@ BEGIN
 
 			INSERT INTO @FinanceCode 
 			(
-				CustId		
-				,UserName	
-				,Recommend	
-				,Mrecommend	
-				,Srecommend	
-				,AgentName   
-				,MasterName  
-				,SuperName   
-				,IsView			
-				,FinanceCode 
-				,RoleId      
-				,GroupId		
+				GroupId
+				,FinanceCode
+				,RoleId
+				,IsView
+				,Username
+				,AgentName
+				,MasterName
+				,SuperName	
 			)
 			SELECT DISTINCT
-				 u.CustId		
-				,u.UserName	
-				,u.Recommend	
-				,u.Mrecommend	
-				,u.Srecommend	
-				,u.AgentName   
-				,u.MasterName  
-				,u.SuperName   
-				,u.IsView			
-				,u.FinanceCode 
-				,u.RoleId      
-				,n.GroupId
+				n.GroupId
+				,k.FinanceCode
+				,k.RoleId
+				,k.IsView
+				,CASE WHEN k.RoleId >= 2 THEN '' ELSE Username END
+				,CASE WHEN k.RoleId >= 3 THEN '' ELSE AgentName END
+				,CASE WHEN k.RoleId >= 4 THEN '' ELSE MasterName END
+				,SuperName	
 			FROM @FinanceCode u
 			CROSS APPLY (
 				SELECT a.GroupId
 				FROM dbo.Acc_FinancePermission a WITH(NOLOCK)
 				WHERE a.FinanceCode IN (u.UserName, u.AgentName, u.MasterName, u.SuperName) AND a.GroupId NOT IN (0, 1) AND (GroupId IN (SELECT GroupId FROM @GroupList) OR @GroupIds = '')
 			) AS n
-
-			DELETE @FinanceCode WHERE GroupId IS NULL
-
-			UPDATE u
-				SET u.FinanceCode =  n.FinanceCode 
-					,u.RoleId     =  n.RoleId    
-					,u.IsView     =  n.IsView    
-			FROM @FinanceCode u  
 			CROSS APPLY (
 				SELECT TOP(1) a.FinanceCode, a.RoleId, a.IsView
 				FROM dbo.Acc_FinancePermission a WITH(NOLOCK)
-				WHERE a.FinanceCode IN (u.UserName, u.AgentName, u.MasterName, u.SuperName) AND u.GroupId = a.GroupId
+				WHERE a.FinanceCode IN (u.UserName, u.AgentName, u.MasterName, u.SuperName) AND n.GroupId = a.GroupId
 				ORDER BY a.RoleId ASC
-			) AS n
+			) AS k
+
+			DELETE @FinanceCode WHERE GroupId IS NULL
 
 			IF @Level IS NOT NULL 
 			BEGIN
