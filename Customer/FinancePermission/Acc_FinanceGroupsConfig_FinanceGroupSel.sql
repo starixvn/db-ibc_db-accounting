@@ -59,59 +59,49 @@ BEGIN
 		UNION SELECT 5848823 --ABS026
 		UNION SELECT 6081162 --ABSJackyTING.
 
-		DECLARE @DepartmentGroupId INT
-
-		SELECT @DepartmentGroupId = GroupID FROM NAP_UserControl.dbo.acc_groupinfo WITH(NOLOCK) WHERE GroupName  = 'Finance' AND System = 'ACCOUNTING'
-
 		DECLARE @FinanceUser TABLE (CustId INT, UserName VARCHAR(30) DEFAULT(''), GroupId INT)
 
 	    IF @UsernameList = ''
 		BEGIN
-			INSERT INTO @FinanceUser (CustId, UserName)
-			SELECT a.custid, c.Username
-			FROM NAP_UserControl.dbo.acccustomer a WITH(NOLOCK)
-				INNER JOIN dbo.Customer c WITH(NOLOCK) ON c.custid = a.custid 
-			WHERE (a.GroupID = @DepartmentGroupId OR c.username LIKE 'Starix%') AND a.custid NOT IN (SELECT custid FROM @ABS)
+			INSERT INTO @FinanceUser (UserName, GroupId)
+			SELECT FinanceCode, GroupId
+			FROM dbo.Acc_FinancePermission WITH(NOLOCK)
+			WHERE RoleId > 4
 		END
 		ELSE
 		BEGIN
 			INSERT INTO @FinanceUser (UserName)
-			SELECT f.val AS UserName
+			SELECT DISTINCT f.val AS UserName
 			FROM dbo.f_StringSplit(@UsernameList, ',') f
 			OPTION (MAXRECURSION 0)
 
-			UPDATE u
-				SET u.CustId = n.custid
-			FROM @FinanceUser u
-			CROSS APPLY (
-				SELECT CustId FROM dbo.Customer c WHERE c.username = U.UserName 
-			) AS n
+			UPDATE f
+				SET f.GroupId = a.GroupId
+			FROM @FinanceUser f
+				INNER JOIN dbo.Acc_FinancePermission a WITH(NOLOCK) ON a.FinanceCode = f.UserName 
+			WHERE a.RoleId > 4
 
-			DELETE u
-			FROM @FinanceUser u	
-			WHERE NOT EXISTS (
-				SELECT 1 
-				FROM NAP_UserControl.dbo.acccustomer a WITH(NOLOCK) 
-				WHERE (a.GroupID = @DepartmentGroupId OR u.UserName LIKE 'Starix%') AND a.custid NOT IN (SELECT custid FROM @ABS) 
-				AND a.custid = u.CustId
-			)
+			DELETE u FROM @FinanceUser u WHERE u.GroupId IS NULL		
 		END
 		
-		UPDATE f
-			SET f.GroupId = a.GroupId
-		FROM @FinanceUser f
-			INNER JOIN dbo.Acc_FinancePermission a WITH(NOLOCK) ON a.FinanceCode = f.UserName 
+		UPDATE u
+		 SET u.CustId = n.custid
+		FROM @FinanceUser u
+		CROSS APPLY (
+			SELECT CustId FROM dbo.Customer c WHERE c.username = U.UserName 
+		) AS n
 
-		SELECT @NRows = COUNT(1) FROM @FinanceUser
+		SELECT @NRows = COUNT(1) FROM @FinanceUser WHERE (GroupId IN (SELECT GroupId FROM @GroupList) OR @GroupIds = '')
 
 		SELECT n.CustId, n.UserName, n.GroupId
 		FROM 
 		(	
-			SELECT CustId, UserName, GroupId, ROW_NUMBER() OVER(ORDER BY UserName ASC) AS rn
+			SELECT CustId, UserName, GroupId, ROW_NUMBER() OVER(ORDER BY GroupId ASC, UserName ASC) AS rn
 			FROM @FinanceUser
 			WHERE (GroupId IN (SELECT GroupId FROM @GroupList) OR @GroupIds = '')
 		) AS n
 		WHERE n.rn BETWEEN @RowStart AND @RowEnd
+		ORDER BY n.rn ASC
 	END
 	ELSE
 	BEGIN
@@ -263,6 +253,7 @@ BEGIN
 		FROM @FinanceCode
 		) AS n
 		WHERE n.rn BETWEEN @RowStart AND @RowEnd
+		ORDER BY n.rn ASC
 	END
 END
 GO

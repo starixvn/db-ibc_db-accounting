@@ -29,8 +29,6 @@ BEGIN
 		SELECT @ErrCode = 100, @ErrMsg = 'Please enter at least 1 Username or 1 Finance Code.'
 		RETURN
 	END
-	
-	DECLARE @DepartmentGroupId INT
 
 	DECLARE @ABS TABLE (custid int)
 
@@ -51,6 +49,10 @@ BEGIN
 	UNION SELECT 6081162 --ABSJackyTING.
 
 	DECLARE @FinanceCodeTmp TABLE (CustId INT, UserName VARCHAR(30), Recommend INT, Mrecommend INT,  Srecommend INT, IsInternal BIT, RoleId INT)
+
+	DECLARE @FuncId INT
+
+	SELECT @FuncId = FuncId FROM NAP_UserControl.dbo.acc_functioninfo WITH(NOLOCK) WHERE FuncDesc = 'View Finance Account'
 
 	INSERT INTO @FinanceCodeTmp (UserName)
 	SELECT DISTINCT LTRIM(RTRIM(f.val)) AS UserName
@@ -76,8 +78,6 @@ BEGIN
 		RETURN
 	END
 
-	SELECT @DepartmentGroupId = GroupID FROM NAP_UserControl.dbo.acc_groupinfo WITH(NOLOCK) WHERE GroupName  = 'Finance' AND System = 'ACCOUNTING'
-
 	-- Check finance User
 	BEGIN 
 		UPDATE u
@@ -91,10 +91,13 @@ BEGIN
 			SET u.Status = 'Invalid'
 		FROM @FinanceUserTmp u
 		WHERE NOT EXISTS (
-			SELECT 1 FROM NAP_UserControl.dbo.acccustomer a WITH(NOLOCK) 
+			SELECT 1 
+			FROM NAP_UserControl.dbo.acccustomer a WITH(NOLOCK) 
+				INNER JOIN NAP_UserControl.dbo.acc_memberpolicy m WITH(NOLOCK) ON m.CustID = a.custid
+				INNER JOIN NAP_UserControl.DBO.acc_grouppolicy g WITH(NOLOCK) ON g.GroupID = a.GroupID AND g.FuncID = m.FuncID
 			WHERE a.custid = u.CustId 
-				AND (a.GroupID = @DepartmentGroupId OR u.UserName LIKE 'Starix%')
 				AND a.custid NOT IN (SELECT Custid FROM @ABS)
+				AND m.FuncID = @FuncId AND ((ISNULL(m.Policy, 0) | ISNULL(g.Policy, 0)) > 0) 
 		) 
 
 		UPDATE u

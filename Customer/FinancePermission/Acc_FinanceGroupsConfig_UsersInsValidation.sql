@@ -26,7 +26,7 @@ BEGIN
 		RETURN
 	END
 
-	DECLARE @NRowInValid INT = 0, @DepartmentGroupId INT, @NRows INT = 0
+	DECLARE @NRowInValid INT = 0, @NRows INT = 0
 
 	DECLARE @ABS TABLE (custid int)
 
@@ -59,7 +59,9 @@ BEGIN
 		RETURN
 	END
 
-	SELECT @DepartmentGroupId = GroupID FROM NAP_UserControl.dbo.acc_groupinfo WITH(NOLOCK) WHERE GroupName  = 'Finance' AND System = 'ACCOUNTING'
+	DECLARE @FuncId INT
+
+	SELECT @FuncId = FuncId FROM NAP_UserControl.dbo.acc_functioninfo WITH(NOLOCK) WHERE FuncDesc = 'View Finance Account'
 
 	UPDATE u
 		SET u.CustId = n.CustId, u.RoleId = n.Roleid, u.Status = CASE WHEN ISNULL(n.closed, 0) = 0 THEN 'Active' ELSE 'Closed' END
@@ -72,9 +74,12 @@ BEGIN
 		SET u.Status = 'Invalid'
 	FROM @FinanceUserTmp u
 	WHERE NOT EXISTS (
-		SELECT 1 FROM NAP_UserControl.dbo.acccustomer a WITH(NOLOCK) 
+		SELECT 1 
+		FROM NAP_UserControl.dbo.acccustomer a WITH(NOLOCK) 
+			INNER JOIN NAP_UserControl.dbo.acc_memberpolicy m WITH(NOLOCK) ON m.CustID = a.custid
+			INNER JOIN NAP_UserControl.DBO.acc_grouppolicy g WITH(NOLOCK) ON g.GroupID = a.GroupID AND g.FuncID = m.FuncID
 		WHERE a.custid = u.CustId 
-			AND (a.GroupID = @DepartmentGroupId OR u.UserName LIKE 'Starix%')
+			AND m.FuncID = @FuncId AND ((ISNULL(m.Policy, 0) | ISNULL(g.Policy, 0)) > 0)
 			AND a.custid NOT IN (SELECT Custid FROM @ABS)
 		) 
 
