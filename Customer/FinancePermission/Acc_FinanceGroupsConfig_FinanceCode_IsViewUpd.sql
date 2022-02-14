@@ -1,5 +1,5 @@
 /*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
-ALTER PROCEDURE [dbo].[Acc_FinanceGroupsConfig_FinanceGroup_IsViewUpd]
+ALTER PROCEDURE [dbo].[Acc_FinanceGroupsConfig_FinanceCode_IsViewUpd]
 	@XmlData 	NVARCHAR(MAX) 
 	,@UserID	INT
 	,@IP		VARCHAR(50) = ''
@@ -71,14 +71,14 @@ BEGIN
 
 		SELECT @UserName = UserName, @IsView = IsView, @CustId = CustId, @GroupId = GroupId FROM #Finance WITH(NOLOCK) WHERE ID = @Id
 
-		SELECT @LogSPData = '<Acc_FinanceGroupsConfig_FinanceGroup_IsViewUpd GroupId="'+ COALESCE(CAST(@GroupId AS VARCHAR(10)), SPACE(1)) + '" ' +
+		SELECT @LogSPData = '<Acc_FinanceGroupsConfig_FinanceCode_IsViewUpd GroupId="'+ COALESCE(CAST(@GroupId AS VARCHAR(10)), SPACE(1)) + '" ' +
 							   'CustId="'+ COALESCE(CAST(@CustId AS VARCHAR(20)), SPACE(1)) + '" ' +
 							   'Username="'+ COALESCE(CAST(@Username AS VARCHAR(50)), SPACE(1)) + '" ' +
 							   'IsView="'+ COALESCE(CAST(ISNULL(@IsView, 0) AS VARCHAR(2)), SPACE(1)) + '" ' +				   
 							   'ErrCode="'+ COALESCE(CAST(@ErrCode AS VARCHAR(10)), SPACE(1)) + '" ' +
 							   'ErrMsg="'+ COALESCE(CAST(@ErrMsg as VARCHAR(4000)),SPACE(1)) + '" />'
 
-		SELECT @LogSPData2 = '<Acc_FinanceGroupsConfig_FinanceGroup_IsViewUpd GroupId="'+ COALESCE(CAST(@GroupId AS VARCHAR(10)), SPACE(1)) + '" ' +
+		SELECT @LogSPData2 = '<Acc_FinanceGroupsConfig_FinanceCode_IsViewUpd GroupId="'+ COALESCE(CAST(@GroupId AS VARCHAR(10)), SPACE(1)) + '" ' +
 							   'CustId="'+ COALESCE(CAST(@CustId AS VARCHAR(20)), SPACE(1)) + '" ' +
 							   'Username="'+ COALESCE(CAST(@Username AS VARCHAR(50)), SPACE(1)) + '" ' +
 							   'IsView="'+ COALESCE(CAST(ISNULL(~@IsView, 0) AS VARCHAR(2)), SPACE(1)) + '" ' +				   

@@ -1,5 +1,5 @@
 /*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
-ALTER PROCEDURE [dbo].[Acc_FinanceGroupsConfig_FinanceGroup_GroupUpd]
+ALTER PROCEDURE [dbo].[Acc_FinanceGroupsConfig_FinanceUser_GroupUpd]
 	@NewGroupId		SMALLINT = NULL
 	,@OldGroupId	SMALLINT = NULL
 	,@UserID		INT
@@ -32,12 +32,7 @@ BEGIN
 	SELECT @CustId = custid, @RoleId = roleid FROM dbo.Customer c WITH(NOLOCK) WHERE username = @UserName
 
 	BEGIN TRY 
-		IF @OldGroupId IS NULL
-		BEGIN
-			INSERT INTO dbo.Acc_FinancePermission (GroupId, FinanceCode, RoleId, IsView)
-			VALUES (@NewGroupId, @UserName, @RoleId, 0)
-		END
-		ELSE IF @NewGroupId IS NULL
+		IF @NewGroupId IS NULL
 		BEGIN
 			DELETE f WITH(ROWLOCK, UPDLOCK)
 			FROM dbo.Acc_FinancePermission f 
@@ -59,13 +54,13 @@ BEGIN
 	SET @endRun = GETDATE()
 	SET @duration = DATEDIFF (MILLISECOND,@startRun,@endRun)
 
-	SELECT @LogSPData = '<Acc_FinanceGroupsConfig_FinanceGroup_GroupUpd GroupId="'+ COALESCE(ISNULL(CONVERT(VARCHAR(20), @NewGroupId), 'None'), SPACE(1)) + '" ' +
+	SELECT @LogSPData = '<Acc_FinanceGroupsConfig_FinanceUser_GroupUpd GroupId="'+ COALESCE(ISNULL(CONVERT(VARCHAR(20), @NewGroupId), 'None'), SPACE(1)) + '" ' +
 							   'CustId="'+ COALESCE(CAST(@CustId AS VARCHAR(20)), SPACE(1)) + '" ' +
 							   'Username="'+ COALESCE(CAST(@Username AS VARCHAR(50)), SPACE(1)) + '" ' +		   
 							   'ErrCode="'+ COALESCE(CAST(@ErrCode AS VARCHAR(10)), SPACE(1)) + '" ' +
 							   'ErrMsg="'+ COALESCE(CAST(@ErrMsg as VARCHAR(4000)),SPACE(1)) + '" />'
 
-	SELECT @LogSPData2 = '<Acc_FinanceGroupsConfig_FinanceGroup_GroupUpd GroupId="'+ COALESCE(ISNULL(CONVERT(VARCHAR(20), @OldGroupId), 'None'), SPACE(1)) + '" ' +
+	SELECT @LogSPData2 = '<Acc_FinanceGroupsConfig_FinanceUser_GroupUpd GroupId="'+ COALESCE(ISNULL(CONVERT(VARCHAR(20), @OldGroupId), 'None'), SPACE(1)) + '" ' +
 							   'CustId="'+ COALESCE(CAST(@CustId AS VARCHAR(20)), SPACE(1)) + '" ' +
 							   'Username="'+ COALESCE(CAST(@Username AS VARCHAR(50)), SPACE(1)) + '" ' +		   
 							   'ErrCode="'+ COALESCE(CAST(@ErrCode AS VARCHAR(10)), SPACE(1)) + '" ' +
