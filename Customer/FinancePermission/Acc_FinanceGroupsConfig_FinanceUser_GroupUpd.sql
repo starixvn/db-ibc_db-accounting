@@ -4,7 +4,7 @@ ALTER PROCEDURE [dbo].[Acc_FinanceGroupsConfig_FinanceUser_GroupUpd]
 	,@OldGroupId	SMALLINT = NULL
 	,@UserID		INT
 	,@IP			VARCHAR(50) = ''
-	,@UserName      VARCHAR(50)
+	,@UserName      VARCHAR(30)
 	,@ErrCode		INT = 0 OUTPUT
 	,@ErrMsg		NVARCHAR(2000) = '' OUTPUT
 AS
@@ -56,13 +56,13 @@ BEGIN
 
 	SELECT @LogSPData = '<Acc_FinanceGroupsConfig_FinanceUser_GroupUpd GroupId="'+ COALESCE(ISNULL(CONVERT(VARCHAR(20), @NewGroupId), 'None'), SPACE(1)) + '" ' +
 							   'CustId="'+ COALESCE(CAST(@CustId AS VARCHAR(20)), SPACE(1)) + '" ' +
-							   'Username="'+ COALESCE(CAST(@Username AS VARCHAR(50)), SPACE(1)) + '" ' +		   
+							   'Username="'+ COALESCE(CAST(@Username AS VARCHAR(30)), SPACE(1)) + '" ' +		   
 							   'ErrCode="'+ COALESCE(CAST(@ErrCode AS VARCHAR(10)), SPACE(1)) + '" ' +
 							   'ErrMsg="'+ COALESCE(CAST(@ErrMsg as VARCHAR(4000)),SPACE(1)) + '" />'
 
 	SELECT @LogSPData2 = '<Acc_FinanceGroupsConfig_FinanceUser_GroupUpd GroupId="'+ COALESCE(ISNULL(CONVERT(VARCHAR(20), @OldGroupId), 'None'), SPACE(1)) + '" ' +
 							   'CustId="'+ COALESCE(CAST(@CustId AS VARCHAR(20)), SPACE(1)) + '" ' +
-							   'Username="'+ COALESCE(CAST(@Username AS VARCHAR(50)), SPACE(1)) + '" ' +		   
+							   'Username="'+ COALESCE(CAST(@Username AS VARCHAR(30)), SPACE(1)) + '" ' +		   
 							   'ErrCode="'+ COALESCE(CAST(@ErrCode AS VARCHAR(10)), SPACE(1)) + '" ' +
 							   'ErrMsg="'+ COALESCE(CAST(@ErrMsg as VARCHAR(4000)),SPACE(1)) + '" />'
 		

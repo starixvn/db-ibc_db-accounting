@@ -26,15 +26,15 @@ BEGIN
 
 	DECLARE @Xml XML = CONVERT(XML, @XmlData)
 
-	DECLARE @startRun DATETIME, @endRun DATETIME, @duration INT, @LogSPData NVARCHAR(MAX), @CustId INT = NULL, @UserName VARCHAR(50), @IsView BIT, @GroupId INT
+	DECLARE @startRun DATETIME, @endRun DATETIME, @duration INT, @LogSPData NVARCHAR(MAX), @CustId INT = NULL, @UserName VARCHAR(30), @IsView BIT, @GroupId INT
 
 	SET @startRun = GETDATE();
 
-	CREATE TABLE #Finance(ID INT IDENTITY(1, 1), GroupId SMALLINT, UserName VARCHAR(50), CustId INT, IsView BIT, RoleId TINYINT)
+	CREATE TABLE #Finance(ID INT IDENTITY(1, 1), GroupId SMALLINT, UserName VARCHAR(30), CustId INT, IsView BIT, RoleId TINYINT)
 	INSERT INTO #Finance (GroupId , UserName, IsView, RoleId)
 	SELECT 
 		t.c.value('@GroupId', 'SMALLINT') AS GroupId
-		,t.c.value('@UserName', 'VARCHAR(50)') AS UserName
+		,t.c.value('@UserName', 'VARCHAR(30)') AS UserName
 		,t.c.value('@IsView', 'BIT') AS IsView
 		,t.c.value('@RoleId', 'TINYINT') AS RoleId
 	FROM @Xml.nodes('root/r') t(c)
@@ -71,7 +71,7 @@ BEGIN
 
 		SELECT @LogSPData = '<Acc_FinanceGroupsConfig_FinanceCodeDel GroupId="'+ COALESCE(CAST(@GroupId AS VARCHAR(10)), SPACE(1)) + '" ' +
 							   'CustId="'+ COALESCE(CAST(@CustId AS VARCHAR(20)), SPACE(1)) + '" ' +
-							   'Username="'+ COALESCE(CAST(@Username AS VARCHAR(50)), SPACE(1)) + '" ' +
+							   'Username="'+ COALESCE(CAST(@Username AS VARCHAR(30)), SPACE(1)) + '" ' +
 							   'IsView="'+ COALESCE(CAST(ISNULL(@IsView, 0) AS VARCHAR(2)), SPACE(1)) + '" ' +				   
 							   'ErrCode="'+ COALESCE(CAST(@ErrCode AS VARCHAR(10)), SPACE(1)) + '" ' +
 							   'ErrMsg="'+ COALESCE(CAST(@ErrMsg as VARCHAR(4000)),SPACE(1)) + '" />'
