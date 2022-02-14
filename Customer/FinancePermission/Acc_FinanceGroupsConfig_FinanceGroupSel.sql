@@ -173,13 +173,58 @@ BEGIN
 			OPTION (MAXRECURSION 0)
 
 			UPDATE u
-				SET u.Recommend = n.Recommend, u.Mrecommend = n.Mrecommend, u.Srecommend = n.Srecommend, u.CustId = n.custid
+				SET u.Recommend = n.Recommend, u.Mrecommend = n.Mrecommend, u.Srecommend = n.Srecommend, u.CustId = n.custid, u.RoleId = n.roleid
 			FROM @FinanceCode u
 			CROSS APPLY (
-				SELECT c.custid, c.recommend, c.mrecommend, c.srecommend
+				SELECT c.custid, c.recommend, c.mrecommend, c.srecommend, c.roleid
 				FROM dbo.Customer c WITH(NOLOCK)
 				WHERE c.username = u.UserName
 			) n
+
+			DELETE @FinanceCode WHERE CustId IS NULL
+
+			-- Get Downlines
+			IF EXISTS (SELECT 1 FROM @FinanceCode WHERE RoleId = 4)
+			BEGIN
+				INSERT INTO @FinanceCode (Username, CustId, Recommend, Mrecommend, Srecommend)
+				SELECT n.username, n.custid, n.recommend, n.mrecommend, n.srecommend
+				FROM @FinanceCode f
+				CROSS APPLY (
+					SELECT c.username, c.custid, c.recommend, c.mrecommend, c.srecommend
+					FROM dbo.Acc_FinancePermission a WITH(NOLOCK)
+						INNER JOIN dbo.Customer c WITH(NOLOCK) ON c.username = a.FinanceCode
+					WHERE c.roleid < 4 AND c.srecommend = f.CustId 
+				) AS n
+				WHERE f.RoleId = 4
+			END
+
+			IF EXISTS (SELECT 1 FROM @FinanceCode WHERE RoleId = 3)
+			BEGIN
+				INSERT INTO @FinanceCode (Username, CustId, Recommend, Mrecommend, Srecommend)
+				SELECT n.username, n.custid, n.recommend, n.mrecommend, n.srecommend
+				FROM @FinanceCode f
+				CROSS APPLY (
+					SELECT c.username, c.custid, c.recommend, c.mrecommend, c.srecommend
+					FROM dbo.Acc_FinancePermission a WITH(NOLOCK)
+						INNER JOIN dbo.Customer c WITH(NOLOCK) ON c.username = a.FinanceCode
+					WHERE c.roleid < 4 AND c.mrecommend = f.CustId 
+				) AS n
+				WHERE f.RoleId = 3 AND RoleId IS NOT NULL
+			END
+
+			IF EXISTS (SELECT 1 FROM @FinanceCode WHERE RoleId = 2)
+			BEGIN
+				INSERT INTO @FinanceCode (Username, CustId, Recommend, Mrecommend, Srecommend)
+				SELECT n.username, n.custid, n.recommend, n.mrecommend, n.srecommend
+				FROM @FinanceCode f
+				CROSS APPLY (
+					SELECT c.username, c.custid, c.recommend, c.mrecommend, c.srecommend
+					FROM dbo.Acc_FinancePermission a WITH(NOLOCK)
+						INNER JOIN dbo.Customer c WITH(NOLOCK) ON c.username = a.FinanceCode
+					WHERE c.roleid < 2 AND c.recommend = f.CustId 
+				) AS n
+				WHERE f.RoleId = 2 AND f.RoleId IS NOT NULL
+			END
 
 			UPDATE u
 				SET u.SuperName 	= ISNULL(n.SuperName, '')
