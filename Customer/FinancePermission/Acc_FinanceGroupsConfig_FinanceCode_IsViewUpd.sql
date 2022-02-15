@@ -32,7 +32,9 @@ BEGIN
 			, @UserName VARCHAR(30), @IsView BIT, @GroupId SMALLINT, @LogSPData2 NVARCHAR(MAX)
 	SET @startRun = GETDATE();
 
-	CREATE TABLE #Finance(ID INT IDENTITY(1, 1), GroupId SMALLINT, UserName VARCHAR(30), CustId INT, IsView BIT)
+	CREATE TABLE #FinanceLog(ID INT IDENTITY(1, 1), GroupId SMALLINT, UserName VARCHAR(30), CustId INT, IsView BIT)
+
+	CREATE TABLE #Finance(ID INT, GroupId SMALLINT, UserName VARCHAR(30), CustId INT, IsView BIT)
 	INSERT INTO #Finance (GroupId , UserName, IsView)
 	SELECT 
 		t.c.value('@GroupId', 'SMALLINT') AS GroupId
@@ -51,8 +53,12 @@ BEGIN
 	BEGIN TRY
 		UPDATE f WITH(ROWLOCK)
 			SET f.IsView = c.IsView
+		OUTPUT deleted.FinanceCode, deleted.GroupId, deleted.IsView, c.CustId
+			INTO #FinanceLog (UserName, GroupId, IsView, CustId)
 		FROM dbo.Acc_FinancePermission f
 			INNER JOIN #Finance c ON c.UserName = f.FinanceCode AND c.GroupId = f.GroupId
+		WHERE f.IsView <> c.IsView
+
 	END TRY
 	BEGIN CATCH
 		SELECT @ErrCode = 100, @ErrMsg = 'Update unsuccessfully, please check again.' 
@@ -66,10 +72,10 @@ BEGIN
 
 	WHILE 1 = 1
 	BEGIN
-		IF NOT EXISTS (SELECT 1 FROM #Finance f WHERE f.ID = @Id)
+		IF NOT EXISTS (SELECT 1 FROM #FinanceLog f WHERE f.ID = @Id)
 			BREAK
 
-		SELECT @UserName = UserName, @IsView = IsView, @CustId = CustId, @GroupId = GroupId FROM #Finance WITH(NOLOCK) WHERE ID = @Id
+		SELECT @UserName = UserName, @IsView = IsView, @CustId = CustId, @GroupId = GroupId FROM #FinanceLog WITH(NOLOCK) WHERE ID = @Id
 
 		SELECT @LogSPData = '<Acc_FinanceGroupsConfig_FinanceCode_IsViewUpd GroupId="'+ COALESCE(CAST(@GroupId AS VARCHAR(10)), SPACE(1)) + '" ' +
 							   'CustId="'+ COALESCE(CAST(@CustId AS VARCHAR(20)), SPACE(1)) + '" ' +
@@ -97,5 +103,6 @@ BEGIN
 	END	
 	
 	DROP TABLE #Finance
+	DROP TABLE #FinanceLog
 END
 GO
