@@ -88,7 +88,7 @@ BEGIN
 		 SET u.CustId = n.custid
 		FROM @FinanceUser u
 		CROSS APPLY (
-			SELECT CustId FROM dbo.Customer c WHERE c.username = U.UserName 
+			SELECT CustId FROM dbo.Customer c WITH(NOLOCK) WHERE c.username = U.UserName 
 		) AS n
 
 		SELECT @NRows = COUNT(1) FROM @FinanceUser WHERE (GroupId IN (SELECT GroupId FROM @GroupList) OR @GroupIds = '')
