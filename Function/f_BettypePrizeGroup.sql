@@ -12,6 +12,7 @@ AS
 	Revision:
 		- 20210603@Sophia: initial [Redmine: #155697]
 		- 20210617@Sol: deploy function to DBTXN-bobd02 - [RedmineId : #156653]
+		- 20220106@Evan: Add SG Jackpot - [Redmine: #166685]	
 		 
 */
 
@@ -20,12 +21,12 @@ RETURN
 		CONVERT(INT, Bettype) AS Bettype
 		,CONVERT(VARCHAR(50), 'Prize') AS BettypeGroup
 	FROM (
-		VALUES (1699), (1906), (2199), (2399), (2999), (3899), (4298), (4299), (4300)
+		VALUES (1699), (1906), (2199), (2399), (2999), (3899), (4298), (4299), (4300), (4600)
 	) AS t (Bettype)
 
 	UNION ALL
 	SELECT Bettype, 'Contribution'
 	FROM (
-		VALUES (1698), (2198), (2398), (2998), (3898), (4297)
+		VALUES (1698), (2198), (2398), (2998), (3898), (4297), (4599)
 	) t (Bettype)
 	 

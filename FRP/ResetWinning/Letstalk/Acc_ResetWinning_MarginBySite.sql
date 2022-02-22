@@ -20,6 +20,7 @@ AS
 		- 20210614@Sophia: Do not separate Exchange Product anymore [Redmine: #156908]
 		- 20210917@Sophia: Remove Cashout and Exchange product[Redmine: #161826]
 		- 20211224@Sophia: Remove Saba Promotion products [Redmine: #166556]
+		- 20220106@Evan: Add SG Jackpot - [Redmine: #166685]	
 	Param Explanation:
 		 
 	   
@@ -82,12 +83,12 @@ BEGIN
 							END
 					)	 AS TurnOver,
 				SUM(
-						CASE WHEN b.bettype IN (1699, 2199, 2399, 2999, 3899, 4298) THEN 0
+						CASE WHEN b.bettype IN (1699, 2199, 2399, 2999, 3899, 4298, 4600) THEN 0
 							ELSE
 								(ISNULL(winlost,0)-ISNULL(actual_stake,0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)
 									+ CASE
 										-- Jackpot
-										WHEN b.bettype IN (1698, 2198, 2398, 2998, 3898, 4297) THEN ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000),0)
+										WHEN b.bettype IN (1698, 2198, 2398, 2998, 3898, 4297, 4599) THEN ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000),0)
 										ELSE 0 END
 								) * b.actualrate 
 							END
@@ -108,9 +109,9 @@ BEGIN
 						(	
 							CASE
 							-- Jackpot
-							WHEN b.bettype IN (1698, 2198, 2398, 2998, 3898, 4297) THEN
+							WHEN b.bettype IN (1698, 2198, 2398, 2998, 3898, 4297, 4599) THEN
 								CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) END
-							WHEN b.bettype IN (1699, 2199, 2399, 2999, 3899, 4298) THEN 0
+							WHEN b.bettype IN (1699, 2199, 2399, 2999, 3899, 4298, 4600) THEN 0
 							ELSE
 								CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
 							END
@@ -148,9 +149,9 @@ BEGIN
 					
 				SUM(
 						(CASE
-							WHEN b.gameId IN(1698, 2198, 2398, 2998, 3898, 4297)
+							WHEN b.gameId IN(1698, 2198, 2398, 2998, 3898, 4297, 4599)
 								THEN b.ContributionRate * b.BetStake + awinlost + mwinlost + swinlost + scomm 
-							WHEN b.GameId IN (1699, 2199, 2399, 2999, 3899, 4298, 4299, 4300)	THEN 0 /*Progressive Jackpot, PP Promotion Prize, PP Tournament Prize*/
+							WHEN b.GameId IN (1699, 2199, 2399, 2999, 3899, 4298, 4299, 4300, 4600)	THEN 0 /*Progressive Jackpot, PP Promotion Prize, PP Tournament Prize*/
 							ELSE winlost - actual_stake + awinlost + mwinlost + swinlost + scomm 
 							END) * actualrate
 					) AS winlost,	
@@ -159,8 +160,8 @@ BEGIN
 						(	
 							CASE
 								-- Jackpot
-								WHEN b.gameid IN (1698, 2198, 2398, 2998, 3898, 4297) THEN - (b.ContributionRate * b.BetStake)
-								WHEN b.gameid IN (1699, 2199, 2399, 2999, 3899, 4298) THEN ISNULL(b.Winlost, 0) - ISNULL(b.actual_stake, 0)
+								WHEN b.gameid IN (1698, 2198, 2398, 2998, 3898, 4297, 4599) THEN - (b.ContributionRate * b.BetStake)
+								WHEN b.gameid IN (1699, 2199, 2399, 2999, 3899, 4298, 4600) THEN ISNULL(b.Winlost, 0) - ISNULL(b.actual_stake, 0)
 							ELSE 0 
 							END
 						) * b.actualrate
@@ -169,8 +170,8 @@ BEGIN
 				SUM(			(CASE
                                     WHEN tpositiontaking = 1
                                     THEN 0
-                                    WHEN b.GameId IN (1699, 2199, 2399, 2999, 3899, 4298, 4299, 4300)	THEN 0 /*Progressive Jackpot, PP Promotion Prize, PP Tournament Prize*/
-                                    WHEN b.gameId IN(1698, 2198, 2398, 2998, 3898, 4297)
+                                    WHEN b.GameId IN (1699, 2199, 2399, 2999, 3899, 4298, 4299, 4300, 4600)	THEN 0 /*Progressive Jackpot, PP Promotion Prize, PP Tournament Prize*/
+                                    WHEN b.gameId IN(1698, 2198, 2398, 2998, 3898, 4297, 4599)
                                     THEN ContributionRate * BetStake + 1.0 * scomm / (1 - tpositiontaking) --Jackpot Contribution
                                     ELSE winlost - actual_stake + 1.0 * scomm / (1 - tpositiontaking)
                                 END) * ISNULL(CAST(b.epositiontaking AS DECIMAL(9, 8)), 0) * actualrate
