@@ -17,13 +17,14 @@ AS
 		- 20210422@Sophia: Add Cricket [Redmind: #153777]	
 		- 20210504@Sophia: Fix Cricket of Saba [Redmine: #154465]
 		- 20210524@Sophia: Add Saba Pin Goal [RedmineId: #155697]
-		- 20210720@Sophia: Split Saba Pin Goal out of Saba Virtual Sports [Redmine: #158780]
+		- 20210720@Sophia: Split Saba Soccer PinGoal out of Saba Virtual Sports [Redmine: #158780]
+		- 20220307@Sophia: Add Saba Basketball PinGoal [Redmind: #169580]
 		
 		 
 	Param Explanation:
 		IsSaba = 0: Normal,
 		IsSaba = 1: Saba Virtual Sports,
-		IsSaba = 2: Saba Pin Goal
+		IsSaba = 2: Saba PinGoal (Soccer & Basketball)
 		 
 	   
 */
@@ -61,14 +62,17 @@ BEGIN
 	CREATE TABLE #SabaVirtualSportsLeague (LeagueId INT, SabaType TINYINT)
 
 	INSERT INTO #SabaVirtualSportsLeague
-	SELECT leagueid, CASE WHEN LeagueGroupID = 113 THEN 2 ELSE 1 END AS SabaType  ---- SabaType = 2: Saba Pin Goal, SabaType = 1: Saba Virtual Sports 
-	FROM dbo.League WITH (NOLOCK)
-	WHERE  LeagueGroupID IN (41, 42, 74, 108, 113)
-			/*((sporttype = 1 AND LeagueGroupID IN (41, 42, 74, 108))
-			OR (sporttype = 2 AND LeagueGroupID IN (42, 72)) 
-			OR (sporttype = 50 AND LeagueGroupID IN (42)) 
-			)
-			*/
+	SELECT  l.leagueid,
+			CASE
+				WHEN l.LeagueGroupId = 113 AND l.SportType = 1 THEN 2 --Saba Soccer PinGoal
+				WHEN l.LeagueGroupId = 122 AND l.SportType = 2 THEN 2 --Saba Basketball PinGoal
+				--WHEN l.LeagueGroupId IN (42, 74, 108) AND l.SportType = 1 THEN -3 -- Saba Soccer
+				--WHEN l.LeagueGroupId IN (42) AND l.SportType = 2 THEN -5 -- Saba Basketball
+				--WHEN l.LeagueGroupId IN (42) AND l.SportType = 50 THEN -8 -- Saba Cricket
+			ELSE 1  ---SabaType = 1: Saba Virtual Sports, SabaType = 2: Saba PinGoal
+			END AS SabaType
+	FROM 	dbo.League l WITH (NOLOCK)
+	WHERE  	l.LeagueGroupID IN (41, 42, 74, 108, 113, 122)
 		
 	----- End get Saba League  	
 	
