@@ -28,6 +28,7 @@ AS
 		- 20210617@Sophia: Initialize SP [RedmineID: #155337]
 		- 20211103@Sophia: Add Param Winlostdate [Redmine: #164198]
 		- 20211112@Sol: Support IPv6 - Phase 2 - [Redmine: #163963]
+		- 20220309@Sophia: Not to check @Amount < 0 due to business changed [Redmine : #169683] 
 		
 	Example: 
 			DECLARE 
@@ -128,15 +129,7 @@ BEGIN
 		GOTO FINISH
 	END
 
-	IF (ISNULL(@Amount,0) <= 0 -- Invalid Amount
-		)
-	BEGIN
-		SELECT @ErrCode = 102
-			 ,@ErrMsg		= N'Invalid Amount ' + CAST(@Amount AS VARCHAR(10))
-		
-		GOTO FINISH
-	END
-
+	
 	BEGIN TRY
 	
 		-- GET balance before
