@@ -3,7 +3,7 @@ ALTER PROCEDURE  [dbo].[Dot_Dep_BettransInsCancelWithdrawal_Cust]
 	@custid		int,
 	@transid	bigint,	
 	@transdesc	nvarchar(300) = '',
-	@ip			nvarchar(15)='',
+	@ip			varchar(45)='',
 	@NewTransID bigint = 0 OUTPUT,	
 	@ErrCode int = 0 OUTPUT,
 	@ErrMsg nvarchar(200) = '' OUTPUT
@@ -33,6 +33,7 @@ Revisions:
 	- 20150808@Elodie: Balance Improvement [Redmine:#40125]	
 	- 20151230@Cooper: add  @IsForced = 1  for execute sp Dot_BalanceDebitUpd
 	- 20211112@Sol: Support IPv6 - Phase 2 - Add [Convert Ipv6 to dummy IPv4] - [Redmine: #163963]
+	- 20211111@Sol: Split Transfer out of bettrans/Support IPv6 - [RedmineID: #164301]
 
 Input 
     1) CustID (For Double check) 
@@ -48,6 +49,17 @@ Input
 */
 SET NOCOUNT ON
 
+---- #1 CHECK UM TRANSFER FUNCTION
+EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckUM  
+	@CustID = @custid
+	,@Language = 'E'
+	,@ErrMsg = @ErrMsg OUTPUT 
+	,@ErrCode = @ErrCode OUTPUT
+	 
+IF @ErrCode <> 0  -- Function Transfer is under UM 
+BEGIN
+	RETURN		
+END
 
 declare @trans_custid int,
 	@username varchar(50),
@@ -81,8 +93,6 @@ declare @trans_custid int,
 	@DWIT int,
 	@DCAN int
 
-SELECT @ip = dbo.f_ConvertIPv6ToDummy(@ip)
-
 Select @ErrCode = 0,
 	@ErrMsg = '',
 	@DDEP = 22001,
@@ -96,7 +106,7 @@ select @amount = actual_stake,
 		@currency = currency,
 		@currencyName = currencyName,
 		@srecommend = srecommend
-from bettrans with (nolock)
+from dbo.Transfer t with(nolock)
 where transid = @transid
 
 if @trans_custid <> @custid
@@ -105,10 +115,10 @@ BEGIN
 	return
 END
 
-SELECT @site = site, @username = username from CustDB.dbo.DEP_custsuper with(nolock) where custid=@srecommend
+SELECT @site = site, @username = username from CustDB.dbo.DEP_custsuper d with(nolock) where custid=@srecommend
 
 IF @@rowcount = 0
-	SELECT @site = site, @username = username from DBCUST.CustDB.dbo.DEP_custsuper with(nolock) where custid=@srecommend
+	SELECT @site = site, @username = username from DBCUST.CustDB.dbo.DEP_custsuper d with(nolock) where custid=@srecommend
 
 declare @CustIDs as table (custid int, isReal bit)
 
@@ -136,15 +146,14 @@ DECLARE @TransID_TEMP as table(transid bigint, custid int, balance money )
 
 INSERT INTO @TransID_TEMP
 SELECT TransID , custid, (winlost - actual_stake) as balance 
-FROM Bettrans with(nolock) 
-WHERE matchID = 0
-	and bettype = 22002
+FROM dbo.transfer t with(nolock) 
+WHERE bettype = 22002
 	and custid in (select custid from @CustIDs)
 	and refno = @refno
  
 IF @@ROWCOUNT = 0
 BEGIN
-	Select @ErrMsg = 'bettrans data not found.', @ErrCode = 105
+	Select @ErrMsg = 'transfer data not found.', @ErrCode = 105
 	return
 END
 
@@ -155,12 +164,12 @@ FROM @TransID_TEMP
 GROUP BY custid
  
 select @actualrate = actualrate
-from CustDB.dbo.exchange with (NOLOCK)
+from CustDB.dbo.exchange e with(NOLOCK)
 where exchangeid = @currency
 
 IF @@rowcount = 0	
 	select @actualrate = actualrate
-	from DBCUST.CustDB.dbo.exchange with (NOLOCK)
+	from DBCUST.CustDB.dbo.exchange e with(NOLOCK)
 	where exchangeid = @currency
 
 --20080926: Get winlostdate as today date
@@ -172,7 +181,7 @@ BEGIN
 	return
 END
 
-if exists (select 1 from bettrans with (nolock) where refno = @RefNo and bettype = @DCAN and matchid=0 and custid = @custid)
+if exists (select 1 from dbo.Transfer t with(nolock) where refno = @RefNo and bettype = @DCAN and custid = @custid)
 BEGIN
 	Select @ErrMsg = 'This transaction has been cancelled before.', @ErrCode = 103		
 	return
@@ -202,17 +211,18 @@ END
 
 select @transdate = current_timestamp
 	
-INSERT INTO bettrans 
-	(custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, winlostdate, 
-	 creator,recommend,mrecommend,srecommend,currency, actualrate, currencyName, ruben, status, statusID, ip)
-select custid, username, @refno, @transdate, 0, @DCAN, @transdesc, actual_stake, winlost, @winlostdate,
-	 creator, recommend, mrecommend, srecommend, currency, @actualrate, currencyname, 1, 'Completed', 131, @ip
-from bettrans (nolock) where transid in (select transid from @TransID_TEMP)
+INSERT INTO dbo.Transfer 
+	(custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, 
+	 creator,recommend,mrecommend,srecommend,currency, actualrate, currencyName, statusID, ip, RepUpdateTime)
+select custid, username, @refno, @transdate, @DCAN, @transdesc, actual_stake, winlost, @winlostdate,
+	 creator, recommend, mrecommend, srecommend, currency, @actualrate, currencyname, 131, @ip, SYSDATETIME()
+from dbo.Transfer t WITH(nolock) where transid in (select transid from @TransID_TEMP)
 
 if @@ERROR <> 0
 BEGIN
 	--Manually rollback
-	--DELETE FROM bettrans where refno = @RefNo and matchid = 0 and bettype = 108
+	DELETE FROM dbo.Transfer WHERE refno = @RefNo and bettype = @DCAN AND CustId IN (select custid from @TransID_TEMP)
+
 	Select @ErrMsg = 'Insert transaction failed.', @ErrCode = 106
 	--rollback balance
 			
@@ -236,11 +246,10 @@ BEGIN
 END
 Select @NewTransID = @@IDENTITY
 
-Update Bettrans WITH (ROWLOCK, UPDLOCK)
-SET transdesc = transdesc + ' (withdrawal cancelled)'
+Update dbo.Transfer WITH(ROWLOCK, UPDLOCK)
+	SET transdesc = transdesc + ' (withdrawal cancelled)',
+		RepUpdateTime = SYSDATETIME()
 WHERE transid in (select transid from @TransID_TEMP)
-
-
 	
 ---update credit balance		
 	DECLARE CUR CURSOR FOR	SELECT	CustID, Balance 

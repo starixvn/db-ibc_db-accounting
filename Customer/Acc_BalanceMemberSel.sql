@@ -14,6 +14,7 @@ AS
 	Revisions:
 		- 20190723@Percy: Initialize SP [RedmineID: #117334]
 		- 20200602@Percy: Add output param: @PendingTransfer3rd [RedmineID: #135200]
+		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 */
 
 BEGIN
@@ -36,7 +37,7 @@ BEGIN
 
 	-- 3rd Pending Transfer
 	SELECT @PendingTransfer3rd = -SUM(winlost-actual_stake)
-	FROM dbo.bettrans WITH (NOLOCK)
+	FROM dbo.transfer WITH (NOLOCK)
 	WHERE custid = @CustId
 		AND bettype IN (21008, 21009) -- BBIN Transfer
 	

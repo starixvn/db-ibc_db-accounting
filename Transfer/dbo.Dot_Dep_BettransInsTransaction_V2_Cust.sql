@@ -9,7 +9,7 @@ ALTER PROCEDURE  [dbo].[Dot_Dep_BettransInsTransaction_V2_Cust]
 	@ErrMsg nvarchar(200) = '' OUTPUT,
 	@bettype smallint = 22001,
 	@IsCharge bit = 0,	
-	@ip	nvarchar(15)='',
+	@ip	varchar(45)='',
 	@RefNo bigint = 0 OUTPUT,
 	@ExchangeRate smallmoney = 1,
 	@bal_transid bigint = 0 OUTPUT,
@@ -60,6 +60,8 @@ Revisions:
 	- 20201014@Danny: Convert Ipv6 to dummy IPv4 [Redmine: #143323]
 	- 20210518@Percy: Change code to adapt new Move Bets flow [RedmineID: #154866]
 	- 20211021@Benson: add update betcheck for balance accounts(@bal_custid)
+	- 20211111@Sol: Split Transfer out of bettrans/Support IPv6 - [RedmineID: #164301]
+
 Param's Explanation:
 ? @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction
 				For ex: 12BetManilaBankUS$, 12BetNetellerGBP
@@ -100,8 +102,17 @@ Param's Explanation:
 BEGIN
 	SET NOCOUNT ON
 
-
-	--------------------------------
+	---- #1 CHECK UM TRANSFER FUNCTION
+	EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckUM  
+		@CustID = @custid
+		,@Language = 'E'
+		,@ErrMsg = @ErrMsg OUTPUT 
+		,@ErrCode = @ErrCode OUTPUT
+	 
+	IF @ErrCode <> 0  -- Function Transfer is under UM 
+	BEGIN
+		RETURN		
+	END
 
 	declare @username varchar(50),
 		@currency tinyint,
@@ -139,6 +150,7 @@ BEGIN
 		@IsForced BIT,
 		@balance_bettransRNG	MONEY,
 		@balance_bettransLC		MONEY,
+		@balance_Transfer		MONEY,
 		@WalletType TINYINT,
 		@BonusWalletFlag BIT, 
 		-- Rebate bonus
@@ -149,8 +161,6 @@ BEGIN
 		@NewMoveBetsDay smalldatetime
 
 	declare @MBBU table (BalanceUpDay smalldatetime, MoveBetsDay smalldatetime)
-		
-	select @ip = dbo.f_ConvertIPv6ToDummy(@ip)	
 
 	Select @ErrCode = 0,
 			@ErrMsg = '',
@@ -167,7 +177,7 @@ BEGIN
 			@WalletType = CASE	WHEN @bettype IN (@DBONRTRA, @DBONRADJ) THEN 1 -- Rebate bonus
 								WHEN @BonusID > 0 THEN 2
 								ELSE NULL END,
-		@BonusWalletFlag = 0
+			@BonusWalletFlag = 0
 
 	select @bettype = 
 		case @bettype when 103 then 21003 
@@ -194,8 +204,8 @@ BEGIN
 		,@srecommend = srecommend
 		,@roleid = roleid
 		,@BonusWalletFlag = ISNULL(ci.BonusWalletFlag,0)
-	FROM CustDB.dbo.custinfo AS ci WITH (NOLOCK)
-	INNER JOIN CustDB.dbo.exchange AS e WITH (NOLOCK) ON ci.currency = e.exchangeid
+	FROM CustDB.dbo.custinfo AS ci WITH(NOLOCK)
+	INNER JOIN CustDB.dbo.exchange AS e WITH(NOLOCK) ON ci.currency = e.exchangeid
 	WHERE ci.custid = @custid
 
 	
@@ -210,8 +220,8 @@ BEGIN
 			,@srecommend = srecommend
 			,@roleid = roleid
 			,@BonusWalletFlag = ISNULL(ci.BonusWalletFlag,0)
-		FROM DBCUST.CustDB.dbo.custinfo AS ci WITH (NOLOCK)
-		INNER JOIN DBCUST.CustDB.dbo.exchange AS e WITH (NOLOCK) ON ci.currency = e.exchangeid
+		FROM DBCUST.CustDB.dbo.custinfo AS ci WITH(NOLOCK)
+		INNER JOIN DBCUST.CustDB.dbo.exchange AS e WITH(NOLOCK) ON ci.currency = e.exchangeid
 		WHERE ci.custid = @custid
 
 		END
@@ -269,27 +279,31 @@ BEGIN
 			EXEC dbo.Age_SelBalanceUpDay
 			SELECT @MoveBetsDay = MoveBetsDay FROM @MBBU
 
-			SELECT @balance = 0, @translogCredit = 0, @balance_bettransRNG = 0, @balance_bettransLC = 0
+			SELECT @balance = 0, @translogCredit = 0, @balance_bettransRNG = 0, @balance_bettransLC = 0, @balance_Transfer = 0
 
 			SELECT @balance = SUM(winlost-actual_stake+playercomm)
-			FROM dbo.bettrans WITH (NOLOCK)
+			FROM dbo.bettrans b WITH(NOLOCK)
 			WHERE custid = @custid
-				AND 1 = CASE
-							WHEN bettype = 19999 AND winlostdate > @MoveBetsDay THEN 0
-							WHEN bettype < 19999 AND winlostdate <= @MoveBetsDay THEN 0
-							ELSE 1 END
+				AND	bettype < 19999 AND winlostdate > @MoveBetsDay
+
+			---get data of transfer ticket from new table [transfer]
+			SELECT @balance_Transfer = SUM(winlost-actual_stake+playercomm)
+			FROM dbo.Transfer t WITH(NOLOCK)
+			WHERE custid = @custid
+				AND (bettype = 19999 AND winlostdate <= @MoveBetsDay OR t.Bettype > 19999)
+			---
 
 			SELECT @translogCredit = SUM(ISNULL(actual_stake, 0))
-			FROM dbo.translog WITH (NOLOCK)
+			FROM dbo.translog t WITH(NOLOCK)
 			WHERE custid = @custid AND statusId = 0
 		
 			SELECT	@balance_bettransRNG = SUM(winlost - actual_stake + playercomm)
-			FROM	dbo.bettransRnG WITH (NOLOCK)
+			FROM	dbo.bettransRnG b WITH(NOLOCK)
 			WHERE	custid = @custID
 					AND IsSum=0
 				
 			SELECT	@balance_bettransLC = SUM(winlost - actual_stake + playercomm)
-			FROM	dbo.bettransLC WITH (NOLOCK)
+			FROM	dbo.bettransLC b WITH(NOLOCK)
 			WHERE	custid = @custID
 					AND IsSum=0
 		
@@ -316,27 +330,31 @@ BEGIN
 
 			IF @NewMoveBetsDay <> @MoveBetsDay
 			BEGIN
-				SELECT @balance = 0, @translogCredit = 0, @balance_bettransRNG = 0, @balance_bettransLC = 0
+				SELECT @balance = 0, @translogCredit = 0, @balance_bettransRNG = 0, @balance_bettransLC = 0, @balance_Transfer = 0
 
 				SELECT @balance = SUM(winlost-actual_stake+playercomm)
-				FROM dbo.bettrans WITH (NOLOCK)
+				FROM dbo.bettrans b WITH(NOLOCK)
 				WHERE custid = @custid
-					AND 1 = CASE
-								WHEN bettype = 19999 AND winlostdate > @NewMoveBetsDay THEN 0
-								WHEN bettype < 19999 AND winlostdate <= @NewMoveBetsDay THEN 0
-								ELSE 1 END
+					AND	bettype < 19999 AND winlostdate > @NewMoveBetsDay
+
+				---get data of transfer ticket from new table [transfer]
+				SELECT @balance_Transfer = SUM(winlost-actual_stake+playercomm)
+				FROM dbo.Transfer t WITH(NOLOCK)
+				WHERE custid = @custid
+					AND (bettype = 19999 AND winlostdate <= @NewMoveBetsDay OR t.Bettype > 19999)
+				---
 
 				SELECT @translogCredit = SUM(ISNULL(actual_stake, 0))
-				FROM dbo.translog WITH (NOLOCK)
+				FROM dbo.translog t WITH(NOLOCK)
 				WHERE custid = @custid AND statusId = 0
 		
 				SELECT	@balance_bettransRNG = SUM(winlost - actual_stake + playercomm)
-				FROM	dbo.bettransRnG WITH (NOLOCK)
+				FROM	dbo.bettransRnG b WITH(NOLOCK)
 				WHERE	custid = @custID
 						AND IsSum=0
 				
 				SELECT	@balance_bettransLC = SUM(winlost - actual_stake + playercomm)
-				FROM	dbo.bettransLC WITH (NOLOCK)
+				FROM	dbo.bettransLC b WITH(NOLOCK)
 				WHERE	custid = @custID
 						AND IsSum=0
 
@@ -355,42 +373,39 @@ BEGIN
 				END
 			END
 
-		/*
-			Check Member's Balance for Withdrawal 
-		*/
+			/*
+				Check Member's Balance for Withdrawal 
+			*/
 
-		IF (ISNULL(@balance, 0) + ISNULL(@balance_bettransRNG, 0) + ISNULL(@balance_bettransLC, 0) - ISNULL(@translogCredit, 0)
-			 + @winlost - @actual_stake) < 0
-		BEGIN
-			SELECT @ErrMsg = 'Sorry, you do not have enough money to withdraw.', @ErrCode = 103				
-			RETURN		
-		END
-
-		----------------------------------
-		-- Check Bonus Wallet 
-		----------------------------------
-		DECLARE @FinalBalance	MONEY
-		DECLARE @BonusAmount	MONEY
-		SELECT	@FinalBalance	= 0,
-				@BonusAmount	= 0  
-		IF @BonusWalletFlag = 1
-		BEGIN
-			EXEC dbo.Dot_BalanceMemberSel @CustID = @CustID, @Balance = @FinalBalance OUT, @BonusWalletFlag = @BonusWalletFlag, @Amount = @BonusAmount OUT 
-
-			IF (@balance + @balance_bettransRNG + @balance_bettransLC + @winlost-@actual_stake-@translogCredit-@BonusAmount) <0 
+			IF (ISNULL(@balance, 0) + ISNULL(@balance_Transfer, 0) + ISNULL(@balance_bettransRNG, 0) + ISNULL(@balance_bettransLC, 0) - ISNULL(@translogCredit, 0)
+				 + @winlost - @actual_stake) < 0
 			BEGIN
-				SELECT	@ErrMsg = 'Sorry, you do not have enough money to withdraw.', @ErrCode = 201	
-				RETURN
+				SELECT @ErrMsg = 'Sorry, you do not have enough money to withdraw.', @ErrCode = 103				
+				RETURN		
 			END
-		END
-		----------------------------------
+
+			----------------------------------
+			-- Check Bonus Wallet 
+			----------------------------------
+			DECLARE @FinalBalance	MONEY
+			DECLARE @BonusAmount	MONEY
+			SELECT	@FinalBalance	= 0,
+					@BonusAmount	= 0  
+			IF @BonusWalletFlag = 1
+			BEGIN
+				EXEC dbo.Dot_BalanceMemberSel @CustID = @CustID, @Balance = @FinalBalance OUT, @BonusWalletFlag = @BonusWalletFlag, @Amount = @BonusAmount OUT 
+
+				IF (ISNULL(@balance, 0) + ISNULL(@balance_Transfer, 0) + ISNULL(@balance_bettransRNG, 0) + ISNULL(@balance_bettransLC, 0) + @winlost - @actual_stake - ISNULL(@translogCredit, 0) - @BonusAmount) <0 
+				BEGIN
+					SELECT	@ErrMsg = 'Sorry, you do not have enough money to withdraw.', @ErrCode = 201	
+					RETURN
+				END
+			END
 
 		END
 		----------------------------------
 
-		----------------------------------
-		--Check balance Account
-
+	--Check balance Account
 	SELECT @bal_custid = c.custid
 		,@bal_Username = c.username
 		,@bal_mrecommend = c.mrecommend
@@ -399,8 +414,8 @@ BEGIN
 		,@bal_currency = c.currency
 		,@bal_actualrate = e.actualrate
 		,@bal_currencyName = e.currency
-	FROM CustDB.dbo.customer c WITH (NOLOCK)
-	INNER JOIN CustDB.dbo.exchange AS e WITH (NOLOCK) ON c.currency = e.exchangeid
+	FROM CustDB.dbo.customer c WITH(NOLOCK)
+	INNER JOIN CustDB.dbo.exchange AS e WITH(NOLOCK) ON c.currency = e.exchangeid
 	WHERE c.custid = @bal_custid
 
 		IF @@rowcount = 0
@@ -464,19 +479,35 @@ BEGIN
 
 		select @transdate = current_timestamp
 
-		INSERT INTO bettrans 
-			(custid, username, refno, transdate, matchid, bettype, transdesc,winlost, actual_stake, winlostdate, 
-			 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, ruben, status, statusID, ip, betcheck, WalletType,BonusID)
-		VALUES 
-			(@CustID, @username, @RefNo, @transdate, 0, @bettype, @transdesc,@winlost, @actual_stake, convert(nvarchar(10), @transdate, 120), 
-			 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency,@actualrate, @currencyName, 1, 'Completed', 131, @ip, @BetCheck,@WalletType,@BonusID)
+		BEGIN TRY
+			---get transid into table variable
+			DECLARE @Transfer TABLE(TransId BIGINT)
 
-		if @@ERROR <> 0
-		BEGIN						
+			INSERT INTO dbo.transfer
+				(custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, 
+				 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID, ip, SerialNo, RepUpdateTime)
+			OUTPUT INSERTED.TransId INTO @Transfer(TransId)
+			VALUES 
+				(@CustID, @username, @RefNo, @transdate, @bettype, @transdesc,@winlost, @actual_stake, convert(nvarchar(10), @transdate, 120), 
+				 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency,@actualrate, @currencyName, 131, @ip, @BetCheck, SYSDATETIME())
+
+			---insert into new table transferinfo
+			SELECT TOP 1 @TransId = TransId FROM @Transfer
+
+			IF NOT (@WalletType IS NULL AND @BonusID IS NULL)
+			BEGIN
+				INSERT INTO dbo.TransferInfo(TransId, WalletType, BonusID, RepUpdateTime)
+				VALUES (@TransId, @WalletType, @BonusID, SYSDATETIME())
+			END
+
+		END TRY
+		BEGIN CATCH
+							
 			Select @ErrMsg = 'Insert transaction failed.', @ErrCode = 105	
 		
 			--Manually rollback
-			DELETE FROM bettrans where refno = @RefNo and matchid = 0 and bettype = @bettype and custid in (@custid, @bal_custID)
+			DELETE FROM dbo.transfer where refno = @RefNo and bettype = @bettype and custid = @custid
+			DELETE FROM dbo.TransferInfo WHERE TransId = @TransId
 		
 			--rollback balance
 			IF @Cust_balance < 0 
@@ -485,9 +516,12 @@ BEGIN
 				--EXEC Dot_BalanceUpdCredit @custid = @CustID, @Balance = @Cust_balance_ABS
 				EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_balance_ABS, @type = 2
 			END  
-			return
-		END
-		Select @TransID = @@IDENTITY
+
+			RETURN
+
+		END CATCH
+
+		--Select @TransID = @@IDENTITY
 	
 		---Update Credit Balance	
 		IF @Cust_balance > 0 
@@ -496,20 +530,37 @@ BEGIN
 			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_balance, @type = 2
 		END 
 
+		---clear table variable
+		DELETE FROM @Transfer
 
-		INSERT INTO bettrans 
-			(custid, username, refno, transdate, matchid, bettype, transdesc,winlost, actual_stake, winlostdate, 
-			 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, ruben, status, statusID, ip, WalletType,BonusID, betcheck)
-		VALUES 
-			(@bal_custID, @bal_Username, @RefNo, @transdate, 0, @bettype, @transdesc, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, convert(nvarchar(10), @transdate, 120), 
-			 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 1, 'Completed', 131, @ip,@WalletType,@BonusID, @BetCheck)
+		BEGIN TRY
 
-		if @@ERROR <> 0
-		BEGIN
+			INSERT INTO dbo.Transfer 
+				(custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, 
+				 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID, ip, SerialNo, RepUpdateTime)
+			OUTPUT INSERTED.TransId INTO @Transfer(TransId)
+			VALUES 
+				(@bal_custID, @bal_Username, @RefNo, @transdate, @bettype, @transdesc, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, convert(nvarchar(10), @transdate, 120), 
+				 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 131, @ip, @BetCheck, SYSDATETIME())
+
+			---insert into new table transferinfo
+			SELECT TOP 1 @bal_transid = TransId FROM @Transfer
+
+			IF NOT (@WalletType IS NULL AND @BonusID IS NULL)
+			BEGIN
+				INSERT INTO dbo.TransferInfo(TransId, WalletType, BonusID, RepUpdateTime)
+				VALUES (@bal_transid, @WalletType, @BonusID, SYSDATETIME())
+			END
+
+		END TRY
+		BEGIN CATCH
+		
 			Select @ErrMsg = 'Insert transaction failed.', @ErrCode = 106
 		
 			--Manually rollback
-			DELETE FROM bettrans where refno = @RefNo and matchid = 0 and bettype = @bettype and custid in (@custid, @bal_custID)
+			DELETE FROM dbo.Transfer where refno = @RefNo and bettype = @bettype and custid in (@custid, @bal_custID)
+			DELETE FROM dbo.TransferInfo WHERE TransId IN (@transid, @bal_transid)
+
 			--rollback balance @CustID
 			IF @Cust_balance < 0 
 			BEGIN 
@@ -523,9 +574,12 @@ BEGIN
 				--EXEC Dot_BalanceUpdDebit @custid = @CustID, @Balance = @Cust_balance
 				EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_balance, @type = 2, @isForced = 1
 			END 	
-			return
-		END
-		Select @bal_transid = @@IDENTITY
+
+			RETURN
+
+		END CATCH
+
+		--Select @bal_transid = @@IDENTITY
 		SET @transdate = CONVERT(CHAR(30),@transdate, 121)
 	
 		declare @LogData varchar(300)

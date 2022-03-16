@@ -16,7 +16,7 @@ ALTER PROCEDURE [dbo].[Dot_BBIN_TransferIns]
 	@ADiscount			DECIMAL(9,8),
 	@SDiscount			DECIMAL(9,8),
 	@TransDesc			NVARCHAR(1000) = '',
-	@IP					NVARCHAR(15) = '',
+	@IP					VARCHAR(45) = '',
 	@GivenCredit 		MONEY = NULL,
 	@RefNo		BIGINT = 0 			OUTPUT,
 	@TransID	BIGINT = 0 			OUTPUT,
@@ -32,7 +32,9 @@ AS
 	Revision: 
 		- 20200411@Sophia.Nguyen: Initial SP [Redmine: #131347]
 		- 20200519@Sophia: add param GivenCredit [Redmine: #131347]
+
 		- 20211112@Sol: Support IPv6 - Phase 2 - Add [Convert Ipv6 to dummy IPv4] - [Redmine: #163963]
+		- 20211111@Sol: Split Transfer out of bettrans/Support IPv6 - [RedmineID: #164301]
 	
 	Param's Explanation:
 	
@@ -76,7 +78,6 @@ AS
 BEGIN 
 	SET NOCOUNT ON 
 
-	
 	DECLARE 
 		@Username 		VARCHAR(50),
 		@Currency 		TINYINT,
@@ -100,8 +101,6 @@ BEGIN
 		SELECT @ErrMsg = 'Sorry, amount is invalid.', @ErrCode = 101	
 		RETURN		
 	END
-
-	SELECT @IP = dbo.f_ConvertIPv6ToDummy(@IP)
 
 	SELECT	 @Username = Username
 			,@Currency = ci.Currency
@@ -214,19 +213,39 @@ BEGIN
 
 		SELECT @TransDate = CURRENT_TIMESTAMP
 		
-		INSERT INTO dbo.bettrans 
-			(custid, username, refno, transdate, matchid, bettype, transdesc,winlost, actual_stake, winlostdate, 
-			 creator, recommend, mrecommend, srecommend, currency, actualrate, currencyName, ruben, status, statusID, ip, betcheck, betid, 
-			 APositiontaking, MPositiontaking, SPositiontaking, TPositiontaking, EPositiontaking, PlayerDiscount, Discount, ADiscount, SDiscount)
-		VALUES 
-			(@CustID, @username, @RefNo, @transdate, 0, @bettype, @transdesc, @winlost, @actual_stake, convert(nvarchar(10), @transdate, 120), 
-			 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency, @ActualRate, @CurrencyName, 1, 'Completed', 131, @ip, @BetCheck, 0, 
-			 @APositiontaking, @MPositiontaking, @SPositiontaking, @TPositiontaking, @EPositiontaking, @PlayerDiscount, @Discount, @ADiscount, @SDiscount)
+		BEGIN TRY
+			---get transid into table variable
+			DECLARE @Transfer TABLE(TransId BIGINT)
 
-		IF @@ERROR <> 0
-		BEGIN						
-			SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 107	
+			INSERT INTO dbo.Transfer 
+				(custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, 
+				 creator, recommend, mrecommend, srecommend, currency, actualrate, currencyName, statusID, ip, SerialNo, RepUpdateTime)
+			OUTPUT INSERTED.TransId INTO @Transfer(TransId)
+			VALUES 
+				(@CustID, @username, @RefNo, @transdate, @bettype, @transdesc, @winlost, @actual_stake, convert(nvarchar(10), @transdate, 120), 
+				 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency, @ActualRate, @CurrencyName, 131, @ip, @BetCheck, SYSDATETIME())
+
+			---insert into new table transferinfo
+			SELECT TOP 1 @TransId = TransId FROM @Transfer
+
+			INSERT INTO dbo.TransferInfo
+				(TransId, CheckerId, APositiontaking, MPositiontaking, SPositiontaking, EPositiontaking, 
+				PlayerDiscount, Discount, ADiscount, SDiscount, RepUpdateTime)
+			VALUES (@TransId, 0, @APositiontaking, @MPositiontaking, @SPositiontaking, @EPositiontaking,
+					@PlayerDiscount, @Discount, @ADiscount, @SDiscount, SYSDATETIME())
+
+		END TRY
+		BEGIN CATCH
+		
 			
+			SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 107	
+
+			--Rollback transaction
+			DELETE dbo.Transfer WITH (ROWLOCK) WHERE TransID = @TransID
+			DELETE dbo.TransferInfo WITH (ROWLOCK) WHERE TransID = @TransID
+
+			SELECT @TransID = 0
+
 			--rollback balance
 			IF @Amount < 0 
 			BEGIN	
@@ -240,19 +259,17 @@ BEGIN
 			END 
 			
 			RETURN
-		END
-		ELSE
-		BEGIN 
-			SELECT @TransID = @@IDENTITY
-		END
- 
+
+		END CATCH
+		 
 		SET @TransDate = CONVERT(CHAR(30),@TransDate, 121)
 		
 		----- Mark Transfer in ticket which is cancelled------
 		IF @Bettype = 21009 AND ISNULL(@RefTransId ,0) <> 0
 		BEGIN 
-			UPDATE 	dbo.Bettrans WITH (ROWLOCK)
-			SET   	betId = 1
+			UPDATE 	dbo.TransferInfo WITH (ROWLOCK)
+				SET CheckerId = 1,
+					RepUpdateTime = SYSDATETIME()
 			WHERE 	TransID = @RefTransID					
 		END
 		
@@ -261,8 +278,8 @@ BEGIN
 			SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 108	
 			
 			--Rollback transaction
-			DELETE dbo.Bettrans WITH (ROWLOCK)
-			WHERE TransID = @TransID
+			DELETE dbo.Transfer WITH (ROWLOCK) WHERE TransID = @TransID
+			DELETE dbo.TransferInfo WITH (ROWLOCK) WHERE TransID = @TransID
 
 			--rollback balance
 			IF @Amount < 0 
@@ -301,7 +318,7 @@ BEGIN
 						   'Discount="'+ COALESCE(CAST(@Discount AS VARCHAR(20)), SPACE(1)) + '" ' +
 						   'ADiscount="'+ COALESCE(CAST(@ADiscount AS VARCHAR(20)), SPACE(1)) + '" ' +
 						   'SDiscount="'+ COALESCE(CAST(@SDiscount AS VARCHAR(20)), SPACE(1)) + '" ' +						  
-						   'IP="'+ COALESCE(CAST(@IP AS VARCHAR(20)), SPACE(1)) + '" ' +
+						   'IP="'+ COALESCE(CAST(@IP AS VARCHAR(45)), SPACE(1)) + '" ' +
 						   'GivenCredit="'+ COALESCE(CAST(@GivenCredit AS VARCHAR(20)), SPACE(1)) + '" ' +								   
 						   'ErrCode="'+ COALESCE(CAST(@ErrCode AS VARCHAR(20)), SPACE(1)) + '" ' +						   
 						   'ErrMsg="'+ COALESCE(CAST(@ErrMsg as NVARCHAR(200)),SPACE(1)) + '" ' +
