@@ -6,7 +6,7 @@ ALTER PROCEDURE [dbo].[Task_ResetWinning_Non3rdParty]
 	@todate   smalldatetime,
 	@mode     tinyint = 0,
 	@creator  INT = 5838421,
-	@ip       VARCHAR(20) = '',
+	@ip       VARCHAR(45) = '',
 	@MoveBetDay SMALLDATETIME = NULL,
 	@ErrCode  INT = 0 output,
     @ErrMsg   VARCHAR(100) = '' output
@@ -75,6 +75,7 @@ AS
 		- 20210816@Sol: fix nested insert exec - [Redmine: #160212]
 		- 20210907@Evan: Exclude CN88 data, Tuning Code - [Redmine: #161262]
 		- 20220112@Evan: Add SG Jackpot & revise SP [Redmine: #166685]
+		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 
 	Param Explanation:
 	    @mode:  0 _ view report
@@ -162,12 +163,10 @@ BEGIN
 	SELECT winlostdate, CASE WHEN bettype IN (21001, 21002) THEN custid ELSE -1 END AS custid, '' AS product
 		,SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS Winlost
 		,SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm)) AS RealWinlost
-	FROM dbo.bettrans WITH (NOLOCK, INDEX = IX_Report)
+	FROM dbo.transfer WITH (NOLOCK)
 	WHERE winlostdate BETWEEN @fromdate AND @todate
-	   AND ruben = 1
-	   AND bettype > 19000 
+	   AND ((bettype = 19999 AND winlostdate <= @moveBetsDay)  OR (bettype > 19999 ))
 	   AND bettype <> 21007 -- Exclude CN88 headline balance
-	   AND matchID = 0 
 	GROUP BY winlostdate, CASE WHEN bettype IN (21001, 21002) THEN custid ELSE -1 END
 	
 	DELETE t FROM #Transfer t WHERE t.CustId IN (SELECT d.CustId FROM @dummyBalance d WHERE d.IsExtraPT = 1)
@@ -214,7 +213,8 @@ BEGIN
 		SELECT winlostdate, bettype, matchId, liveindicator,winlost, actual_stake ,awinlost, mwinlost, swinlost, scomm, betid, actualrate, epositiontaking,tpositiontaking,statusID
 		FROM dbo.bettrans WITH (NOLOCK)
 		WHERE Winlostdate between @fromdate and @todate
-			AND bettype < 19001
+			AND bettype < 19999
+			AND winlostdate > @moveBetsDay
 			AND ruben = 1
 			AND statusID IN (111, 112, 113)
 	) 

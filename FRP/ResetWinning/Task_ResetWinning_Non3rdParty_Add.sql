@@ -6,7 +6,7 @@ ALTER PROCEDURE [dbo].[Task_ResetWinning_Non3rdParty_Add]
 	@amount      MONEY,
 	@transdesc   NVARCHAR(1000),
 	@creator     INT,
-	@ip          VARCHAR(20),
+	@ip          VARCHAR(45),
 	@isExtraPT	 BIT = 0,
 	@ErrCode     INT = 0 OUTPUT,  
     @ErrMsg      VARCHAR(100) = '' OUTPUT
@@ -26,7 +26,7 @@ AS
 		- 20180412@Percy: Increase Transdesc length to 1000 [RedmineID: #92841]
 		- 20190801@Sophia: Integrate CN88, use ExchangeDailyOanda instead of exchange table [Redmine: #117809]		
 		- 20190826@Sophia: remove Rollback code (in CATCH block) [Redmine: #117863]
-
+		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 
 */
 BEGIN
@@ -73,19 +73,19 @@ BEGIN
     SELECT @RefNum = @RefNum + 100000000000
 
     BEGIN TRY
-	    INSERT INTO bettrans
+	    INSERT INTO dbo.transfer
         (
-	        custid, username, refno, transdate, matchid,
+	        custid, username, refno, transdate,
 	        bettype, transdesc, winlost, actual_stake, winlostdate,
 	        creator, recommend, mrecommend, srecommend, currency,
-	        currencyName, actualrate, ruben, status, ip, statusID
+	        currencyName, actualrate, ip, statusID, RepUpdateTime
 	    )
 	    VALUES
 	    (
-	        @CustID, @username, @RefNum, current_timestamp, 0,
+	        @CustID, @username, @RefNum, current_timestamp,
 	        @bettype, @transDesc, @creditamt, @debitamt, @winlostdate,
 	        @creator, @Recommend, @MRecommend, @SRecommend, @curr,
-	        @currName, @actualrate, 1, 'Completed', @ip, 131
+	        @currName, @actualrate, @ip, 131, SYSDATETIME()
         )
     END TRY
     

@@ -6,7 +6,7 @@ ALTER PROCEDURE [dbo].[Acc_BettransInsTransaction]
 	@amount money,	
 	@transdesc nvarchar(300),
 	@UserID int,
-	@IP nvarchar(15)='',
+	@IP varchar(45)='',
 	@ErrCode int = 0 OUTPUT,
 	@ErrMsg nvarchar(200) = '' OUTPUT,
 	@Language varchar(2)= 'E'
@@ -43,7 +43,7 @@ Revisions:
 	- 20151021@Elodie: Set @IsForce = 1 for updating balance debit [Redmine:#40125]
 	- 20180808@Helen: GET CODE FROM PRODUCTION + DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 	- 20190812@Bobby: AddDelTXN - Update checking constraint [Redmine:118530]
-	
+	- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 	
 Param's Explanation:
 */
@@ -73,11 +73,14 @@ BEGIN
 		, @archivedDay		SMALLDATETIME
 		, @constraintDay	SMALLDATETIME
 
-	SELECT TOP 1 @balanceUpDay = winlostdate
-	FROM dbo.Bettrans WITH (NOLOCK)
-	WHERE bettype = 20000
-		AND matchid = 0
-		AND custid = 3
+	DECLARE @MoveBetsDay DATETIME
+
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	SELECT @balanceUpDay = BalanceUpDay, @MoveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 
 	SELECT @archivedDay	= MAX(winlostdate)
 	FROM dbo.Task_ArchiveDate WITH (NOLOCK)
@@ -158,12 +161,12 @@ BEGIN
 
 	select @RefNo = @RefNo + 100000000000
 
-	INSERT INTO dbo.bettrans( custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
+	INSERT INTO dbo.transfer( custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 						  winlostdate, creator,recommend,mrecommend,srecommend,currency, currencyName,
-						  actualrate,ruben, status,ip,statusID)
-	VALUES (@CustID, @username, @RefNo, current_timestamp, 0, @bettype, @transdesc, @creditamt, @debitamt, 
+						  actualrate,ip,statusID, RepUpdateTime)
+	VALUES (@CustID, @username, @RefNo, current_timestamp, @bettype, @transdesc, @creditamt, @debitamt, 
 			@winlostdate, @UserID, @Recommend, @MRecommend, @SRecommend, @curr, @currName,
-			@actualrate,1, 'Completed',@ip,131)
+			@actualrate, @ip,131,SYSDATETIME())
 
 	if @@ERROR <> 0
 	BEGIN
@@ -177,17 +180,14 @@ BEGIN
 			END
 		END
 
-		delete bettrans where custid = @custid and refno = @refno and matchid = 0	
+		delete dbo.transfer WITH(ROWLOCK) where custid = @custid and refno = @refno
 		Select @ErrMsg = 'Insert trans failed. Please try again.', @ErrCode = 103		
 		return
 	END
 	Select @TransID = @@IDENTITY
 
 	-- Update Transfer Amount in bodb_report.dbo.rptStatement table before move bet day
-	DECLARE @MoveBetsDay DATETIME
-	SELECT @MoveBetsDay = MAX(eventdate)
-	FROM dbo.match14 WITH (NOLOCK)
-
+	
 	IF @winlostdate <= @MoveBetsDay
 	BEGIN
 		EXEC [DBRPT].bodb_report.dbo.[Acc_StatementUpdateTransfer]
@@ -209,7 +209,7 @@ BEGIN
 				END
 			END
 
-			delete bettrans where custid = @custid and refno = @refno and matchid = 0	
+			delete dbo.Transfer WITH(ROWLOCK) where custid = @custid and refno = @refno
 			Select @ErrMsg = 'Insert trans failed. Please try again.', @ErrCode = 104		
 			return
 		END

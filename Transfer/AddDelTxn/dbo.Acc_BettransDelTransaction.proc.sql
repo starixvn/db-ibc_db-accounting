@@ -38,6 +38,7 @@ AS
 		- 20181112@Sophia: Add Transfer Collection [redmine: #98621]
 		- 20190812@Bobby: AddDelTXN - Update checking constraint [Redmine:118530]
 		- 20200828@Sol: hotfix - transfer - duplicated transid by page split/nolock [Redmine:140461]
+		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 */
 BEGIN
 
@@ -55,7 +56,8 @@ BEGIN
 				@IsCollection   BIT
 				
 
-		DECLARE @Reversal TABLE (	TransID BIGINT,
+		DECLARE @Reversal TABLE (	
+									TransID BIGINT,
 									custid INT,
 									transdate DATETIME,
 									Username NVARCHAR(50),
@@ -66,17 +68,14 @@ BEGIN
 									transdesc NVARCHAR(300),
 									creator INT,
 									bettype SMALLINT,
-									matchid INT,
 									actualrate FLOAT,
 									recommend INT,
 									mrecommend INT,
 									srecommend INT,
 									currency TINYINT,
 									CurrencyName NVARCHAR(50),
-									ip NVARCHAR(15) ,
-									status NVARCHAR(10),
+									ip VARCHAR(45) ,
 									statusID TINYINT,
-									ruben TINYINT,
 									liveindicator BIT,
 									OddsID INT
 								)
@@ -87,17 +86,18 @@ BEGIN
 		----get unique custid to use in where condition of inserting @Reversal for index seek used
 		INSERT INTO @tblUniqueCustIds (custid)
 		SELECT	DISTINCT custid
-		FROM	bettrans WITH (NOLOCK)
-		WHERE	refno = @refno AND matchid = 0 AND bettype > 20000
+		FROM	dbo.Transfer WITH (NOLOCK)
+		WHERE	refno = @refno AND bettype > 20000
 
 		----insert transfer data into @Reversal
 		INSERT INTO @Reversal 
 			(	transid, custid, transdate, Username, refno, winlost, actual_stake, winlostdate, transdesc, creator,
-				bettype, matchid, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, ip, status, statusID, ruben, liveindicator, OddsID )
-		SELECT	transid, custid, transdate, Username, refno, winlost, actual_stake, winlostdate, transdesc, creator,
-				bettype, matchid, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, ip, status, statusID, ruben, liveindicator, OddsID
-		FROM	bettrans WITH (NOLOCK)
-		WHERE	refno = @refno AND matchid = 0 AND bettype > 20000 
+				bettype, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, ip, statusID, liveindicator, OddsID )
+		SELECT	t.transid, custid, transdate, Username, refno, winlost, actual_stake, winlostdate, transdesc, creator,
+				bettype, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, ip, statusID, ISNULL(ti.IsDel,0), ISNULL(ti.IsCollection,0)
+		FROM	dbo.transfer t WITH (NOLOCK)
+		LEFT JOIN dbo.TransferInfo ti WITH (NOLOCK) ON t.TransId = ti.TransId
+		WHERE	refno = @refno  AND bettype > 20000 
 				AND custid IN (SELECT custid FROM @tblUniqueCustIds)
 
 
@@ -109,12 +109,13 @@ BEGIN
 		DECLARE @BalanceUpDay	SMALLDATETIME
 			, @archivedDay		SMALLDATETIME
 			, @constraintDay	SMALLDATETIME
+			, @MoveBetsDay		SMALLDATETIME
+		
+		DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+		INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+		EXEC bodb02.dbo.Age_SelBalanceUpDay
 
-		SELECT TOP 1 @balanceUpDay = winlostdate
-		FROM dbo.Bettrans WITH (NOLOCK)
-		WHERE bettype = 20000
-			AND matchid = 0
-			AND custid = 3
+		SELECT @BalanceUpDay = BalanceUpDay, @MoveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 
 		SELECT @archivedDay	= MAX(winlostdate)
 		FROM dbo.Task_ArchiveDate WITH (NOLOCK)
@@ -156,25 +157,23 @@ BEGIN
 		--Get data before update
 		INSERT INTO #BeforeUpd (custid, balance)
 		SELECT	b.custid, SUM (b.winlost - b.actual_stake + b.playercomm) balance
-		FROM	bettrans b WITH (NOLOCK)
+		FROM	dbo.transfer b WITH (NOLOCK)
 			INNER JOIN	CustDB.dbo.custInfo c WITH (NOLOCK) 
 			ON	b.custid = c.custID
-		WHERE	b.refno = @refno AND matchid = 0 AND bettype > 20000
+		WHERE	b.refno = @refno AND bettype > 20000
 				AND c.roleid = 1
 				AND b.custid IN (SELECT custid FROM @tblUniqueCustIds)
 		GROUP BY b.CustID
 		
-
-
 	---- Begin reversal
 		SET @transdesc = '(Reversal) ' + @transdesc
 		
-		-----Bettrans
-		INSERT INTO bettrans (	custid, transdate, Username, refno, winlost, actual_stake, winlostdate, transdesc, creator,
-								bettype, matchid, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, ip, status, statusID, ruben, liveindicator, OddsID)
+		-----transfer
+		INSERT INTO dbo.transfer (custid, transdate, Username, refno, winlost, actual_stake, winlostdate, transdesc, creator,
+								bettype, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, ip, statusID,RepUpdateTime)
 		OUTPUT  INSERTED.transid into @TransIDs
 		SELECT	custid, CURRENT_TIMESTAMP, Username, refno, actual_stake, winlost, winlostdate, @transdesc, @UserID,
-				bettype, matchid, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, @IP, status, statusID, ruben, 1, OddsID
+				bettype, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, @IP, statusID, SYSDATETIME()
 		FROM	@Reversal
 
 		IF @@ERROR <> 0
@@ -185,13 +184,20 @@ BEGIN
 		END
 
 	 ---Update Liveindicator = 1 for marking deleted transaction
-		UPDATE	bettrans WITH (ROWLOCK) 
-		SET		liveindicator = 1
-		WHERE	transid IN (Select transid from @Reversal)
-
+		MERGE dbo.TransferInfo t
+		USING @Reversal s ON t.transid=s.transid
+		WHEN MATCHED THEN
+			UPDATE SET IsDel = 1
+		WHEN NOT MATCHED THEN
+			INSERT (Transid,IsDel)
+			VALUES (s.Transid,1);
+			
 		IF @@ERROR <> 0
 		BEGIN
-			DELETE  bettrans WITH (ROWLOCK) 
+			DELETE  dbo.transfer WITH (ROWLOCK) 
+			WHERE	transid IN (SELECT transid FROM @TransIDs)
+
+			DELETE  dbo.transferInfo WITH (ROWLOCK) 
 			WHERE	transid IN (SELECT transid FROM @TransIDs)
 			
 			DELETE  Transfer_Coll WITH (ROWLOCK) 
@@ -209,19 +215,48 @@ BEGIN
 				TransID, RefNo, Username, Recommend, MRecommend, SRecommend, Creator ,TransDesc, IP )
 		SELECT 	CustId, WinlostDate, TransDate, Bettype, Actual_Stake, Winlost, Currency, ActualRate, 
 				TransID, RefNo, Username, Recommend, MRecommend, SRecommend, Creator ,TransDesc, IP
-		FROM 	dbo.Bettrans WITH (NOLOCK) 
+		FROM 	dbo.transfer WITH (NOLOCK) 
 		WHERE 	TransID IN (SELECT transid FROM @TransIDs)
 		
 		IF @@ERROR <> 0
 		BEGIN
-			DELETE  bettrans WITH (ROWLOCK) 
+			DELETE  dbo.transfer WITH (ROWLOCK) 
 			WHERE	transid IN (SELECT transid FROM @TransIDs)
 			
 			DELETE  Transfer_Coll WITH (ROWLOCK) 
-			WHERE	transid IN (SELECT transid FROM @TransIDs)		
+			WHERE	transid IN (SELECT transid FROM @TransIDs)
+			
+			DELETE  dbo.transferInfo WITH (ROWLOCK) 
+			WHERE	transid IN (SELECT transid FROM @TransIDs)
+			
+			UPDATE	transferInfo WITH (ROWLOCK) 
+			SET		isDel = 0
+			WHERE	transid IN (Select transid from @Reversal)
+					
+			SELECT	@ErrMsg ='Delete the transaction unsuccessfully!',
+					@ErrCode = 104
+			RETURN 
+		END
+
+		-----TransferInfo
+		INSERT INTO dbo.TransferInfo (TransId, IsDel, IsCollection)
+		SELECT	t.TransId, 1 IsDel, @IsCollection -- All tickets have the same refno also must have the same IsCollection value
+		FROM	dbo.transfer t
+		WHERE 	TransID IN (SELECT transid FROM @TransIDs)
 		
-			UPDATE	bettrans WITH (ROWLOCK) 
-			SET		liveindicator = 0
+		IF @@ERROR <> 0
+		BEGIN
+			DELETE  dbo.transfer WITH (ROWLOCK) 
+			WHERE	transid IN (SELECT transid FROM @TransIDs)
+			
+			DELETE  Transfer_Coll WITH (ROWLOCK) 
+			WHERE	transid IN (SELECT transid FROM @TransIDs)
+			
+			DELETE  dbo.transferInfo WITH (ROWLOCK) 
+			WHERE	transid IN (SELECT transid FROM @TransIDs)
+			
+			UPDATE	transferInfo WITH (ROWLOCK) 
+			SET		isDel = 0
 			WHERE	transid IN (Select transid from @Reversal)
 					
 			SELECT	@ErrMsg ='Delete the transaction unsuccessfully!',
@@ -229,12 +264,7 @@ BEGIN
 			RETURN 
 		END
 				
-		
 		-- Update Transfer Amount in bodb_report.dbo.rptStatement table before move bet day
-		DECLARE @MoveBetsDay DATETIME
-		SELECT @MoveBetsDay = MAX(eventdate)
-		FROM dbo.match14 WITH (NOLOCK)
-
 		DECLARE @amount money
 
 		IF @winlostdate <= @MoveBetsDay
@@ -250,15 +280,18 @@ BEGIN
 			
 			IF @ErrCode <> 0
 				BEGIN
-					DELETE  dbo.bettrans WITH (ROWLOCK) 
+					DELETE  dbo.transfer WITH (ROWLOCK) 
+					WHERE	transid IN (SELECT transid FROM @TransIDs)
+
+					DELETE  dbo.transferInfo WITH (ROWLOCK) 
 					WHERE	transid IN (SELECT transid FROM @TransIDs)
 					
 					DELETE  Transfer_Coll WITH (ROWLOCK) 
 					WHERE	transid IN (SELECT transid FROM @TransIDs)
 						
 					--20150808@Elodie: rollback liveindicator = 0
-					UPDATE	bettrans WITH (ROWLOCK) 
-					SET		liveindicator = 0
+					UPDATE	dbo.TransferInfo WITH (ROWLOCK) 
+					SET		IsDel = 0
 					WHERE	transid IN (Select transid from @Reversal)
 
 					SELECT	@ErrMsg ='Delete the transaction unsuccessfully!',
@@ -279,15 +312,18 @@ BEGIN
 			
 				IF @ErrCode <> 0
 					BEGIN
-						DELETE  dbo.bettrans WITH (ROWLOCK) 
+						DELETE  dbo.transfer WITH (ROWLOCK) 
+						WHERE	transid IN (SELECT transid FROM @TransIDs)
+
+						DELETE  dbo.transferInfo WITH (ROWLOCK) 
 						WHERE	transid IN (SELECT transid FROM @TransIDs)
 						
 						DELETE  Transfer_Coll WITH (ROWLOCK) 
 						WHERE	transid IN (SELECT transid FROM @TransIDs)
 
 						--20150808@Elodie: rollback liveindicator = 0
-						UPDATE	bettrans WITH (ROWLOCK) 
-						SET		liveindicator = 0
+						UPDATE	transferInfo WITH (ROWLOCK) 
+						SET		isDel = 0
 						WHERE	transid IN (Select transid from @Reversal)
 
 						SELECT TOP 1 @custid = custid,@amount = (b.winlost - b.actual_stake) FROM	@Reversal b WHERE @custid <> custid
@@ -309,10 +345,10 @@ BEGIN
 	--Get data after update
 		INSERT INTO #AfterUpd (custid, balance)
 		SELECT	b.custid, SUM (b.winlost - b.actual_stake + b.playercomm) balance
-		FROM	bettrans b WITH (NOLOCK)
+		FROM	dbo.Transfer b WITH (NOLOCK)
 			INNER JOIN	CustDB.dbo.custInfo c WITH (NOLOCK) 
 			ON	b.custid = c.custID
-		WHERE	b.refno = @refno AND matchid = 0 AND bettype > 20000
+		WHERE	b.refno = @refno AND bettype > 20000
 				AND c.roleid = 1
 				AND b.custid IN (SELECT custid FROM @tblUniqueCustIds)
 		GROUP BY b.CustID

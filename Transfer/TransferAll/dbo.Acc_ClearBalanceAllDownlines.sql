@@ -2,7 +2,7 @@
 ALTER PROCEDURE [dbo].[Acc_ClearBalanceAllDownlines]
 	@AgentName varchar(50),	-- S99BD
 	@UserID int = 8,
-	@IP nvarchar(15)='', 
+	@IP varchar(45)='', 
 	@IsJob BIT = 0,
 	@ErrMsg nvarchar(4000) = '' OUTPUT,
 	@ErrCode int = 0 OUTPUT
@@ -46,6 +46,7 @@ AS
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20210817@Sophia: Fix overflow Refno [Redmine: #160262]
+		- 20211115@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 		 				       
 	Param's Explanation:
 		@AgentName: username of agent/master/super to clear his all downlines' balance
@@ -102,7 +103,6 @@ BEGIN
 		RETURN
 	END	
 
-	
 	---- #1 CHECK UM TRANSFER FUNCTION
 	EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckUM  
 		@CustID = @AgentID
@@ -196,11 +196,11 @@ BEGIN
 			,SUM(mwinlost) mwinlost
 			,SUM(acomm) acomm
 		FROM @masterlist c
-			INNER JOIN dbo.bettrans b WITH(NOLOCK) ON c.custid = b.custid
+			INNER JOIN dbo.transfer b WITH(NOLOCK) ON c.custid = b.custid
 		WHERE (winlostdate < @winlostdate OR (winlostdate >= @winlostdate AND bettype > 20000))
-			AND ruben = 1
 			AND bettype NOT IN (21008, 21009)
 		GROUP BY b.custid, b.recommend, b.mrecommend
+
 	END
 		
 	-- member & agent data	
@@ -215,14 +215,27 @@ BEGIN
 		,SUM(acomm) acomm
 	FROM @agList ag
 		INNER JOIN dbo.bettrans b WITH(NOLOCK, INDEX=IX_Recommend) ON ag.custid = b.recommend
-	WHERE (winlostdate < @winlostdate OR (winlostdate >= @winlostdate AND bettype > 20000))
+	WHERE winlostdate < @winlostdate 
 		AND ruben = 1
-		AND bettype NOT IN (21008, 21009)
-		AND 
-			1 = CASE 
-					WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-					WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-				ELSE 1 END
+		AND b.winlostdate > @moveBetsDay
+		AND b.bettype < 19999
+	GROUP BY b.custid, b.recommend, b.mrecommend
+
+	INSERT INTO #tempdata (custid, recommend, mrecommend, winlost, actual_stake, playercomm, awinlost, comm, mwinlost, acomm)
+	SELECT b.custid, b.recommend, b.mrecommend	
+		,SUM(winlost) winlost
+		,SUM(actual_stake) actual_stake
+		,SUM(playercomm) playercomm
+		,SUM(awinlost) awinlost
+		,SUM(comm) comm
+		,SUM(mwinlost) mwinlost
+		,SUM(acomm) acomm
+	FROM @agList ag
+		INNER JOIN dbo.Transfer b WITH(NOLOCK, INDEX=IX_Recommend) ON ag.custid = b.recommend
+	WHERE (
+			(bettype = 19999 AND winlostdate <= @moveBetsDay) 
+			OR (bettype > 19999 AND bettype NOT IN (21008, 21009))
+		  )
 	GROUP BY b.custid, b.recommend, b.mrecommend
 
 	----check move bet date again to make sure it is not changed
@@ -246,9 +259,8 @@ BEGIN
 				,SUM(mwinlost) mwinlost
 				,SUM(acomm) acomm
 			FROM @masterlist c
-				INNER JOIN dbo.bettrans b WITH(NOLOCK) ON c.custid = b.custid
+				INNER JOIN dbo.transfer b WITH(NOLOCK) ON c.custid = b.custid
 			WHERE (winlostdate < @winlostdate OR (winlostdate >= @winlostdate AND bettype > 20000))
-				AND ruben = 1
 				AND bettype NOT IN (21008, 21009)
 			GROUP BY b.custid, b.recommend, b.mrecommend
 		END
@@ -265,14 +277,27 @@ BEGIN
 			,SUM(acomm) acomm
 		FROM @agList ag
 			INNER JOIN dbo.bettrans b WITH(NOLOCK, INDEX=IX_Recommend) ON ag.custid = b.recommend
-		WHERE (winlostdate < @winlostdate OR (winlostdate >= @winlostdate AND bettype > 20000))
+		WHERE winlostdate < @winlostdate 
 			AND ruben = 1
-			AND bettype NOT IN (21008, 21009)
-			AND 
-				1 = CASE 
-						WHEN bettype = 19999 and winlostdate > @NewMoveBetDate THEN 0 --> get data from ticket detail
-						WHEN bettype < 19999 and winlostdate <= @NewMoveBetDate THEN 0 --> get data from sum record
-					ELSE 1 END
+			AND b.winlostdate > @NewMoveBetDate
+			AND b.bettype < 19999
+		GROUP BY b.custid, b.recommend, b.mrecommend
+
+		INSERT INTO #tempdata (custid, recommend, mrecommend, winlost, actual_stake, playercomm, awinlost, comm, mwinlost, acomm)
+		SELECT b.custid, b.recommend, b.mrecommend	
+			,SUM(winlost) winlost
+			,SUM(actual_stake) actual_stake
+			,SUM(playercomm) playercomm
+			,SUM(awinlost) awinlost
+			,SUM(comm) comm
+			,SUM(mwinlost) mwinlost
+			,SUM(acomm) acomm
+		FROM @agList ag
+			INNER JOIN dbo.Transfer b WITH(NOLOCK, INDEX=IX_Recommend) ON ag.custid = b.recommend
+		WHERE (
+				(bettype = 19999 AND winlostdate <= @NewMoveBetDate) 
+				OR (bettype > 19999 AND bettype NOT IN (21008, 21009))
+			)
 		GROUP BY b.custid, b.recommend, b.mrecommend
 	END
 
@@ -420,15 +445,16 @@ BEGIN
 		IF (
 				EXISTS (
 					SELECT 1
-					FROM bettrans WITH (NOLOCK)
-					WHERE custid = @custid
-						AND bettype IN (21003, 21004)
+					FROM dbo.Transfer t WITH (NOLOCK)
+					LEFT JOIN dbo.TransferInfo ti WITH (NOLOCK) ON t.TransId = ti.TransId
+					WHERE t.custid = @custid
+						AND t.bettype IN (21003, 21004)
 						AND (
-							transdate BETWEEN convert(VARCHAR(10), current_timestamp, 120)
+							t.transdate BETWEEN convert(VARCHAR(10), current_timestamp, 120)
 								AND convert(VARCHAR(10), current_timestamp, 120) + ' 23:59:59'
 							)
-						AND liveindicator = 0
-					)
+						AND ISNULL(ti.IsDel,0) = 0
+					) 
 				)
 		BEGIN
 			SELECT @SkipTransfer = 1
@@ -445,16 +471,15 @@ BEGIN
 				)
 		BEGIN
 
-			INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
-			VALUES (0, @UserID, @recommend, @agentusername, @refno, @Now, 21004, 'From Customer::' + @membername, @memberBalance, 0, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @MRecommend, @srecommend, 0, 0, @IP, 131)
+			INSERT INTO dbo.Transfer(creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, RepUpdateTime)
+			VALUES (@UserID, @recommend, @agentusername, @refno, @Now, 21004, 'From Customer::' + @membername, @memberBalance, 0, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @MRecommend, @srecommend, 0, 0, @IP, 131, SYSDATETIME())
 
 			IF @@Error <> 0
 			BEGIN
 				SELECT @ErrMsg = 'Insert Failed', @ErrCode = 101
 
-				DELETE dbo.bettrans
+				DELETE dbo.Transfer
 				WHERE custid IN (@recommend, @custid)
-					AND matchid = 0
 					AND bettype IN (21003, 21004)
 					AND refno = @refno
 
@@ -463,14 +488,13 @@ BEGIN
 
 			---update debit balance  
 			--EXEC Dot_BalanceUpdDebit @CustID = @CustID, @balance = @memberBalance
-					EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @memberBalance, @Type = 2, @IsForced = 1, @ErrCode = @ErrCode OUTPUT
+			EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @memberBalance, @Type = 2, @IsForced = 1, @ErrCode = @ErrCode OUTPUT
 			IF @ErrCode <> 0
 			BEGIN
 				SELECT @ErrMsg = 'Insert Failed', @ErrCode = 102
 
-				DELETE dbo.bettrans
+				DELETE dbo.Transfer
 				WHERE custid IN (@recommend, @custid)
-					AND matchid = 0
 					AND bettype IN (21003, 21004)
 					AND refno = @refno
 
@@ -480,16 +504,15 @@ BEGIN
 			DECLARE @TotalCash1 MONEY 
 			EXEC Acc_CustomerSelCash_CaptureBalance @custid = @custid, @TotalCash  = @TotalCash1 OUTPUT
 
-			INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance)
-			VALUES (0, @UserID, @custid, @membername, @refno, @Now, 21004, 'To Customer::' + @agentusername, 0, @memberBalance, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @MRecommend, @srecommend, 0, 0, @IP, 131, @TotalCash1)
+			INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance, RepUpdateTime)
+			VALUES (@UserID, @custid, @membername, @refno, @Now, 21004, 'To Customer::' + @agentusername, 0, @memberBalance, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @MRecommend, @srecommend, 0, 0, @IP, 131, @TotalCash1, SYSDATETIME())
 
 			IF @@Error <> 0
 			BEGIN
 				SELECT @ErrMsg = 'Insert Failed', @ErrCode = 102
 
-				DELETE dbo.bettrans
+				DELETE dbo.Transfer
 				WHERE custid IN (@recommend, @custid)
-					AND matchid = 0
 					AND bettype IN (21003, 21004)
 					AND refno = @refno
 
@@ -538,16 +561,15 @@ BEGIN
 		BEGIN
 
 			--SET @memberBalance = abs(@memberBalance)      
-			INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
-			VALUES (0, @UserID, @recommend, @agentusername, @refno, CURRENT_TIMESTAMP, 21004, 'To Customer::' + @membername, 0, abs(@memberBalance), 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @MRecommend, @srecommend, 0, 0, @IP, 131)
+			INSERT INTO dbo.Transfer(creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, RepUpdateTime)
+			VALUES (@UserID, @recommend, @agentusername, @refno, CURRENT_TIMESTAMP, 21004, 'To Customer::' + @membername, 0, abs(@memberBalance), convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @MRecommend, @srecommend, 0, 0, @IP, 131, SYSDATETIME())
 
 			IF @@Error <> 0
 			BEGIN
 				SELECT @ErrMsg = 'Insert Failed', @ErrCode = 103
 
-				DELETE dbo.bettrans
+				DELETE dbo.Transfer
 				WHERE custid IN (@recommend, @custid)
-					AND matchid = 0
 					AND bettype IN (21003, 21004)
 					AND refno = @refno
 
@@ -557,16 +579,15 @@ BEGIN
 			DECLARE @TotalCash3 MONEY 
 			EXEC Acc_CustomerSelCash_CaptureBalance @custid = @custid, @TotalCash  = @TotalCash3 OUTPUT
 
-			INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance)
-			VALUES (0, @UserID, @custid, @membername, @refno, CURRENT_TIMESTAMP, 21004, 'From Customer::' + @agentusername, abs(@memberBalance), 0, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @MRecommend, @srecommend, 0, 0, @IP, 131, @TotalCash3)
+			INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance, RepUpdateTime)
+			VALUES (@UserID, @custid, @membername, @refno, CURRENT_TIMESTAMP, 21004, 'From Customer::' + @agentusername, abs(@memberBalance), 0, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @MRecommend, @srecommend, 0, 0, @IP, 131, @TotalCash3, SYSDATETIME())
 
 			IF @@Error <> 0
 			BEGIN
 				SELECT @ErrMsg = 'Insert Failed', @ErrCode = 104
 
-				DELETE dbo.bettrans
+				DELETE dbo.Transfer
 				WHERE custid IN (@recommend, @custid)
-					AND matchid = 0
 					AND bettype IN (21003, 21004)
 					AND refno = @refno
 
@@ -684,16 +705,15 @@ BEGIN
 			IF @agentBalance > 0
 			BEGIN
 
-				INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
-				VALUES (0, @UserID, @mrecommend, @mastername, @refno, @Now, 21003, 'From Customer::' + @agentusername, @agentBalance, 0, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @mrecommend, @srecommend, 0, 0, @IP, 131)
+				INSERT INTO dbo.Transfer(creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, RepUpdateTime)
+				VALUES (@UserID, @mrecommend, @mastername, @refno, @Now, 21003, 'From Customer::' + @agentusername, @agentBalance, 0, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @mrecommend, @srecommend, 0, 0, @IP, 131, SYSDATETIME())
 
 				IF @@Error <> 0
 				BEGIN
 					SELECT @ErrMsg = 'Insert Failed', @ErrCode = 105
 
-					DELETE dbo.bettrans
+					DELETE dbo.Transfer
 					WHERE custid IN (@mrecommend, @recommend)
-						AND matchid = 0
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
 
@@ -703,16 +723,15 @@ BEGIN
 				DECLARE @TotalCash5 MONEY 
 				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @recommend, @TotalCash  = @TotalCash5 OUTPUT
 
-				INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance)
-				VALUES (0, @UserID, @recommend, @agentusername, @refno, @Now, 21003, 'To Customer::' + @mastername, 0, @agentBalance, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @mrecommend, @srecommend, 0, 0, @IP, 131, @TotalCash5)
+				INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance, RepUpdateTime)
+				VALUES (@UserID, @recommend, @agentusername, @refno, @Now, 21003, 'To Customer::' + @mastername, 0, @agentBalance, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @mrecommend, @srecommend, 0, 0, @IP, 131, @TotalCash5, SYSDATETIME())
 
 				IF @@Error <> 0
 				BEGIN
 					SELECT @ErrMsg = 'Insert Failed', @ErrCode = 106
 
-					DELETE dbo.bettrans
+					DELETE dbo.Transfer
 					WHERE custid IN (@mrecommend, @recommend)
-						AND matchid = 0
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
 
@@ -741,16 +760,15 @@ BEGIN
 			ELSE IF @agentBalance < 0
 			BEGIN
 				--SET @agentBalance = abs(@agentBalance)  
-				INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
-				VALUES (0, @UserID, @mrecommend, @mastername, @refno, @Now, 21003, 'To Customer::' + @agentusername, 0, abs(@agentBalance), 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @mrecommend, @srecommend, 0, 0, @IP, 131)
+				INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, RepUpdateTime)
+				VALUES (@UserID, @mrecommend, @mastername, @refno, @Now, 21003, 'To Customer::' + @agentusername, 0, abs(@agentBalance), convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @mrecommend, @srecommend, 0, 0, @IP, 131, SYSDATETIME())
 
 				IF @@Error <> 0
 				BEGIN
 					SELECT @ErrMsg = 'Insert Failed', @ErrCode = 107
 
-					DELETE dbo.bettrans
+					DELETE dbo.Transfer
 					WHERE custid IN (@mrecommend, @recommend)
-						AND matchid = 0
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
 
@@ -760,16 +778,15 @@ BEGIN
 				DECLARE @TotalCash7 MONEY 
 				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @recommend, @TotalCash  = @TotalCash7 OUTPUT
 
-				INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance)
-				VALUES (0, @UserID, @recommend, @agentusername, @refno, @Now, 21003, 'From Customer::' + @mastername, abs(@agentBalance), 0, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @mrecommend, @srecommend, 0, 0, @IP, 131, @TotalCash7)
+				INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance, RepUpdateTime)
+				VALUES (@UserID, @recommend, @agentusername, @refno, @Now, 21003, 'From Customer::' + @mastername, abs(@agentBalance), 0, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @recommend, @mrecommend, @srecommend, 0, 0, @IP, 131, @TotalCash7, SYSDATETIME())
 
 				IF @@Error <> 0
 				BEGIN
 					SELECT @ErrMsg = 'Insert Failed', @ErrCode = 108
 
-					DELETE dbo.bettrans
+					DELETE dbo.Transfer
 					WHERE custid IN (@mrecommend, @recommend)
-						AND matchid = 0
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
 
@@ -856,16 +873,15 @@ BEGIN
 			IF @masterBalance > 0
 			BEGIN
 
-				INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID)
-				VALUES (0, @UserID, @srecommend, @supername, @refno, @Now, 21003, 'From Customer::' + @mastername, @masterBalance, 0, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @srecommend, 0, 0, 0, @ip, 131)
+				INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID, RepUpdateTime)
+				VALUES (@UserID, @srecommend, @supername, @refno, @Now, 21003, 'From Customer::' + @mastername, @masterBalance, 0, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @srecommend, 0, 0, 0, @ip, 131, SYSDATETIME())
 
 				IF @@Error <> 0
 				BEGIN
 					SELECT @ErrMsg = 'Insert Failed', @ErrCode = 109
 
-					DELETE dbo.bettrans
+					DELETE dbo.Transfer
 					WHERE custid IN (@srecommend, @mrecommend)
-						AND matchid = 0
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
 
@@ -875,16 +891,15 @@ BEGIN
 				DECLARE @TotalCash9 MONEY 
 				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @mrecommend, @TotalCash  = @TotalCash9 OUTPUT
 
-				INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID, balance)
-				VALUES (0, @UserID, @mrecommend, @mastername, @refno, @Now, 21003, 'To Customer::' + @supername, 0, @masterBalance, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @mrecommend, @srecommend, 0, 0, 0, @ip, 131, @TotalCash9)
+				INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID, balance, RepUpdateTime)
+				VALUES (@UserID, @mrecommend, @mastername, @refno, @Now, 21003, 'To Customer::' + @supername, 0, @masterBalance, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @mrecommend, @srecommend, 0, 0, 0, @ip, 131, @TotalCash9, SYSDATETIME())
 
 				IF @@Error <> 0
 				BEGIN
 					SELECT @ErrMsg = 'Insert Failed', @ErrCode = 110
 
-					DELETE dbo.bettrans
+					DELETE dbo.Transfer
 					WHERE custid IN (@srecommend, @mrecommend)
-						AND matchid = 0
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
 
@@ -913,16 +928,15 @@ BEGIN
 			ELSE IF @masterBalance < 0
 			BEGIN
 				--SET @masterBalance = abs(@masterBalance)  
-				INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID)
-				VALUES (0, @UserID, @srecommend, @supername, @refno, @Now, 21003, 'To Customer::' + @mastername, 0, abs(@masterBalance), 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @srecommend, 0, 0, 0, @ip, 131)
+				INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID, RepUpdateTime)
+				VALUES (@UserID, @srecommend, @supername, @refno, @Now, 21003, 'To Customer::' + @mastername, 0, abs(@masterBalance), convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @srecommend, 0, 0, 0, @ip, 131, SYSDATETIME())
 
 				IF @@Error <> 0
 				BEGIN
 					SELECT @ErrMsg = 'Insert Failed', @ErrCode = 111
 
-					DELETE dbo.bettrans
+					DELETE dbo.Transfer
 					WHERE custid IN (@srecommend, @mrecommend)
-						AND matchid = 0
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
 
@@ -932,16 +946,15 @@ BEGIN
 				DECLARE @TotalCash11 MONEY 
 				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @mrecommend, @TotalCash  = @TotalCash11 OUTPUT
 
-				INSERT INTO bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, STATUS, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID, balance)
-				VALUES (0, @UserID, @mrecommend, @mastername, @refno, CURRENT_TIMESTAMP, 21003, 'From Customer::' + @supername, abs(@masterBalance), 0, 'Completed', 1, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @mrecommend, @srecommend, 0, 0, 0, @ip, 131, @TotalCash11)
+				INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID, balance, RepUpdateTime)
+				VALUES (@UserID, @mrecommend, @mastername, @refno, CURRENT_TIMESTAMP, 21003, 'From Customer::' + @supername, abs(@masterBalance), 0, convert(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @mrecommend, @srecommend, 0, 0, 0, @ip, 131, @TotalCash11, SYSDATETIME())
 
 				IF @@Error <> 0
 				BEGIN
 					SELECT @ErrMsg = 'Insert Failed', @ErrCode = 112
 
-					DELETE dbo.bettrans
+					DELETE dbo.Transfer
 					WHERE custid IN (@srecommend, @mrecommend)
-						AND matchid = 0
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
 

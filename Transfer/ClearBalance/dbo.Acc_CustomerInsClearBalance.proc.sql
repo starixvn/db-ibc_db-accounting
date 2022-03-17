@@ -3,7 +3,7 @@ ALTER PROCEDURE [dbo].[Acc_CustomerInsClearBalance]
  	@FromCustID int, --Agent ID here
 	@ToCustIDs varchar(4000), 
 	@UserID int,
-	@ip nvarchar(15)='',
+	@ip varchar(45)='',
 	@Language varchar(2)= 'E',
 	@ErrMsg nvarchar(4000) = '' OUTPUT,
 	@ErrCode int = 0 OUTPUT,
@@ -50,12 +50,12 @@ Revisions:
 	- 20210310@Danny: Capture total cash before transfering  [Redmine: #146038]
 	- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 	- 20210817@Sophia: Fix overflow Refno [Redmine: #160262]
+	- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 	
 Param's Explanation:
 */ 
 BEGIN
 	SET NOCOUNT ON
-	select @IP = dbo.f_ConvertIPv6ToDummy(@IP)
 
 	--Check permission for account site: @phuc20080213
 	DECLARE @ErrMsg_temp nvarchar(4000)   
@@ -159,35 +159,35 @@ BEGIN
 
 	IF( @CusStatus <> '' or @CusStatus <> null)
 	BEGIN
-		--INSERT INTO #Member(custid,memberName,memberBalance)
-
-		--SELECT b.custid ,c.username,
-		--	   isnull(SUM(isnull(case when bettype < 19001 and b.winlostdate < @WinlostDate then winlost-actual_stake+playercomm 
-	 --                                 when bettype > 19000 then winlost-actual_stake +playercomm 
-		--							  else 0 
-		--							  end , 0)), 0) memberBal
-		--FROM  Bettrans AS b with (NOLOCK)
-		--INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
-		--WHERE c.recommend = @AgentID and c.roleid = 1 and b.ruben = 1
-		--GROUP BY b.custid ,c.username
 
 		;WITH cte_Balance AS (
 			SELECT
 				b.custid,
-				isnull(SUM(isnull(case when bettype < 19001 and b.winlostdate < @WinlostDate then winlost-actual_stake+playercomm 
-										  when bettype > 19000 then winlost-actual_stake +playercomm 
-										  else 0 
-										  end , 0)), 0) memberBal
+				isnull(SUM(isnull(winlost-actual_stake+playercomm,0)), 0) memberBal
 			FROM  Bettrans AS b with (NOLOCK)
 			INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
-			WHERE c.recommend = @AgentID and c.roleid = 1 and b.ruben = 1 and b.bettype not in (21008, 21009)
-				AND 1 = CASE 
-							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-						ELSE 1 END
+			WHERE c.recommend = @AgentID 
+				and c.roleid = 1 
+				and b.ruben = 1 
+				AND b.bettype < 19999
+				AND b.winlostdate > @moveBetsDay
+				AND b.winlostdate < @WinlostDate
 			GROUP BY b.custid 
 
 			UNION ALL 
+			SELECT
+				b.custid,
+				isnull(SUM(isnull(winlost-actual_stake +playercomm, 0)), 0) memberBal
+			FROM  dbo.Transfer AS b with (NOLOCK)
+			INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
+			WHERE c.recommend = @AgentID 
+				and c.roleid = 1  
+				and b.bettype not in (21008, 21009)
+				AND ((b.bettype = 19999 AND winlostdate <= @moveBetsDay)  OR b.bettype > 19999 )
+			GROUP BY b.custid 
+
+			UNION ALL
+
 			SELECT b.custid, SUM(winlost - actual_stake + playercomm) memberBal
 			FROM bettransRNG b WITH (NOLOCK)
 			WHERE b.recommend = @AgentID AND statusID NOT IN (0,1) AND IsSum = 0 AND winlostdate < @WinlostDate
@@ -208,18 +208,6 @@ BEGIN
 	END 
 	ELSE 
 	BEGIN
-		--INSERT INTO #Member(custid,memberName,memberBalance)
-		--SELECT b.custid ,c.username,
-		--	  isnull(SUM(isnull(case when bettype < 19001 and b.winlostdate < @WinlostDate then winlost-actual_stake+playercomm 
-	 --                                when bettype > 19000 then winlost-actual_stake +playercomm
-		--							 else 0 
-		--							 end , 0)), 0) memberBal
-		--FROM  Bettrans AS b with (NOLOCK)
-		--INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
-		--WHERE b.custid in (Select convert(int, val) from dbo.strSplit (@ToCustIDs, ',' ))
-		--	  and c.recommend = @AgentID and b.ruben = 1 
-		--GROUP BY b.custid ,c.username
-
 		CREATE TABLE #ToCustIDs (custID INT)
 
 		INSERT INTO #ToCustIDs (CustID)
@@ -228,21 +216,32 @@ BEGIN
 		
 		;WITH cte_Balance AS (
 			SELECT b.custid ,c.username,
-				  isnull(SUM(isnull(case when bettype < 19001 and b.winlostdate < @WinlostDate then winlost-actual_stake+playercomm 
-										 when bettype > 19000 then winlost-actual_stake +playercomm
-										 else 0 
-										 end , 0)), 0) memberBal
+				  isnull(SUM(isnull(winlost-actual_stake+playercomm,0)), 0) memberBal
 			FROM  Bettrans AS b with (NOLOCK)
 			INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
 			WHERE EXISTS (SELECT 1 FROM #ToCustIDs WHERE custid = b.custid)
-				  and c.recommend = @AgentID and b.ruben = 1 and b.bettype not in (21008, 21009)
-				  AND 1 = CASE 
-							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-						ELSE 1 END
+				  and c.recommend = @AgentID 
+				  and b.ruben = 1 
+				  AND b.bettype < 19999
+				  AND b.winlostdate > @moveBetsDay
+				  AND b.winlostdate < @WinlostDate
+
 			GROUP BY b.custid ,c.username
 
 			UNION ALL 
+
+			SELECT b.custid ,c.username,
+				  isnull(SUM(isnull(winlost-actual_stake + playercomm, 0)), 0) memberBal
+			FROM  dbo.Transfer AS b with (NOLOCK)
+			INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
+			WHERE EXISTS (SELECT 1 FROM #ToCustIDs WHERE custid = b.custid)
+				  and c.recommend = @AgentID 
+				  and b.bettype not in (21008, 21009)
+				 AND ((b.bettype = 19999 AND winlostdate <= @moveBetsDay)  OR b.bettype > 19999 )
+			GROUP BY b.custid ,c.username
+
+			UNION ALL 
+
 			SELECT b.custid, c.username, SUM(winlost - actual_stake + playercomm) memberBal
 			FROM bettransRNG b WITH (NOLOCK)
 				INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
@@ -276,21 +275,29 @@ BEGIN
 
 		IF( @CusStatus <> '' or @CusStatus <> null)
 		BEGIN
-
 			;WITH cte_Balance AS (
 				SELECT
 					b.custid,
-					isnull(SUM(isnull(case when bettype < 19001 and b.winlostdate < @WinlostDate then winlost-actual_stake+playercomm 
-											  when bettype > 19000 then winlost-actual_stake +playercomm 
-											  else 0 
-											  end , 0)), 0) memberBal
+					isnull(SUM(isnull(winlost-actual_stake+playercomm, 0)), 0) memberBal
 				FROM  Bettrans AS b with (NOLOCK)
 				INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
-				WHERE c.recommend = @AgentID and c.roleid = 1 and b.ruben = 1 and b.bettype not in (21008, 21009)
-					AND 1 = CASE 
-								WHEN bettype = 19999 and winlostdate > @NewMoveBetDate THEN 0 --> get data from ticket detail
-								WHEN bettype < 19999 and winlostdate <= @NewMoveBetDate THEN 0 --> get data from sum record
-							ELSE 1 END
+				WHERE c.recommend = @AgentID 
+					and c.roleid = 1 
+					and b.ruben = 1
+					AND b.bettype < 19999 
+					AND b.winlostdate > @NewMoveBetDate
+					and b.winlostdate < @WinlostDate
+				GROUP BY b.custid 
+				UNION ALL 
+
+				SELECT
+					b.custid,
+					isnull(SUM(isnull(winlost-actual_stake +playercomm, 0)), 0) memberBal
+				FROM  dbo.Transfer AS b with (NOLOCK)
+				INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
+				WHERE c.recommend = @AgentID and c.roleid = 1 
+					and b.bettype not in (21008, 21009)
+					 AND ((b.bettype = 19999 AND winlostdate <= @NewMoveBetDate)  OR b.bettype > 19999 )
 				GROUP BY b.custid 
 
 				UNION ALL 
@@ -317,20 +324,28 @@ BEGIN
 
 			;WITH cte_Balance AS (
 				SELECT b.custid ,c.username,
-					  isnull(SUM(isnull(case when bettype < 19001 and b.winlostdate < @WinlostDate then winlost-actual_stake+playercomm 
-											 when bettype > 19000 then winlost-actual_stake +playercomm
-											 else 0 
-											 end , 0)), 0) memberBal
+					  isnull(SUM(isnull(winlost-actual_stake+playercomm, 0)), 0) memberBal
 				FROM  Bettrans AS b with (NOLOCK)
 				INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
 				WHERE EXISTS (SELECT 1 FROM #ToCustIDs WHERE custid = b.custid)
-					  and c.recommend = @AgentID and b.ruben = 1 and b.bettype not in (21008, 21009)
-					  AND 1 = CASE 
-								WHEN bettype = 19999 and winlostdate > @NewMoveBetDate THEN 0 --> get data from ticket detail
-								WHEN bettype < 19999 and winlostdate <= @NewMoveBetDate THEN 0 --> get data from sum record
-							ELSE 1 END
+					  and c.recommend = @AgentID 
+					  and b.ruben = 1 
+					  AND b.bettype < 19999
+					  AND b.winlostdate > @NewMoveBetDate
+					  and b.winlostdate < @WinlostDate
 				GROUP BY b.custid ,c.username
 
+				UNION ALL
+
+				SELECT b.custid ,c.username,
+					  isnull(SUM(isnull(winlost-actual_stake +playercomm, 0)), 0) memberBal
+				FROM  dbo.Transfer AS b with (NOLOCK)
+				INNER JOIN CustDB.dbo.customer as c with (NOLOCK) on b.custid = c.custid 
+				WHERE EXISTS (SELECT 1 FROM #ToCustIDs WHERE custid = b.custid)
+					  and c.recommend = @AgentID 
+					  and b.bettype not in (21008, 21009)
+					  AND ((b.bettype = 19999 AND winlostdate <= @NewMoveBetDate)  OR b.bettype > 19999 )
+				GROUP BY b.custid ,c.username
 				UNION ALL 
 				SELECT b.custid, c.username, SUM(winlost - actual_stake + playercomm) memberBal
 				FROM bettransRNG b WITH (NOLOCK)
@@ -392,10 +407,11 @@ BEGIN
 		SELECT @SkipTransfer = 0
 		--Check for existing transfer (allow only one transfer per day) - Tho@09062008  
 		IF(exists(  
-			  SELECT 1 FROM bettrans WITH (NOLOCK)   
+			  SELECT 1 FROM dbo.Transfer t WITH (NOLOCK)   
+			  LEFT JOIN dbo.TransferInfo ti WITH (NOLOCK)  ON t.TransId = ti.TransId
 			  WHERE custid=@custid AND bettype in (21003, 21004)   
 			  AND (transdate BETWEEN convert(varchar(10), current_timestamp, 120) AND convert(varchar(10), current_timestamp, 120) + ' 23:59:59')  
-			  AND liveindicator = 0
+			  AND ISNULL(ti.IsDel,0) = 0
 		 ))  
 		BEGIN 
 			SELECT @SkipTransfer = 1  
@@ -405,13 +421,13 @@ BEGIN
 		IF (@amount > 0 and @SkipTransfer = 0)
 		BEGIN
 		
-			INSERT INTO bettrans 
-				(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
-				status, ruben, winlostdate, currency,actualrate,currencyName, recommend, mrecommend, 
-				srecommend, scomm, swinlost,ip,statusID)
-			VALUES (0, @UserID, @agentid, @agUser, @refno, CURRENT_TIMESTAMP, 21004, 'To Customer via Multiple: ' + @User, @amount, 0, 
-				'Completed', 1, @WinlostDate, @currency,@actualrate, @currName,@agentid, @MRecommend1, 
-				@srecommend1, 0, 0,@ip,131)
+			INSERT INTO dbo.Transfer 
+				(creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
+				winlostdate, currency,actualrate,currencyName, recommend, mrecommend, 
+				srecommend, scomm, swinlost,ip,statusID, RepUpdateTime)
+			VALUES (@UserID, @agentid, @agUser, @refno, CURRENT_TIMESTAMP, 21004, 'To Customer via Multiple: ' + @User, @amount, 0, 
+				@WinlostDate, @currency,@actualrate, @currName,@agentid, @MRecommend1, 
+				@srecommend1, 0, 0,@ip,131,SYSDATETIME())
 			if @@Error <> 0
 			BEGIN
 				Select @ErrMsg = case @Language 
@@ -421,9 +437,8 @@ BEGIN
 							else N'Clear balance failed. Please try again.'
 						end, @ErrCode = 102
 				
-				DELETE dbo.bettrans
+				DELETE dbo.Transfer
 				WHERE custid in (@agentid, @custid)
-					and matchid = 0
 					and bettype = 21004
 					and refno = @refno
 					
@@ -442,9 +457,8 @@ BEGIN
 							else N'Clear balance failed. Please try again.'
 						end, @ErrCode = 102
 				
-				DELETE dbo.bettrans
+				DELETE dbo.Transfer
 				WHERE custid in (@agentid, @custid)
-					and matchid = 0
 					and bettype = 21004
 					and refno = @refno
 					
@@ -454,13 +468,13 @@ BEGIN
 			DECLARE @TotalCash1 MONEY 
 			EXEC Acc_CustomerSelCash_CaptureBalance @custid = @custid, @TotalCash  = @TotalCash1 OUTPUT
 
-			INSERT INTO bettrans
-				(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
-				status, ruben, winlostdate, currency,actualrate,currencyName, recommend, mrecommend, srecommend, 
-				scomm, swinlost,ip,statusID,balance)
-			VALUES (0, @UserID, @custid, @User, @refno, CURRENT_TIMESTAMP, 21004, 'To Customer via Multiple: ' + @agUser, 0, @amount,
-				'Completed', 1, @WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend1,
-				 0, 0,@ip,131,@TotalCash1)
+			INSERT INTO dbo.Transfer 
+				(creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
+				winlostdate, currency,actualrate,currencyName, recommend, mrecommend, srecommend, 
+				scomm, swinlost,ip,statusID,balance,RepUpdateTime)
+			VALUES (@UserID, @custid, @User, @refno, CURRENT_TIMESTAMP, 21004, 'To Customer via Multiple: ' + @agUser, 0, @amount,
+				@WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend1,
+				 0, 0,@ip,131,@TotalCash1,SYSDATETIME())
 			if @@Error <> 0
 			BEGIN
 				Select @ErrMsg = case @Language 
@@ -470,9 +484,8 @@ BEGIN
 							else N'Clear balance failed. Please try again.'
 						end, @ErrCode = 103
 				
-				DELETE dbo.bettrans
+				DELETE dbo.Transfer
 				WHERE custid in (@agentid, @custid)
-					and matchid = 0
 					and bettype = 21004
 					and refno = @refno
 				
@@ -492,13 +505,13 @@ BEGIN
 		ELSE if (@amount<0 and @SkipTransfer = 0)
 		BEGIN
 			--SET @amount = abs(@amount)
-			INSERT INTO bettrans 
-				(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
-				status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend,
-				scomm, swinlost,ip,statusID)
-			VALUES (0, @UserID, @agentid, @agUser, @refno, CURRENT_TIMESTAMP, 21004, 'To Customer via Multiple: ' + @User, 0, abs(@amount),
-				'Completed', 1,@WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend1,
-				0, 0, @ip,131)
+			INSERT INTO dbo.Transfer 
+				(creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
+				 winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend,
+				scomm, swinlost,ip,statusID,RepUpdateTime)
+			VALUES (@UserID, @agentid, @agUser, @refno, CURRENT_TIMESTAMP, 21004, 'To Customer via Multiple: ' + @User, 0, abs(@amount),
+				@WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend1,
+				0, 0, @ip,131,SYSDATETIME())
 			if @@Error <> 0
 			BEGIN
 				Select @ErrMsg = case @Language 
@@ -508,9 +521,8 @@ BEGIN
 							else N'Clear balance failed. Please try again.'
 						end, @ErrCode = 104
 				
-				DELETE dbo.bettrans
+				DELETE dbo.Transfer
 				WHERE custid in (@agentid, @custid)
-					and matchid = 0
 					and bettype = 21004
 					and refno = @refno
 					
@@ -520,13 +532,13 @@ BEGIN
 			DECLARE @TotalCash3 MONEY 
 			EXEC Acc_CustomerSelCash_CaptureBalance @custid = @custid, @TotalCash  = @TotalCash3 OUTPUT
 
-			INSERT INTO bettrans
-				(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
-				status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
-				scomm, swinlost,ip,statusID,balance)
-			VALUES (0, @UserID, @custid, @User, @refno, CURRENT_TIMESTAMP, 21004, 'To Customer via Multiple: ' + @agUser, abs(@amount), 0,
-				'Completed', 1,@WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend1, 
-				0, 0, @ip,131,@TotalCash3)
+			INSERT INTO dbo.Transfer 
+				(creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
+				winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
+				scomm, swinlost,ip,statusID,balance, RepUpdateTime)
+			VALUES (@UserID, @custid, @User, @refno, CURRENT_TIMESTAMP, 21004, 'To Customer via Multiple: ' + @agUser, abs(@amount), 0,
+				@WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend1, 
+				0, 0, @ip,131,@TotalCash3,SYSDATETIME())
 			if @@Error <> 0
 			BEGIN
 				Select @ErrMsg = case @Language 
@@ -536,9 +548,8 @@ BEGIN
 							else N'Clear balance failed. Please try again.'
 						end, @ErrCode = 105
 				
-				DELETE dbo.bettrans
+				DELETE dbo.Transfer
 				WHERE custid in (@agentid, @custid)
-					and matchid = 0
 					and bettype = 21004
 					and refno = @refno
 					

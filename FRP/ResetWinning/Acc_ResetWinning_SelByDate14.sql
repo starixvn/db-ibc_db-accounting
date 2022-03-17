@@ -68,6 +68,7 @@ AS
 		- 20210512@Malcolm : Add VGaming (Amount due to Jackpot Pool) into Reset winning [RedmineId : #154643]
 		- 20210907@Evan: Exclude CN88 data, Tuning Code - [Redmine: #161262]
 		- 20220112@Evan: Add SG Jackpot & revise SP [Redmine: #166685]
+		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 		
 	Explanation's Param:
 	    @mode:  0 _ view report
@@ -89,6 +90,15 @@ BEGIN
 	INSERT INTO #SportBettype (Bettype, ProductID, SubProduct)  
 	SELECT DISTINCT Bettype, ProductID, SubProduct FROM bodb02.dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest) 
 	----- End get sport bettype 
+
+
+	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 	
 ------------------------------------------
 	DECLARE @dummyBalance TABLE (CustId INT, Product VARCHAR(250), seq INT, IsExtraPT BIT)  
@@ -149,12 +159,10 @@ BEGIN
 			''  AS Product,
 			SUM((ISNULL(winlost, 0) - ISNULL(actual_stake, 0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)) * b.actualrate) AS Winlost,
 			SUM(ISNULL(winlost, 0) - ISNULL(actual_stake, 0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)) AS RealWinlost 
-	FROM dbo.bettrans b WITH (NOLOCK, INDEX = IX_Report)
+	FROM dbo.transfer b WITH (NOLOCK)
 	WHERE b.winlostdate = @winlostdate
-	   AND b.ruben = 1
-	   AND b.bettype > 19000 
+	   	AND ((b.bettype = 19999 AND b.winlostdate <= @moveBetsDay)  OR (b.bettype > 19999 ))
 	   AND b.bettype <> 21007 ---- exclude CN88 headline balance
-	   and b.matchID = 0 
     GROUP BY b.winlostdate, 
 			CASE WHEN b.bettype IN (21001, 21002) THEN custid ELSE -1 END  ,			
 			CASE WHEN b.bettype = 20000 then b.bettype ELSE 0 END
@@ -492,7 +500,7 @@ BEGIN
 					@transDesc    nvarchar(1000)= '',
 					@seq		  smallint = 0,
 					@maxseq		  smallint = 0,
-					@ip			  VARCHAR(20) = '',
+					@ip			  VARCHAR(45) = '',
 					@LogData	  NVARCHAR(200) = ''
                 
 			SELECT @seq = 1 

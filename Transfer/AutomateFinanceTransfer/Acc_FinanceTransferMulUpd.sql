@@ -3,7 +3,7 @@ ALTER PROCEDURE [dbo].[Acc_FinanceTransferMulUpd]
     @UserID INT,    
     @FileName VARCHAR(100),
     @FileSize INT,
-    @Ip varchar(15) = '',
+    @Ip varchar(45) = '',
     @ErrCode INT = 0 OUTPUT ,
     @ErrMsg NVARCHAR(200) = '' OUTPUT
 AS 
@@ -26,6 +26,7 @@ Revisions:
 	- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 	- 20181112@Sophia: Add @IsCollection [redmine: #98621]
 	- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
+	- 20211115@Danny: Change @Ip datatype to support IPv6 [Redmine: #164196]
 	
 */
 BEGIN

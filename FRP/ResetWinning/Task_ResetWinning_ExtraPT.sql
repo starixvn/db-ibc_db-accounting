@@ -4,7 +4,7 @@ ALTER PROCEDURE [dbo].[Task_ResetWinning_ExtraPT]
 	@todate   SMALLDATETIME,
 	@mode     TINYINT = 0,
 	@creator  INT = 5838421,
-	@ip       VARCHAR(20) = '',
+	@ip       VARCHAR(45) = '',
 	@MoveBetDay SMALLDATETIME = NULL,
 	@ErrCode  INT = 0 output,
     @ErrMsg   VARCHAR(100) = '' output
@@ -35,6 +35,7 @@ AS
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20210816@Sol: fix nested insert exec - [Redmine: #160212]
 		- 20220106@Evan: Add SG Jackpot - [Redmine: #166685]	
+		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 
 	Param's explain:
 		@mode:  0 _ view report
@@ -148,7 +149,8 @@ BEGIN
 				AND s.ProductID <> 1 
 				AND b.ruben = 1
 				AND b.statusid NOT IN (101, 102, 103, 121)
-				AND b.bettype < 19001
+				AND b.bettype < 19999
+				AND b.winlostdate > @moveBetsDay
 			GROUP BY b.winlostdate, b.srecommend, s.ProductID
 			)
 
@@ -178,8 +180,9 @@ BEGIN
 			WHERE  b.winlostdate BETWEEN @fromdate AND @todate
 				AND b.ruben = 1
 				AND b.statusid NOT IN (101, 102, 103, 121)
-				AND b.bettype < 19001
+				AND b.bettype < 19999
 				AND s.productID = 1 
+				AND b.winlostdate > @moveBetsDay
 			GROUP BY b.winlostdate, b.srecommend,
 					CASE WHEN ISNULL(m.matchid, 0) <> 0	THEN m.Sporttype ELSE 0 END, 
 					CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss','Bet Builder') THEN s.SubProduct ELSE '' END
@@ -200,7 +203,7 @@ BEGIN
 
 	INSERT INTO @LastReset (CustID, [Reset], Winlostdate, GroupID)
 	SELECT b.custid, ROUND(SUM(ISNULL(b.winlost, 0) - ISNULL(b.actual_stake, 0)), 2) AS [Reset], b.winlostdate, d.GroupID
-	FROM bettrans b WITH(READPAST)
+	FROM dbo.Transfer b WITH(READPAST)
 	INNER JOIN (SELECT DISTINCT CustID, GroupID FROM @dummy) d
 		ON b.custid = d.CustID
 	WHERE b.bettype IN (21001, 21002)

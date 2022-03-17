@@ -1,4 +1,5 @@
-﻿ALTER PROCEDURE [dbo].[DBA_BettransInsTransaction]
+﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
+CREATE PROCEDURE [dbo].[DBA_BettransInsTransaction]
 	@custid int,	
 	@actual_stake money,
 	@winlost money,
@@ -6,7 +7,7 @@
 	
 	@transdesc nvarchar(300) = 'Horse racing correction trans',
 	@UserID int = 360418,
-	@IP nvarchar(15) = '',
+	@IP varchar(45) = '',
 	@ErrCode int = 0 OUTPUT,
 	@ErrMsg nvarchar(200) = '' OUTPUT,
 	@Language varchar(2)= 'E'
@@ -25,6 +26,10 @@ Revisions:
 	- 20111028@Sophia: update balance
 	- 20120412@Sophia: Revise balance credit/debit
 	- 20130201@Elodie: Write more log on DBTXN server in case of DBLOG server failure
+	- 20131108@Elodie: Splitting bodb02 into CustDB (call CustInfo, Exchange by link database)
+	- 20150814@Kathy: Using new balance table (BalCreditOthers, BalDebitOthers) [Redmine:#40125]
+	- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
+	
 Param's Explanation:
 */
 
@@ -55,8 +60,8 @@ END
 
 Select @Curr = c.Currency, @actualrate = e.actualrate, @currName = e.currency,@username = c.username,  
 	   @Recommend = c.Recommend, @MRecommend = c.MRecommend, @SRecommend = c.SRecommend 
-from Custinfo c with (NOLOCK) 
-	INNER JOIN Exchange e with (NOLOCK) on c.currency = e.exchangeid 
+FROM CustDB.dbo.custinfo c with (NOLOCK) 
+	inner join CustDB.dbo.exchange e with (NOLOCK) on c.currency = e.exchangeid 
 where c.CustID = @CustID
 
 if @@rowcount = 0
@@ -75,7 +80,21 @@ SELECT @balance = @winlost - @actual_stake
 IF 	@balance < 0 
 	BEGIN 
 		SELECT @balance_ABS = ABS(@balance)
-		EXEC Dot_BalanceUpdDebit @custid = @custid, @balance = @balance_ABS
+		--EXEC Dot_BalanceUpdDebit @custid = @custid, @balance = @balance_ABS
+		EXEC dbo.Dot_BalanceDebitUpd 
+			@custID		= @custid
+			,@balance	= balance_ABS
+			,@type		= 4 -- Others
+			,@isForced	= 0
+			,@errCode	= @errCode OUTPUT
+		
+		IF @errCode <> 0
+		BEGIN
+			SELECT @errMsg = 'Cannot update balance!'
+					,@errCode = 100
+		
+			RETURN
+		END
 	END 
 
 ---insert transaction
@@ -83,17 +102,22 @@ EXEC dbo.Acc_SelRefNo @refNo = @RefNo OUTPUT
 
 select @RefNo = @RefNo + 100000000000
 
-INSERT INTO bettrans( custid, username, refno, transdate, matchid, bettype, transdesc, winlost, actual_stake, 
+INSERT INTO dbo.Transfer( custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 					  winlostdate, creator,recommend,mrecommend,srecommend,currency, currencyName,
-					  actualrate,ruben, status,ip,statusID)
-VALUES (@CustID, @username, @RefNo, current_TIMESTAMP, 0, @bettype, @transdesc, @winlost, @actual_stake, 
+					  actualrate,ip,statusID, RepUpdateTime)
+VALUES (@CustID, @username, @RefNo, current_TIMESTAMP, @bettype, @transdesc, @winlost, @actual_stake, 
         @winlostdate, @UserID, @Recommend, @MRecommend, @SRecommend, @curr, @currName,
-        @actualrate,1, 'Completed', @ip,131)
+        @actualrate, @ip,131, SYSDATETIME())
 
 ---update balance credit       
 	IF  @balance > 0 
 	BEGIN 
-		EXEC Dot_BalanceUpdCredit @custid = @custid, @balance = @balance
+		--EXEC Dot_BalanceUpdCredit @custid = @custid, @balance = @balance
+		EXEC dbo.Dot_BalanceCreditUpd
+		@custID = @custid
+		,@balance = @balance
+		,@type = 4 -- Others
+
 	END
         
         
@@ -117,6 +141,3 @@ BEGIN CATCH
 	EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = 0, @ToCustID = @CustID, @IP = @IP, @Doing = @LogData
 END CATCH
 
-GO
-GRANT VIEW DEFINITION ON [dbo].[DBA_BettransInsTransaction] TO [VNTeam]
-GO 
