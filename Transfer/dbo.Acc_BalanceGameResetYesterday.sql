@@ -18,17 +18,12 @@ AS
 		- 20160201@Elodie: Apply new rule for auto reset of OneRNG 
 		- 20160204@Elodie: Add WinLossLimit setting type for DCS [Redmine: #49606]
 		- 20191107@Eden: 3rd party products - Remove InActive Products Phase 2 [Redmine: #118699]
+		- 20220110@Eden: Saba Casino use DCS Setting [RedmineID: #164280]
 */
 BEGIN
 	SET NOCOUNT ON	
 	SELECT @IsResetYesterdayBalance = 0, @ErrCode = 0
 	DECLARE @BetTypeIds TABLE(BetType SMALLINT)
-
-	--for GD & RnG CS
-	INSERT INTO @BetTypeIds(BetType)
-	SELECT bettype
-	FROM DBCUST.CustDB.dbo.CustWinLimit WITH (NOLOCK)
-	WHERE CustId = @CustID AND IsAutoReset = 0 AND ((BetType = 1701 AND MaxWinlimit > 0) OR BetType = 2101)
 
 	--for DCS Product
 	INSERT INTO @BetTypeIds(BetType)
