@@ -51,6 +51,7 @@ Revisions:
 	- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 	- 20210817@Sophia: Fix overflow Refno [Redmine: #160262]
 	- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
+	- 20220315@Evan: SQL Server Upgrade STRING_SPLIT [Redmine: #168783]
 	
 Param's Explanation:
 */ 
@@ -211,8 +212,8 @@ BEGIN
 		CREATE TABLE #ToCustIDs (custID INT)
 
 		INSERT INTO #ToCustIDs (CustID)
-		SELECT convert(int, val) 
-		from dbo.strSplit (@ToCustIDs, ',' )
+		SELECT convert(int, value) 
+		FROM STRING_SPLIT (@ToCustIDs, ',' )
 		
 		;WITH cte_Balance AS (
 			SELECT b.custid ,c.username,

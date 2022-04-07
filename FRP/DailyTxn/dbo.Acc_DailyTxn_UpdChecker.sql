@@ -20,6 +20,7 @@ Revisions:
 					   Write more log on DBTXN server in case of DBLOG server failure
 	- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 	- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
+	- 20220315@Evan: SQL Server Upgrade STRING_SPLIT [Redmine: #168783]
 	
 Param's Explanation:
 	@TransIDs   : '1111,2341,...'
@@ -40,8 +41,8 @@ BEGIN
 
 	INSERT INTO @tmpTransID(transID, checktime, RepUpdateTime)
 	SELECT	transID, checktime, RepUpdateTime	FROM dbo.transfer WITH (NOLOCK) 
-	WHERE	refno IN (	SELECT	CONVERT(bigint, val)
-						FROM	dbo.strSplit (@Refnos, ',' ))
+	WHERE	refno IN (	SELECT	CONVERT(bigint, value)
+						FROM	STRING_SPLIT (@Refnos, ',' ))
 			AND bettype > 20000 
 
 	INSERT INTO @tmpTransferInfoID(transID) 
@@ -96,15 +97,15 @@ BEGIN
 	--ActionID: 1600 - Verify; 1601 - Unverify 
 	BEGIN TRY
 		INSERT INTO DBLOG.bodb_CustomerLog.dbo.UserLog_Transaction(UserID, Refno, ActionID, IP, Doing)
-		SELECT	@UserID, CONVERT(bigint, val),@ActionID, @IP, @LogData
-		FROM	dbo.strSplit (@Refnos, ',' )
+		SELECT	@UserID, CONVERT(bigint, value),@ActionID, @IP, @LogData
+		FROM	STRING_SPLIT (@Refnos, ',' )
 	END TRY
 	BEGIN CATCH
 		SELECT @LogData = '<Acc_DailyTxn_UpdChecker CheckerName="'+ @Username +
 						  '" ErrMsg="' + error_message() + '" />'
 		INSERT INTO bodb_CustomerLog.dbo.UserLog_Transaction(UserID, Refno, ActionID, IP, Doing)
-		SELECT	@UserID, CONVERT(bigint, val),@ActionID, @IP, @LogData
-		FROM	dbo.strSplit (@Refnos, ',' )
+		SELECT	@UserID, CONVERT(bigint, value),@ActionID, @IP, @LogData
+		FROM	STRING_SPLIT (@Refnos, ',' )
 	END CATCH
 END
 GO
