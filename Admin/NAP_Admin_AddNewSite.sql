@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCust-CustDB" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCust-CustDB" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
  
 ALTER PROCEDURE [dbo].[NAP_Admin_AddNewSite]
 	@sitename	NVARCHAR(50),
