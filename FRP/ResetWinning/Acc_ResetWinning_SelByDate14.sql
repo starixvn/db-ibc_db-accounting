@@ -69,6 +69,7 @@ AS
 		- 20210907@Evan: Exclude CN88 data, Tuning Code - [Redmine: #161262]
 		- 20220112@Evan: Add SG Jackpot & revise SP [Redmine: #166685]
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
+		- 20220425@Evan: Change product name and remove Casino Jackpot Amount [Redmine: #171865]
 		
 	Explanation's Param:
 	    @mode:  0 _ view report
@@ -194,14 +195,12 @@ BEGIN
 		  ,liveindicator bit   
 		  ,winlost    money  
 		  ,eWinlost    money  
-		  ,WinlostDueToRNG  money default (0)  
 		  ,WinlostDueToPP   money default (0)  
 		  ,WinlostDueToSaba  money default (0)  
 		  ,WinlostDueToVgaming money default (0)  
 		  ,WinlostDueToSG money default (0)  
 		  ,RealWinlost    money  
 		  ,eRealWinlost    money  
-		  ,RealWinlostDueToRNG  money default (0)  
 		  ,RealWinlostDueToPP   money default (0)  
 		  ,RealWinlostDueToSaba  money default (0)  
 		  ,RealWinlostDueToVgaming money default (0)  
@@ -216,31 +215,26 @@ BEGIN
 			AND b.statusID IN (111, 112, 113)
 	) 
 	INSERT INTO #tmpData (winlostdate, bettype, MatchId, liveindicator
-		,winlost, eWinlost, WinlostDueToRNG, WinlostDueToPP, WinlostDueToSaba, WinlostDueToVgaming,WinlostDueToSG
-		,RealWinlost, eRealWinlost, RealWinlostDueToRNG, RealWinlostDueToPP, RealWinlostDueToSaba, RealWinlostDueToVgaming,RealWinlostDueToSG)
+		,winlost, eWinlost, WinlostDueToPP, WinlostDueToSaba, WinlostDueToVgaming,WinlostDueToSG
+		,RealWinlost, eRealWinlost, RealWinlostDueToPP, RealWinlostDueToSaba, RealWinlostDueToVgaming,RealWinlostDueToSG)
 	---------Jackpot Contribution Tickets ------------
 	 SELECT winlostdate, bettype, 0 AS MatchId, 0 AS liveindicator,
 		-- Base Currency
 		SUM(CASE
 				-- Jackpot Prize
-				WHEN bettype IN (1699, 2199, 2399, 2999, 3899, 4298, 4600) THEN 0
+				WHEN bettype IN (1699, 3899, 4298, 4600) THEN 0
 				-- Jackpot full Contribution
-				WHEN bettype IN (1698, 2198, 2398, 2998, 3898, 4297, 4599) 
+				WHEN bettype IN (1698,  3898, 4297, 4599) 
 				THEN winlost - actual_stake + awinlost + mwinlost + swinlost + scomm + ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
 				ELSE 0 END 
 				* CASE WHEN @Istest = 1 THEN 1 ELSE actualrate END) AS winlost,
 		SUM(CASE
 				-- Jackpot Prize
-				WHEN bettype IN (1699, 2199, 2399, 2999, 3899, 4298, 4600) THEN 0
+				WHEN bettype IN (1699, 3899, 4298, 4600) THEN 0
 				-- Jackpot full Contribution
-				WHEN bettype IN (1698, 2198, 2398, 2998, 3898, 4297, 4599) THEN ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
+				WHEN bettype IN (1698,  3898, 4297, 4599) THEN ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
 				ELSE 0 END 
 				* CASE WHEN @Istest = 1 THEN 1 ELSE actualrate END * ISNULL(epositiontaking, 0)) AS eWinlost,
-		SUM(CASE
-				WHEN bettype IN (2198, 2398, 2998) THEN -ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
-				WHEN bettype IN (2199, 2399, 2999) THEN winlost - actual_stake
-				ELSE 0 END 
-				* CASE WHEN @Istest = 1 THEN 1 ELSE actualrate END) AS WinlostDueToRNG,
 		SUM(CASE
 				WHEN bettype IN (4297) THEN -ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
 				WHEN bettype IN (4298) THEN winlost - actual_stake
@@ -264,22 +258,18 @@ BEGIN
 		-- Real Currency
 		SUM(CASE
 				-- Jackpot Prize
-				WHEN bettype IN (1699, 2199, 2399, 2999, 3899, 4298, 4600) THEN 0
+				WHEN bettype IN (1699, 3899, 4298, 4600) THEN 0
 				-- Jackpot full Contribution
-				WHEN bettype IN (1698, 2198, 2398, 2998, 3898, 4297, 4599) 
+				WHEN bettype IN (1698, 3898, 4297, 4599) 
 				THEN winlost - actual_stake + awinlost + mwinlost + swinlost + scomm + ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
 				ELSE 0 END) AS winlost,
 		SUM(CASE
 				-- Jackpot Prize
-				WHEN bettype IN (1699, 2199, 2399, 2999, 3899, 4298, 4600) THEN 0
+				WHEN bettype IN (1699, 3899, 4298, 4600) THEN 0
 				-- Jackpot full Contribution
-				WHEN bettype IN (1698, 2198, 2398, 2998, 3898, 4297, 4599) THEN ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
+				WHEN bettype IN (1698, 3898, 4297, 4599) THEN ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
 				ELSE 0 END 
 				* ISNULL(epositiontaking, 0)) AS eWinlost,
-		SUM(CASE
-				WHEN bettype IN (2198, 2398, 2998) THEN -ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
-				WHEN bettype IN (2199, 2399, 2999) THEN winlost - actual_stake
-				ELSE 0 END) AS WinlostDueToRNG,
 		SUM(CASE
 				WHEN bettype IN (4297) THEN -ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
 				WHEN bettype IN (4298) THEN winlost - actual_stake
@@ -297,7 +287,7 @@ BEGIN
 				WHEN bettype IN (4600) THEN winlost - actual_stake
 				ELSE 0 END) AS WinlostDueToSG
 	FROM CTE_tmpData
-	WHERE bettype IN (1698, 1699, 2198, 2199, 2398, 2399, 2998, 2999, 3898, 3899, 4297, 4298, 4599, 4600)
+	WHERE bettype IN (1698, 1699, 3898, 3899, 4297, 4298, 4599, 4600)
 	GROUP BY winlostdate, bettype
 	
 	-----------Normal bet Tickets------------
@@ -308,15 +298,14 @@ BEGIN
 				* CASE WHEN @Istest = 1 THEN 1 ELSE actualrate END) AS winlost,
 		SUM(CASE WHEN tpositiontaking = 1 THEN 0 ELSE (winlost - actual_stake + scomm / (1 - tpositiontaking)) END
 				* CASE WHEN @Istest = 1 THEN 1 ELSE actualrate END 
-				* ISNULL(epositiontaking, 0)) AS eWinlost, 0, 0, 0, 0, 0,
+				* ISNULL(epositiontaking, 0)) AS eWinlost, 0, 0, 0, 0, 
 		-- Real Currency
 		SUM(winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) AS RealWinlost,
 		SUM(CASE WHEN tpositiontaking = 1 THEN 0 ELSE (winlost - actual_stake + scomm / (1 - tpositiontaking)) END
-				* ISNULL(epositiontaking, 0)) AS eRealWinlost, 0, 0, 0, 0, 0
+				* ISNULL(epositiontaking, 0)) AS eRealWinlost, 0, 0, 0, 0
 	FROM CTE_tmpData 
-	WHERE bettype NOT IN (1698, 1699, 2198, 2199, 2398, 2399, 2998, 2999, 3898, 3899, 4297, 4298, 4599, 4600)
+	WHERE bettype NOT IN (1698, 1699, 3898, 3899, 4297, 4298, 4599, 4600)
 	GROUP BY winlostdate, bettype, MatchId, liveindicator
-
 	 
 	DECLARE @wlDate DATETIME = @winlostdate;
 	
@@ -355,14 +344,12 @@ BEGIN
 			,CASE WHEN s.SubProduct IN ('MG-SuperLive', 'BT-Sold','BT-Bought','BT-Comm','BT-Winloss','Bet Builder') THEN s.SubProduct ELSE '' END AS SubProduct  
 			,SUM(b.Winlost)  AS Winlost
 			,SUM(b.eWinlost) AS eWinlost
-			,SUM(b.WinlostDueToRNG)  AS WinlostDueToRNG
 			,SUM(b.WinlostDueToPP)  AS WinlostDueToPP
 			,SUM(b.WinlostDueToSaba) AS WinlostDueToSaba
 			,SUM(b.WinlostDueToVgaming) AS WinlostDueToVgaming
 			,SUM(b.WinlostDueToSG) AS WinlostDueToSG
 			,SUM(b.RealWinlost)  AS RealWinlost
 			,SUM(b.eRealWinlost) AS eRealWinlost
-			,SUM(b.RealWinlostDueToRNG)  AS RealWinlostDueToRNG
 			,SUM(b.RealWinlostDueToPP)  AS RealWinlostDueToPP
 			,SUM(b.RealWinlostDueToSaba) AS RealWinlostDueToSaba
 			,SUM(b.RealWinlostDueToVgaming) AS RealWinlostDueToVgaming
@@ -388,7 +375,6 @@ BEGIN
 	FROM CTE_tmpWL c  
 	CROSS APPLY (  
 		SELECT c.ProductId, c.ProductName, c.Winlost, c.eWinlost, c.RealWinlost, c.eRealWinlost  
-		UNION ALL SELECT 0, 'Casino (Amount due to Jackpot Pool)', c.WinlostDueToRNG, 0, c.RealWinlostDueToRNG, 0 WHERE c.WinlostDueToRNG <> 0  
 		UNION ALL SELECT 0, 'PP (Amount due to Jackpot Pool)', c.WinlostDueToPP, 0, c.RealWinlostDueToPP, 0 WHERE c.WinlostDueToPP <> 0  
 		UNION ALL SELECT 0, 'Saba.club (Amount due to Jackpot Pool)', c.WinlostDueToSaba, 0, c.RealWinlostDueToSaba, 0 WHERE c.WinlostDueToSaba <> 0  
 		UNION ALL SELECT 0, 'VGaming (Amount due to Jackpot Pool)', c.WinlostDueToVgaming, 0, c.RealWinlostDueToVgaming, 0 WHERE c.WinlostDueToVgaming <> 0  
@@ -398,10 +384,10 @@ BEGIN
 	
 	----- Update ProductName
 	UPDATE e 
-	SET ProductName = CASE WHEN e.ProductId = 6 THEN 'Casino' ELSE CASE WHEN e.ProductID <> 1 THEN p.ProductName ELSE e.ProductName END END 
+	SET ProductName = p.ProductName 
 	FROM #WLByProduct e
-	INNER JOIN dbo.Products p WITH (NOLOCK)
-		ON e.ProductId = p.ProductId
+		INNER JOIN dbo.Products p WITH (NOLOCK) ON e.ProductId = p.ProductId
+	WHERE e.ProductId NOT IN (0, 1)
 	 
 	---------------------------------------------------------------------------------------------------------
 	
@@ -455,12 +441,10 @@ BEGIN
 			CREATE TABLE #reset
 			(	seq         		INT IDENTITY (1,1),			
 				product     		VARCHAR(250),
-
 				winlost				MONEY,
 				WinlostAfterExtraPT MONEY,
 				reset       		MONEY,
 				latestreset 		MONEY,
-
 				Realwinlost				MONEY,
 				RealWinlostAfterExtraPT MONEY,
 				Realreset       		MONEY,
