@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCust-CustDB" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCust-CustDB" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
  
 ALTER PROCEDURE [dbo].[NAP_Admin_AddNewSite]
 	@sitename	NVARCHAR(50),
@@ -13,6 +13,7 @@ AS
 
 	Revisions:
 		- 20170704@Harper: Create new SP [RedmineID: #77817]
+		- 20220413@Elodie: Remove code to delete site in case of error [RedmineID: #170752]
 */
 BEGIN
 	
@@ -32,15 +33,12 @@ BEGIN
 		BEGIN
 			SELECT @ErrMsg = 'Insert Failed', @ErrCode = 102
 
-			DELETE dbo.Site
-			WHERE site = @sitename AND isDeposit = @isDeposit
+			--DELETE dbo.Site
+			--WHERE site = @sitename AND isDeposit = @isDeposit
 
 			RETURN
 		END
 	END	
 END
 GO
-GRANT EXECUTE ON [dbo].[NAP_Admin_AddNewSite] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[NAP_Admin_AddNewSite] TO [vnteam]
-GO
+
