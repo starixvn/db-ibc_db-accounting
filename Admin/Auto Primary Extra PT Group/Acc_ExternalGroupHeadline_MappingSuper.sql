@@ -14,6 +14,7 @@ AS
 
 	Revisions:
 		- 20210302@Percy: Initialize SP [RemineID: #146710]
+		- 20220509@Danny: Use String_split built-in function [RemineID: #171831]
 */
 
 BEGIN
@@ -24,7 +25,7 @@ BEGIN
 
 	DECLARE @Supers TABLE (CustId INT, ExchangeId INT, Currency VARCHAR(50), SiteId INT, Site VARCHAR(100), UserName VARCHAR(30))
 	INSERT INTO @Supers (UserName)
-	SELECT DISTINCT LTRIM(RTRIM(val)) FROM dbo.strSplit(@UserNames, ',')
+	SELECT DISTINCT LTRIM(RTRIM(value)) FROM STRING_SPLIT(@UserNames, ',')
 
 	UPDATE s
 	SET s.CustId = c.CustId
