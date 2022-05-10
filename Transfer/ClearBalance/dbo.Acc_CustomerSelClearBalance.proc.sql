@@ -34,6 +34,7 @@ AS
 		- 20210615@Sol: Alpha - All Sites - Lock account & indirect close account - [RedmineID: #148600]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
+		- 20220216@Evan: Remove unused columns - [Redmine: #164280]
 
 	Param's Explanation:
 	
@@ -356,13 +357,13 @@ BEGIN
 	END	
  
 
-	DECLARE @result TABLE (rownum INT, custid INT PRIMARY KEY, username VARCHAR(30), closed BIT, firstname NVARCHAR(100), lastname NVARCHAR(100), credit MONEY, recommend INT, mrecommend INT, srecommend INT, SyncCasino BIT)
-	INSERT INTO @result (rownum, custid, username, closed, firstname, lastname, credit, recommend, mrecommend, srecommend, SyncCasino)
-	SELECT rownum, custid, username, closed, firstname, lastname, credit, recommend, mrecommend, srecommend, SyncCasino
+	DECLARE @result TABLE (rownum INT, custid INT PRIMARY KEY, username VARCHAR(30), closed BIT, firstname NVARCHAR(100), lastname NVARCHAR(100), credit MONEY, recommend INT, mrecommend INT, srecommend INT)
+	INSERT INTO @result (rownum, custid, username, closed, firstname, lastname, credit, recommend, mrecommend, srecommend)
+	SELECT rownum, custid, username, closed, firstname, lastname, credit, recommend, mrecommend, srecommend
 	FROM (
 		SELECT
 			ROW_NUMBER() OVER(ORDER BY cs.IsClosed, c.username) AS rownum,
-			c.custid, c.username, cs.IsClosed AS closed, c.firstname, c.lastname, ci.credit, c.recommend, c.mrecommend, c.srecommend, ci.SyncCasino /* recommend, mrecommend, SyncCasino for agent level*/
+			c.custid, c.username, cs.IsClosed AS closed, c.firstname, c.lastname, ci.credit, c.recommend, c.mrecommend, c.srecommend/* recommend, mrecommend for agent level*/
 		FROM dbo.Customer c WITH(NOLOCK)
 			INNER JOIN dbo.custInfo ci WITH(NOLOCK) ON c.custid = ci.custid
 			CROSS APPLY  
@@ -424,8 +425,7 @@ BEGIN
 		c.used_credit AS UsedCredit,
 		r.credit - c.used_credit AS AvailableCredit,
 		r.recommend AS Recommend,
-		r.mrecommend AS Mrecommend,
-		r.SyncCasino
+		r.mrecommend AS Mrecommend
 	FROM @result r
 		LEFT JOIN dbo.Customer p WITH(NOLOCK) ON r.custid = p.custid
 		LEFT JOIN dbo.Customer a WITH(NOLOCK) ON r.recommend = a.custid
