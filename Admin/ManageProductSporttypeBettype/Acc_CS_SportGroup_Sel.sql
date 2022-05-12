@@ -10,6 +10,7 @@ Original:
 
 	Revisions:
 		- 20200328@Malcolm: NAP Manage CS_SportBettypeMatrix [Redmine: #131241]
+		- 20220509@Evan: SQL Server Upgrade STRING_SPLIT [Redmine: #172461]
 		
 */
 BEGIN
@@ -26,7 +27,7 @@ BEGIN
 		CROSS APPLY(
 					SELECT N'\' + SportName 
 					FROM dbo.Sports WITH(NOLOCK) 
-					WHERE Sporttype IN (SELECT Val FROM dbo.strSplit(t.DisplaySport, ',')) FOR XML PATH('')
+					WHERE Sporttype IN (SELECT value FROM STRING_SPLIT(t.DisplaySport,',')) FOR XML PATH('')
 		) AS d(SportName)
 END
 
