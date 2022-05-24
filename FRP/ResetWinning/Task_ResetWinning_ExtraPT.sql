@@ -36,6 +36,7 @@ AS
 		- 20210816@Sol: fix nested insert exec - [Redmine: #160212]
 		- 20220106@Evan: Add SG Jackpot - [Redmine: #166685]	
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
+		- 20220425@Evan: Remove Casino Jackpot Amount [Redmine: #171865]
 
 	Param's explain:
 		@mode:  0 _ view report
@@ -135,9 +136,9 @@ BEGIN
 				SUM((
 					CASE
 						-- Jackpot
-						WHEN b.bettype IN (1698, 2198, 2398, 2998, 3898, 4297, 4599) THEN
+						WHEN b.bettype IN (1698, 3898, 4297, 4599) THEN
 							CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE ISNULL(b.betid/CONVERT(DECIMAL(19,8), 100000000), 0) END
-						WHEN b.bettype IN (1699, 2199, 2399, 2999, 3899, 4298, 4600) THEN 0
+						WHEN b.bettype IN (1699, 3899, 4298, 4600) THEN 0
 						ELSE
 							CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE b.winlost - b.actual_stake + b.scomm / (1 - b.tpositiontaking) END
 						END) * b.actualrate * ISNULL(b.epositiontaking, 0)) AS eWinlost,
