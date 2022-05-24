@@ -33,6 +33,7 @@ AS
   - 20210819@Evan: NAP - Prevent reversal near BU [Redmine: #160439]
   - 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
   - 20220830@Danny: add filter to Remove orphan ticket [Redmine: #175253]
+  - 20220421@Percy: Get Opening Balance from Statement_Accum table [RedmineID: #169560]
 
     Param's Explanation:  
         - @FilterBy: 1:winlostdate - 2:transdate  
@@ -131,22 +132,22 @@ BEGIN
 				b.transdesc + ' - Ex.Rate: ' + CAST(b.actualrate AS VARCHAR(10)) transdesc, 
 				b.creator,
 				CASE 
-					WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL 
+					WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL 
 					ELSE ti.CheckerId
-				END checkerID, --BalanceUP AND Transfer to Casino/Bingo/P2P
+				END checkerID, -- Transfer to Casino/Bingo/P2P
 				CASE 
-					WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN '0' 
+					WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN '0' 
 					ELSE ti.CheckerName
 				END checkerName,
 				CASE 
-					WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL 
+					WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL 
 					ELSE b.checkTime 
 				END checkTime,
 				CASE 
-					WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN 0 
+					WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN 0 
 					ELSE 1 
 				END isAllowVerify,
-				CASE b.bettype WHEN 20000 THEN 1 ELSE ISNULL(ti.IsDel,0) END isReversal
+				ISNULL(ti.IsDel,0) isReversal
 			FROM bodb02.dbo.transfer b WITH(NOLOCK) 
 				 LEFT JOIN dbo.TransferInfo ti WITH(NOLOCK) ON b.TransId = ti.TransId
                  LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = b.bettype
@@ -174,7 +175,7 @@ BEGIN
 						ORDER BY f.RoleId ASC
 				 ) cr			 
 			WHERE  b.refno = @_RefNo
-				AND b.bettype >= 20000 
+				AND b.bettype > 20000 
 				AND (@GroupId = 1 OR ISNULL(cr.IsView, ~l.IsInternal) = 1 OR (@GroupId = 0 AND ISNULL(cr.IsView, 1) = 1))
 				AND b.CustId <> 0
 
@@ -272,27 +273,27 @@ BEGIN
 				b.transdesc + ' - Ex.Rate: ' + CAST(b.actualrate AS VARCHAR(10)) transdesc, 
 				b.creator,
 				CASE 
-					WHEN bettype.typeid IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL 
+					WHEN bettype.typeid IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL 
 					ELSE ti.CheckerId
-				END checkerID, --BalanceUP AND Transfer to Casino/Bingo/P2P
+				END checkerID, -- Transfer to Casino/Bingo/P2P
 				CASE 
-					WHEN bettype.typeid IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN '0' 
+					WHEN bettype.typeid IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN '0' 
 					ELSE ti.CheckerName
 				END checkerName,
 				CASE 
-					WHEN bettype.typeid IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL 
+					WHEN bettype.typeid IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL 
 					ELSE b.checkTime 
 				END checkTime,
 				CASE 
-					WHEN bettype.typeid IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN 0 
+					WHEN bettype.typeid IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN 0 
 					ELSE 1 
 				END isAllowVerify,
-				CASE b.bettype WHEN 20000 THEN 1 ELSE ISNULL(ti.IsDel,0) END isReversal
+				ISNULL(ti.IsDel,0) isReversal
 			FROM dbo.transfer b (NOLOCK)
 				LEFT JOIN dbo.TransferInfo ti WITH(NOLOCK) ON b.TransId = ti.TransId
 				LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = b.bettype 
 			WHERE b.custid = @CustID
-				AND b.bettype >= 20000 
+				AND b.bettype > 20000 
 				AND 
 					( (@FilterBy = 1 AND b.winlostdate >= @_FromDate AND b.winlostdate < @_ToDate)
 					OR (@FilterBy = 2 AND b.transdate >= @_FromDate AND b.transdate < @_ToDate)
@@ -319,20 +320,17 @@ BEGIN
 	FROM #StatementTable
 	WHERE TransType LIKE 'Bal'
 
-	IF ( (@_FromDate < @_BalanceUpDay) OR (@HasOpeningBalanceInBettrans = 0) ) AND (@CustID > 0)
+	IF ( (@_FromDate <= @_BalanceUpDay) OR (@HasOpeningBalanceInBettrans = 0) ) AND (@CustID > 0)
 	BEGIN
+		IF @_ToDate > @_BalanceUpDay
+			SET @_ToDate = @_BalanceUpDay
 
-		IF DATEADD(day,-1,@_ToDate) >= DATEADD(day,-1,@_BalanceUpDay)
-			SELECT @_ToDate = @_BalanceUpDay -- where statement winlostdate/transdate < @_ToDate
-	
-		SELECT TOP 1 @_FromDate = ISNULL(accdate,@FromDate_Bk)
-		FROM bodb_Report.dbo.Statement WITH (NOLOCK)
-		WHERE 
-			custid = @CustID 
-			AND accdate <= @FromDate_Bk
-			AND transtype LIKE 'Bal' AND transdesc LIKE 'OPENING BALANCE'
-		ORDER BY accdate DESC
- 
+		SELECT TOP 1 @_FromDate = ISNULL(AccDate, @FromDate_Bk)
+		FROM bodb_Report.dbo.Statement_Accum WITH (NOLOCK)
+		WHERE CustId = @CustID
+			AND AccDate <= @FromDate_Bk
+		ORDER BY AccDate DESC
+		
 		INSERT INTO #StatementTable(
 				TransID,
 				TransDate,
@@ -353,19 +351,17 @@ BEGIN
 				accdate winlostdate,
 				0 refno,
 				totalamt,
-				transtype,
-				transdesc, 
+				'Bal' transtype,
+				'OPENING BALANCE' transdesc, 
 				0 creator,
 				NULL checkerID,
 				'' checkerName,
 				NULL checkTime,
 				0 isAllowVerify,
 				1 isReversal
-			FROM bodb_Report.dbo.Statement WITH (NOLOCK) 
-			WHERE 
-				custid = @CustID 
-				AND accdate >= @_FromDate AND accdate < @_ToDate
-				AND transtype LIKE 'Bal' AND transdesc LIKE 'OPENING BALANCE'
+			FROM bodb_Report.dbo.Statement_Accum WITH (NOLOCK) 
+			WHERE custid = @CustID
+				AND AccDate BETWEEN @_FromDate AND @_ToDate
 
 		INSERT INTO #StatementTable(
 				TransID,

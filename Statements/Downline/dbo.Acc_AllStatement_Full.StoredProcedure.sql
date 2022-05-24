@@ -72,6 +72,7 @@ AS
 		- 20211202@Malcolm: exclude record with 'ComStatus' = 'CO'for Cashout - [Redmine: #164902]
 		- 20220110@Malcolm: show Void/Cancelled Bet for parlay tickets [Redmine: #165850]
 		- 20211115@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
+		- 20220421@Percy: Get Opening Balance from Statement_Accum table [RedmineID: #169560]
 		
 	Param explanation : 
 		- Transtypeid = 4 - GrandPrize
@@ -417,16 +418,16 @@ BEGIN
 				0,
 				transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END transdesc, 
 				b.creator AS creatorID,
-				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE ti.CheckerId END, --BalanceUP AND Transfer to Casino/Bingo/P2P
-				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN '0' ELSE ti.CheckerName END,
-				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE b.checkTime END,
-				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN 0 ELSE 1 END   
+				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE ti.CheckerId END, -- Transfer to Casino/Bingo/P2P
+				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN '0' ELSE ti.CheckerName END,
+				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE b.checkTime END,
+				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN 0 ELSE 1 END   
 			FROM
 				dbo.Transfer b WITH (NOLOCK)
 				INNER JOIN bettype bt WITH (NOLOCK) ON b.bettype = bt.typeid 
 				LEFT JOIN dbo.TransferInfo ti WITH(NOLOCK) ON b.TransId = ti.TransId
 			WHERE 
-				bettype >= 20000 
+				bettype > 20000 
 				AND b.custid=@CID 
 				AND b.bettype NOT IN (23001,23002,23101,23102,23201,23202)
 				AND (winlost-actual_stake) <> 0 
@@ -614,16 +615,16 @@ BEGIN
 				0,
 				transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END transdesc, 			
 				b.creator AS creatorID,
-				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE ti.CheckerId END,
-				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN '0' ELSE ti.CheckerName END,
-				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE b.checkTime END,
-				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN 0 ELSE 1 END   
+				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE ti.CheckerId END,
+				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN '0' ELSE ti.CheckerName END,
+				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE b.checkTime END,
+				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN 0 ELSE 1 END   
 			FROM
 				dbo.Transfer b WITH (NOLOCK) 
 				INNER JOIN bettype bt WITH (NOLOCK) ON b.bettype = bt.typeid 
 				LEFT JOIN dbo.TransferInfo ti WITH (NOLOCK) ON b.TransId = ti.TransId
 			WHERE 
-				bettype >= 20000
+				bettype > 20000
 				AND b.custid = @CID
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate 
 				
@@ -737,16 +738,16 @@ BEGIN
 				0,
 				transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END transdesc, 
 				b.creator AS creatorID,
-				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE ti.CheckerId END,
-				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN '0' ELSE ti.CheckerName END,
-				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE b.checkTime END,
-				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN 0 ELSE 1 END    
+				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE ti.CheckerId END,
+				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN '0' ELSE ti.CheckerName END,
+				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE b.checkTime END,
+				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN 0 ELSE 1 END    
 			FROM
 				dbo.transfer b WITH (NOLOCK) 
 				INNER JOIN bettype bt WITH (NOLOCK) ON b.bettype = bt.typeid 
 				LEFT JOIN dbo.transferInfo ti WITH (NOLOCK) ON b.TransId = ti.TransId 
 			WHERE 
-				bettype >= 20000 
+				bettype > 20000 
 				AND b.custid = @CID 
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate 
 				
@@ -861,16 +862,16 @@ BEGIN
 				0,
 				transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END transdesc,
 				b.creator AS creatorID,
-				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE ti.CheckerId END,
-				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN '0' ELSE ti.CheckerName END,
-				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE b.checkTime END,
-				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN 0 ELSE 1 END  
+				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE ti.CheckerId END,
+				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN '0' ELSE ti.CheckerName END,
+				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE b.checkTime END,
+				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN 0 ELSE 1 END  
 			FROM
 				dbo.Transfer b WITH (NOLOCK) 
 				INNER JOIN bettype bt WITH (NOLOCK) ON b.bettype=bt.typeid  
 				LEFT JOIN dbo.TransferInfo ti WITH (NOLOCK) ON b.TransID = ti.TransId
 			WHERE 
-				bettype >= 20000 
+				bettype > 20000 
 				AND b.custid=@CID 
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate
 
@@ -983,15 +984,15 @@ BEGIN
 				0,
 				transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END transdesc,
 				b.creator AS creatorID,
-				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21007,21008,21009) THEN NULL ELSE ti.CheckerId END,
-				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21007,21008,21009) THEN '0' ELSE ti.CheckerName END,
-				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21007,21008,21009) THEN NULL ELSE b.checkTime END,
-				CASE WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21007,21008,21009) THEN 0 ELSE 1 END  
+				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21007,21008,21009) THEN NULL ELSE ti.CheckerId END,
+				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21007,21008,21009) THEN '0' ELSE ti.CheckerName END,
+				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21007,21008,21009) THEN NULL ELSE b.checkTime END,
+				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21007,21008,21009) THEN 0 ELSE 1 END  
 			FROM
 				dbo.transfer b WITH (NOLOCK) 
 				INNER JOIN bettype bt WITH (NOLOCK) ON b.bettype=bt.typeid  
 				LEFT JOIN dbo.transferInfo ti WITH (NOLOCK) ON b.TransId = ti.TransId
-			WHERE bettype >= 20000 
+			WHERE bettype > 20000 
 				AND b.custid=@CID 
 				AND b.winlostdate BETWEEN @_FromDate AND @_ToDate
 		END
@@ -999,21 +1000,23 @@ BEGIN
 
 	END		   
 
-	IF @_FromDate < @_BalanceUpDay
+	IF @_FromDate <= @_BalanceUpDay
 	BEGIN
 		DECLARE @lateTransaction BIT
 
-		IF @_ToDate >= DATEADD(dd, -1, @_BalanceUpDay)
+		IF @_ToDate > @_BalanceUpDay
 		BEGIN
-			SELECT	@_ToDate = DATEADD(dd, -1, @_BalanceUpDay) + ' 23:59:59',
+			SELECT	@_ToDate = @_BalanceUpDay,
 					@lateTransaction = 1		
 		END
-	
-		SELECT	TOP 1 @_FromDate = ISNULL(accdate, @Fromdate_bk)
-		FROM	bodb_Report.dbo.[Statement] WITH (NOLOCK)
-		WHERE	custid = @CID AND transdesc = 'OPENING BALANCE' AND accdate <= @Fromdate_bk
-		ORDER BY accdate DESC
- 
+
+		IF @_FromDate < @_BalanceUpDay
+			SELECT TOP 1 @_FromDate = ISNULL(AccDate, @FromDate_Bk)
+			FROM bodb_Report.dbo.Statement_Accum WITH (NOLOCK)
+			WHERE CustId = @CustID
+				AND AccDate <= @FromDate_Bk
+			ORDER BY AccDate DESC
+		
 		INSERT INTO @StatementTable
 		SELECT
 			accdate,
@@ -1034,6 +1037,7 @@ BEGIN
 		WHERE
 			custid = @CID
 			AND accdate BETWEEN @_FromDate AND @_ToDate
+			AND transtype <> 'Bal'
 	
 		UNION ALL --- @Lukas add missing transaction
 		SELECT 		 
@@ -1051,51 +1055,39 @@ BEGIN
 		FROM bodb_Report.dbo.[Statement] WITH (NOLOCK) 
 		WHERE
 			custid = @CID
-			AND accdate > @_ToDate AND accdate <= DATEADD(DAY, 2, @_ToDate)
+			AND accdate >= @_ToDate AND accdate < DATEADD(DAY, 3, @_ToDate)
 			AND @lateTransaction = 1
 			AND transtype IN ('Dep','Wit')
+
+		INSERT INTO @StatementTable
+		SELECT
+			accdate,
+			0,
+			totalamt,
+			'Bal' transtype,
+			0 transtypeid,
+			'OPENING BALANCE' transdesc, 
+			'' creator,
+			NULL,
+			'',
+			NULL,
+			0
+		FROM bodb_Report.dbo.Statement_Accum WITH (NOLOCK) 
+		WHERE CustId = @CID
+			AND AccDate BETWEEN @_FromDate AND @_ToDate
 	END
 
-	IF (@_IncludeAccBal = 1)
+	IF (@_IncludeAccBal = 1) AND (@Fromdate_bk <> @_BalanceUpDay)
 	BEGIN
 		DECLARE @AccBal MONEY, @BUDate DATETIME
-	
-		IF (@Fromdate_bk <> @_BalanceUpDay)
-		BEGIN
-		
-			IF (@Fromdate_bk > @_BalanceUpDay)
-			BEGIN
-				--get acc bal FROM current (bettrans)
-				SELECT @AccBal = ISNULL(SUM(totalamt),0)
-				FROM @StatementTable
-				WHERE accdate < @Fromdate_bk AND transtype <> 'GP'
-			END
-			ELSE 
-			BEGIN
-				--get latest old BUDate
-				SELECT TOP 1 @BUDate = accdate
-				FROM bodb_Report.dbo.[Statement] WITH (NOLOCK)
-				WHERE custid = @CID AND transdesc = 'OPENING BALANCE' AND accdate <= @Fromdate_bk
-				ORDER BY accdate DESC
-			
-				--if cannot find any old BU row, get BUDate FROM last BUDate before @Fromdate
-				IF (@BUDate IS NULL) 
-				BEGIN
-					SET @BUDate = @Fromdate_bk
-					WHILE(DATEPART(WEEKDAY, @BUDate) <> 7) SET @BUDate = DATEADD(dd, -1, @BUDate)  
-				END
-			
-				--get acc bal FROM statement old (Statement):		
-				SELECT @AccBal = ISNULL(SUM(totalamt),0)
-				FROM bodb_Report.dbo.[Statement] WITH (NOLOCK) 
-				WHERE custid = @CID AND accdate >= @BUDate AND accdate < @Fromdate_bk AND transtype <> 'GP'
-			END
 
-			IF EXISTS(SELECT 1 FROM @StatementTable WHERE accdate >= @Fromdate_bk AND @AccBal <> 0) 
-				INSERT INTO @StatementTable
-				SELECT '', 0, @AccBal, 'BAL', 0, 'ACCUMULATED BALANCE', NULL, NULL, 0, NULL, 0
+		SELECT @AccBal = ISNULL(SUM(totalamt),0)
+		FROM @StatementTable
+		WHERE accdate < @Fromdate_bk AND transtype <> 'GP'
 
-		END
+		IF EXISTS(SELECT 1 FROM @StatementTable WHERE accdate >= @Fromdate_bk AND @AccBal <> 0) 
+			INSERT INTO @StatementTable
+			SELECT '', 0, @AccBal, 'BAL', 0, 'ACCUMULATED BALANCE', NULL, NULL, 0, NULL, 0
 	END
 
 	-- OUTPUT result
