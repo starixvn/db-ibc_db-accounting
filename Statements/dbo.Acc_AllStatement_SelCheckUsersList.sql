@@ -1,6 +1,6 @@
 ﻿/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_AllStatement_SelCheckUsersList]
-	@userlist varchar(6000),
+	@UserList varchar(6000),
 	@UserId	INT
 	
 AS
@@ -30,7 +30,7 @@ BEGIN
 
 	INSERT INTO @TEMP_USER_LIST (username)
 	SELECT DISTINCT LTRIM(RTRIM(f.value)) as username
-	FROM STRING_SPLIT(@userlist, ',') f 
+	FROM STRING_SPLIT(@UserList, ',') f 
 	
 	INSERT INTO @TEMP_USER_VALID (Custid,UserName,Recommend,Mrecommend,Srecommend)
 	SELECT c.custid,c.username,c.recommend,c.mrecommend,c.srecommend 
