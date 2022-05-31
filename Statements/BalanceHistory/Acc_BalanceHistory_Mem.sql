@@ -15,6 +15,7 @@ AS
 	Revisions:  
 		- 20210126@Sol: Initialize sp - [RedmineID: #144546] 
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
+		- 20220427@Sol: NAP - fixbug - missing table transfer in range 14 - [Redmine: #167296]
 */
 BEGIN
 
@@ -44,7 +45,7 @@ BEGIN
 	EXEC Age_SelBalanceUpDay
 
 	SELECT @MoveBetsDay = MoveBetsDay, @BalanceUpDay = BalanceUpDay FROM @tmp
-	SELECT @InternalFromDate = @FromDate, @InternalToDate = DATEADD(DAY, 1, @Todate)
+	SELECT @InternalFromDate = @FromDate, @InternalToDate = DATEADD(DAY, 1, @Todate) --cover for users that are created in @today
 
 	CREATE TABLE #BalanceRecord(ActionDate DATETIME, winlostdate SMALLDATETIME, refNo BIGINT, actual_stake MONEY, winloss MONEY, playercomm MONEY, BalanceChanged MONEY, NewBalance MONEY, GivenCredit MONEY, BetCredit MONEY, Action VARCHAR(256), custid INT, ActionID TINYINT, rowid BIGINT, bettype SMALLINT)
 	CREATE TABLE #Transaction(transID BIGINT, custID INT, winlostdate SMALLDATETIME, refNo BIGINT)
@@ -106,7 +107,8 @@ BEGIN
 			FROM dbo.BalanceRecord b WITH(NOLOCK)
 			WHERE 
 				b.custid = @CustId
-				AND b.ActionDate BETWEEN @InternalFromDate AND @InternalToDate
+				AND b.ActionDate >= @InternalFromDate 
+				AND b.ActionDate < @InternalToDate
 				AND b.Actionid <> 33
 			UNION
 			SELECT 
@@ -123,7 +125,8 @@ BEGIN
 			FROM BalanceRecord.dbo.BalanceRecord_bk b WITH(NOLOCK)
 			WHERE 
 				b.custid = @CustId
-				AND b.ActionDate BETWEEN @InternalFromDate AND @InternalToDate
+				AND b.ActionDate >= @InternalFromDate 
+				AND b.ActionDate < @InternalToDate
 				AND b.Actionid <> 33
 		)
 		INSERT INTO #BalanceRecord(ActionDate, winlostdate, refNo, actual_stake, winloss, playercomm, BalanceChanged, NewBalance, GivenCredit, BetCredit, Action, custid, ActionID, rowid, bettype)
@@ -240,6 +243,14 @@ BEGIN
 				AND NOT EXISTS (SELECT TOP 1 1 FROM #Transaction t WHERE t.refno = b.transid )
 				AND br.bettype < 19999
 
+			-- transfer
+			INSERT INTO #Transaction(transID, custID, winlostdate, refNo)
+			SELECT br.refNo, br.custID, b.winlostdate, b.RefNo
+			FROM #BalanceRecord br
+				INNER JOIN dbo.transfer b WITH(NOLOCK)
+					ON br.custid = b.custid AND br.refNo = b.transid
+			WHERE  br.bettype >= 19999
+
 		END
 		ELSE IF (@InternalFromDate >= @BalanceUpDay AND @InternalFromDate <= @MoveBetsDay AND @InternalToDate > @MoveBetsDay) -- bettrans14 and bettrans
 		BEGIN
@@ -309,7 +320,7 @@ BEGIN
 				AND NOT EXISTS (SELECT TOP 1 1 FROM #Transaction t WHERE t.refno = b.transid )
 				AND br.bettype < 19999
 
-				-- transfer
+			-- transfer
 			INSERT INTO #Transaction(transID, custID, winlostdate, refNo)
 			SELECT br.refNo, br.custID, b.winlostdate, b.RefNo
 			FROM #BalanceRecord br
