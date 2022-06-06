@@ -1013,8 +1013,7 @@ BEGIN
 		IF @_FromDate < @_BalanceUpDay
 			SELECT TOP 1 @_FromDate = ISNULL(AccDate, @FromDate_Bk)
 			FROM bodb_Report.dbo.Statement_Accum WITH (NOLOCK)
-			WHERE CustId = @CustID
-				AND AccDate <= @FromDate_Bk
+			WHERE AccDate <= @FromDate_Bk
 			ORDER BY AccDate DESC
 		
 		INSERT INTO @StatementTable
