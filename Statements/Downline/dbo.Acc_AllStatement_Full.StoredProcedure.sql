@@ -1036,6 +1036,7 @@ BEGIN
 		WHERE
 			custid = @CID
 			AND accdate BETWEEN @_FromDate AND @_ToDate
+			AND accdate < @BalanceUpDay
 			AND transtype <> 'Bal'
 	
 		UNION ALL --- @Lukas add missing transaction
