@@ -16,7 +16,8 @@ Task :  NAP -  Manage VendorGlobal Setting  [Redmine: #153521]
 DB:   DBCUST-CustDB         
 
 Revisions:   
-    - 20210511@Evan: Create new SP [Redmine: #153521]  
+    - 20210511@Evan: Create new SP [Redmine: #153521] 
+	- 20220509@Danny: Use String_split built-in function [RemineID: #171831]
 Param's Explanation:
   @SportType = N'1,2,3,4'
   @BetType = N'1,2,3,4'
@@ -53,12 +54,12 @@ BEGIN
     );
 
   INSERT INTO #tmp_Sports (SportType,SportName)
-  SELECT  val, ''
-  FROM dbo.f_StringSplit(ISNULL(@SportType, ''), ',') OPTION (MAXRECURSION 0) ;
+  SELECT  value, ''
+  FROM STRING_SPLIT(ISNULL(@SportType, ''), ',');
 
   INSERT INTO #tmp_Bettype (typeid,typenamee)
-  SELECT  val, ''
-    FROM dbo.f_StringSplit(ISNULL(@BetType, ''), ',') OPTION (MAXRECURSION 0) ;
+  SELECT  value, ''
+    FROM STRING_SPLIT(ISNULL(@BetType, ''), ',');
   
   UPDATE a 
   SET a.SportName = b.SportName

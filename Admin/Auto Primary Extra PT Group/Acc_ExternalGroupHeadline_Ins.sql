@@ -23,6 +23,7 @@ AS
 	Revisions:
 		- 20210302@Percy: Initialize SP [RemineID: #146710]
 		- 20210825@Percy: Add data into CustSuperProfile [RemineID: #160682]
+		- 20220509@Danny: Use String_split built-in function [RemineID: #171831]
 */
 
 BEGIN
@@ -76,7 +77,7 @@ BEGIN
 	-- Check valid Group
 	DECLARE @EaGroup TABLE (GroupId INT, GroupExtraPTId INT, GroupName VARCHAR(100), GroupTypeId TINYINT)
 	INSERT INTO @EaGroup (GroupName, GroupTypeId)
-	SELECT DISTINCT val, 0 FROM dbo.strSplit(@ExternalGroups, ',')
+	SELECT DISTINCT value, 0 FROM STRING_SPLIT(@ExternalGroups, ',')
 
 	UPDATE t
 	SET t.GroupId = e.GroupId
