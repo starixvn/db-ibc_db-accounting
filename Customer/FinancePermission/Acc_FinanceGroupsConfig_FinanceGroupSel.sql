@@ -17,6 +17,7 @@ AS
 
 	Revisions:
 		- 20220114@Malcolm: Initialize SP [Redmine: #164833]
+		- 20220614@Danny: Use String_split built-in function [RemineID: #171831]
 
 	Param's Explanation:
 		@FinanceType = 1 : Finance User
@@ -35,9 +36,8 @@ BEGIN
 	DECLARE @GroupList TABLE (GroupId INT)
 
 	INSERT INTO @GroupList (GroupId)
-	SELECT f.val AS GroupId
-	FROM dbo.f_StringSplit(@GroupIds, ',') f
-	OPTION (MAXRECURSION 0)
+	SELECT f.value AS GroupId
+	FROM STRING_SPLIT(@GroupIds, ',') f
 
 	IF @FinanceType = 1
 	BEGIN
@@ -71,9 +71,8 @@ BEGIN
 		ELSE
 		BEGIN
 			INSERT INTO @FinanceUser (UserName)
-			SELECT DISTINCT f.val AS UserName
-			FROM dbo.f_StringSplit(@UsernameList, ',') f
-			OPTION (MAXRECURSION 0)
+			SELECT DISTINCT f.value AS UserName
+			FROM STRING_SPLIT(@UsernameList, ',') f
 
 			UPDATE f
 				SET f.GroupId = a.GroupId
@@ -168,9 +167,8 @@ BEGIN
 		ELSE IF @UsernameList <> ''
 		BEGIN
 			INSERT INTO @FinanceCode (UserName)
-			SELECT f.val AS UserName
-			FROM dbo.f_StringSplit(@UsernameList, ',') f
-			OPTION (MAXRECURSION 0)
+			SELECT f.value AS UserName
+			FROM STRING_SPLIT(@UsernameList, ',') f
 
 			UPDATE u
 				SET u.Recommend = n.Recommend, u.Mrecommend = n.Mrecommend, u.Srecommend = n.Srecommend, u.CustId = n.custid, u.RoleId = n.roleid

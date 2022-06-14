@@ -12,6 +12,7 @@ AS
 
 	Revisions:
 		- 20220114@Malcolm: Initialize SP [Redmine: #164833]
+		- 20220614@Danny: Use String_split built-in function [RemineID: #171831]
 		
 	Param's Explanation:		
 		               
@@ -49,9 +50,8 @@ BEGIN
 	DECLARE @FinanceUserTmp TABLE (CustId INT, UserName VARCHAR(30), GroupId INT, Status VARCHAR(20) DEFAULT ('Invalid'), RoleId INT)
 
 	INSERT INTO @FinanceUserTmp (UserName)
-	SELECT DISTINCT LTRIM(RTRIM(f.val)) AS UserName
-	FROM dbo.f_StringSplit(@UsernameList, ',') f
-	OPTION (MAXRECURSION 0)
+	SELECT DISTINCT LTRIM(RTRIM(f.value)) AS UserName
+	FROM STRING_SPLIT(@UsernameList, ',') f
 
 	IF (SELECT COUNT(1) FROM @FinanceUserTmp) > 50
 	BEGIN
