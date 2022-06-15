@@ -35,16 +35,13 @@ BEGIN
     SELECT @MoveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 
     ---- To avoid parametter sniffing
-    DECLARE @_FromDate SMALLDATETIME, @_ToDate SMALLDATETIME
-    SELECT @_FromDate = @FromDate, @_ToDate = @ToDate
+    DECLARE @_FromDate SMALLDATETIME, @_ToDate SMALLDATETIME, @FromDate_Bk SMALLDATETIME, @_BalanceUpDay SMALLDATETIME
+    SELECT @_FromDate = @FromDate, @_ToDate = @ToDate, @FromDate_Bk = @FromDate, @_BalanceUpDay = @BalanceUpDay
 
-    DECLARE @FromDate_Bk SMALLDATETIME
-    SET @FromDate_Bk = @_FromDate
-
-    DECLARE @Yesterday DATETIME 
+    DECLARE @Yesterday SMALLDATETIME 
     SELECT  @Yesterday = CONVERT(DATE, DATEADD(DAY, -1, GETDATE()))
         
-    ----Get Sport Bettype Matrix------
+    ---- Get Sport Bettype Matrix 
     DECLARE @isTest BIT = 0
     SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
 
@@ -63,12 +60,19 @@ BEGIN
         Com_Totalamt MONEY DEFAULT ((0))
     )
 
-    CREATE TABLE #TEMP_USER_LIST (Custid INT PRIMARY KEY, UserName VARCHAR(30), Roleid INT, Currency INT, AccDate DATETIME )
+    CREATE TABLE #TEMP_USER_LIST 
+    (   
+        Custid INT PRIMARY KEY, 
+        UserName    VARCHAR(30), 
+        Roleid      INT, 
+        Currency    INT, 
+        AccDate     DATETIME 
+    )
 
     INSERT INTO #TEMP_USER_LIST (Custid, UserName, Roleid, Currency)
-    SELECT Custid, UserName, Roleid, Currency
-    FROM custinfo WITH (NOLOCK)
-    WHERE UserName IN (SELECT value FROM STRING_SPLIT(@UserList, ','))
+    SELECT  Custid, UserName, Roleid, Currency
+    FROM    custinfo WITH (NOLOCK)
+    WHERE   UserName IN (SELECT value FROM STRING_SPLIT(@UserList, ','))
 
     CREATE TABLE #StatementTable
     (
@@ -82,22 +86,22 @@ BEGIN
     )
     CREATE TABLE #tmpBettrans
     (
-        Custid  INT,
-        Recommend   INT,
-        Mrecommend  INT,
-        Srecommend  INT,
-        WinlostDate SMALLDATETIME,
-        Winlost     MONEY,
-        aWinlost     MONEY,
-        mWinlost     MONEY,
-        sWinlost     MONEY,
-        Actual_stake MONEY,
-        Playercomm    MONEY,
-        Scomm   MONEY,
-        Acomm   MONEY,   
-        Comm      MONEY,
-        StatusID      TINYINT,
-        Bettype      SMALLINT
+        Custid          INT,
+        Recommend       INT,
+        Mrecommend      INT,
+        Srecommend      INT,
+        WinlostDate     SMALLDATETIME,
+        Winlost         MONEY,
+        aWinlost        MONEY,
+        mWinlost        MONEY,
+        sWinlost        MONEY,
+        Actual_stake    MONEY,
+        Playercomm      MONEY,
+        Scomm           MONEY,
+        Acomm           MONEY,   
+        Comm            MONEY,
+        StatusID        TINYINT,
+        Bettype         SMALLINT
     )
 
     CREATE TABLE #tmpTransfer
@@ -109,48 +113,48 @@ BEGIN
         TransType   NVARCHAR(100)
     )
 
-    IF @_ToDate >= @BalanceUpDay
+    IF @_ToDate >= @_BalanceUpDay
     BEGIN
 
         -- always get all data from latest BUDate -> @todate for calculating ACCUMULATED BALANCE row
-        IF (@_FromDate > @BalanceUpDay)  
+        IF (@_FromDate > @_BalanceUpDay)  
         BEGIN  
             SELECT @Fromdate_bk = @_FromDate  
-            SELECT @_FromDate = @BalanceUpDay  
+            SELECT @_FromDate = @_BalanceUpDay  
         END  
         -- bettrans
         INSERT INTO #tmpBettrans(Custid,Recommend,Mrecommend,Srecommend,WinlostDate,StatusID,b.Bettype,Winlost,aWinlost,mWinlost,sWinlost,Actual_stake,Playercomm,Scomm,Acomm,Comm)
-        SELECT Custid,Recommend,Mrecommend,Srecommend,WinlostDate,StatusID,b.Bettype,SUM(Winlost),SUM(aWinlost),SUM(mWinlost),SUM(sWinlost),SUM(Actual_stake),SUM(Playercomm),SUM(Scomm),SUM(Acomm),SUM(Comm)
+        SELECT      Custid,Recommend,Mrecommend,Srecommend,WinlostDate,StatusID,b.Bettype,SUM(Winlost),SUM(aWinlost),SUM(mWinlost),SUM(sWinlost),SUM(Actual_stake),SUM(Playercomm),SUM(Scomm),SUM(Acomm),SUM(Comm)
         FROM        bettrans b WITH (NOLOCK)
         LEFT JOIN   #SportBettype s 
                     ON s.bettype = b.bettype 
         WHERE
             b.bettype < 19999
             AND (b.custid IN (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 1)
-                            OR b.recommend  IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 2)
-                            OR b.mrecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 3)
-                            OR b.srecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 4)
+                    OR b.recommend  IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 2)
+                    OR b.mrecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 3)
+                    OR b.srecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 4)
                 )
             AND winlostdate BETWEEN @_FromDate AND @_ToDate
             AND (
-                        winlostdate < @Yesterday
-                        OR (winlostdate >= @Yesterday AND (s.RefTable IS NULL OR s.RefTable = 3)) -- exclude settle ticket on bettransRnG/LC today, yesterday
-                    )
+                winlostdate < @Yesterday
+                OR (winlostdate >= @Yesterday AND (s.RefTable IS NULL OR s.RefTable = 3)) -- exclude settle ticket on bettransRnG/LC today, yesterday
+                )
             AND winlostdate > @MoveBetsDay
         GROUP BY Winlostdate,Custid,Recommend,Mrecommend,Srecommend,StatusID,b.Bettype
         UNION ALL
         -- bettransRnG
-        SELECT Custid,Recommend,Mrecommend,Srecommend,WinlostDate,StatusID,b.gameID,SUM(Winlost),SUM(aWinlost),SUM(mWinlost),SUM(sWinlost),SUM(Actual_stake),SUM(Playercomm),SUM(Scomm),SUM(Acomm),SUM(Comm)
-        FROM        bettransRnG b 
+        SELECT  Custid,Recommend,Mrecommend,Srecommend,WinlostDate,StatusID,b.gameID,SUM(Winlost),SUM(aWinlost),SUM(mWinlost),SUM(sWinlost),SUM(Actual_stake),SUM(Playercomm),SUM(Scomm),SUM(Acomm),SUM(Comm)
+        FROM    bettransRnG b 
         WHERE   winlostdate BETWEEN @_FromDate AND @_ToDate 
                 AND (b.custid IN (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 1)
-                            OR b.recommend  IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 2)
-                            OR b.mrecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 3)
-                            OR b.srecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 4)
+                    OR b.recommend  IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 2)
+                    OR b.mrecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 3)
+                    OR b.srecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 4)
                 )
                 AND (
-                        winlostdate >= @Yesterday 
-                        OR StatusID IN (0, 1)
+                    winlostdate >= @Yesterday 
+                    OR StatusID IN (0, 1)
                     ) 
         GROUP BY Winlostdate,Custid,Recommend,Mrecommend,Srecommend,StatusID,b.gameID
         UNION ALL
@@ -159,20 +163,20 @@ BEGIN
         FROM    bettransLC b 
         WHERE   winlostdate BETWEEN @_FromDate AND @_ToDate 
                 AND (b.custid IN (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 1)
-                            OR b.recommend  IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 2)
-                            OR b.mrecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 3)
-                            OR b.srecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 4)
+                    OR b.recommend  IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 2)
+                    OR b.mrecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 3)
+                    OR b.srecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 4)
                 )
                 AND (
-                        winlostdate >= @Yesterday 
-                        OR StatusID IN (0, 1)
+                     winlostdate >= @Yesterday 
+                     OR StatusID IN (0, 1)
                     ) 
         GROUP BY Winlostdate,Custid,Recommend,Mrecommend,Srecommend,StatusID,b.gameID
 
         -- Transfer
         INSERT INTO #tmpTransfer (Transdate,Custid,TotalAmt,TransType,TransDesc)
         SELECT  
-                transdate,
+                TransDate,
                 Custid,
                 SUM(winlost-actual_stake) AS TotalAmt,
                 CASE WHEN ISNULL(ti.IsCollection,0) = 0 THEN bt.typenamee ELSE 'Coll' END  AS TransType,
@@ -184,7 +188,7 @@ BEGIN
             bettype > 20000            
             AND b.CustId IN (SELECT custid FROM #TEMP_USER_LIST)
             AND winlostdate BETWEEN @_FromDate AND @_ToDate
-        GROUP BY transdate,Custid,TransDesc,ti.IsCollection,bt.typenamee
+        GROUP BY TransDate,Custid,TransDesc,ti.IsCollection,bt.typenamee
         
         --IF @Roleid = 1
         IF EXISTS (SELECT 1 FROM #TEMP_USER_LIST WHERE Roleid = 1)
@@ -210,10 +214,10 @@ BEGIN
             UNION ALL
 
             SELECT
-                winlostdate Accdate,
-                SUM(playercomm) TotalAmt,
-                'COM' TransType,
-                'Commission' TransDesc,
+                winlostdate AS Accdate,
+                SUM(playercomm) AS TotalAmt,
+                'COM' AS TransType,
+                'Commission' AS TransDesc,
                 1 AS Roleid,
                 t.UserName, 
                 t.Currency
@@ -227,10 +231,10 @@ BEGIN
 
             -- translog
             SELECT
-                winlostdate Accdate,
-                0 TotalAmt,
-                'BET' TransType,
-                'Outstanding Bet' TransDesc,
+                winlostdate AS Accdate,
+                0 AS TotalAmt,
+                'BET' AS TransType,
+                'Outstanding Bet' AS TransDesc,
                 1 AS Roleid,
                 t.UserName, 
                 t.Currency
@@ -245,10 +249,10 @@ BEGIN
             -- Grand Prize          
             INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency)
             SELECT
-                winlostdate accdate
-                ,SUM (WinAmount) totalamt
-                ,'GP' transtype
-                ,'Grand Prize' transdesc,
+                winlostdate AS Accdate
+                ,SUM (WinAmount) AS TotalAmt
+                ,'GP' AS TransType
+                ,'Grand Prize' AS TransDesc,
                 1 AS Roleid,
                 t.UserName, 
                 t.Currency
@@ -257,7 +261,7 @@ BEGIN
                     ON  b.custid = t.Custid AND t.Roleid = 1
             WHERE
                 winlostdate BETWEEN @_Fromdate AND @_ToDate
-                AND WinlostDate > @BalanceUpDay
+                AND WinlostDate > @_BalanceUpDay
                 AND PayoutStatusId IN (4, 5)  ----- 'Completed', 'Expired'
             GROUP BY winlostdate,t.UserName,t.Currency
             
@@ -277,8 +281,8 @@ BEGIN
             SELECT
                 p.AccDate,
                 com_totalamt,
-                'COM' TransType,
-                'Commission' TransDesc,
+                'COM' AS TransType,
+                'Commission' AS TransDesc,
                 1 AS Roleid,
                 t.UserName, 
                 t.Currency
@@ -291,8 +295,8 @@ BEGIN
             SELECT
                 p.AccDate,
                 bet_totalamt,
-                'BET' TransType,
-                'Betting' TransDesc,
+                'BET' AS TransType,
+                'Betting' AS TransDesc,
                 1 AS Roleid,
                 t.UserName, 
                 t.Currency
@@ -339,8 +343,8 @@ BEGIN
                 SELECT DISTINCT
                     b.winlostdate accdate,
                     0 totalamt,
-                    'BET' transtype,
-                    'Void/Cancelled Bet' transdesc,
+                    'BET' AS transtype,
+                    'Void/Cancelled Bet' AS transdesc,
                     1 AS Roleid,
                     t.UserName, 
                     t.Currency
@@ -354,7 +358,7 @@ BEGIN
                         ) s ON  s.Bettype = b.bettype
                 WHERE
                     winlostdate BETWEEN @_Fromdate AND @MoveBetsDay
-                    AND winlostdate >= @BalanceUpDay
+                    AND winlostdate >= @_BalanceUpDay
                 GROUP BY winlostdate, t.UserName, t. Currency
             
                 --- zzzbettrans inner join match/match14
@@ -362,8 +366,8 @@ BEGIN
                 SELECT DISTINCT
                     eventdate AS Accdate,
                     0 AS TotalAmt,
-                    'BET' TransType,
-                    'Void/Cancelled Bet' TransDesc,
+                    'BET' AS TransType,
+                    'Void/Cancelled Bet' AS TransDesc,
                     1 AS Roleid,
                     t. UserName,
                     t. Currency
@@ -383,8 +387,8 @@ BEGIN
                 SELECT DISTINCT
                     eventdate AS Accdate,
                     0 AS TotalAmt,
-                    'BET' TransType,
-                    'Void/Cancelled Bet' TransDesc,
+                    'BET' AS TransType,
+                    'Void/Cancelled Bet' AS TransDesc,
                     1 AS Roleid,
                     t.UserName,
                     t.Currency
@@ -449,8 +453,8 @@ BEGIN
             SELECT
                 p.AccDate,
                 com_totalamt,
-                'COM' TransType,
-                'Commission' TransDesc,
+                'COM' AS TransType,
+                'Commission' AS TransDesc,
                 2 AS Roleid,
                 t.UserName, 
                 t.Currency
@@ -503,8 +507,8 @@ BEGIN
             SELECT
                 p.AccDate,
                 com_totalamt,
-                'COM' TransType,
-                'Commission' TransDesc,
+                'COM' AS TransType,
+                'Commission' AS TransDesc,
                 3 AS Roleid,
                 t.UserName, 
                 t.Currency
@@ -557,8 +561,8 @@ BEGIN
             SELECT
                 p.AccDate,
                 com_totalamt,
-                'COM' TransType,
-                'Commission' TransDesc,
+                'COM' AS TransType,
+                'Commission' AS TransDesc,
                 4 AS Roleid,
                 t.UserName, 
                 t.Currency
@@ -571,8 +575,8 @@ BEGIN
             SELECT
                 p.AccDate,
                 pos_totalamt,
-                'POS' TransType,
-                'Position' TransDesc,
+                'POS' AS TransType,
+                'Position' AS TransDesc,
                 4 AS Roleid,
                 t.UserName, 
                 t.Currency
@@ -583,14 +587,14 @@ BEGIN
         END
     END
 
-    IF @_FromDate <= @BalanceUpDay
+    IF @_FromDate <= @_BalanceUpDay
     BEGIN
         
-        IF @_ToDate > @BalanceUpDay
-            SELECT @_ToDate = @BalanceUpDay
+        IF @_ToDate > @_BalanceUpDay
+            SELECT @_ToDate = @_BalanceUpDay
         
         UPDATE a
-        SET a.AccDate = CASE WHEN @_FromDate < @BalanceUpDay THEN ISNULL(b.Accdate,@FromDate_Bk) ELSE @_FromDate END
+        SET a.AccDate = CASE WHEN @_FromDate < @_BalanceUpDay THEN ISNULL(b.Accdate,@FromDate_Bk) ELSE @_FromDate END
         FROM #TEMP_USER_LIST a 
         OUTER APPLY(SELECT TOP 1 Accdate
                     FROM bodb_Report.dbo.Statement_Accum b1 WITH (NOLOCK) 
@@ -618,7 +622,7 @@ BEGIN
         
     END
 
-    IF (@Fromdate_bk <> @BalanceUpDay)
+    IF (@Fromdate_bk <> @_BalanceUpDay)
     BEGIN
         
         ;WITH CTE_Sum AS (
@@ -647,13 +651,7 @@ BEGIN
     WHERE 
         Accdate >= @Fromdate_bk
         OR TransDesc = 'ACCUMULATED BALANCE'
-    GROUP BY 
-        UserName,
-        Roleid ,
-        Accdate ,
-        TransType ,
-        TransDesc ,       
-        Currency
+    GROUP BY UserName,Roleid,Accdate,TransType,TransDesc,Currency
     ORDER BY UserName, Accdate, TransType, TransDesc, CASE WHEN TransDesc like '%OPENING BALANCE%' THEN 1 ELSE 2 END
     
     DROP TABLE #SportBettype
