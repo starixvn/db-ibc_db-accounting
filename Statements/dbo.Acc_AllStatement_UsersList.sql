@@ -65,8 +65,7 @@ BEGIN
         Custid INT PRIMARY KEY, 
         UserName    VARCHAR(30), 
         Roleid      INT, 
-        Currency    INT, 
-        AccDate     DATETIME 
+        Currency    INT
     )
 
     INSERT INTO #TEMP_USER_LIST (Custid, UserName, Roleid, Currency)
@@ -593,15 +592,12 @@ BEGIN
         IF @_ToDate > @_BalanceUpDay
             SELECT @_ToDate = @_BalanceUpDay
         
-        UPDATE a
-        SET a.AccDate = CASE WHEN @_FromDate < @_BalanceUpDay THEN ISNULL(b.Accdate,@FromDate_Bk) ELSE @_FromDate END
-        FROM #TEMP_USER_LIST a 
-        OUTER APPLY(SELECT TOP 1 Accdate
-                    FROM bodb_Report.dbo.Statement_Accum b1 WITH (NOLOCK) 
-                    WHERE   b1.custid = a.custid 
-                            AND Accdate <= @Fromdate_bk
-                    ORDER BY b1.Accdate DESC
-                    ) b
+        IF @_FromDate < @_BalanceUpDay
+            SELECT TOP 1 @_FromDate = ISNULL(AccDate, @FromDate_Bk)
+            FROM bodb_Report.dbo.Statement_Accum WITH (NOLOCK)
+            WHERE AccDate <= @FromDate_Bk
+            ORDER BY AccDate DESC
+
         
         INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency)
         SELECT s.Accdate, TotalAmt, TransType, TransDesc, t.Roleid, t.UserName, t.Currency
@@ -609,7 +605,7 @@ BEGIN
         INNER JOIN  #TEMP_USER_LIST t 
                 ON  s.custid = t.Custid
         WHERE 
-            s.Accdate BETWEEN t.Accdate AND @_ToDate 
+            s.Accdate BETWEEN @_FromDate AND @_ToDate 
             AND s.TransType <> 'BAL'
 
         INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency)
@@ -618,7 +614,7 @@ BEGIN
         INNER JOIN  #TEMP_USER_LIST t 
                 ON  a.custid = t.Custid
         WHERE 
-            a.Accdate BETWEEN t.Accdate AND @_ToDate
+            a.Accdate BETWEEN @_FromDate AND @_ToDate
         
     END
 
