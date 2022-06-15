@@ -16,10 +16,13 @@ AS
 	Revisions:
 		- 20200405@Sophia: Clone setting ExtraPT from existing Super [redmineId: #130647]
 		- 20200708@Sol: Add/modify setting for new table - Extra PT - Redmine: [#136320]
+		- 20220615@Danny: Use explicit temporary table  [RemineID: #174035]
 */
 
 BEGIN
 	SET NOCOUNT ON
+
+	CREATE TABLE #GroupName (GroupName VARCHAR(50), FromDate DATETIME)
 
 	DECLARE @StartRun DATETIME, @EndRun DATETIME, @Duration INT, @LogData NVARCHAR(MAX)
 	SELECT  @StartRun = GETDATE()
@@ -63,9 +66,9 @@ BEGIN
 				@ErrMsg = N'This CustID ' + CONVERT(VARCHAR(10), @CustID) + ' had had ExtraPT group.'
 			RETURN
 	END 
-				
+			
+	INSERT INTO #GroupName(GroupName, FromDate)		
 	SELECT	DISTINCT GroupName, FromDate  
-	INTO	#GroupName
 	FROM	dbo.Acc_GroupExtraPTSetting WITH (NOLOCK) 
 	WHERE	SuperID = @Custid AND ToDate > = @EffectiveDate
 
@@ -107,7 +110,7 @@ BEGIN
 	END CATCH
 	
 	
-	  
+	DROP TABLE #GroupName  
 	
 END
 GO
