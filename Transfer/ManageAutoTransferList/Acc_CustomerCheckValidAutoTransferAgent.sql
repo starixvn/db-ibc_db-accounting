@@ -11,7 +11,8 @@ AS
 		
 	Revisions:
 		- 20190409@Percy: Check existing super for case insert master/agent [RedmineID: #111365]
-		
+		- 20220613@Elodie: DBCUST - modify sp syntax to adapt with the SQL Server upgrade to 2019 [Redmine: #171831] 
+
 	Parameter's Explanation:
 */
 
@@ -22,8 +23,9 @@ BEGIN
 	DECLARE @tmpResult TABLE (username VARCHAR(50), remark VARCHAR(100), isValid bit)
 	
 	INSERT INTO @tmpUser(username)
-	SELECT val
-	FROM strSplit (@username,',')
+	SELECT value
+	FROM string_split (@username,',')
+	WHERE value <> ''
 	
 	UPDATE t
 	SET t.custid = c.custid, t.roleid = c.roleid, t.srecommend = c.srecommend

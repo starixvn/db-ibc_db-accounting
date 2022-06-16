@@ -18,6 +18,7 @@ AS
 		- 20150406@Johnson: fix log format [Redmine: #25321]
 		- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 		- 20190409@Percy: Set transfer option to daily if super is in automate transfer list [RedmineID: #111365]
+		- 20220613@Elodie: DBCUST - modify sp syntax to adapt with the SQL Server upgrade to 2019 [Redmine: #171831]  
 
 	Parameter's Explanation:
 		- @TransferType = 1: Transfer all members
@@ -48,8 +49,8 @@ BEGIN
 	DECLARE @ErrType VARCHAR(4000)
 	
 	INSERT INTO @tmpUser(username)
-	SELECT DISTINCT val
-	FROM strSplit (@username, ',')
+	SELECT DISTINCT value
+	FROM string_split (@username, ',') WHERE value <> ''
 	
 	UPDATE t
 	SET t.custid = c.custid, t.roleid = c.roleid, t.srecommend = c.srecommend

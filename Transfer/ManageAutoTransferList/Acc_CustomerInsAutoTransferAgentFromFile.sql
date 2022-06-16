@@ -1,7 +1,4 @@
 ﻿/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
-USE [CustDB]
-GO
-
 ALTER PROCEDURE [Acc_CustomerInsAutoTransferAgentFromFile]	
 	@username		VARCHAR(MAX),
 	@TransferType	TINYINT = 1,
@@ -21,6 +18,7 @@ AS
 		- 20141023@Johnson: Set default transfer to 'Transfer all downlines' from upload file
 		- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 		- 20190409@Percy: Set transfer option to daily if super is in automate transfer list [RedmineID: #111365]
+		- 20220614@Eden: DBCUST - modify sp syntax to adapt with the SQL Server upgrade to 2019 [Redmine: #171831] 
 	
 	Parameter's Explanation:
 		- @TransferType = 1: Transfer all members
@@ -52,8 +50,9 @@ BEGIN
 	DECLARE @tmpResult TABLE (username VARCHAR(50), remark VARCHAR(100), isSuccess BIT)
 	
 	INSERT INTO @tmpUser(username)
-	SELECT val
-	FROM strSplit (@username, ',')
+	SELECT value
+	FROM STRING_SPLIT (@username, ',')
+	WHERE value <> ''
 	
 	-- Hardcode transfer type from file is 'Transfer all downlines'
 	SET @TransferType = 2
