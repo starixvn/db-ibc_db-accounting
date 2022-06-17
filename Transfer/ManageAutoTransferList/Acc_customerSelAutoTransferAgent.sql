@@ -7,24 +7,37 @@ ALTER PROCEDURE [dbo].[Acc_CustomerSelAutoTransferAgent]
 	@PageSize		INT = 50,
 	@PageIndex		INT = 1
 AS
-	/*
-		Created: Johnson
-		Date: 2014-09-23
-		Task: Select automate transfer list agent
-		DB: DBCUST/CustDB
+/*
+	Created: Johnson
+	Date: 2014-09-23
+	Task: Select automate transfer list agent
+	DB: DBCUST/CustDB
 		
-		Revisions:
-			20201029@Malcolm : add filter failure reason [RedmineId : #143217]
+	Revisions:
+		- 20201029@Malcolm : add filter failure reason [RedmineId : #143217]
+		- 20220615@Tacy: Hot modify Select Into statement to avoid dump [Redmine: #174035]
 		
-		Parameter's Explanation:
-			-@username = '': get all agents
-			-@status = '' : get all status
-	*/
+	Parameter's Explanation:
+		-@username = '': get all agents
+		-@status = '' : get all status
+*/
 BEGIN
 	SET NOCOUNT ON 
 	DECLARE @RowStart INT, @RowEnd INT  
 	SELECT @PageIndex = @PageIndex - 1, @RowStart = @PageSize * @PageIndex + 1, @RowEnd = @RowStart + @PageSize - 1
 
+	CREATE TABLE #tmp (
+			custid		INT,
+			username	VARCHAR(50),
+			transferType TINYINT,
+			role		NVARCHAR(20),
+			super		NVARCHAR(50),
+			master		NVARCHAR(50),
+			status		VARCHAR(20),
+			lastTransfer DATETIME
+	)
+
+	INSERT INTO #tmp (custid, username, transferType, role, super, master, status, lastTransfer)
 	SELECT ci.custid
 		,ci.username 
 		,c.transferType
@@ -33,7 +46,6 @@ BEGIN
 		,CASE WHEN ci.roleid = 2 THEN ISNULL(master.username,'') ELSE '' END as master
 		,c.status
 		,c.lastTransfer	
-	INTO #tmp	
 	FROM Acc_ClearBalanceList c WITH(NOLOCK) 
 		INNER JOIN Customer ci WITH(NOLOCK) ON c.custid = ci.custid
 		LEFT JOIN customer super WITH(NOLOCK) ON ci.srecommend = super.custid
