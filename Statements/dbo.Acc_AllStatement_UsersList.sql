@@ -209,7 +209,7 @@ BEGIN
             LEFT JOIN   #SportBettype s ON s.bettype = b.bettype
             WHERE 
                 statusID NOT IN (0, 1)
-                OR (statusID IN (0, 1) AND s.RefTable IS NULL)
+                OR (statusID IN (0, 1) AND ISNULL(s.RefTable,0) <> 3)
             UNION ALL
 
             SELECT
@@ -223,8 +223,11 @@ BEGIN
             FROM        #tmpBettrans b 
             INNER JOIN  #TEMP_USER_LIST t 
                     ON  b.custid = t.Custid AND t.Roleid = 1
+            LEFT JOIN   #SportBettype s   
+                    ON s.bettype = b.bettype
             WHERE   
                 playercomm <> 0
+                AND (WinlostDate >= @Yesterday OR (WinlostDate < @Yesterday AND s.RefTable IS NULL)) 
             GROUP BY winlostdate,t.UserName,t.Currency
             UNION ALL
 
@@ -446,6 +449,10 @@ BEGIN
             FROM        #tmpBettrans b 
             INNER JOIN  #TEMP_USER_LIST t 
                     ON  b.Recommend = t.Custid AND Roleid = 2
+            LEFT JOIN   #SportBettype s   
+                    ON s.bettype = b.bettype
+            WHERE   WinlostDate >= @Yesterday 
+                    OR (WinlostDate < @Yesterday AND s.RefTable IS NULL)
             GROUP BY t.Custid, WinlostDate
 
             INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency)
@@ -500,6 +507,10 @@ BEGIN
             FROM        #tmpBettrans b 
             INNER JOIN  #TEMP_USER_LIST t 
                     ON  b.Mrecommend = t.Custid AND Roleid = 3
+            LEFT JOIN   #SportBettype s   
+                    ON s.bettype = b.bettype
+            WHERE   WinlostDate >= @Yesterday 
+                    OR (WinlostDate < @Yesterday AND s.RefTable IS NULL)
             GROUP BY t.Custid, WinlostDate
 
             INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency)
@@ -554,6 +565,10 @@ BEGIN
             FROM        #tmpBettrans b 
             INNER JOIN  #TEMP_USER_LIST t 
                     ON  b.Srecommend = t.Custid AND Roleid = 4
+            LEFT JOIN   #SportBettype s   
+                    ON s.bettype = b.bettype
+            WHERE   WinlostDate >= @Yesterday 
+                    OR (WinlostDate < @Yesterday AND s.RefTable IS NULL)
             GROUP BY t.Custid, WinlostDate
 
             INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency)
