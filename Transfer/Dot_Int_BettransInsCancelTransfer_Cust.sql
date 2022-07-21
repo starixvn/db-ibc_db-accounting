@@ -38,7 +38,7 @@ Revisions:
 	- 20210518@Percy: Change way to get MoveBetsDay [RedmineID: #154866]
 	- 20211112@Sol: Support IPv6 - Phase 2 - Add [Convert Ipv6 to dummy IPv4] - [Redmine: #163963]
 	- 20211111@Sol: Split Transfer out of bettrans/Support IPv6 - [RedmineID: #164301]
-	- 20220721@Evan: Integrate new transid - [Redmine: #175640]
+	- 20220721@Evan: Integrate new transid [Redmine: #175640]
 
 Input 
     1) CustID (For Double check) 
@@ -273,17 +273,16 @@ BEGIN
 	SELECT @transdate = CURRENT_TIMESTAMP
 	
 	---get new transid 
-	DECLARE @TransId_New BIGINT
-	EXEC Get_Bettrans_TransID @TransID = @TransId_New OUTPUT
+	EXEC Get_Bettrans_TransID @TransID = @NewTransID OUTPUT
 
 	INSERT INTO dbo.Transfer 
 		(TransId, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, 
 		 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID, ip, SerialNo, RepUpdateTime)
 	VALUES 
-		(@TransId_New, @CustID, @username, @RefNo, @transdate, @DCAN, @transdesc, @actual_stake, @winlost, @winlostdate, 
+		(@NewTransID, @CustID, @username, @RefNo, @transdate, @DCAN, @transdesc, @actual_stake, @winlost, @winlostdate, 
 		 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency, @actualrate, @currencyName, 131, @ip, @betcheck, SYSDATETIME())
 		 
-	SELECT @NewTransID = @@IDENTITY
+	
 
 	SET @ErrCode = @@ERROR	
 
@@ -411,13 +410,14 @@ BEGIN
 	--END 
 
 	---get new transid 
+	DECLARE @TransId_New BIGINT
 	EXEC Get_Bettrans_TransID @TransID = @TransId_New OUTPUT
 
 	INSERT INTO dbo.Transfer 
 		(TransId, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, 
 		 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID, ip, SerialNo, RepUpdateTime)
 	VALUES 
-		(TransId_New, @bal_custID, @bal_Username, @RefNo, @transdate, @DCAN, @transdesc, @winlost , @actual_stake, @winlostdate, 
+		(@TransId_New, @bal_custID, @bal_Username, @RefNo, @transdate, @DCAN, @transdesc, @winlost , @actual_stake, @winlostdate, 
 		 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @Currency, @actualrate, @currencyName, 131, @ip, @betcheck, SYSDATETIME())
 
 	IF @@ERROR <> 0

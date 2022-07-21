@@ -61,7 +61,7 @@ Revisions:
 	- 20210518@Percy: Change code to adapt new Move Bets flow [RedmineID: #154866]
 	- 20211021@Benson: add update betcheck for balance accounts(@bal_custid)
 	- 20211111@Sol: Split Transfer out of bettrans/Support IPv6 - [RedmineID: #164301]
-	- 20220721@Evan: Integrate new transid - [Redmine: #175640]
+	- 20220721@Evan: Integrate new transid [Redmine: #175640]
 
 Param's Explanation:
 ? @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction
@@ -458,9 +458,10 @@ BEGIN
 
 		IF @RefNo <> 0 Set @IsForced = 1   -- if @Refno <> 0 = Approved action
 		------------------Insert trans into DB---------------------------------------------------------------
-		if @RefNo = 0
+		IF @RefNo = 0
+		BEGIN
 			EXEC Get_Refno_Transid @RefNo = @RefNo OUTPUT
-
+		END	
 
 		---Update Debit Balance	
 		SELECT @Cust_balance = @winlost - @actual_stake
@@ -571,7 +572,6 @@ BEGIN
 
 		END CATCH
 
-		--Select @bal_transid = @@IDENTITY
 		SET @transdate = CONVERT(CHAR(30),@transdate, 121)
 	
 		declare @LogData varchar(300)

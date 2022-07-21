@@ -64,7 +64,7 @@ Revision:
 	- 20201014@Danny: Convert Ipv6 to dummy IPv4 [Redmine: #143323]
 	- 20210518@Percy: Change code to adapt new Move Bets flow [RedmineID: #154866]
 	- 20211111@Sol: Split Transfer out of bettrans/Support IPv6 - [RedmineID: #164301]
-	- 20220721@Evan: Integrate new transid - [Redmine: #175640]
+	- 20220721@Evan: Integrate new transid [Redmine: #175640]
 
 Param's Explanation:
 @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction
