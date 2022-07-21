@@ -1,9 +1,9 @@
-Admin\TicketToGroupHeadline\Acc_CustomerSelGroupHeadlineByRefno.sql
-Customer\Acc_CustomerSelBalanceCashInfo.sql
-Customer\CreditTerm\dbo.Acc_CustomerSelBalanceInfo.sql
 FRP\ResetWinning\Acc_ResetWinning_SelByDate14.sql
 FRP\ResetWinning\Task_ResetWinning_ExtraPT.sql
 FRP\ResetWinning\Task_ResetWinning_ExtraPT14.sql
 FRP\ResetWinning\Task_ResetWinning_Non3rdParty.sql
-Statements\Downline\dbo.Acc_AllStatement_Full.StoredProcedure.sql
-Transfer\ClearBalance\dbo.Acc_CustomerSelClearBalance.proc.sql
+
+Transfer\AutomateFinanceCrossTransfer\Acc_FinanceCrossTransferMulUpd.sql
+Transfer\AutomateLicenseeCodeTransfer\dbo.Acc_LicenseeTransfer_Job.sql
+Task\Balance\Clear Balance\dbo.Task_ClearBalanceAllDownlines.sql
+Transfer\AutomateFinanceTransfer\Acc_FinanceTransferMulUpd.sql

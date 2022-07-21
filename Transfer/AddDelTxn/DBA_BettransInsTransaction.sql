@@ -29,6 +29,7 @@ Revisions:
 	- 20131108@Elodie: Splitting bodb02 into CustDB (call CustInfo, Exchange by link database)
 	- 20150814@Kathy: Using new balance table (BalCreditOthers, BalDebitOthers) [Redmine:#40125]
 	- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
+	- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
 	
 Param's Explanation:
 */
@@ -98,14 +99,14 @@ IF 	@balance < 0
 	END 
 
 ---insert transaction
-EXEC dbo.Acc_SelRefNo @refNo = @RefNo OUTPUT
+EXEC Get_Refno_Transid @RefNo = @RefNo OUTPUT
 
-select @RefNo = @RefNo + 100000000000
+EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
 
-INSERT INTO dbo.Transfer( custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
+INSERT INTO dbo.Transfer(transid, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 					  winlostdate, creator,recommend,mrecommend,srecommend,currency, currencyName,
 					  actualrate,ip,statusID, RepUpdateTime)
-VALUES (@CustID, @username, @RefNo, current_TIMESTAMP, @bettype, @transdesc, @winlost, @actual_stake, 
+VALUES (@TransID, @CustID, @username, @RefNo, current_TIMESTAMP, @bettype, @transdesc, @winlost, @actual_stake, 
         @winlostdate, @UserID, @Recommend, @MRecommend, @SRecommend, @curr, @currName,
         @actualrate, @ip,131, SYSDATETIME())
 
@@ -121,8 +122,6 @@ VALUES (@CustID, @username, @RefNo, current_TIMESTAMP, @bettype, @transdesc, @wi
 	END
         
         
-select @transid = @@IDENTITY
-
 if @@ERROR <> 0
 BEGIN
 	delete bettrans where refno = @refno and matchid = 0

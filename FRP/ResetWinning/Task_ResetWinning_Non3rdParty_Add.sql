@@ -27,6 +27,7 @@ AS
 		- 20190801@Sophia: Integrate CN88, use ExchangeDailyOanda instead of exchange table [Redmine: #117809]		
 		- 20190826@Sophia: remove Rollback code (in CATCH block) [Redmine: #117863]
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
+		- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
 
 */
 BEGIN
@@ -34,7 +35,7 @@ BEGIN
 	
 	Declare @RefNum bigint = 0, @bettype int, @Curr int, @CurrName nvarchar(10),
             @actualrate float, @Recommend int, @MRecommend int, @SRecommend int,
-            @username nvarchar(50), @creditamt money, @debitamt money, @roleID tinyint
+            @username nvarchar(50), @creditamt money, @debitamt money, @roleID tinyint, @TransID BIGINT
 
 	IF @amount > 0 --Deposit
 	BEGIN
@@ -67,22 +68,21 @@ BEGIN
 
 
     ----Insert transaction
-    EXEC Acc_SelRefNo
-        @refNo = @RefNum OUTPUT
-
-    SELECT @RefNum = @RefNum + 100000000000
+    EXEC Get_Refno_Transid @RefNo = @RefNum OUTPUT
+   
+	EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
 
     BEGIN TRY
 	    INSERT INTO dbo.transfer
         (
-	        custid, username, refno, transdate,
+	        transid, custid, username, refno, transdate,
 	        bettype, transdesc, winlost, actual_stake, winlostdate,
 	        creator, recommend, mrecommend, srecommend, currency,
 	        currencyName, actualrate, ip, statusID, RepUpdateTime
 	    )
 	    VALUES
 	    (
-	        @CustID, @username, @RefNum, current_timestamp,
+	        @TransID, @CustID, @username, @RefNum, current_timestamp,
 	        @bettype, @transDesc, @creditamt, @debitamt, @winlostdate,
 	        @creator, @Recommend, @MRecommend, @SRecommend, @curr,
 	        @currName, @actualrate, @ip, 131, SYSDATETIME()
