@@ -219,6 +219,8 @@ BEGIN
 
 			EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
 
+			EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
+
 			INSERT INTO dbo.Transfer 
 				(transid, custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, 
 				 creator, recommend, mrecommend, srecommend, currency, actualrate, currencyName, statusID, ip, SerialNo, RepUpdateTime)
