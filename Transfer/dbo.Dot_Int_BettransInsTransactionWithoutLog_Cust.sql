@@ -64,6 +64,7 @@ Revision:
 	- 20201014@Danny: Convert Ipv6 to dummy IPv4 [Redmine: #143323]
 	- 20210518@Percy: Change code to adapt new Move Bets flow [RedmineID: #154866]
 	- 20211111@Sol: Split Transfer out of bettrans/Support IPv6 - [RedmineID: #164301]
+	- 20220721@Evan: Integrate new transid - [Redmine: #175640]
 
 Param's Explanation:
 @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction
@@ -517,10 +518,7 @@ BEGIN
 		SELECT @Count = 0
 		------------------Insert trans into DB---------------------------------------------------------------
 		IF @RefNo = 0
-		BEGIN
-			EXEC dbo.Acc_SelRefNo @RefNo = @RefNo OUTPUT
-			SELECT @RefNo = @RefNo + 100000000000
-		END
+			EXEC Get_Refno_Transid @RefNo = @RefNo OUTPUT
 		
 		----------------------------------
 		---- Checking the balance of customer before updating the amount on Credit or Debit table 
@@ -547,20 +545,18 @@ BEGIN
 
 		SELECT @transdate = CURRENT_TIMESTAMP
 
-		---get transid into table variable
-		DECLARE @Transfer TABLE(TransId BIGINT)
-		
+		---get new transid 
+		EXEC Get_Bettrans_TransID @TransID = @TransId OUTPUT
+
 		SELECT @Count = 2
 		INSERT INTO dbo.Transfer 
-			(custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, balance,
+			(TransId, custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, balance,
 			 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID,ip, SerialNo, RepUpdateTime)
-		OUTPUT INSERTED.TransId INTO @Transfer(TransId)
 		VALUES 
-			(@CustID, @username, @RefNo, @transdate, @bettype, @transdesc,@winlost, @actual_stake, CONVERT(NVARCHAR(10), @transdate, 120), @beforebalance,
+			(@TransId, @CustID, @username, @RefNo, @transdate, @bettype, @transdesc,@winlost, @actual_stake, CONVERT(NVARCHAR(10), @transdate, 120), @beforebalance,
 			 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency,@actualrate, @currencyName, 131,@ip, @betcheck, SYSDATETIME())
 
 		---insert into new table transferinfo
-		SELECT TOP 1 @TransId = TransId FROM @Transfer
 
 		IF NOT (@WalletType IS NULL AND @BonusID IS NULL)
 		BEGIN
@@ -597,21 +593,19 @@ BEGIN
 		EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_Balance, @type = @BalanceType
 	END 
 
-	---clear table variable
-	DELETE FROM @Transfer
+	---get new transid 
+	EXEC Get_Bettrans_TransID @TransID = @bal_transid OUTPUT
 
 	BEGIN TRY
 		----ADD DUMMY TRANSACTION
 		INSERT INTO dbo.Transfer 
-			(custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, balance,
+			(TransId, custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, balance,
 			 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID,ip, RepUpdateTime)
-		OUTPUT INSERTED.TransId INTO @Transfer(TransId)
 		VALUES 
-			(@bal_custID, @bal_Username, @RefNo, @transdate, @bettype, @transdesc, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, CONVERT(NVARCHAR(10), @transdate, 120), @beforebalance,
+			(@bal_transid, @bal_custID, @bal_Username, @RefNo, @transdate, @bettype, @transdesc, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, CONVERT(NVARCHAR(10), @transdate, 120), @beforebalance,
 			 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 131,@ip, SYSDATETIME())
 		 
 		---insert into new table transferinfo
-		SELECT TOP 1 @bal_transid = TransId FROM @Transfer
 
 		IF NOT (@WalletType IS NULL AND @BonusID IS NULL)
 		BEGIN
@@ -632,7 +626,7 @@ BEGIN
 
 		DELETE FROM dbo.TransferInfo WHERE TransId IN (@transid, @bal_transid)
 
-		--Rollback Balance Table  
+	--Rollback Balance Table  
 		IF @Cust_balance < 0  --Rollback BalanceDebit 
 		BEGIN 
 			--EXEC dbo.Dot_BalanceUpdCredit @custid = @CustID, @Balance = @Cust_Balance_ABS

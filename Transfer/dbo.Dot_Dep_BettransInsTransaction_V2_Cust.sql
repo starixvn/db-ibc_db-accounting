@@ -61,6 +61,7 @@ Revisions:
 	- 20210518@Percy: Change code to adapt new Move Bets flow [RedmineID: #154866]
 	- 20211021@Benson: add update betcheck for balance accounts(@bal_custid)
 	- 20211111@Sol: Split Transfer out of bettrans/Support IPv6 - [RedmineID: #164301]
+	- 20220721@Evan: Integrate new transid - [Redmine: #175640]
 
 Param's Explanation:
 ? @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction
@@ -458,10 +459,8 @@ BEGIN
 		IF @RefNo <> 0 Set @IsForced = 1   -- if @Refno <> 0 = Approved action
 		------------------Insert trans into DB---------------------------------------------------------------
 		if @RefNo = 0
-		BEGIN	
-			EXEC dbo.Acc_SelRefNo @RefNo = @RefNo OUTPUT
-			select @RefNo = @RefNo + 100000000000	
-		END
+			EXEC Get_Refno_Transid @RefNo = @RefNo OUTPUT
+
 
 		---Update Debit Balance	
 		SELECT @Cust_balance = @winlost - @actual_stake
@@ -478,21 +477,19 @@ BEGIN
 		END 
 
 		select @transdate = current_timestamp
+		---get new transid 
+		EXEC Get_Bettrans_TransID @TransID = @TransId OUTPUT
 
 		BEGIN TRY
-			---get transid into table variable
-			DECLARE @Transfer TABLE(TransId BIGINT)
 
 			INSERT INTO dbo.transfer
-				(custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, 
+				(TransId, custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, 
 				 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID, ip, SerialNo, RepUpdateTime)
-			OUTPUT INSERTED.TransId INTO @Transfer(TransId)
 			VALUES 
-				(@CustID, @username, @RefNo, @transdate, @bettype, @transdesc,@winlost, @actual_stake, convert(nvarchar(10), @transdate, 120), 
+				(@TransId, @CustID, @username, @RefNo, @transdate, @bettype, @transdesc,@winlost, @actual_stake, convert(nvarchar(10), @transdate, 120), 
 				 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency,@actualrate, @currencyName, 131, @ip, @BetCheck, SYSDATETIME())
 
 			---insert into new table transferinfo
-			SELECT TOP 1 @TransId = TransId FROM @Transfer
 
 			IF NOT (@WalletType IS NULL AND @BonusID IS NULL)
 			BEGIN
@@ -521,30 +518,25 @@ BEGIN
 
 		END CATCH
 
-		--Select @TransID = @@IDENTITY
-	
 		---Update Credit Balance	
 		IF @Cust_balance > 0 
 		BEGIN 
 			--EXEC Dot_BalanceUpdCredit @custid = @CustID, @Balance = @Cust_balance
 			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_balance, @type = 2
 		END 
-
-		---clear table variable
-		DELETE FROM @Transfer
+		---get new transid 
+		EXEC Get_Bettrans_TransID @TransID = @bal_transid OUTPUT
 
 		BEGIN TRY
 
 			INSERT INTO dbo.Transfer 
-				(custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, 
+				(TransId, custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, 
 				 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID, ip, SerialNo, RepUpdateTime)
-			OUTPUT INSERTED.TransId INTO @Transfer(TransId)
 			VALUES 
-				(@bal_custID, @bal_Username, @RefNo, @transdate, @bettype, @transdesc, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, convert(nvarchar(10), @transdate, 120), 
+				(@bal_transid, @bal_custID, @bal_Username, @RefNo, @transdate, @bettype, @transdesc, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, convert(nvarchar(10), @transdate, 120), 
 				 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 131, @ip, @BetCheck, SYSDATETIME())
 
 			---insert into new table transferinfo
-			SELECT TOP 1 @bal_transid = TransId FROM @Transfer
 
 			IF NOT (@WalletType IS NULL AND @BonusID IS NULL)
 			BEGIN
