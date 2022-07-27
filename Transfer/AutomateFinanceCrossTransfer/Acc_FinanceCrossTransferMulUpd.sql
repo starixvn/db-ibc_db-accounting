@@ -1,13 +1,13 @@
 ﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_FinanceCrossTransferMulUpd]
-    @UserID INT,    
-    @FileName VARCHAR(100),
-    @FileSize INT,
+    @UserID			INT,    
+    @FileName		VARCHAR(100),
+    @FileSize		INT,
 	@ForexUsername	NVARCHAR(50),
     --@Index INT,
-    @Ip varchar(45) = '',
-    @ErrCode INT = 0 OUTPUT ,
-    @ErrMsg NVARCHAR(200) = '' OUTPUT
+    @Ip				VARCHAR(45) = '',
+    @ErrCode		INT = 0 OUTPUT ,
+    @ErrMsg			NVARCHAR(200) = '' OUTPUT
 AS 
 /*
 	Created: 
@@ -23,6 +23,7 @@ AS
 		- 20181112@Sophia: Add Transfer Collection [redmine: #98621]
 		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
 		- 20211115@Danny: Change @Ip datatype to support IPv6 [Redmine: #164196]
+		- 20220802@Danny: change code to support SiteDB [Redmine: #175253]
 */
 BEGIN
     SET NOCOUNT ON		
@@ -86,82 +87,22 @@ BEGIN
     WHERE UserId = @UserId
     
     
-    --Transfer Code
-    DECLARE cur_FinanceTransfer CURSOR FOR
-    SELECT FromCustID, FromUsername, ToCustID, ToUsername, FromAmount, ToAmount, Remark, IsCollection
-    FROM @tmpTransfer
-    
-    DECLARE @FromCustID INT, @ToCustID INT, @FromAmount MONEY, @ToAmount MONEY, @Remark NVARCHAR(200),
-			@FromUsername NVARCHAR(50), @ToUsername NVARCHAR(50), @IsCollection BIT
-    
-	OPEN cur_FinanceTransfer 
-    
-	FETCH NEXT FROM cur_FinanceTransfer INTO @FromCustID, @FromUsername, @ToCustID, @ToUsername, @FromAmount, @ToAmount, @Remark, @IsCollection
-	While @@FETCH_STATUS = 0
-	BEGIN		
-		--Call transfer SP here
-		EXEC dbo.[Acc_FinanceCrossTransferBettransIns] 
-			 @FromCustID	= @FromCustID,  
-			 @ToCustID		= @ToCustID,   
-			 @FromAmount	= @FromAmount,  
-			 @ToAmount		= @ToAmount,  
-			 @ForexUsername = @ForexUsername,
-			 @Remark		= @Remark,  
-			 @UserID		= @UserID, --custid of Admin  
-			 @IP			= @IP,  
-			 @ErrCode		= @ErrCode OUTPUT,  
-			 @ErrMsg		= @ErrMsg OUTPUT,
-			 @IsCollection  = @IsCollection
+	-- Return param dataset here
+	-- Process Call transfer SP move outsite (handle by web)
 
-		IF @ErrCode = 0--Success transaction		
-		BEGIN
-			INSERT INTO @Success(FromUserName, ToUserName, FromAmount, ToAmount, Description, IsCollection)
-			VALUES(@FromUserName, @ToUserName, @FromAmount, @ToAmount, @Remark, @IsCollection)
-		END
-		ELSE
-		BEGIN
-			INSERT INTO @Fail(FromUserName, ToUserName, FromAmount, ToAmount, Description, Reason, IsCollection)
-			VALUES(@FromUserName, @ToUserName, @FromAmount, @ToAmount, @Remark, '; <b>' + @ErrMsg + '</b>', @IsCollection)
-		END
-		
-		FETCH NEXT FROM cur_FinanceTransfer INTO @FromCustID, @FromUsername, @ToCustID, @ToUsername, @FromAmount, @ToAmount, @Remark, @IsCollection
-		SELECT @ErrCode = 0, @ErrMsg = ''
-	END
-    
-    CLOSE cur_FinanceTransfer
-	DEALLOCATE cur_FinanceTransfer
-	--End Transfer Code
-	
-	
-	--Return failed table and success table	
-	SELECT * FROM @Fail
-	SELECT * FROM @Success
-	
-	
--- Write Log Row
-    DECLARE @TotalUsers INT
-    SELECT  @TotalUsers = COUNT(*)
-    FROM    @Success
-    
-    select @TotalUsers = -@TotalUsers
-    
-	declare @Doing nvarchar(500)
-	
-	select @Doing ='<Acc_FinanceCrossTransferMulUpd TotalUser="'
-            + CONVERT(VARCHAR(20), @TotalUsers) + '" FileName="' + @FileName
-            + '" Size="' + CONVERT(VARCHAR(20), @FileSize) + '" />'			
-            
-    BEGIN TRY
-		EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @TotalUsers, @ToCustID = 0, @IP = @IP, @Doing = @Doing
-	END TRY
-	BEGIN CATCH
-		select @Doing = '<Acc_FinanceCrossTransferMulUpd TotalUser="' + CONVERT(VARCHAR(20), @TotalUsers) + 
-						'" FileName="' + @FileName + 
-						'" Size="' + CONVERT(VARCHAR(20), @FileSize) + 
-						'" ErrMsg="' + error_message() + '" />'
-						
-		EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @TotalUsers, @ToCustID = 0, @IP = @IP, @Doing = @Doing
-	END CATCH
+	 SELECT FromCustID, 
+			FromUsername, 
+			ToCustID, 
+			ToUsername, 
+			FromAmount, 
+			ToAmount, 
+			Remark, 
+			IsCollection, 
+			@UserID AS UserID, 
+			@ForexUsername AS ForexUsername,
+			@IP AS IP,
+			'Acc_FinanceCrossTransferBettransIns' AS SP_name
+    FROM @tmpTransfer
 END			
 
 

@@ -39,6 +39,7 @@ AS
 		- 20200730@Sophia: Check UM Transfer Function [Redmine: #136992]
 		- 20211115@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 		- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
+		- 20220801@Danny: change code to support SiteDB [Redmine: #175253]
 */
 BEGIN
 	SET NOCOUNT ON	
@@ -248,19 +249,22 @@ BEGIN
 						 END, 
 				@ErrCode = 104		
 				
-		DELETE dbo.Transfer WITH(ROWLOCK) 
-		WHERE custid in (@FromCustID, @ForexCustID, @ToCustID)
+		UPDATE dbo.Transfer WITH(ROWLOCK)
+		SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+		WHERE custid IN (@FromCustID, @ToCustID, @ForexCustID)
 			AND refno = @refno 
 			AND bettype = 21003
-			
-		DELETE Transfer_Coll WITH(ROWLOCK) 
-		WHERE  custid in (@FromCustID, @ForexCustID, @ToCustID)
-			AND refno = @refno 
-			AND bettype = 21003
+	
+		UPDATE Transfer_Coll WITH(ROWLOCK)
+		SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
+		WHERE	custid in (@FromCustID, @ToCustID, @ForexCustID)
+				AND refno = @refno 
+				AND bettype = 21003
 
-		DELETE TransferInfo WITH(ROWLOCK)
-		WHERE  TransID IN (SELECT TransID FROM @TransIDs)
-					
+		UPDATE TransferInfo WITH(ROWLOCK)
+		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+		WHERE  TransID = @TransID
+
 		--- rollback credit
 		IF @FromAmount < 0 AND @FromRoleID = 1
 			EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @tmp
@@ -272,10 +276,10 @@ BEGIN
 		INSERT INTO Transfer_Coll 
 				( CustId, WinlostDate, TransDate, Bettype, Debit, Credit, Currency, ActualRate, 
 				TransID, RefNo, Username, Recommend, MRecommend, SRecommend, 
-				Creator ,TransDesc, IP )
+				Creator ,TransDesc, IP, RepUpdateTime )
 		SELECT 	CustId, WinlostDate, TransDate, Bettype, Actual_Stake, Winlost, Currency, ActualRate, 
 				TransID, RefNo, Username, Recommend, MRecommend, SRecommend, 
-				Creator ,TransDesc, IP
+				Creator ,TransDesc, IP, SYSDATETIME()
 		FROM dbo.Transfer WITH (NOLOCK) 
 		WHERE TransID IN (SELECT TransID FROM @TransIDs)
 	  
@@ -289,18 +293,22 @@ BEGIN
 						 END, 
 				@ErrCode = 104		
 				
-		DELETE dbo.Transfer WITH(ROWLOCK) 
-		WHERE custid in (@FromCustID, @ForexCustID, @ToCustID)
+		UPDATE dbo.Transfer WITH(ROWLOCK)
+		SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+		WHERE custid IN (@FromCustID, @ToCustID, @ForexCustID)
 			AND refno = @refno 
 			AND bettype = 21003
-			
-		DELETE Transfer_Coll WITH(ROWLOCK)
-		WHERE  custid in (@FromCustID, @ForexCustID, @ToCustID)
-			AND refno = @refno 
-			AND bettype = 21003
-		
-		DELETE TransferInfo WITH(ROWLOCK)
-		WHERE  TransID IN (SELECT TransID FROM @TransIDs)
+	
+		UPDATE Transfer_Coll WITH(ROWLOCK)
+		SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
+		WHERE	custid in (@FromCustID, @ToCustID, @ForexCustID)
+				AND refno = @refno 
+				AND bettype = 21003
+
+		UPDATE TransferInfo WITH(ROWLOCK)
+		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+		WHERE  TransID = @TransID
+
 		--- rollback credit
 		IF @FromAmount < 0 AND @FromRoleID = 1
 			EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @tmp
@@ -322,18 +330,21 @@ BEGIN
 					else N'Transfer failed. Please try again.'
 				end, @ErrCode = 104	
 				
-		delete dbo.Transfer WITH(ROWLOCK)
-		where custid in (@FromCustID, @ToCustID)
-			and refno = @refno 
-			and bettype = 21003
-				
-		delete Transfer_Coll WITH(ROWLOCK)
-		where  custid in (@FromCustID, @ToCustID)
-			and refno = @refno  
-			and bettype = 21003
+		UPDATE dbo.Transfer WITH(ROWLOCK)
+		SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+		WHERE custid IN (@FromCustID, @ToCustID, @ForexCustID)
+			AND refno = @refno 
+			AND bettype = 21003
+	
+		UPDATE Transfer_Coll WITH(ROWLOCK)
+		SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
+		WHERE	custid in (@FromCustID, @ToCustID, @ForexCustID)
+				AND refno = @refno 
+				AND bettype = 21003
 
-		DELETE TransferInfo WITH(ROWLOCK)
-		WHERE  TransID IN (SELECT TransID FROM @TransIDs)
+		UPDATE TransferInfo WITH(ROWLOCK)
+		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+		WHERE  TransID = @TransID
 		
 		--- rollback credit
 		IF @FromAmount < 0 AND @FromRoleID = 1
@@ -370,18 +381,21 @@ BEGIN
 						 END, 
 				@ErrCode = 105
 
-		DELETE dbo.Transfer WITH(ROWLOCK)
-		WHERE custid in (@FromCustID, @ForexCustID, @ToCustID)
-			AND refno = @refno 
-			AND bettype = 21003		
-			
-		DELETE Transfer_Coll WITH(ROWLOCK)
-		WHERE  custid in (@FromCustID, @ForexCustID, @ToCustID)
+		UPDATE dbo.Transfer WITH(ROWLOCK)
+		SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+		WHERE custid IN (@FromCustID, @ToCustID, @ForexCustID)
 			AND refno = @refno 
 			AND bettype = 21003
+	
+		UPDATE Transfer_Coll WITH(ROWLOCK)
+		SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
+		WHERE	custid in (@FromCustID, @ToCustID, @ForexCustID)
+				AND refno = @refno 
+				AND bettype = 21003
 
-		DELETE TransferInfo WITH(ROWLOCK)
-		WHERE  TransID IN (SELECT TransID FROM @TransIDs)
+		UPDATE TransferInfo WITH(ROWLOCK)
+		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+		WHERE  TransID = @TransID
 			
 		IF @FromAmount > 0 AND @FromRoleID = 1	--- rollback for add to credit
 				EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1 --EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @FromAmount	
@@ -395,10 +409,10 @@ BEGIN
 	INSERT INTO Transfer_Coll 
 			( CustId, WinlostDate, TransDate, Bettype, Debit, Credit, Currency, ActualRate, 
 			TransID, RefNo, Username, Recommend, MRecommend, SRecommend, 
-			Creator ,TransDesc, IP )
+			Creator ,TransDesc, IP, RepUpdateTime )
 	SELECT 	CustId, WinlostDate, TransDate, Bettype, Actual_Stake, Winlost, Currency, ActualRate, 
 			TransID, RefNo, Username, Recommend, MRecommend, SRecommend, 
-			Creator ,TransDesc, IP
+			Creator ,TransDesc, IP, SYSDATETIME()
 	FROM dbo.Transfer WITH (NOLOCK) 
 	WHERE TransID IN (SELECT TransID FROM @TransIDs)	  
 	
@@ -411,18 +425,21 @@ BEGIN
 						 END, 
 				@ErrCode = 105
 
-		DELETE dbo.Transfer WITH(ROWLOCK)
-		WHERE custid in (@FromCustID, @ForexCustID, @ToCustID)
-			AND refno = @refno 
-			AND bettype = 21003		
-			
-		DELETE Transfer_Coll WITH(ROWLOCK)
-		WHERE  custid in (@FromCustID, @ForexCustID, @ToCustID)
+		UPDATE dbo.Transfer WITH(ROWLOCK)
+		SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+		WHERE custid IN (@FromCustID, @ToCustID, @ForexCustID)
 			AND refno = @refno 
 			AND bettype = 21003
-			
-		DELETE TransferInfo WITH(ROWLOCK)
-		WHERE  TransID IN (SELECT TransID FROM @TransIDs)
+	
+		UPDATE Transfer_Coll WITH(ROWLOCK)
+		SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
+		WHERE	custid in (@FromCustID, @ToCustID, @ForexCustID)
+				AND refno = @refno 
+				AND bettype = 21003
+
+		UPDATE TransferInfo WITH(ROWLOCK)
+		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+		WHERE  TransID = @TransID
 
 		IF @FromAmount > 0 AND @FromRoleID = 1	--- rollback for add to credit
 				EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1 --EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @FromAmount	
@@ -446,18 +463,21 @@ BEGIN
 					else N'Transfer failed. Please try again.'
 				end, @ErrCode = 105	
 				
-		delete dbo.Transfer WITH(ROWLOCK)
-		where custid in (@FromCustID, @ToCustID)
-			and refno = @refno 
-			and bettype = 21003
-				
-		delete Transfer_Coll WITH(ROWLOCK)
-		where  custid in (@FromCustID, @ToCustID)
-			and refno = @refno  
-			and bettype = 21003
+		UPDATE dbo.Transfer WITH(ROWLOCK)
+		SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+		WHERE custid IN (@FromCustID, @ToCustID, @ForexCustID)
+			AND refno = @refno 
+			AND bettype = 21003
+	
+		UPDATE Transfer_Coll WITH(ROWLOCK)
+		SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
+		WHERE	custid in (@FromCustID, @ToCustID, @ForexCustID)
+				AND refno = @refno 
+				AND bettype = 21003
 
-		DELETE TransferInfo WITH(ROWLOCK)
-		WHERE  TransID IN (SELECT TransID FROM @TransIDs)
+		UPDATE TransferInfo WITH(ROWLOCK)
+		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+		WHERE  TransID = @TransID
 		
 		IF @FromAmount > 0 AND @FromRoleID = 1	--- rollback for add to credit
 				EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1 --EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @FromAmount	
@@ -499,18 +519,21 @@ BEGIN
 						 END, 
 				@ErrCode = 106
 
-		DELETE Transfer WITH(ROWLOCK)
-		WHERE custid in (@FromCustID, @ForexCustID, @ToCustID)
-			AND refno = @refno 
-			AND bettype = 21003	
-			
-		DELETE Transfer_Coll WITH(ROWLOCK)
-		WHERE  custid in (@FromCustID, @ForexCustID, @ToCustID)
+		UPDATE dbo.Transfer WITH(ROWLOCK)
+		SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+		WHERE custid IN (@FromCustID, @ToCustID, @ForexCustID)
 			AND refno = @refno 
 			AND bettype = 21003
+	
+		UPDATE Transfer_Coll WITH(ROWLOCK)
+		SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
+		WHERE	custid in (@FromCustID, @ToCustID, @ForexCustID)
+				AND refno = @refno 
+				AND bettype = 21003
 
-		DELETE TransferInfo WITH(ROWLOCK)
-		WHERE  TransID IN (SELECT TransID FROM @TransIDs)
+		UPDATE TransferInfo WITH(ROWLOCK)
+		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+		WHERE  TransID = @TransID
 		
 		IF @FromAmount > 0 AND @FromRoleID = 1	--- rollback for add to credit
 				EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1 --EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @FromAmount	
@@ -526,10 +549,10 @@ BEGIN
 	INSERT INTO Transfer_Coll 
 			( CustId, WinlostDate, TransDate, Bettype, Debit, Credit, Currency, ActualRate, 
 			TransID, RefNo, Username, Recommend, MRecommend, SRecommend, 
-			Creator ,TransDesc, IP )
+			Creator ,TransDesc, IP, RepUpdateTime )
 	SELECT 	CustId, WinlostDate, TransDate, Bettype, Actual_Stake, Winlost, Currency, ActualRate, 
 			TransID, RefNo, Username, Recommend, MRecommend, SRecommend, 
-			Creator ,TransDesc, IP
+			Creator ,TransDesc, IP, SYSDATETIME()
 	FROM dbo.Transfer WITH (NOLOCK) 
 	WHERE TransID IN (SELECT TransID FROM @TransIDs)	 
 	
@@ -542,18 +565,21 @@ BEGIN
 						 END, 
 				@ErrCode = 106
 
-		DELETE dbo.Transfer WITH(ROWLOCK)
-		WHERE custid in (@FromCustID, @ForexCustID, @ToCustID)
-			AND refno = @refno 
-			AND bettype = 21003	
-			
-		DELETE Transfer_Coll WITH(ROWLOCK)
-		WHERE  custid in (@FromCustID, @ForexCustID, @ToCustID)
+		UPDATE dbo.Transfer WITH(ROWLOCK)
+		SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+		WHERE custid IN (@FromCustID, @ToCustID, @ForexCustID)
 			AND refno = @refno 
 			AND bettype = 21003
+	
+		UPDATE Transfer_Coll WITH(ROWLOCK)
+		SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
+		WHERE	custid in (@FromCustID, @ToCustID, @ForexCustID)
+				AND refno = @refno 
+				AND bettype = 21003
 
-		DELETE TransferInfo WITH(ROWLOCK)
-		WHERE  TransID IN (SELECT TransID FROM @TransIDs)
+		UPDATE TransferInfo WITH(ROWLOCK)
+		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+		WHERE  TransID = @TransID
 		
 		IF @FromAmount > 0 AND @FromRoleID = 1	--- rollback for add to credit
 				EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1 --EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @FromAmount	
@@ -578,18 +604,21 @@ BEGIN
 					else N'Transfer failed. Please try again.'
 				end, @ErrCode = 106		
 				
-		delete dbo.Transfer WITH(ROWLOCK)
-		where custid in (@FromCustID, @ToCustID)
-			and refno = @refno 
-			and bettype = 21003
-				
-		delete Transfer_Coll WITH(ROWLOCK)
-		where  custid in (@FromCustID, @ToCustID)
-			and refno = @refno  
-			and bettype = 21003
+		UPDATE dbo.Transfer WITH(ROWLOCK)
+		SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+		WHERE custid IN (@FromCustID, @ToCustID, @ForexCustID)
+			AND refno = @refno 
+			AND bettype = 21003
+	
+		UPDATE Transfer_Coll WITH(ROWLOCK)
+		SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
+		WHERE	custid in (@FromCustID, @ToCustID, @ForexCustID)
+				AND refno = @refno 
+				AND bettype = 21003
 
-		DELETE TransferInfo WITH(ROWLOCK)
-		WHERE  TransID IN (SELECT TransID FROM @TransIDs)
+		UPDATE TransferInfo WITH(ROWLOCK)
+		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+		WHERE  TransID = @TransID
 		
 		IF @FromAmount > 0 AND @FromRoleID = 1	--- rollback for add to credit
 				EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1 --EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @FromAmount	
@@ -613,18 +642,21 @@ BEGIN
 						 END, 
 				@ErrCode = 107
 
-		DELETE dbo.Transfer WITH(ROWLOCK)
-		WHERE custid in (@FromCustID, @ForexCustID, @ToCustID)
+		UPDATE dbo.Transfer WITH(ROWLOCK)
+		SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+		WHERE custid IN (@FromCustID, @ToCustID, @ForexCustID)
 			AND refno = @refno 
 			AND bettype = 21003
-		
-		DELETE Transfer_Coll WITH(ROWLOCK)
-		WHERE  custid in (@FromCustID, @ForexCustID, @ToCustID)
-			AND refno = @refno 
-			AND bettype = 21003
+	
+		UPDATE Transfer_Coll WITH(ROWLOCK)
+		SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
+		WHERE	custid in (@FromCustID, @ToCustID, @ForexCustID)
+				AND refno = @refno 
+				AND bettype = 21003
 
-		DELETE TransferInfo WITH(ROWLOCK)
-		WHERE  TransID IN (SELECT TransID FROM @TransIDs)
+		UPDATE TransferInfo WITH(ROWLOCK)
+		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+		WHERE  TransID = @TransID
 	
 		IF @FromAmount > 0 AND @FromRoleID = 1	--- rollback for add to credit
 				EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1 --EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @FromAmount	
@@ -654,18 +686,21 @@ BEGIN
 						 END, 
 				@ErrCode = 107
 
-		DELETE dbo.Transfer WITH(ROWLOCK) 
-		WHERE custid in (@FromCustID, @ForexCustID, @ToCustID)
+		UPDATE dbo.Transfer WITH(ROWLOCK)
+		SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+		WHERE custid IN (@FromCustID, @ToCustID, @ForexCustID)
 			AND refno = @refno 
 			AND bettype = 21003
-		
-		DELETE Transfer_Coll WITH(ROWLOCK)
-		WHERE  custid in (@FromCustID, @ForexCustID, @ToCustID)
-			AND refno = @refno 
-			AND bettype = 21003
+	
+		UPDATE Transfer_Coll WITH(ROWLOCK)
+		SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
+		WHERE	custid in (@FromCustID, @ToCustID, @ForexCustID)
+				AND refno = @refno 
+				AND bettype = 21003
 
-		DELETE TransferInfo WITH(ROWLOCK)
-		WHERE  TransID IN (SELECT TransID FROM @TransIDs)
+		UPDATE TransferInfo WITH(ROWLOCK)
+		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+		WHERE  TransID = @TransID
 	
 		IF @FromAmount > 0 AND @FromRoleID = 1	--- rollback for add to credit
 						EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1 --EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @FromAmount	
@@ -682,10 +717,10 @@ BEGIN
 	INSERT INTO Transfer_Coll 
 			( CustId, WinlostDate, TransDate, Bettype, Debit, Credit, Currency, ActualRate, 
 			TransID, RefNo, Username, Recommend, MRecommend, SRecommend, 
-			Creator ,TransDesc, IP )
+			Creator ,TransDesc, IP, RepUpdateTime )
 	SELECT 	CustId, WinlostDate, TransDate, Bettype, Actual_Stake, Winlost, Currency, ActualRate, 
 			TransID, RefNo, Username, Recommend, MRecommend, SRecommend, 
-			Creator ,TransDesc, IP
+			Creator ,TransDesc, IP, SYSDATETIME()
 	FROM dbo.Transfer WITH (NOLOCK) 
 	WHERE TransID IN (SELECT TransID FROM @TransIDs)	 
 
@@ -698,15 +733,21 @@ BEGIN
 						 END, 
 				@ErrCode = 107
 
-		DELETE dbo.Transfer WITH(ROWLOCK) 
-		WHERE custid in (@FromCustID, @ForexCustID, @ToCustID)
+		UPDATE dbo.Transfer WITH(ROWLOCK)
+		SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+		WHERE custid IN (@FromCustID, @ToCustID, @ForexCustID)
 			AND refno = @refno 
 			AND bettype = 21003
-		
-		DELETE Transfer_Coll WITH(ROWLOCK)
-		WHERE  custid in (@FromCustID, @ForexCustID, @ToCustID)
-			AND refno = @refno 
-			AND bettype = 21003
+	
+		UPDATE Transfer_Coll WITH(ROWLOCK)
+		SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
+		WHERE	custid in (@FromCustID, @ToCustID, @ForexCustID)
+				AND refno = @refno 
+				AND bettype = 21003
+
+		UPDATE TransferInfo WITH(ROWLOCK)
+		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+		WHERE  TransID = @TransID
 	
 		IF @FromAmount > 0 AND @FromRoleID = 1	--- rollback for add to credit
 						EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1 --EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @FromAmount	
@@ -733,18 +774,21 @@ BEGIN
 					else N'Transfer failed. Please try again.'
 				end, @ErrCode = 107		
 				
-		delete dbo.Transfer WITH(ROWLOCK)
-		where custid in (@FromCustID, @ToCustID)
-			and refno = @refno 
-			and bettype = 21003
-				
-		delete Transfer_Coll WITH(ROWLOCK)
-		where  custid in (@FromCustID, @ToCustID)
-			and refno = @refno  
-			and bettype = 21003
+		UPDATE dbo.Transfer WITH(ROWLOCK)
+		SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+		WHERE custid IN (@FromCustID, @ToCustID, @ForexCustID)
+			AND refno = @refno 
+			AND bettype = 21003
+	
+		UPDATE Transfer_Coll WITH(ROWLOCK)
+		SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
+		WHERE	custid in (@FromCustID, @ToCustID, @ForexCustID)
+				AND refno = @refno 
+				AND bettype = 21003
 
-		DELETE TransferInfo WITH(ROWLOCK)
-		WHERE  TransID IN (SELECT TransID FROM @TransIDs)
+		UPDATE TransferInfo WITH(ROWLOCK)
+		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+		WHERE  TransID = @TransID
 		
 		IF @FromAmount > 0 AND @FromRoleID = 1	--- rollback for add to credit
 						EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1 --EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @FromAmount	

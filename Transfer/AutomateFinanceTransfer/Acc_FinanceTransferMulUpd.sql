@@ -1,11 +1,11 @@
 ﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_FinanceTransferMulUpd]
-    @UserID INT,    
-    @FileName VARCHAR(100),
-    @FileSize INT,
-    @Ip varchar(45) = '',
-    @ErrCode INT = 0 OUTPUT ,
-    @ErrMsg NVARCHAR(200) = '' OUTPUT
+    @UserID			INT,    
+    @FileName		VARCHAR(100),
+    @FileSize		INT,
+    @Ip				VARCHAR(45) = '',
+    @ErrCode		INT = 0 OUTPUT ,
+    @ErrMsg			NVARCHAR(200) = '' OUTPUT
 AS 
 /*
 Created: 
@@ -27,7 +27,8 @@ Revisions:
 	- 20181112@Sophia: Add @IsCollection [redmine: #98621]
 	- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
 	- 20211115@Danny: Change @Ip datatype to support IPv6 [Redmine: #164196]
-	
+	- 20220802@Danny: change code to support SiteDB [Redmine: #175253]
+
 */
 BEGIN
     SET NOCOUNT ON		
@@ -43,6 +44,7 @@ BEGIN
         (
           FromCustid INT,
           FromUserName varchar(30),
+		  ToCustid INT,
           ToUserName varchar(30),
           Amount money,
           ExchangeRate float,
@@ -52,95 +54,29 @@ BEGIN
         )
         
     --Declare Table temp to store succeed trans and failed trans
-    Declare @Fail table(Seq int, FromUserName varchar(30), ToUserName varchar(30), Amount money, ExchangeRate float, Description nvarchar(200), Reason nvarchar(100), IsCollection BIT)    
-    Declare @Success table(Seq int, FromUserName varchar(30), ToUserName varchar(30), Amount money, ExchangeRate float, Description nvarchar(200), IsCollection BIT)
+    DECLARE @Fail table(Seq INT, FromUserName VARCHAR(30), ToUserName VARCHAR(30), Amount MONEY, ExchangeRate FLOAT, Description NVARCHAR(200), Reason NVARCHAR(100), IsCollection BIT)    
+    DECLARE @Success table(Seq INT, FromUserName VARCHAR(30), ToUserName VARCHAR(30), Amount MONEY, ExchangeRate FLOAT, Description NVARCHAR(200), IsCollection BIT)
     
-    INSERT  INTO @tmpTransfer(FromCustid, FromUserName, ToUserName, Amount, ExchangeRate, Description, seq, IsCollection)
+    INSERT INTO @tmpTransfer(FromCustid, FromUserName, ToCustid, ToUserName, Amount, ExchangeRate, Description, seq, IsCollection)
     SELECT  c.custid,--Get custId by From Cust Username
 			FromCust,
+			c1.custid, -- Get custId by To Cust Username
             ToCust,--To Username
             Amount,
             ExRate,
             a.Description,
 			seq,
 			IsCollection
-    FROM DBCUST.CustDB.dbo.Acc_CustFinanceTransfer a with(nolock)
-		left join CustDB.dbo.CustInfo c with(nolock) on a.FromCust = c.Username
+    FROM DBCUST.CustDB.dbo.Acc_CustFinanceTransfer a WITH(NOLOCK)
+		LEFT JOIN CustDB.dbo.CustInfo c WITH(NOLOCK) on a.FromCust = c.Username
+		LEFT JOIN CustDB.dbo.CustInfo c1 WITH(NOLOCK) on a.ToCust = c1.Username
     WHERE UserId = @UserId    
 
-    --Transfer Code    
-    Declare cur_FinanceTransfer Cursor for
-    Select FromCustid, FromUserName, ToUserName, Amount, ExchangeRate, Description, seq, IsCollection   
-    From @tmpTransfer
-	ORDER BY seq ASC
-    
-    Declare @FromCustId int, @FromUserName varchar(30), @ToUserName varchar(30), @Amount money, @ExchangeRate float, @Description nvarchar(200), @Seq int, @IsCollection BIT
-    
-	open cur_FinanceTransfer 
-    
-	Fetch Next From cur_FinanceTransfer Into @FromCustId, @FromUserName, @ToUserName, @Amount, @ExchangeRate, @Description, @Seq, @IsCollection
-	While @@Fetch_Status = 0
-	Begin		
-		--Call transfer SP here
-		Exec dbo.[Acc_FinanceTransferBettransIns] 
-			 @FromCustID = @FromCustId,  
-			 @ToUserName = @ToUserName,   
-			 @Amount = @Amount,  
-			 @ExchangeRate = @ExchangeRate,  
-			 @Remark = @Description,  
-			 @UserID = @UserId, --custid of Admin  
-			 @IP = @Ip,  
-			 @ErrCode = @ErrCode OUTPUT,  
-			 @ErrMsg = @ErrMsg OUTPUT,
-			 @IsCollection = @IsCollection
-		
-	
-		If @ErrCode = 0--Success transaction		
-		Begin
-			insert into @Success(Seq, FromUserName, ToUserName, Amount, ExchangeRate, Description, IsCollection)
-			values(@Seq, @FromUserName, @ToUserName, @Amount, @ExchangeRate, @Description, @IsCollection)
-		End
-		Else
-		Begin
-			insert into @Fail(Seq, FromUserName, ToUserName, Amount, ExchangeRate, Description, Reason, IsCollection)
-			values(@Seq, @FromUserName, @ToUserName, @Amount, @ExchangeRate, @Description, '; <b>' + @ErrMsg + '</b>', @IsCollection)
-		End
-		
-		Fetch Next From cur_FinanceTransfer Into @FromCustId, @FromUserName, @ToUserName, @Amount, @ExchangeRate, @Description, @Seq, @IsCollection
-		select @ErrCode = 0, @ErrMsg = ''
-	End
-    
-    Close cur_FinanceTransfer
-	Deallocate cur_FinanceTransfer
-	--End Transfer Code	
-	
-	--Return failed table and success table	
-	Select * from @Fail ORDER BY seq ASC
-	Select * from @Success ORDER BY seq ASC
-	
--- Write Log Row
-    DECLARE @TotalUsers INT
-    SELECT  @TotalUsers = COUNT(*)
-    FROM    @Success
-    
-    select @TotalUsers = -@TotalUsers
-    
-	declare @Doing nvarchar(500)
-	
-	select @Doing ='<Acc_FinanceTransferMulUpd TotalUser="'
-            + CONVERT(VARCHAR(20), @TotalUsers) + '" FileName="' + @FileName
-            + '" Size="' + CONVERT(VARCHAR(10), @FileSize) + '" />'
-             
-	BEGIN TRY                
-		EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @TotalUsers, @ToCustID = 0, @IP = @IP, @Doing = @Doing
-    END TRY
-    BEGIN CATCH
-		select @Doing = '<Acc_FinanceTransferMulUpd TotalUser="' + CONVERT(VARCHAR(20), @TotalUsers) + 
-						'" FileName="' + @FileName + 
-						'" Size="' + CONVERT(VARCHAR(10), @FileSize) + 
-						'" ErrMsg="' + error_message() + '" />'
-		EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @TotalUsers, @ToCustID = 0, @IP = @IP, @Doing = @Doing
-    END CATCH
+	-- Return param dataset here
+	-- Process Call transfer SP move outsite (handle by web)
+	SELECT FromCustid, ToCustid ,ToUserName, Amount, ExchangeRate, Description, @UserID AS UserId, @Ip AS Ip, IsCollection , 'Acc_FinanceTransferBettransIns' AS SP_name
+	FROM @tmpTransfer
+
 END	
 	
 

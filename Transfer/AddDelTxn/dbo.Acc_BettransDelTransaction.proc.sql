@@ -6,7 +6,8 @@ ALTER PROCEDURE [dbo].[Acc_BettransDelTransaction]
 	@IP nvarchar(15)='',
 	@Language varchar(2)= 'E',
 	@ErrCode int = 0 OUTPUT,
-	@ErrMsg nvarchar(200) = '' OUTPUT 
+	@ErrMsg nvarchar(200) = '' OUTPUT,
+	@SiteDBGroupID	SMALLINT
 AS
 /*	Created by: [Creator]
 	Task:	For Delete Transaction (transfer)
@@ -57,29 +58,29 @@ BEGIN
 				@IsCollection   BIT
 		
 		DECLARE @Reversal TABLE (	
-									Seq INT IDENTITY(1,1) PRIMARY KEY,
-									TransID BIGINT,
-									custid INT,
-									transdate DATETIME,
-									Username NVARCHAR(50),
-									refno BIGINT,
-									winlost MONEY,
-									actual_stake MONEY,
-									winlostdate SMALLDATETIME,
-									transdesc NVARCHAR(300),
-									creator INT,
-									bettype SMALLINT,
-									actualrate FLOAT,
-									recommend INT,
-									mrecommend INT,
-									srecommend INT,
-									currency TINYINT,
-									CurrencyName NVARCHAR(50),
-									ip VARCHAR(45) ,
-									statusID TINYINT,
-									liveindicator BIT,
-									OddsID INT
-								)
+				Seq INT IDENTITY(1,1) PRIMARY KEY,
+				TransID BIGINT,
+				custid INT,
+				transdate DATETIME,
+				Username NVARCHAR(50),
+				refno BIGINT,
+				winlost MONEY,
+				actual_stake MONEY,
+				winlostdate SMALLDATETIME,
+				transdesc NVARCHAR(300),
+				creator INT,
+				bettype SMALLINT,
+				actualrate FLOAT,
+				recommend INT,
+				mrecommend INT,
+				srecommend INT,
+				currency TINYINT,
+				CurrencyName NVARCHAR(50),
+				ip VARCHAR(45) ,
+				statusID TINYINT,
+				liveindicator BIT,
+				OddsID INT
+		)
 
 		DECLARE @TransIDs AS TABLE (transID BIGINT, seq TINYINT)
 		DECLARE @tblUniqueCustIds TABLE (CustId INT)
@@ -90,6 +91,29 @@ BEGIN
 		FROM	dbo.Transfer WITH (NOLOCK)
 		WHERE	refno = @refno AND bettype > 20000
 
+		-- handle sitegroup DB
+		DECLARE @SiteGroupInfo TABLE(CustID INT, SiteDBGroupID SMALLINT, LinkedServerName  VARCHAR(512), ClientAccessName VARCHAR(512), AGIP VARCHAR (50))
+		DECLARE @cs_CustID INT
+
+		DECLARE CS_CustIDs
+		CURSOR FOR  
+		SELECT CustID FROM @tblUniqueCustIds 
+	   		 
+		OPEN CS_CustIDs  
+		FETCH NEXT FROM CS_CustIDs INTO @cs_CustID
+		WHILE @@FETCH_STATUS = 0  
+		BEGIN
+			INSERT INTO @SiteGroupInfo (SiteDBGroupID, LinkedServerName, ClientAccessName, AGIP)
+			EXEC DBCUST.CustDB.dbo.Acc_SiteDBConfigSel @CustID = @cs_CustID
+
+			UPDATE @SiteGroupInfo SET CustID = @cs_CustID WHERE CustID IS NULL
+
+			FETCH NEXT FROM CS_CustIDs INTO @cs_CustID
+		END
+		
+		CLOSE CS_CustIDs  
+		DEALLOCATE CS_CustIDs  
+
 		----insert transfer data into @Reversal
 		INSERT INTO @Reversal 
 			(	transid, custid, transdate, Username, refno, winlost, actual_stake, winlostdate, transdesc, creator,
@@ -99,7 +123,7 @@ BEGIN
 		FROM	dbo.transfer t WITH (NOLOCK)
 		LEFT JOIN dbo.TransferInfo ti WITH (NOLOCK) ON t.TransId = ti.TransId
 		WHERE	refno = @refno  AND bettype > 20000 
-				AND custid IN (SELECT custid FROM @tblUniqueCustIds)
+				AND t.custid IN (SELECT custid FROM @SiteGroupInfo WHERE SiteDBGroupID = @SiteDBGroupID)
 
 		DECLARE @rowCount TINYINT = 0
 		SELECT @rowCount = COUNT(1) FROM @Reversal
@@ -168,7 +192,7 @@ BEGIN
 			ON	b.custid = c.custID
 		WHERE	b.refno = @refno AND bettype > 20000
 				AND c.roleid = 1
-				AND b.custid IN (SELECT custid FROM @tblUniqueCustIds)
+				AND b.custid IN (SELECT custid FROM @SiteGroupInfo WHERE SiteDBGroupID = @SiteDBGroupID)
 		GROUP BY b.CustID
 		
 		---- Begin reversal
@@ -200,15 +224,18 @@ BEGIN
 			
 		IF @@ERROR <> 0
 		BEGIN
-			DELETE  dbo.transfer WITH (ROWLOCK) 
+			UPDATE dbo.Transfer WITH(ROWLOCK)
+			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+			WHERE transid IN (SELECT transid FROM @TransIDs)
+	
+			UPDATE Transfer_Coll WITH(ROWLOCK)
+			SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
 			WHERE	transid IN (SELECT transid FROM @TransIDs)
 
-			DELETE  dbo.transferInfo WITH (ROWLOCK) 
-			WHERE	transid IN (SELECT transid FROM @TransIDs)
-			
-			DELETE  Transfer_Coll WITH (ROWLOCK) 
-			WHERE	transid IN (SELECT transid FROM @TransIDs)
-		
+			UPDATE TransferInfo WITH(ROWLOCK)
+			SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+			WHERE  transid IN (SELECT transid FROM @TransIDs)
+
 			SELECT	@ErrMsg ='Delete the transaction unsuccessfully!',
 					@ErrCode = 104
 			RETURN 
@@ -218,26 +245,25 @@ BEGIN
 		IF @IsCollection = 1
 		INSERT INTO Transfer_Coll 
 				(CustId, WinlostDate, TransDate, Bettype, Debit, Credit, Currency, ActualRate, 
-				TransID, RefNo, Username, Recommend, MRecommend, SRecommend, Creator ,TransDesc, IP )
+				TransID, RefNo, Username, Recommend, MRecommend, SRecommend, Creator ,TransDesc, IP , RepUpdateTime)
 		SELECT 	CustId, WinlostDate, TransDate, Bettype, Actual_Stake, Winlost, Currency, ActualRate, 
-				TransID, RefNo, Username, Recommend, MRecommend, SRecommend, Creator ,TransDesc, IP
+				TransID, RefNo, Username, Recommend, MRecommend, SRecommend, Creator ,TransDesc, IP, SYSDATETIME()
 		FROM 	dbo.transfer WITH (NOLOCK) 
 		WHERE 	TransID IN (SELECT transid FROM @TransIDs)
 		
 		IF @@ERROR <> 0
 		BEGIN
-			DELETE  dbo.transfer WITH (ROWLOCK) 
+			UPDATE dbo.Transfer WITH(ROWLOCK)
+			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+			WHERE transid IN (SELECT transid FROM @TransIDs)
+	
+			UPDATE Transfer_Coll WITH(ROWLOCK)
+			SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
 			WHERE	transid IN (SELECT transid FROM @TransIDs)
-			
-			DELETE  Transfer_Coll WITH (ROWLOCK) 
-			WHERE	transid IN (SELECT transid FROM @TransIDs)
-			
-			DELETE  dbo.transferInfo WITH (ROWLOCK) 
-			WHERE	transid IN (SELECT transid FROM @TransIDs)
-			
-			UPDATE	transferInfo WITH (ROWLOCK) 
-			SET		isDel = 0
-			WHERE	transid IN (Select transid from @Reversal)
+
+			UPDATE TransferInfo WITH(ROWLOCK)
+			SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+			WHERE  transid IN (SELECT transid FROM @TransIDs)
 					
 			SELECT	@ErrMsg ='Delete the transaction unsuccessfully!',
 					@ErrCode = 104
@@ -245,24 +271,27 @@ BEGIN
 		END
 
 		-----TransferInfo
-		INSERT INTO dbo.TransferInfo (TransId, IsDel, IsCollection)
-		SELECT	t.TransId, 1 IsDel, @IsCollection -- All tickets have the same refno also must have the same IsCollection value
+		INSERT INTO dbo.TransferInfo (TransId, IsDel, IsCollection, RepUpdateTime)
+		SELECT	t.TransId, 1 IsDel, @IsCollection, SYSDATETIME() -- All tickets have the same refno also must have the same IsCollection value
 		FROM	dbo.transfer t
 		WHERE 	TransID IN (SELECT transid FROM @TransIDs)
 		
 		IF @@ERROR <> 0
 		BEGIN
-			DELETE  dbo.transfer WITH (ROWLOCK) 
+			UPDATE dbo.Transfer WITH(ROWLOCK)
+			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+			WHERE transid IN (SELECT transid FROM @TransIDs)
+	
+			UPDATE Transfer_Coll WITH(ROWLOCK)
+			SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
 			WHERE	transid IN (SELECT transid FROM @TransIDs)
-			
-			DELETE  Transfer_Coll WITH (ROWLOCK) 
-			WHERE	transid IN (SELECT transid FROM @TransIDs)
-			
-			DELETE  dbo.transferInfo WITH (ROWLOCK) 
-			WHERE	transid IN (SELECT transid FROM @TransIDs)
+
+			UPDATE TransferInfo WITH(ROWLOCK)
+			SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+			WHERE  transid IN (SELECT transid FROM @TransIDs)
 			
 			UPDATE	transferInfo WITH (ROWLOCK) 
-			SET		isDel = 0
+			SET		isDel = 0, RepUpdateTime = SYSDATETIME()
 			WHERE	transid IN (Select transid from @Reversal)
 					
 			SELECT	@ErrMsg ='Delete the transaction unsuccessfully!',
@@ -286,18 +315,21 @@ BEGIN
 			
 			IF @ErrCode <> 0
 				BEGIN
-					DELETE  dbo.transfer WITH (ROWLOCK) 
+					UPDATE dbo.Transfer WITH(ROWLOCK)
+					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+					WHERE transid IN (SELECT transid FROM @TransIDs)
+	
+					UPDATE Transfer_Coll WITH(ROWLOCK)
+					SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
 					WHERE	transid IN (SELECT transid FROM @TransIDs)
 
-					DELETE  dbo.transferInfo WITH (ROWLOCK) 
-					WHERE	transid IN (SELECT transid FROM @TransIDs)
-					
-					DELETE  Transfer_Coll WITH (ROWLOCK) 
-					WHERE	transid IN (SELECT transid FROM @TransIDs)
+					UPDATE TransferInfo WITH(ROWLOCK)
+					SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+					WHERE  transid IN (SELECT transid FROM @TransIDs)
 						
 					--20150808@Elodie: rollback liveindicator = 0
 					UPDATE	dbo.TransferInfo WITH (ROWLOCK) 
-					SET		IsDel = 0
+					SET		IsDel = 0, RepUpdateTime = SYSDATETIME()
 					WHERE	transid IN (Select transid from @Reversal)
 
 					SELECT	@ErrMsg ='Delete the transaction unsuccessfully!',
@@ -318,18 +350,21 @@ BEGIN
 			
 				IF @ErrCode <> 0
 					BEGIN
-						DELETE  dbo.transfer WITH (ROWLOCK) 
+						UPDATE dbo.Transfer WITH(ROWLOCK)
+						SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+						WHERE transid IN (SELECT transid FROM @TransIDs)
+	
+						UPDATE Transfer_Coll WITH(ROWLOCK)
+						SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
 						WHERE	transid IN (SELECT transid FROM @TransIDs)
 
-						DELETE  dbo.transferInfo WITH (ROWLOCK) 
-						WHERE	transid IN (SELECT transid FROM @TransIDs)
-						
-						DELETE  Transfer_Coll WITH (ROWLOCK) 
-						WHERE	transid IN (SELECT transid FROM @TransIDs)
+						UPDATE TransferInfo WITH(ROWLOCK)
+						SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+						WHERE  transid IN (SELECT transid FROM @TransIDs)
 
 						--20150808@Elodie: rollback liveindicator = 0
 						UPDATE	transferInfo WITH (ROWLOCK) 
-						SET		isDel = 0
+						SET		isDel = 0, RepUpdateTime = SYSDATETIME()
 						WHERE	transid IN (Select transid from @Reversal)
 
 						SELECT TOP 1 @custid = custid,@amount = (b.winlost - b.actual_stake) FROM	@Reversal b WHERE @custid <> custid
@@ -348,7 +383,7 @@ BEGIN
 			END
 		END
 
-	--Get data after update
+		--Get data after update
 		INSERT INTO #AfterUpd (custid, balance)
 		SELECT	b.custid, SUM (b.winlost - b.actual_stake + b.playercomm) balance
 		FROM	dbo.Transfer b WITH (NOLOCK)
@@ -356,7 +391,7 @@ BEGIN
 			ON	b.custid = c.custID
 		WHERE	b.refno = @refno AND bettype > 20000
 				AND c.roleid = 1
-				AND b.custid IN (SELECT custid FROM @tblUniqueCustIds)
+				AND b.custid IN (SELECT custid FROM @SiteGroupInfo WHERE SiteDBGroupID = @SiteDBGroupID)
 		GROUP BY b.CustID
 
 
@@ -384,7 +419,7 @@ BEGIN
 			BEGIN
 				DECLARE @ABS_Balance MONEY
 				SELECT @ABS_Balance = ABS(@Balance)
-							EXEC Dot_BalanceDebitUpd @CustID = @MemID, @balance = @ABS_Balance, @type = 2, @IsForced = 1
+				EXEC Dot_BalanceDebitUpd @CustID = @MemID, @balance = @ABS_Balance, @type = 2, @IsForced = 1
 			END
 
 			FETCH NEXT FROM CS_MemBal INTO @MemID, @Balance 

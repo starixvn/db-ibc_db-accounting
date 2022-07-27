@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView,bodbExtAccNet" isFunction="0" isNested="1"></info>*/
+/*<info serverAlias="DBAGE-bodb02,DBSIG-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView,bodbExtAccNet" isFunction="0" isNested="1"></info>*/
 ALTER PROCEDURE [dbo].[Acc_CustomerSelBalanceCashInfo]
 	@CustId INT
 AS
@@ -18,6 +18,7 @@ AS
 		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
+		- 20220801@Sophia: Scale out DBTRANS, add metadata at SiteDB [RedmineID: #175253]
 	
 	Param's Explaination:
 		- @CustId: custid
