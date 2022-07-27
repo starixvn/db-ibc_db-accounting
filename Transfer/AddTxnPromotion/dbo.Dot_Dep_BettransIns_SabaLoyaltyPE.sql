@@ -29,6 +29,8 @@ AS
 	Revisions:
 		- 20200731@Sol: Initialize SP [RedmineID: #138216]
 		- 20211112@Sol: Support IPv6 - Phase 2 - [Redmine: #163963]
+		- 20220721@Evan: Integrate new transid - [Redmine: #175640]
+
 */
 BEGIN
 	SET NOCOUNT ON
@@ -117,12 +119,15 @@ BEGIN
 		
 		GOTO FINISH
 	END
-
+	---get new transid 
+	EXEC Get_Bettrans_TransID @TransID = @TransId OUTPUT	
+		
 	BEGIN TRY
 		;
 		WITH CTE_tempPromotionPrize AS 
 		(
-			SELECT @CustID AS CustId
+			SELECT @TransId AS TransId
+			, @CustID AS CustId
 			, @username AS username
 			, @currency AS currency
 			, @currencyName AS currencyName
@@ -191,7 +196,7 @@ BEGIN
 			, NULL AS RefCode
 		)
 		INSERT INTO dbo.bettrans (
-			custid, oddsid, oddsspread, hdp1, hdp2,
+			TransId, custid, oddsid, oddsspread, hdp1, hdp2,
 			bettype, currency, actual_stake, winlostdate, transdesc,
 			odds, modds, stake, [status], [statusID], 
 			livehomescore, liveawayscore, liveindicator, betfrom, betteam, creator, refno,
@@ -202,10 +207,10 @@ BEGIN
 			scomm, acomm, comm, playercomm,
 			winlost,swinlost, mwinlost, awinlost,
 			[ip], Username, CurrencyName, betcheck, oddstype,
-			balance, transid2,recommdate,betid,ruben,comstatus,betdaqid,ExtraInfo,WalletType,BonusID,RefCode
+			balance, transid2,recommdate,betid,ruben,comstatus,betdaqid,ExtraInfo,WalletType,BonusID,RefCode, RepUpdateTime
 		) 
 		SELECT 
-			custid, oddsid, oddsspread, hdp1, hdp2,
+			TransId, custid, oddsid, oddsspread, hdp1, hdp2,
 			bettype, currency, actual_stake, winlostdate, transdesc,
 			odds, modds, stake, [status], [statusID], 
 			livehomescore, liveawayscore, liveindicator, betfrom, betteam, creator, refno,
@@ -216,11 +221,10 @@ BEGIN
 			scomm, acomm, comm, playercomm,
 			winlost,swinlost, mwinlost, awinlost,
 			[ip], Username, CurrencyName, betcheck, oddstype, 
-			balance, transid2,recommdate,betid,ruben,comstatus,betdaqid,ExtraInfo,WalletType,BonusID,RefCode
+			balance, transid2,recommdate,betid,ruben,comstatus,betdaqid,ExtraInfo,WalletType,BonusID,RefCode, SYSDATETIME()
 		FROM CTE_tempPromotionPrize
 
-		-- insert into bettrans
-		SELECT @TransID = SCOPE_IDENTITY(), @doneinsert = CURRENT_TIMESTAMP
+		SELECT @doneinsert = CURRENT_TIMESTAMP
 
 		SET @insertData= N' oddsid:' +  cast(isnull(@oddsid,0) as varchar(10)) 
                             + N' bettype:' +  cast(isnull( @bettype,0) as varchar(10)) 

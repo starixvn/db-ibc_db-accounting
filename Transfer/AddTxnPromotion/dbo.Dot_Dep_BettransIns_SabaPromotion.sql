@@ -29,7 +29,8 @@ AS
 		- 20211103@Sophia: Add Param Winlostdate [Redmine: #164198]
 		- 20211112@Sol: Support IPv6 - Phase 2 - [Redmine: #163963]
 		- 20220309@Sophia: Not to check @Amount < 0 due to business changed [Redmine : #169683] 
-		
+		- 20220721@Evan: Integrate new transid - [Redmine: #175640]
+
 	Example: 
 			DECLARE 
 				 @TransID 		BIGINT		 
@@ -136,11 +137,13 @@ BEGIN
 		EXEC [dbo].[Dot_BalanceMemberSel]
 			@custID		= @CustID
 			, @balance	= @Balance OUTPUT			
-			
+		---get new transid 
+		EXEC Get_Bettrans_TransID @TransID = @TransId OUTPUT	
 		;
 		WITH CTE_tempPromotionPrize AS 
 		(
-			SELECT @CustID AS CustId
+			SELECT @TransID AS TransId
+			, @CustID AS CustId
 			, @username AS username
 			, @currency AS currency
 			, @currencyName AS currencyName
@@ -209,7 +212,7 @@ BEGIN
 			, NULL AS RefCode
 		)
 		INSERT INTO dbo.bettrans (
-			custid, oddsid, oddsspread, hdp1, hdp2,
+			TransId, custid, oddsid, oddsspread, hdp1, hdp2,
 			bettype, currency, actual_stake, winlostdate, transdesc,
 			odds, modds, stake, [status], [statusID], 
 			livehomescore, liveawayscore, liveindicator, betfrom, betteam, creator, refno,
@@ -220,10 +223,10 @@ BEGIN
 			scomm, acomm, comm, playercomm,
 			winlost,swinlost, mwinlost, awinlost,
 			[ip], Username, CurrencyName, betcheck, oddstype,
-			balance, transid2,recommdate,betid,ruben,comstatus,betdaqid,ExtraInfo,WalletType,BonusID,RefCode
+			balance, transid2,recommdate,betid,ruben,comstatus,betdaqid,ExtraInfo,WalletType,BonusID,RefCode, RepUpdateTime
 		) 
 		SELECT 
-			custid, oddsid, oddsspread, hdp1, hdp2,
+			TransId, custid, oddsid, oddsspread, hdp1, hdp2,
 			bettype, currency, actual_stake, winlostdate, transdesc,
 			odds, modds, stake, [status], [statusID], 
 			livehomescore, liveawayscore, liveindicator, betfrom, betteam, creator, refno,
@@ -234,13 +237,10 @@ BEGIN
 			scomm, acomm, comm, playercomm,
 			winlost,swinlost, mwinlost, awinlost,
 			[ip], Username, CurrencyName, betcheck, oddstype, 
-			balance, transid2,recommdate,betid,ruben,comstatus,betdaqid,ExtraInfo,WalletType,BonusID,RefCode
+			balance, transid2,recommdate,betid,ruben,comstatus,betdaqid,ExtraInfo,WalletType,BonusID,RefCode, SYSDATETIME()
 		FROM CTE_tempPromotionPrize
 
-		-- insert into bettrans
-		SELECT @TransID = SCOPE_IDENTITY(), @doneinsert = CURRENT_TIMESTAMP
-
-		 
+		SELECT @doneinsert = CURRENT_TIMESTAMP
 		
 		-- GET final total balance
 		EXEC [dbo].[Dot_BalanceMemberSel]
