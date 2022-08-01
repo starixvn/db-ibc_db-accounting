@@ -292,3 +292,5 @@ Select @LogData =
 
 EXEC dbo.WriteLog_UserLog @UserID = @custid, @Doing = @LogData
 
+
+GO

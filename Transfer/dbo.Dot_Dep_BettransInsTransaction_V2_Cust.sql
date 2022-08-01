@@ -62,6 +62,7 @@ Revisions:
 	- 20211021@Benson: add update betcheck for balance accounts(@bal_custid)
 	- 20211111@Sol: Split Transfer out of bettrans/Support IPv6 - [RedmineID: #164301]
 	- 20220721@Evan: Integrate new transid [Redmine: #175640]
+	- 20220721@Evan: Get balance from 8 table balance [Redmine: #175297]
 
 Param's Explanation:
 ? @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction
@@ -122,7 +123,6 @@ BEGIN
 		@actualrate float,
 		@winlost money,	
 		@actual_stake money,
-		@tmpAmount money,
 		@mrecommend int,
 		@recommend int,
 		@srecommend int,
@@ -145,29 +145,18 @@ BEGIN
 		@DTRA smallint,
 		@Cust_balance money,
 		@Cust_balance_ABS money,
-		@bal_balance money,
-		@bal_balance_ABS money,
-		@translogCredit money,
 		@IsForced BIT,
-		@balance_bettransRNG	MONEY,
-		@balance_bettransLC		MONEY,
-		@balance_Transfer		MONEY,
 		@WalletType TINYINT,
 		@BonusWalletFlag BIT, 
 		-- Rebate bonus
 		@DBONRTRA smallint,
-		@DBONRADJ smallint,
+		@DBONRADJ smallint
 
-		@MoveBetsDay smalldatetime,
-		@NewMoveBetsDay smalldatetime
-
-	declare @MBBU table (BalanceUpDay smalldatetime, MoveBetsDay smalldatetime)
 
 	Select @ErrCode = 0,
 			@ErrMsg = '',
 			@RefNo = isnull(@RefNo,0),
 			@amount = @amount,
-
 			@DADJ = 21003,
 			@DDEP = 22001,
 			@DWIT = 22002,
@@ -274,41 +263,15 @@ BEGIN
 				RETURN
 			END
 
-			-- get MB day
-			SET @MoveBetsDay = NULL
-			INSERT INTO @MBBU (BalanceUpDay, MoveBetsDay)
-			EXEC dbo.Age_SelBalanceUpDay
-			SELECT @MoveBetsDay = MoveBetsDay FROM @MBBU
+			/*
+				Check Member's Balance for Withdrawal 
+			*/
 
-			SELECT @balance = 0, @translogCredit = 0, @balance_bettransRNG = 0, @balance_bettransLC = 0, @balance_Transfer = 0
+			DECLARE @BonusAmount MONEY = 0 
 
-			SELECT @balance = SUM(winlost-actual_stake+playercomm)
-			FROM dbo.bettrans b WITH(NOLOCK)
-			WHERE custid = @custid
-				AND	bettype < 19999 AND winlostdate > @MoveBetsDay
+			EXEC dbo.Dot_BalanceMemberSel @CustID = @CustID, @Balance = @Balance OUT, @BonusWalletFlag = @BonusWalletFlag, @Amount = @BonusAmount OUT 
 
-			---get data of transfer ticket from new table [transfer]
-			SELECT @balance_Transfer = SUM(winlost-actual_stake+playercomm)
-			FROM dbo.Transfer t WITH(NOLOCK)
-			WHERE custid = @custid
-				AND (bettype = 19999 AND winlostdate <= @MoveBetsDay OR t.Bettype > 19999)
-			---
-
-			SELECT @translogCredit = SUM(ISNULL(actual_stake, 0))
-			FROM dbo.translog t WITH(NOLOCK)
-			WHERE custid = @custid AND statusId = 0
-		
-			SELECT	@balance_bettransRNG = SUM(winlost - actual_stake + playercomm)
-			FROM	dbo.bettransRnG b WITH(NOLOCK)
-			WHERE	custid = @custID
-					AND IsSum=0
-				
-			SELECT	@balance_bettransLC = SUM(winlost - actual_stake + playercomm)
-			FROM	dbo.bettransLC b WITH(NOLOCK)
-			WHERE	custid = @custID
-					AND IsSum=0
-		
-			--//2nd check: MB/BU is running?
+				--//2nd check: MB/BU is running?
 			EXEC dbo.Acc_Core_IsMainProcessRunning
 				  @CustId = @custid
 				, @UplineId = @recommend
@@ -322,81 +285,17 @@ BEGIN
 				RETURN
 			END
 
-			-- get MB day again
-			SET @NewMoveBetsDay = NULL
-			DELETE @MBBU
-			INSERT INTO @MBBU (BalanceUpDay, MoveBetsDay)
-			EXEC dbo.Age_SelBalanceUpDay
-			SELECT @NewMoveBetsDay = MoveBetsDay FROM @MBBU
-
-			IF @NewMoveBetsDay <> @MoveBetsDay
-			BEGIN
-				SELECT @balance = 0, @translogCredit = 0, @balance_bettransRNG = 0, @balance_bettransLC = 0, @balance_Transfer = 0
-
-				SELECT @balance = SUM(winlost-actual_stake+playercomm)
-				FROM dbo.bettrans b WITH(NOLOCK)
-				WHERE custid = @custid
-					AND	bettype < 19999 AND winlostdate > @NewMoveBetsDay
-
-				---get data of transfer ticket from new table [transfer]
-				SELECT @balance_Transfer = SUM(winlost-actual_stake+playercomm)
-				FROM dbo.Transfer t WITH(NOLOCK)
-				WHERE custid = @custid
-					AND (bettype = 19999 AND winlostdate <= @NewMoveBetsDay OR t.Bettype > 19999)
-				---
-
-				SELECT @translogCredit = SUM(ISNULL(actual_stake, 0))
-				FROM dbo.translog t WITH(NOLOCK)
-				WHERE custid = @custid AND statusId = 0
-		
-				SELECT	@balance_bettransRNG = SUM(winlost - actual_stake + playercomm)
-				FROM	dbo.bettransRnG b WITH(NOLOCK)
-				WHERE	custid = @custID
-						AND IsSum=0
-				
-				SELECT	@balance_bettransLC = SUM(winlost - actual_stake + playercomm)
-				FROM	dbo.bettransLC b WITH(NOLOCK)
-				WHERE	custid = @custID
-						AND IsSum=0
-
-				--//3rd check: MB/BU is running?
-				EXEC dbo.Acc_Core_IsMainProcessRunning
-					  @CustId = @custid
-					, @UplineId = @recommend
-					, @IsDepositMember = 1
-					, @ErrCode = @ErrCode OUTPUT
-					, @ErrMsg = @ErrMsg OUTPUT
-
-				IF @ErrCode <> 0
-				BEGIN
-					SELECT @ErrMsg = @ErrMsg, @ErrCode = 333
-					RETURN
-				END
-			END
-
-			/*
-				Check Member's Balance for Withdrawal 
-			*/
-
-			IF (ISNULL(@balance, 0) + ISNULL(@balance_Transfer, 0) + ISNULL(@balance_bettransRNG, 0) + ISNULL(@balance_bettransLC, 0) - ISNULL(@translogCredit, 0)
-				 + @winlost - @actual_stake) < 0
+			IF (ISNULL(@balance, 0) + @winlost - @actual_stake) < 0
 			BEGIN
 				SELECT @ErrMsg = 'Sorry, you do not have enough money to withdraw.', @ErrCode = 103				
 				RETURN		
 			END
-
 			----------------------------------
 			-- Check Bonus Wallet 
 			----------------------------------
-			DECLARE @FinalBalance	MONEY
-			DECLARE @BonusAmount	MONEY
-			SELECT	@FinalBalance	= 0,
-					@BonusAmount	= 0  
 			IF @BonusWalletFlag = 1
 			BEGIN
-				EXEC dbo.Dot_BalanceMemberSel @CustID = @CustID, @Balance = @FinalBalance OUT, @BonusWalletFlag = @BonusWalletFlag, @Amount = @BonusAmount OUT 
-
-				IF (ISNULL(@balance, 0) + ISNULL(@balance_Transfer, 0) + ISNULL(@balance_bettransRNG, 0) + ISNULL(@balance_bettransLC, 0) + @winlost - @actual_stake - ISNULL(@translogCredit, 0) - @BonusAmount) <0 
+				IF (ISNULL(@balance, 0) + @winlost - @actual_stake - @BonusAmount) <0 
 				BEGIN
 					SELECT	@ErrMsg = 'Sorry, you do not have enough money to withdraw.', @ErrCode = 201	
 					RETURN
@@ -525,7 +424,8 @@ BEGIN
 			--EXEC Dot_BalanceUpdCredit @custid = @CustID, @Balance = @Cust_balance
 			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_balance, @type = 2
 		END 
-		---get new transid 
+
+		--get new transid 
 		EXEC Get_Bettrans_TransID @TransID = @bal_transid OUTPUT
 
 		BEGIN TRY
@@ -544,6 +444,7 @@ BEGIN
 				INSERT INTO dbo.TransferInfo(TransId, WalletType, BonusID, RepUpdateTime)
 				VALUES (@bal_transid, @WalletType, @BonusID, SYSDATETIME())
 			END
+
 
 		END TRY
 		BEGIN CATCH
