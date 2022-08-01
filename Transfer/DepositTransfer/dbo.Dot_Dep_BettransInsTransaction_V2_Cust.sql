@@ -62,7 +62,7 @@ Revisions:
 	- 20211021@Benson: add update betcheck for balance accounts(@bal_custid)
 	- 20211111@Sol: Split Transfer out of bettrans/Support IPv6 - [RedmineID: #164301]
 	- 20220721@Evan: Integrate new transid [Redmine: #175640]
-	- 20220721@Evan: Get balance from 8 table balance [Redmine: #175297]
+	- 20220724@Evan: Revise code rollback, get balance from 8 table balance [Redmine: #175297]
 
 Param's Explanation:
 ? @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction
@@ -401,10 +401,21 @@ BEGIN
 		BEGIN CATCH
 							
 			Select @ErrMsg = 'Insert transaction failed.', @ErrCode = 105	
-		
+			
 			--Manually rollback
-			DELETE FROM dbo.transfer where refno = @RefNo and bettype = @bettype and custid = @custid
-			DELETE FROM dbo.TransferInfo WHERE TransId = @TransId
+			UPDATE dbo.Transfer WITH(ROWLOCK)
+			SET	custid = 0, 
+				Recommend = 0, 
+				MRecommend = 0, 
+				SRecommend = 0, 
+				Winlost = 0, 
+				Actual_Stake = 0, 
+				RepUpdateTime = SYSDATETIME()
+			WHERE refno = @RefNo and bettype = @bettype and custid = @custid
+			
+			UPDATE TransferInfo WITH(ROWLOCK)
+			SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+			WHERE TransId = @TransId
 		
 			--rollback balance
 			IF @Cust_balance < 0 
@@ -450,10 +461,21 @@ BEGIN
 		BEGIN CATCH
 		
 			Select @ErrMsg = 'Insert transaction failed.', @ErrCode = 106
-		
+
 			--Manually rollback
-			DELETE FROM dbo.Transfer where refno = @RefNo and bettype = @bettype and custid in (@custid, @bal_custID)
-			DELETE FROM dbo.TransferInfo WHERE TransId IN (@transid, @bal_transid)
+			UPDATE dbo.Transfer WITH(ROWLOCK)
+			SET	custid = 0, 
+				Recommend = 0, 
+				MRecommend = 0, 
+				SRecommend = 0, 
+				Winlost = 0, 
+				Actual_Stake = 0, 
+				RepUpdateTime = SYSDATETIME()
+			WHERE refno = @RefNo and bettype = @bettype and custid in (@custid, @bal_custID)
+			
+			UPDATE TransferInfo WITH(ROWLOCK)
+			SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+			WHERE TransId IN (@transid, @bal_transid)
 
 			--rollback balance @CustID
 			IF @Cust_balance < 0 

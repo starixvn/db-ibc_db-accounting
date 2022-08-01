@@ -65,7 +65,7 @@ Revision:
 	- 20210518@Percy: Change code to adapt new Move Bets flow [RedmineID: #154866]
 	- 20211111@Sol: Split Transfer out of bettrans/Support IPv6 - [RedmineID: #164301]
 	- 20220721@Evan: Integrate new transid [Redmine: #175640]
-	- 20220721@Evan: Get balance from 8 table balance  [Redmine: #175297]
+	- 20220721@Evan: Revise code rollback, get balance from 8 table balance [Redmine: #175297]
 
 Param's Explanation:
 @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction
@@ -438,7 +438,7 @@ BEGIN
 		END 
 
 		SELECT @transdate = CURRENT_TIMESTAMP
-
+		
 		---get new transid 
 		EXEC Get_Bettrans_TransID @TransID = @TransId OUTPUT
 
@@ -460,14 +460,22 @@ BEGIN
 
 	END TRY
 	BEGIN CATCH
-		--Manually rollback
-		DELETE FROM dbo.Transfer
-		WHERE custid = @custid 
-			AND refno = @RefNo 
-			AND bettype = @bettype
 
-		DELETE FROM dbo.TransferInfo WHERE TransId = @TransId
+		--Manually rollback
+		UPDATE dbo.Transfer WITH(ROWLOCK)
+		SET	custid = 0, 
+			Recommend = 0, 
+			MRecommend = 0, 
+			SRecommend = 0, 
+			Winlost = 0, 
+			Actual_Stake = 0, 
+			RepUpdateTime = SYSDATETIME()
+		WHERE refno = @RefNo and bettype = @bettype and custid = @custid 
 		
+		UPDATE TransferInfo WITH(ROWLOCK)
+		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+		WHERE TransId = @TransId
+
 		SELECT 
 			@ErrCode = 105	
 			,@ErrMsg = 'Insert transaction failed.' + ' STEP: ' + CONVERT(NVARCHAR(1), @Count) + '. ERROR_MESSAGE: ' + CONVERT(NVARCHAR(100), LEFT(ERROR_MESSAGE(),100)) + ' - ERROR_NUMBER: ' + CONVERT(VARCHAR(20), ERROR_NUMBER())
@@ -512,12 +520,19 @@ BEGIN
 		SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 106
 		
 		--Manually rollback
-		DELETE FROM dbo.Transfer 
-		WHERE custid IN (@custid, @bal_custID) 
-			AND refno = @RefNo 
-			AND bettype = @bettype
-
-		DELETE FROM dbo.TransferInfo WHERE TransId IN (@transid, @bal_transid)
+		UPDATE dbo.Transfer WITH(ROWLOCK)
+		SET	custid = 0, 
+			Recommend = 0, 
+			MRecommend = 0, 
+			SRecommend = 0, 
+			Winlost = 0, 
+			Actual_Stake = 0, 
+			RepUpdateTime = SYSDATETIME()
+		WHERE refno = @RefNo and bettype = @bettype and custid in (@custid, @bal_custID)
+		
+		UPDATE TransferInfo WITH(ROWLOCK)
+		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+		WHERE TransId IN (@transid, @bal_transid)
 
 	--Rollback Balance Table  
 		IF @Cust_balance < 0  --Rollback BalanceDebit 

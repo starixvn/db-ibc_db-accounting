@@ -30,6 +30,7 @@ AS
 		- 20211112@Sol: Support IPv6 - Phase 2 - [Redmine: #163963]
 		- 20220309@Sophia: Not to check @Amount < 0 due to business changed [Redmine : #169683] 
 		- 20220721@Evan: Integrate new transid - [Redmine: #175640]
+		- 20220724@Evan: Revise code rollback for scale-out [Redmine: #175297]
 
 	Example: 
 			DECLARE 
@@ -252,8 +253,23 @@ BEGIN
 			,@result = 'failed-bet'
 				
 		--Manually rollback bettrans
-		DELETE dbo.bettrans WHERE transid = @TransID
-				
+		UPDATE dbo.bettrans WITH(ROWLOCK)
+		SET custid = 0,
+			srecommend = 0,
+			mrecommend = 0,
+			recommend = 0,
+			ruben = 1,
+			[status] = 'Completed',
+			statusID = 131,
+			winlost = 0,
+			swinlost = 0,
+			mwinlost = 0,
+			awinlost = 0,
+			actual_stake = 0,
+			stake = 0,
+			RepUpdateTime = SYSDATETIME()
+		WHERE transid = @TransID
+
 		GOTO FINISH
 	END CATCH
 
