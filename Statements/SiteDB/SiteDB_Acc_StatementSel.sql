@@ -100,30 +100,11 @@ BEGIN
 		INSERT INTO @recommend (recommend)
 		SELECT custid FROM CUSTDB.dbo.Customer WITH(NOLOCK) WHERE srecommend = @CID AND roleid = 2
 
-	ELSE IF @roleid = 0 --headline
-		INSERT INTO @recommend (recommend)
-		SELECT c.custid 
-		FROM 
-			CUSTDB.dbo.Customer c WITH(NOLOCK) 
-		INNER JOIN CUSTDB.dbo.CustSuper cs WITH (NOLOCK) ON c.srecommend = cs.custid
-		WHERE 
-			c.roleid = 2
-			AND cs.UplineId = @CID 
-
 	-- to using index on custID level super
 	INSERT INTO @mrecommend (mrecommend)
 	SELECT custid 
 	FROM CUSTDB.dbo.Customer c WITH(NOLOCK) 
 	WHERE srecommend = @CID AND roleid = 3 -- for Super level
-
-	UNION ALL
-	SELECT c.custid 
-	FROM 
-		CUSTDB.dbo.Customer c WITH(NOLOCK) 
-		INNER JOIN CUSTDB.dbo.CustSuper cs WITH (NOLOCK) ON c.srecommend = cs.custid
-	WHERE 
-		c.roleid = 3
-		AND cs.UplineId = @CID -- for Headline level
 
 	UNION ALL
 	SELECT @CID 
