@@ -98,7 +98,7 @@ BEGIN
 			@ForexMrecommend	INT,
 			@ForexSrecommend	INT
 
-	DECLARE @CustInfo TABLE (Username NVARCHAR(10), currency INT, CurrName NVARCHAR(10), recommend INT, mrecommend INT, srecommend INT, CustID INT, actualrate FLOAT, roleid TINYINT)
+	DECLARE @CustInfo TABLE (Username NVARCHAR(50), currency INT, CurrName NVARCHAR(10), recommend INT, mrecommend INT, srecommend INT, CustID INT, actualrate FLOAT, roleid TINYINT)
 			
 	DECLARE @SiteGroupInfo TABLE(SiteDBGroupID SMALLINT, LinkedServerName  VARCHAR(512), ClientAccessName VARCHAR(512), AGIP VARCHAR (50))
 	DECLARE @Str VARCHAR(4000), @FromSiteDBGroupID SMALLINT, @ToSiteDBGroupID SMALLINT, @ForexSiteDBGroupID SMALLINT

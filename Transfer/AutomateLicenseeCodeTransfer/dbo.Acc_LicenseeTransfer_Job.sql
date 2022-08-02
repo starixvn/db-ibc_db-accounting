@@ -1,9 +1,11 @@
 /*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_LicenseeTransfer_Job]
 	@MoveBetsDay		SMALLDATETIME,
-	@TransferMonthDate	SMALLDATETIME = NULL,
+	@TransferMonthDate	SMALLDATETIME = NULL OUTPUT,
 	@ErrCode			INT = 0 OUTPUT,
-	@ErrMsg				VARCHAR(4000) = '' OUTPUT
+	@ErrMsg				VARCHAR(4000) = '' OUTPUT,
+	@EndMonthDate		DATE OUTPUT,
+	@currentDate		DATETIME OUTPUT
 AS
 /*
 	Create: 20190712@Bobby
@@ -16,6 +18,7 @@ AS
 		- 20190806@Bobby: Update Licensee last month transfer information [redmine: #118247]
 		- 20210315@Sol: NAP - Enhance Manage Licensee Code to support change base currency of licensees - [Redmine: #151607]
 		- 20220810@Danny: Add check failed data step [Redmine: #175670]
+		- 20220802@Danny: change code to support SiteDB [Redmine: #175253]
 		 
 */
 BEGIN
@@ -23,9 +26,7 @@ BEGIN
 	
 	DECLARE @isCollection 			BIT = 0
 		,@language					VARCHAR(2)= 'E'
-		,@currentDate				DATETIME
 		,@startMonthDate			DATE
-		,@endMonthDate				DATE
 		,@exchangeDate				SMALLDATETIME
 		,@settingEnable				TINYINT = 1
 		,@strLicInfo				VARCHAR(MAX)
@@ -372,228 +373,9 @@ BEGIN
 	FROM CustDB.dbo.custInfo WITH(NOLOCK) 
 	WHERE username = @createrUserName
 
-	BEGIN TRY
-		WHILE @retryCount <= 3
-			AND EXISTS (SELECT TOP 1 1 
-				FROM dbo.LicenseeTransferPool WITH(NOLOCK) 
-				WHERE MonthDate = @endMonthDate	
-					AND (
-						(TransferID = @transferIDCount AND [Status] = @newStatus) 
-						OR (@retryCount > 0 AND CHARINDEX([Status],@retryStatusAll) > 0) 
-					)
-		)
-		BEGIN
-						
-			SELECT @ErrCode 		= 0
-				,@ErrMsg 			= ''
-				,@fromCustId		= 0
-				,@toCustId			= 0
-				,@fromAmount		= 0
-				,@toAmount			= 0
-				,@fromExRate		= 0
-				,@toExRate			= 0
-				,@autoRemark		= ''
-				
-			SELECT @directTransfer 	= CASE WHEN FromCurrency = ToCurrency THEN 1 ELSE 0 END
-				,@fromCustId		= FromCustId
-				,@fromAmount		= FromAmount
-				,@toCustId			= ToCustID
-				,@toAmount			= ToAmount
-				,@toUsername		= ToUserName
-				,@fromExRate		= FromExRate
-				,@toExRate			= ToExRate
-				,@licenseeName		= LicenseeName
-				,@autoRemark		= CS.username + ' to ' + EX.Code + ' ' + LEFT(DATENAME(MM, @endMonthDate),3) + ' ' + CAST(YEAR(@endMonthDate) AS VARCHAR(4))
-				
-			FROM dbo.LicenseeTransferPool P WITH(NOLOCK)
-				INNER JOIN CustDB.dbo.Dep_CustSuper CS WITH(NOLOCK) ON P.FromCustId = CS.custid
-				INNER JOIN CustDB.dbo.exchange EX WITH(NOLOCK) ON P.ToCurrency = EX.exchangeid
-			WHERE MonthDate = @endMonthDate	
-					AND (
-						(TransferID = @transferIDCount AND [Status] = @newStatus) 
-						OR (@retryCount > 0 AND CHARINDEX([Status],@retryStatusAll) > 0) 
-					)
-			
-			-- SET default creator
-			SET @createrID = ISNULL(@createrID, 10278938) -- StarixIT custID
-
-			-- UPDATE InProgress
-			UPDATE dbo.LicenseeTransferPool WITH(ROWLOCK, UPDLOCK)
-			SET [Status] = @statusInProgress, MonthDate = @endMonthDate, TransferDate = @currentDate
-			WHERE MonthDate = @endMonthDate	
-				AND FromCustId = @fromCustID 
-				AND ToCustID = @toCustId
-			
-			-- PROCESS transfer
-			IF @directTransfer = 1
-			BEGIN
-				SET @execCommand = 'EXEC [dbo].[Acc_BettransInsTransfer]' + CHAR(13)
-					+'@FromCustID		= ' + CAST(@fromCustID AS VARCHAR(10)) + CHAR(13)
-					+',@ToUserName		= ''' + @toUserName + '''' + CHAR(13)
-					+',@Amount			= ' + CAST(@toAmount AS VARCHAR(15)) + CHAR(13)
-					+',@ExchangeRate	= 1' + CHAR(13)
-					+',@Remark			= ''' + @autoRemark + '''' + CHAR(13)
-					+',@UserID			= ' + CAST(@createrID AS VARCHAR(10)) + CHAR(13)
-					+',@isCollection 	= ' + CAST(@isCollection AS VARCHAR(3)) + CHAR(13)
-					+',@Language		= ''' + @language + '''' + CHAR(13)
-					+',@ErrCode			= @ErrCode OUTPUT' + CHAR(13)
-					+',@ErrMsg			= @ErrMsg OUTPUT'
-
-				--SELECT @ErrCode = 199, @ErrMsg = 'Test retry direct transfer'
-				--EXEC direct transfer
-				EXEC [dbo].[Acc_BettransInsTransfer]
-					@FromCustID		= @fromCustID
-					,@ToUserName	= @toUserName 
-					,@Amount		= @toAmount
-					,@ExchangeRate	= 1
-					,@Remark		= @autoRemark
-					,@UserID		= @createrID
-					,@isCollection 	= @isCollection
-					,@Language		= @language
-					,@ErrCode		= @ErrCode OUTPUT
-					,@ErrMsg		= @ErrMsg OUTPUT
-
-
-			END
-			ELSE
-			BEGIN
-				SET @execCommand = 'EXEC [dbo].[Acc_BettransInsCrossTransfer]' + CHAR(13)
-					+'@FromCustID		= ' + CAST(@fromCustID AS VARCHAR(10)) + CHAR(13)
-					+',@ToCustID		= ' + CAST(@toCustId AS VARCHAR(10)) + CHAR(13)
-					+',@FromAmount		= ' + CAST(@fromAmount AS VARCHAR(15)) + CHAR(13)
-					+',@ToAmount		= ' + CAST(@toAmount AS VARCHAR(15)) + CHAR(13)
-					+',@FromExRate		= ' + CAST(@fromExRate AS VARCHAR(10)) + CHAR(13)
-					+',@ToExRate		= ' + CAST(@toExRate AS VARCHAR(10)) + CHAR(13)
-					+',@ForexUsername	= ''' + @forexUsername + '''' + CHAR(13)
-					+',@Remark			= ''' + @autoRemark + '''' + CHAR(13)
-					+',@UserID			= ' + CAST(@createrID AS VARCHAR(10)) + CHAR(13)
-					+',@isCollection 	= ' + CAST(@isCollection AS VARCHAR(3)) + CHAR(13)
-					+',@Language		= ''' + @language + '''' + CHAR(13)
-					+',@ErrCode			= @ErrCode OUTPUT' + CHAR(13)
-					+',@ErrMsg			= @ErrMsg OUTPUT'
-
-				--SELECT @ErrCode = 199, @ErrMsg = 'Test retry cross transfer'
-				-- EXEC cross transfer
-				EXEC [dbo].[Acc_BettransInsCrossTransfer]
-					@FromCustID		= @fromCustID,
-					@ToCustID		= @toCustId,
-					@FromAmount		= @fromAmount,
-					@ToAmount		= @toAmount,
-					@FromExRate		= @fromExRate, 
-					@ToExRate		= @toExRate,
-					@ForexUsername	= @forexUsername,
-					@Remark			= @autoRemark,
-					@UserID			= @createrID, --custid of Admin
-					@isCollection 	= @isCollection,
-					@Language		= @language,
-					@ErrCode		= @ErrCode OUTPUT,
-					@ErrMsg			= @ErrMsg OUTPUT
-			END
-			
-			-- FOR tracing
-			--PRINT 'retry(' + CAST(@retryCount AS VARCHAR(10)) + ')->transferid(' + CAST(@transferIDCount AS VARCHAR(10)) +  ')->LIC(' + @licenseeName + ')->direct(' + CAST(@directTransfer AS VARCHAR(1)) + ')->from(' + CAST(@fromCustId AS VARCHAR(10)) + ')->to(' + CAST(@toCustId AS VARCHAR(10)) + ')->error(' + @ErrMsg + ')'
-			
-			-- INCREASE transferCount
-			SET @transferIDCount += 1
-				
-			IF @ErrCode <> 0
-			BEGIN
-				SET @ErrMsg += ' Command: ' + @execCommand 
-				-- UPDATE Failed
-				UPDATE dbo.LicenseeTransferPool WITH(ROWLOCK, UPDLOCK)
-				SET [Status] = @failedStatus, Error = @ErrMsg
-				WHERE MonthDate = @endMonthDate	
-					AND FromCustId = @fromCustID 
-					AND ToCustID = @toCustId
-				
-				-- CHECK is running in the retry mode
-				IF @retryEnable = 1 AND @retryCount > 0
-					BREAK
-				
-				-- ENABLE retry mode
-				SET @retryEnable = 1				
-				-- jump to the next transfer
-				CONTINUE;
-			END
-			ELSE
-			BEGIN
-				-- UPDATE completed
-				UPDATE dbo.LicenseeTransferPool WITH(ROWLOCK, UPDLOCK)
-				SET [Status] = @completedStatus, Error = NULL
-				WHERE MonthDate = @endMonthDate	
-					AND FromCustId = @fromCustID 
-					AND ToCustID = @toCustId
-			END
-		END
-	
-	END TRY
-	BEGIN CATCH
-		SELECT @ErrCode		= 199
-			, @ErrMsg		= 'Error: ' + CAST(ERROR_NUMBER() AS VARCHAR(10)) 
-							+ '. Source: ' + ERROR_PROCEDURE() 
-							+ '. Line: ' + CAST(ERROR_LINE() AS VARCHAR(10)) 
-							+ '. Message:' + ERROR_MESSAGE() 
-							+ '. Retry: ' + CAST(@retryCount AS VARCHAR(3))
-							+ '. Command: ' + @execCommand
-
-		-- UPDATE error/exception
-		UPDATE dbo.LicenseeTransferPool WITH(ROWLOCK, UPDLOCK)
-		SET [Status] = @failedStatus, Error = @ErrMsg
-		WHERE MonthDate = @endMonthDate	
-				AND FromCustId = @fromCustID 
-				AND ToCustID = @toCustId
-				
-		-- ENABLE retry mode
-		SET @retryEnable = 1
-	END CATCH
-	
-	-- CONTROL retry condition
-	IF (@retryEnable = 1 AND @retryCount < 3)
-	BEGIN
-		SET @retryCount += 1	
-		GOTO START_TRANSFER
-	END
-
-	-- update back to bodb_licensee
-	DECLARE @strLicInfoCompleted VARCHAR(MAX)
-	SELECT @strLicInfoCompleted = CAST((
-			SELECT DISTINCT 
-				LicenseeName AS '@l',
-				ToCustID AS '@c',
-				FromDate AS '@fd'
-			FROM (
-				SELECT pol.LicenseeName, pol.ToCustID, c.FromDate
-					,SUM (CASE WHEN [Status] = @completedStatus THEN 1 ELSE 0 END) AS CompletedCount
-					,SUM (CASE WHEN [Status] = @failedStatus THEN 1 ELSE 0 END) AS FailedCount
-					,SUM (CASE WHEN [Status] = @newStatus THEN 1 ELSE 0 END) AS NewCount
-				FROM dbo.LicenseeTransferPool pol WITH(NOLOCK)
-					INNER JOIN DBCUST.bodb_licensee.dbo.LicenseeTransferCode c WITH(NOLOCK)
-						ON c.LicenseeName = pol.LicenseeName AND pol.ToCustID = c.CustId 
-							AND @TransferMonthDate BETWEEN c.FromDate AND c.ToDate
-				WHERE MonthDate = @endMonthDate 
-				GROUP BY pol.LicenseeName, pol.ToCustID, c.FromDate
-			) AS r
-			WHERE r.FailedCount = 0 AND r.NewCount = 0 -- ALL completed
-			FOR XML PATH('r'), ROOT('root'), TYPE
-	) AS VARCHAR(MAX))
-
-	EXEC DBCUST.bodb_licensee.dbo.Acc_LicenseeTransfer_Update
-		@LicenseeInfo		= @strLicInfoCompleted
-		,@LastMonthDate		= @endMonthDate
-		,@LastTransferDate	= @currentDate
-		,@ErrCode			= @ErrCode OUTPUT
-		,@ErrMsg			= @ErrMsg OUTPUT
-	-- end update back to bodb_licensee
-
-	IF EXISTS (	SELECT 1 
-				FROM dbo.LicenseeTransferPool pol WITH(NOLOCK) 
-				WHERE    [Status] = @failedStatus
-					AND	 MonthDate = @endMonthDate 
-			  )
-	BEGIN
-		SELECT @ErrCode		= 200
-			, @ErrMsg		= 'Some transfer processes of Licensee are failed. '
-	END
+		SELECT @forexUsername AS ForexUsername, * 
+		FROM dbo.LicenseeTransferPool WITH(NOLOCK) 
+		WHERE MonthDate = @endMonthDate	AND [Status] = @newStatus
 
 	-- cleanup
 	DROP TABLE #transferExrate
