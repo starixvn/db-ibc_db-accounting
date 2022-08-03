@@ -4,6 +4,5 @@ FRP\ResetWinning\Task_ResetWinning_ExtraPT14.sql
 FRP\ResetWinning\Task_ResetWinning_Non3rdParty.sql
 
 Transfer\AutomateFinanceCrossTransfer\Acc_FinanceCrossTransferMulUpd.sql
-Transfer\AutomateLicenseeCodeTransfer\dbo.Acc_LicenseeTransfer_Job.sql
 Task\Balance\Clear Balance\dbo.Task_ClearBalanceAllDownlines.sql
 Transfer\AutomateFinanceTransfer\Acc_FinanceTransferMulUpd.sql

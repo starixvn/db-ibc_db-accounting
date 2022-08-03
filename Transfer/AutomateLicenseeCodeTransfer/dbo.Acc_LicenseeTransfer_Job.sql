@@ -88,16 +88,16 @@ BEGIN
 	END
 	
 	-- Check validation on running date & existed monthly transfer
-	IF @ignoreRunningDate = 0
-		AND EXISTS(
-		SELECT 1 AS StatusCode
-		WHERE DAY(@currentDate) NOT BETWEEN 5 AND 10
-	)
-	BEGIN
-		SELECT @ErrCode		= 102
-			, @ErrMsg		= 'The running date is invalid.'
-		RETURN
-	END
+	--IF @ignoreRunningDate = 0
+	--	AND EXISTS(
+	--	SELECT 1 AS StatusCode
+	--	WHERE DAY(@currentDate) NOT BETWEEN 5 AND 10
+	--)
+	--BEGIN
+	--	SELECT @ErrCode		= 102
+	--		, @ErrMsg		= 'The running date is invalid.'
+	--	RETURN
+	--END
 	
 	IF EXISTS(
 			SELECT TOP 1 1 AS StatusCode
