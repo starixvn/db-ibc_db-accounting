@@ -373,8 +373,14 @@ BEGIN
 	FROM CustDB.dbo.custInfo WITH(NOLOCK) 
 	WHERE username = @createrUserName
 
-		SELECT @forexUsername AS ForexUsername, * 
-		FROM dbo.LicenseeTransferPool WITH(NOLOCK) 
+		SELECT ISNULL(@createrID, p.fromCustID) AS UserID,
+				CS.username + ' to ' + EX.Code + ' ' + LEFT(DATENAME(MM, @endMonthDate),3) + ' ' + CAST(YEAR(@endMonthDate) AS VARCHAR(4)) AS Remark,
+				@isCollection as IsCollection,
+				@language AS Language, 
+				@forexUsername AS ForexUsername, p.* 
+		FROM dbo.LicenseeTransferPool p WITH(NOLOCK) 
+			INNER JOIN CustDB.dbo.Dep_CustSuper CS WITH(NOLOCK) ON P.FromCustId = CS.custid
+			INNER JOIN CustDB.dbo.exchange EX WITH(NOLOCK) ON P.ToCurrency = EX.exchangeid
 		WHERE MonthDate = @endMonthDate	AND [Status] = @newStatus
 
 	-- cleanup

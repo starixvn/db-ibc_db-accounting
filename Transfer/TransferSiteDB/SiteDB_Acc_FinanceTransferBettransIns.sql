@@ -718,9 +718,34 @@ BEGIN
 		SELECT @LogData = @LogData + ' is Credit Collection'
 	END
 	
-	--Write Log : Invalid Exchange Rate @Phuong20081023
-	EXEC dbo.Acc_ExchangeRateCheckValid @FromExchangeID = @FromCurr, @ToExchangeID = @ToCurr, @ExchangeRate = @ExchangeRate,
-													  @UserID = @UserID , @FromCust = @FromCustID, @ToCust = @ToCustID, @Amount = @Amt, @transDate =@transdate ,@refNo = @refno
+	IF @@SERVERNAME IN ('SITDBTRANS', 'DBTRANS', 'TESTDBTRANS') 
+	BEGIN
+		--Write Log : Invalid Exchange Rate @Phuong20081023
+		EXEC dbo.Acc_ExchangeRateCheckValid 
+			@FromExchangeID = @FromCurr, 
+			@ToExchangeID = @ToCurr, 
+			@ExchangeRate = @ExchangeRate,
+			@UserID = @UserID , 
+			@FromCust = @FromCustID, 
+			@ToCust = @ToCustID, 
+			@Amount = @Amt, 
+			@transDate =@transdate ,
+			@refNo = @refno
+	END
+	ELSE
+	BEGIN
+		EXEC DBTXN.bodb02.dbo.Acc_ExchangeRateCheckValid 
+			@FromExchangeID = @FromCurr, 
+			@ToExchangeID = @ToCurr, 
+			@ExchangeRate = @ExchangeRate,
+			@UserID = @UserID , 
+			@FromCust = @FromCustID, 
+			@ToCust = @ToCustID, 
+			@Amount = @Amt, 
+			@transDate =@transdate ,
+			@refNo = @refno
+	END
+
 	BEGIN TRY
 		EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @FromCustID, @ToCustID = @ToCustID, @IP = @IP, @Doing = @LogData
 	END TRY

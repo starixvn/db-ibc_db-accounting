@@ -781,7 +781,10 @@ BEGIN
 		SELECT @LogData = @LogData + ' is Credit Collection'
 	END
 	
-	EXEC dbo.Acc_ExchangeRateCheckValid 
+
+	IF @@SERVERNAME IN ('SITDBTRANS', 'DBTRANS', 'TESTDBTRANS') 
+	BEGIN
+		EXEC dbo.Acc_ExchangeRateCheckValid 
 				@FromExchangeID = @FromCurrency, 
 				@ToExchangeID	= @ToCurrency, 
 				@ExchangeRate	= @TransExRate,
@@ -791,6 +794,21 @@ BEGIN
 				@Amount			= @FromAmount, 
 				@transDate		= @transdate ,
 				@refNo			= @refno
+	END
+	ELSE
+	BEGIN
+		EXEC DBTXN.bodb02.dbo.Acc_ExchangeRateCheckValid 
+				@FromExchangeID = @FromCurrency, 
+				@ToExchangeID	= @ToCurrency, 
+				@ExchangeRate	= @TransExRate,
+				@UserID			= @UserID , 
+				@FromCust		= @FromCustID, 
+				@ToCust			= @ToCustID, 
+				@Amount			= @FromAmount, 
+				@transDate		= @transdate ,
+				@refNo			= @refno
+	END
+	
 
 	BEGIN TRY
 		EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @FromCustID, @ToCustID = @ToCustID, @IP = @IP, @Doing = @LogData

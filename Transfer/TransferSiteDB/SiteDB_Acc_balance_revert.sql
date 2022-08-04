@@ -54,6 +54,7 @@ BEGIN
 	CLOSE CS_CustIDs  
 	DEALLOCATE CS_CustIDs  
 
+	-- List all customers by 
 	INSERT INTO @CustRollback(CustId, Amt)
 	SELECT s.CustId, Amt
 	FROM	@SiteGroupInfo s
@@ -90,7 +91,7 @@ BEGIN
 	-- transfer
 	UPDATE dbo.Transfer WITH(ROWLOCK, UPDLOCK)
 	SET		custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()
-	where refno = @refno AND CustID IN (SELECT custid FROM @CustRollback)
+	where  TransID IN (SELECT TransID FROM @TransIDs) AND CustID IN (SELECT custid FROM @CustRollback)
 	
 	UPDATE Transfer_Coll WITH(ROWLOCK, UPDLOCK)
 	SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()

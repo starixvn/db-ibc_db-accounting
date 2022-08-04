@@ -89,7 +89,7 @@ BEGIN
 					c.roleid
 			FROM CustDB.dbo.Custinfo c with (NOLOCK)
 				INNER JOIN CustDB.dbo.Exchange e with (NOLOCK) on c.currency = e.exchangeid 
-			WHERE c.CustID =' + CAST(@FromCustID AS VARCHAR(50)) + ' OR c.username = ''''' + @ToUserName + '''''' + ' OR c.username = ''''' + @ForexUsername + ''''' '')
+			WHERE c.CustID =' + CAST(@FromCustID AS VARCHAR(50)) + ' OR c.CustID = ''''' +CAST(@ToCustID AS VARCHAR(50)) + '''''' + ' OR c.username = ''''' + @ForexUsername + ''''' '')
 	'
 	INSERT INTO @CustInfo (username, currency, CurrName, recommend, mrecommend, srecommend, CustID, actualrate, roleid)
 	EXEC (@Str)
@@ -847,16 +847,32 @@ BEGIN
 		SELECT @LogData = @LogData + ' is Credit Collection'
 	END
 	
-	EXEC dbo.Acc_ExchangeRateCheckValid 
-				@FromExchangeID = @FromCurrency, 
-				@ToExchangeID	= @ToCurrency, 
-				@ExchangeRate	= @TransExRate,
-				@UserID			= @UserID , 
-				@FromCust		= @FromCustID, 
-				@ToCust			= @ToCustID, 
-				@Amount			= @FromAmount, 
-				@transDate		= @transdate ,
-				@refNo			= @refno
+	IF @@SERVERNAME IN ('SITDBTRANS', 'DBTRANS', 'TESTDBTRANS') 
+	BEGIN
+		EXEC dbo.Acc_ExchangeRateCheckValid 
+					@FromExchangeID = @FromCurrency, 
+					@ToExchangeID	= @ToCurrency, 
+					@ExchangeRate	= @TransExRate,
+					@UserID			= @UserID , 
+					@FromCust		= @FromCustID, 
+					@ToCust			= @ToCustID, 
+					@Amount			= @FromAmount, 
+					@transDate		= @transdate ,
+					@refNo			= @refno
+	END
+	ELSE
+	BEGIN
+			EXEC DBTXN.bodb02.dbo.Acc_ExchangeRateCheckValid 
+					@FromExchangeID = @FromCurrency, 
+					@ToExchangeID	= @ToCurrency, 
+					@ExchangeRate	= @TransExRate,
+					@UserID			= @UserID , 
+					@FromCust		= @FromCustID, 
+					@ToCust			= @ToCustID, 
+					@Amount			= @FromAmount, 
+					@transDate		= @transdate ,
+					@refNo			= @refno
+	END
 
 	BEGIN TRY
 		EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @FromCustID, @ToCustID = @ToCustID, @IP = @IP, @Doing = @LogData
