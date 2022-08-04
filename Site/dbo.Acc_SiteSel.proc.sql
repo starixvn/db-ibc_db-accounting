@@ -13,6 +13,8 @@ Revisions:
 	- 20160617@Winnie: #48948 Hide_special_sites_from_unautorized_users
 	- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 	- 20190320@Phillip: #105338 - Build Customer Setting with Singbet Style
+	- 20220802@Sophia: Scale out DBTRANS, add SiteDBGroupID [RedmineID: #175253]
+	
 */
 BEGIN
 	SET NOCOUNT ON
@@ -24,10 +26,10 @@ BEGIN
 	BEGIN
 		IF @Userid IS NULL
 		BEGIN
-			SELECT [siteid], [site],  isLicensee
+			SELECT [siteid], [site],  isLicensee, SiteDBGroupID
 			FROM [Site] with (NOLOCK)
 			WHERE isActive = 1 
-			ORDER BY isLicensee, [site]
+			ORDER BY isLicensee, SiteDBGroupID, [site]
 		END
 		ELSE
 		BEGIN
@@ -39,21 +41,21 @@ BEGIN
 			INSERT INTO  @tmp (siteid , site,SpecialGroup)
 			EXECUTE(@SearchQuery)
 
-			SELECT a.siteid, a.site,  isLicensee
+			SELECT a.siteid, a.site,  isLicensee, SiteDBGroupID
 			FROM [Site] a with (NOLOCK)
 			WHERE isActive = 1 
 				AND siteid NOT IN (SELECT siteid FROM @tmp )
 				AND (@IncludeCN88 <> 0 OR a.site <> 'CN88')
-			ORDER BY isLicensee, [site]
+			ORDER BY isLicensee, SiteDBGroupID, [site]
 		END
 	END
 	ELSE
 	BEGIN
-		SELECT [siteid], [site], isLicensee
+		SELECT [siteid], [site], isLicensee, SiteDBGroupID
 		FROM [Site] with (NOLOCK)
 		WHERE 
 			siteid in (SELECT siteid FROM dbo.f_SiteBySystem(@System))
 			and isActive = 1		
-		ORDER BY isLicensee, [site]
+		ORDER BY isLicensee, SiteDBGroupID, [site]
 	END
 END
