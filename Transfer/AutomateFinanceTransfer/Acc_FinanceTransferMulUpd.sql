@@ -74,7 +74,7 @@ BEGIN
 
 	-- Return param dataset here
 	-- Process Call transfer SP move outsite (handle by web)
-	SELECT FromCustid, ToCustid ,ToUserName, Amount, ExchangeRate, Description, @UserID AS UserId, @Ip AS Ip, IsCollection , 'Acc_FinanceTransferBettransIns' AS SP_name
+	SELECT FromCustid, FromUserName, ToCustid ,ToUserName, Amount, ExchangeRate, Description, @UserID AS UserId, @Ip AS Ip, IsCollection , 'Acc_FinanceTransferBettransIns' AS SP_name
 	FROM @tmpTransfer
 
 END	

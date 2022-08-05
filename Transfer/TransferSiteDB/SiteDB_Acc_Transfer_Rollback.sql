@@ -1,5 +1,5 @@
 ﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
-CREATE PROCEDURE [dbo].[SiteDb_Acc_balance_revert]
+CREATE PROCEDURE [dbo].[SiteDB_Acc_Transfer_Rollback]
 (
 	@Refno					BIGINT,
 	@IP						varchar(45)='',
@@ -22,7 +22,7 @@ BEGIN
 	DECLARE @CurrentDate SMALLDATETIME = GETDATE()
 	DECLARE @Amt MONEY = 0, @CustID INT, @rn TINYINT = 1, @RoleID TINYINT, @LogData nvarchar(2000)
 	DECLARE @CustRollback AS TABLE (CustId INT, Amt MONEY, IsMember BIT , rn TINYINT IDENTITY)	
-	DECLARE @TransferDatail AS TABLE 
+	DECLARE @TransferDetail AS TABLE 
 	(	
 		transID		BIGINT, 
 		currency	INT, 
@@ -57,19 +57,19 @@ BEGIN
 			RETURN
 		END
 
-		IF @CurrentDate < @MoveBetsDay 
+		IF @CurrentDate <= @MoveBetsDay 
 		BEGIN
 			SELECT @ErrMsg = 'Running date is invalid.', @ErrCode = 101 
 			RETURN
 		END
 
-		INSERT INTO @TransferDatail(transID, currency, winlost, Actual_Stake, bettype, statusID, IsDel, CustId, recommend, mrecommend, srecommend)
+		INSERT INTO @TransferDetail(transID, currency, winlost, Actual_Stake, bettype, statusID, IsDel, CustId, recommend, mrecommend, srecommend)
 		SELECT t.transID, currency, winlost, Actual_Stake, bettype, statusID, ISNULL(IsDel,0), CustId, recommend, mrecommend, srecommend
 		FROM dbo.transfer t WITH(NOLOCK)
 		LEFT JOIN dbo.transferInfo u WITH(NOLOCK) ON t.TransId = u.TransId
-		WHERE t.refno = @Refno AND t.StatusId = 131
+		WHERE t.refno = @Refno AND t.StatusId = 131 AND t.CustId <> 0 ANd bettype = 21003
 
-		IF NOT EXISTS (SELECT 1 FROM @TransferDatail) OR EXISTS (SELECT 1 FROM @TransferDatail WHERE IsDel = 1)
+		IF NOT EXISTS (SELECT 1 FROM @TransferDetail) OR EXISTS (SELECT 1 FROM @TransferDetail WHERE IsDel = 1)
 		BEGIN
 			SELECT @ErrMsg = 'Ticket info is invalid', @ErrCode = 102
 			RETURN
@@ -84,7 +84,7 @@ BEGIN
 
 	DECLARE CS_CustIDs
 	CURSOR FOR  
-	SELECT DISTINCT CustID FROM @TransferDatail 
+	SELECT DISTINCT CustID FROM @TransferDetail 
 	   		 
 	OPEN CS_CustIDs  
 	FETCH NEXT FROM CS_CustIDs INTO @cs_CustID
@@ -102,50 +102,66 @@ BEGIN
 	DEALLOCATE CS_CustIDs  
 
 	-- Remove transids of CustID, that not located in @SiteDBGroupID
-	DELETE FROM @TransferDatail
+	DELETE FROM @TransferDetail
 	WHERE CustID IN (SELECT z.CustID FROM @SiteGroupInfo z WHERE z.SiteDBGroupID <> @SiteDBGroupID)
 
 	-- List all customers by 
-	INSERT INTO @CustRollback(CustId, Amt)
-	SELECT CustID, SUM(winlost - Actual_Stake)
-	FROM  @TransferDatail
-	GROUP BY CustID
+	INSERT INTO @CustRollback(CustId, Amt, IsMember)
+	SELECT CustID, SUM(winlost - Actual_Stake), CASE WHEN CustID <> recommend AND CustID <> mrecommend AND CustID <> srecommend THEN 1 ELSE 0 END
+	FROM  @TransferDetail
+	GROUP BY CustID, CASE WHEN CustID <> recommend AND CustID <> mrecommend AND CustID <> srecommend THEN 1 ELSE 0 END
 	
 	BEGIN TRANSACTION
 		-- Revert here
 		WHILE EXISTS (SELECT TOP 1 1 FROM @CustRollback WHERE rn = @rn)
 		BEGIN
-				SELECT	@CustID = CustID, @Amt = Amt
-				FROM	@CustRollback 
-				WHERE rn = @rn
+			SELECT	@CustID = CustID, @Amt = Amt, @RoleID = IsMember
+			FROM	@CustRollback 
+			WHERE rn = @rn
 
+			BEGIN TRY
 				-- Get RoleID
-				SELECT @RoleID = RoleID FROM CustDB.dbo.Customer WITH(NOLOCK) WHERE CustID = @CustID
-
 				IF @Amt > 0 AND @RoleID = 1
+				BEGIN
 					EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Amt, @Type = 2, @IsForced = 1, @ErrCode = @ErrCode OUTPUT
+					SELECT @LogData = @LogData + '- Revert balance: ' + CONVERT(VARCHAR(20), @CustID) + ' ' + CONVERT(VARCHAR(50), @Amt) + ' '
+				END
 		
 				-- transfer
 				UPDATE dbo.Transfer WITH(ROWLOCK, UPDLOCK)
 				SET		custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()
-				where  TransID IN (SELECT z.TransID FROM @TransferDatail z WHERE z.CustID = @CustID)
-	
+				where  TransID IN (SELECT z.TransID FROM @TransferDetail z WHERE z.CustID = @CustID)
+		
 				UPDATE Transfer_Coll WITH(ROWLOCK, UPDLOCK)
 				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
-				WHERE   TransID IN (SELECT z.TransID FROM @TransferDatail z WHERE z.CustID = @CustID)
-	
+				WHERE   TransID IN (SELECT z.TransID FROM @TransferDetail z WHERE z.CustID = @CustID)
+			
 				UPDATE TransferInfo WITH(ROWLOCK,  UPDLOCK)
 				SET		IsDel = 1, RepUpdateTime = SYSDATETIME()
-				WHERE  TransID IN (SELECT z.TransID FROM @TransferDatail z WHERE z.CustID = @CustID)
-	
+				WHERE  TransID IN (SELECT z.TransID FROM @TransferDetail z WHERE z.CustID = @CustID)
+		
 				IF @Amt < 0 AND @RoleID = 1
 				BEGIN
 					DECLARE @balance MONEY
 					SELECT @balance =  ABS(@Amt)
-					EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @balance, @Type = 2
+					EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @balance, @Type = 2, @errCode = @ErrCode OUTPUT
+					
+					SELECT @LogData = @LogData + '- Revert balance: ' + CONVERT(VARCHAR(20), @CustID) + ' ' + CONVERT(VARCHAR(50), @Amt) + ' '
+				END
+				IF @ErrCode <> 0
+				BEGIN
+					ROLLBACK TRANSACTION
+					SELECT @ErrMsg = 'Revert failed', @ErrCode = 103 
+					RETURN
 				END
 
 				SELECT @rn = @rn + 1
+			END TRY
+			BEGIN CATCH
+				SELECT @ErrMsg = 'Revert failed', @ErrCode = 103 
+				ROLLBACK TRANSACTION
+				RETURN
+			END CATCH
 		END
 	COMMIT TRANSACTION
 
