@@ -417,8 +417,7 @@ BEGIN
 			SUM(memberOutstanding) AS customerOutstanding,
 			SUM(PendingTransfer3rd) AS PendingTransfer3rd,
 			@transdate AS lastTxn,
-			@UsedCredit AS masterUsedCredit,
-			ISNULL(@DisableAutoMPT,0) as DisableAutoMPT
+			@UsedCredit AS masterUsedCredit
 		FROM #BalanceInfo
     END
     ELSE IF @roleid = 4
