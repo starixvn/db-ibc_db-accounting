@@ -18,7 +18,7 @@ AS
 		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
-		- 20220801@Sophia: Scale out DBTRANS, add metadata at SiteDB [RedmineID: #175253]
+		- 20220801@Sophia: Scale out DBTRANS, add metadata at SiteDB, remove DisableAutoMPT [RedmineID: #175253]
 	
 	Param's Explaination:
 		- @CustId: custid
@@ -282,10 +282,7 @@ BEGIN
     END
     ELSE IF @roleid = 3
     BEGIN
-	    DECLARE @DisableAutoMPT BIT
-	    --Get disable auto MPT
-	    SELECT @DisableAutoMPT = DisableAutoMPT FROM CustMaster (nolock) WHERE CustID = @CustID
-
+	   
 	    SELECT @UsedCredit = SUM(credit)  
 	    FROM DBCUST.CustDB.dbo.custinfo WITH(NOLOCK) 
 	    WHERE roleid=2 
