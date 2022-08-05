@@ -829,7 +829,10 @@ BEGIN
 		SELECT @LogData = @LogData + ' is Credit Collection'
 	END
 
-	IF @@SERVERNAME IN ('SITDBTRANS', 'DBTRANS', 'TESTDBTRANS') 
+	DECLARE @curentSiteDBGroupID SMALLINT
+	SELECT @curentSiteDBGroupID = dbo.f_Get_SiteDBGroupID()
+
+	IF @curentSiteDBGroupID = 0
 	BEGIN	
 		EXEC dbo.Acc_ExchangeRateCheckValid 
 			@FromExchangeID = @FromCurrency, 

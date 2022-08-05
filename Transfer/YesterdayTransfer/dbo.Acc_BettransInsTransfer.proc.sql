@@ -860,7 +860,10 @@ BEGIN
 									ELSE '' END			
 	END
 
-	IF @@SERVERNAME IN ('SITDBTRANS', 'DBTRANS', 'TESTDBTRANS') 
+	DECLARE @curentSiteDBGroupID SMALLINT
+	SELECT @curentSiteDBGroupID = dbo.f_Get_SiteDBGroupID()
+
+	IF @curentSiteDBGroupID = 0
 	BEGIN	
 		--Write Log : Invalid Exchange Rate @Phuong20081023
 		EXEC dbo.Acc_ExchangeRateCheckValid 

@@ -160,7 +160,7 @@ BEGIN
 		
 	END 
 
-	IF @refno IS NULL
+	IF (@refno IS NULL OR @refno = 0)
 		EXEC Get_Refno_Transid @RefNo = @refno OUTPUT
 
 		IF @amount > 0
@@ -718,7 +718,7 @@ BEGIN
 		SELECT @LogData = @LogData + ' is Credit Collection'
 	END
 	
-	IF @@SERVERNAME IN ('SITDBTRANS', 'DBTRANS', 'TESTDBTRANS') 
+	IF @SiteDBGroupID = 0
 	BEGIN
 		--Write Log : Invalid Exchange Rate @Phuong20081023
 		EXEC dbo.Acc_ExchangeRateCheckValid 

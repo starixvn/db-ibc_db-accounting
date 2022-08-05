@@ -233,7 +233,7 @@ BEGIN
 			@RemarkToCurr	= '',
 			@winlostdate = CONVERT(NVARCHAR(10), CURRENT_TIMESTAMP,120)
 	
-	IF @refno IS NULL
+	IF (@refno IS NULL OR @refno = 0)
 		EXEC Get_Refno_Transid @RefNo = @RefNo OUTPUT
 
 	----- transfer from @FromCustomer to @ForexAcc
@@ -899,7 +899,7 @@ BEGIN
 		SELECT @LogData = @LogData + ' is Credit Collection'
 	END
 	
-	IF @@SERVERNAME IN ('SITDBTRANS', 'DBTRANS', 'TESTDBTRANS') 
+	IF @SiteDBGroupID = 0
 	BEGIN
 		EXEC dbo.Acc_ExchangeRateCheckValid 
 					@FromExchangeID = @FromCurrency, 
