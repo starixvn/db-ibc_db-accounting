@@ -49,12 +49,14 @@ BEGIN
 		SELECT @ErrMsg = 'You cannot do TRANSFER due to the destination account is the same as the source account.', @ErrCode = 100 
 		RETURN
 	END 
-		
-	--Check permission for account site: @phuc20080213
-	EXEC DBPOL.NAP_UserControl.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[FinanceTransfer]',@ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
-	If @ErrCode <> 0
-		RETURN
-		
+	
+	IF @UserID <> 10278938 -- StarixIT
+	BEGIN
+		--Check permission for account site: @phuc20080213
+		EXEC DBPOL.NAP_UserControl.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[FinanceTransfer]',@ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
+		If @ErrCode <> 0
+			RETURN
+	END
 		
 	---- #1 CHECK UM TRANSFER FUNCTION
 	EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckUM  

@@ -15,6 +15,7 @@ AS
 		- 20190802@Bobby: Fix bug - update remark/transdesc [redmine: #118076]
 		- 20190806@Bobby: Update Licensee last month transfer information [redmine: #118247]
 		- 20210315@Sol: NAP - Enhance Manage Licensee Code to support change base currency of licensees - [Redmine: #151607]
+		- 20220810@Danny: Add check failed data step [Redmine: #175670]
 		 
 */
 BEGIN
@@ -88,16 +89,16 @@ BEGIN
 	END
 	
 	-- Check validation on running date & existed monthly transfer
-	--IF @ignoreRunningDate = 0
-	--	AND EXISTS(
-	--	SELECT 1 AS StatusCode
-	--	WHERE DAY(@currentDate) NOT BETWEEN 5 AND 10
-	--)
-	--BEGIN
-	--	SELECT @ErrCode		= 102
-	--		, @ErrMsg		= 'The running date is invalid.'
-	--	RETURN
-	--END
+	IF @ignoreRunningDate = 0
+		AND EXISTS(
+		SELECT 1 AS StatusCode
+		WHERE DAY(@currentDate) NOT BETWEEN 5 AND 10
+	)
+	BEGIN
+		SELECT @ErrCode		= 102
+			, @ErrMsg		= 'The running date is invalid.'
+		RETURN
+	END
 	
 	IF EXISTS(
 			SELECT TOP 1 1 AS StatusCode
@@ -366,11 +367,11 @@ BEGIN
 	FROM dbo.LicenseeTransferPool WITH(NOLOCK) 
 	WHERE MonthDate = @endMonthDate	
 	
+	START_TRANSFER:
 	SELECT TOP(1) @createrID = custid
 	FROM CustDB.dbo.custInfo WITH(NOLOCK) 
 	WHERE username = @createrUserName
 
-	START_TRANSFER:
 	BEGIN TRY
 		WHILE @retryCount <= 3
 			AND EXISTS (SELECT TOP 1 1 
@@ -414,7 +415,7 @@ BEGIN
 					)
 			
 			-- SET default creator
-			SET @createrID = ISNULL(@createrID, @fromCustID)
+			SET @createrID = ISNULL(@createrID, 10278938) -- StarixIT custID
 
 			-- UPDATE InProgress
 			UPDATE dbo.LicenseeTransferPool WITH(ROWLOCK, UPDLOCK)
@@ -583,6 +584,16 @@ BEGIN
 		,@ErrCode			= @ErrCode OUTPUT
 		,@ErrMsg			= @ErrMsg OUTPUT
 	-- end update back to bodb_licensee
+
+	IF EXISTS (	SELECT 1 
+				FROM dbo.LicenseeTransferPool pol WITH(NOLOCK) 
+				WHERE    [Status] = @failedStatus
+					AND	 MonthDate = @endMonthDate 
+			  )
+	BEGIN
+		SELECT @ErrCode		= 200
+			, @ErrMsg		= 'Some transfer processes of Licensee are failed. '
+	END
 
 	-- cleanup
 	DROP TABLE #transferExrate

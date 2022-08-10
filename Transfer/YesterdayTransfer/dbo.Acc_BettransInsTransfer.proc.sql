@@ -49,9 +49,12 @@ Param's Explanation:
 BEGIN
 	SET NOCOUNT ON
 	--Check permission for account site: @phuc20080213
-	EXEC DBPOL.NAP_UserControl.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[OtherTrans]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
-	If @ErrCode <> 0
+	IF @UserID <> 10278938 -- StarixIT
+	BEGIN
+		EXEC DBPOL.NAP_UserControl.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[OtherTrans]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
+		IF @ErrCode <> 0
 		RETURN
+	END
 
 	Declare @ToMrecommend int, @ToRecommend int, @ToSrecommend int, @ToCustID int, @Amt money,
 			@ToCurr int, @ToActualrate float, @ToCurrName nvarchar(10), @RemarkFromCurr nvarchar(70), @RemarkToCurr nvarchar(70), @ToRoleID tinyint 
