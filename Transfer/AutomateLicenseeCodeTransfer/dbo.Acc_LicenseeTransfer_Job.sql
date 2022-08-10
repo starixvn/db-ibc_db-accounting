@@ -360,8 +360,8 @@ BEGIN
 		, @autoRemark			VARCHAR(200) = ''
 		, @licenseeName			VARCHAR(50)
 		, @execCommand			VARCHAR(MAX)
-		, @createrUserName		VARCHAR(30) = 'StarixIT'
-		, @createrID			INT
+		, @creatorUserName		VARCHAR(30) = 'StarixIT'
+		, @creatorID			INT
 	
 	-- INIT transfer count for the month
 	SELECT @transferIDCount = MIN(TransferID)
@@ -369,19 +369,41 @@ BEGIN
 	WHERE MonthDate = @endMonthDate	
 	
 	START_TRANSFER:
-	SELECT TOP(1) @createrID = custid
-	FROM CustDB.dbo.custInfo WITH(NOLOCK) 
-	WHERE username = @createrUserName
 
-		SELECT ISNULL(@createrID, p.fromCustID) AS UserID,
-				CS.username + ' to ' + EX.Code + ' ' + LEFT(DATENAME(MM, @endMonthDate),3) + ' ' + CAST(YEAR(@endMonthDate) AS VARCHAR(4)) AS Remark,
-				@isCollection as IsCollection,
-				@language AS Language, 
-				@forexUsername AS ForexUsername, p.* 
-		FROM dbo.LicenseeTransferPool p WITH(NOLOCK) 
-			INNER JOIN CustDB.dbo.Dep_CustSuper CS WITH(NOLOCK) ON P.FromCustId = CS.custid
-			INNER JOIN CustDB.dbo.exchange EX WITH(NOLOCK) ON P.ToCurrency = EX.exchangeid
-		WHERE MonthDate = @endMonthDate	AND [Status] = @newStatus
+	SELECT @creatorUserName = 'StarixIT'
+
+	SELECT @creatorID = custid
+	FROM CustDB.dbo.custInfo WITH(NOLOCK) 
+	WHERE username = @creatorUserName
+
+	IF @creatorID IS NULL
+	BEGIN
+		SELECT	@ErrCode	= 106, 
+				@ErrMsg		= 'Creator not found.'
+		RETURN
+	END
+
+	SELECT	@creatorID UserID -- StarixIT custID
+			,CS.username + ' to ' + EX.Code + ' ' + LEFT(DATENAME(MM, @endMonthDate),3) + ' ' + CAST(YEAR(@endMonthDate) AS VARCHAR(4)) AS Remark
+			,@isCollection as IsCollection
+			,@language AS Language
+			,@forexUsername AS ForexUsername
+			,p.LicenseeName
+			, p.FromCustId
+			, p.FromCurrency
+			, p.ToCustID
+			, p.ToCurrency
+			, p.ToUsername
+			, p.FromAmount
+			, p.FromExRate
+			, p.ToExRate
+			, p.ToAmount
+			, p.[Status]
+			, p.MonthDate
+	FROM dbo.LicenseeTransferPool p WITH(NOLOCK) 
+		INNER JOIN CustDB.dbo.Dep_CustSuper CS WITH(NOLOCK) ON P.FromCustId = CS.custid
+		INNER JOIN CustDB.dbo.exchange EX WITH(NOLOCK) ON P.ToCurrency = EX.exchangeid
+	WHERE MonthDate = @endMonthDate	AND [Status] = @newStatus
 
 	-- cleanup
 	DROP TABLE #transferExrate

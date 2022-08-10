@@ -129,11 +129,11 @@ BEGIN
 		
 				-- transfer
 				UPDATE dbo.Transfer WITH(ROWLOCK, UPDLOCK)
-				SET		custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()
+				SET		custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 				where  TransID IN (SELECT z.TransID FROM @TransferDetail z WHERE z.CustID = @CustID)
 		
 				UPDATE Transfer_Coll WITH(ROWLOCK, UPDLOCK)
-				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
+				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 				WHERE   TransID IN (SELECT z.TransID FROM @TransferDetail z WHERE z.CustID = @CustID)
 			
 				UPDATE TransferInfo WITH(ROWLOCK,  UPDLOCK)

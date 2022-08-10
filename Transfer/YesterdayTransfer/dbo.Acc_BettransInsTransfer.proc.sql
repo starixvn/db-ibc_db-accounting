@@ -250,7 +250,7 @@ BEGIN
 				  @winlostdate, @FromCurr, @FromActualrate, @FromCurrName, @FromRecommend, @FromMrecommend, @FromSrecommend, 
 				 0, 0,@ip,131, @TotalCash, SYSDATETIME())
 								
-			if @@Error <> 0
+			IF @@Error <> 0
 			BEGIN
 				Select @ErrMsg = case @Language 
 							when 'E' then 'Transfer failed. Please try again.'
@@ -260,13 +260,13 @@ BEGIN
 						end, @ErrCode = 103		
 				
 				UPDATE dbo.Transfer WITH(ROWLOCK)
-				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
 				WHERE custid IN (@FromCustID, @ToCustID)
 					AND refno = @refno 
 					AND bettype = 21003
 				
 				UPDATE Transfer_Coll WITH(ROWLOCK)
-				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
+				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 				WHERE	custid in (@FromCustID, @ToCustID)
 						AND refno = @refno 
 						AND bettype = 21003
@@ -301,13 +301,13 @@ BEGIN
 						end, @ErrCode = 103		
 				
 				UPDATE dbo.Transfer WITH(ROWLOCK)
-				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0		
 				WHERE custid IN (@FromCustID, @ToCustID)
 					AND refno = @refno 
 					AND bettype = 21003
 				
 				UPDATE Transfer_Coll WITH(ROWLOCK)
-				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
+				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 				WHERE	custid in (@FromCustID, @ToCustID)
 						AND refno = @refno 
 						AND bettype = 21003
@@ -336,13 +336,13 @@ BEGIN
 						end, @ErrCode = 103		
 				
 				UPDATE dbo.Transfer WITH(ROWLOCK)
-				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0		
 				WHERE custid IN (@FromCustID, @ToCustID)
 					AND refno = @refno 
 					AND bettype = 21003
 				
 				UPDATE Transfer_Coll WITH(ROWLOCK)
-				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
+				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 				WHERE	custid in (@FromCustID, @ToCustID)
 						AND refno = @refno 
 						AND bettype = 21003
@@ -387,13 +387,13 @@ BEGIN
 					END 
 
 					UPDATE dbo.Transfer WITH(ROWLOCK)
-					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0		
 					WHERE custid IN (@FromCustID, @ToCustID)
 						AND refno = @refno 
 						AND bettype = 21003
 				
 					UPDATE Transfer_Coll WITH(ROWLOCK)
-					SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
+					SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 					WHERE	custid in (@FromCustID, @ToCustID)
 							AND refno = @refno 
 							AND bettype = 21003
@@ -443,13 +443,13 @@ BEGIN
 				END 
 
 				UPDATE dbo.Transfer WITH(ROWLOCK)
-				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0		
 				WHERE custid IN (@FromCustID, @ToCustID)
 					AND refno = @refno 
 					AND bettype = 21003
 				
 				UPDATE Transfer_Coll WITH(ROWLOCK)
-				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
+				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 				WHERE	custid in (@FromCustID, @ToCustID)
 						AND refno = @refno 
 						AND bettype = 21003
@@ -492,13 +492,13 @@ BEGIN
 						end, @ErrCode = 103		
 				
 				UPDATE dbo.Transfer WITH(ROWLOCK)
-				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0		
 				WHERE custid IN (@FromCustID, @ToCustID)
 					AND refno = @refno 
 					AND bettype = 21003
 				
 				UPDATE Transfer_Coll WITH(ROWLOCK)
-				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
+				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 				WHERE	custid in (@FromCustID, @ToCustID)
 						AND refno = @refno 
 						AND bettype = 21003
@@ -526,13 +526,13 @@ BEGIN
 						end, @ErrCode = 103		
 				
 				UPDATE dbo.Transfer WITH(ROWLOCK)
-				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0		
 				WHERE custid IN (@FromCustID, @ToCustID)
 					AND refno = @refno 
 					AND bettype = 21003
 				
 				UPDATE Transfer_Coll WITH(ROWLOCK)
-				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
+				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 				WHERE	custid in (@FromCustID, @ToCustID)
 						AND refno = @refno 
 						AND bettype = 21003
@@ -554,8 +554,7 @@ BEGIN
 			----update balance Debit
 			IF @FromRoleID  = 1
 			BEGIN
-				--EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @amount 
-							EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @amount, @Type = 2, @IsForced = 1, @ErrCode = @ErrCode OUTPUT
+				EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @amount, @Type = 2, @IsForced = 1, @ErrCode = @ErrCode OUTPUT
 				if @ErrCode <> 0
 				BEGIN
 					Select @ErrMsg = case @Language 
@@ -598,13 +597,13 @@ BEGIN
 						end, @ErrCode = 105
 				
 				UPDATE dbo.Transfer WITH(ROWLOCK)
-				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0		
 				WHERE custid IN (@FromCustID, @ToCustID)
 					AND refno = @refno 
 					AND bettype = 21003
 				
 				UPDATE Transfer_Coll WITH(ROWLOCK)
-				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
+				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 				WHERE	custid in (@FromCustID, @ToCustID)
 						AND refno = @refno 
 						AND bettype = 21003
@@ -616,7 +615,6 @@ BEGIN
 				---rollback @FromCustID
 				IF @FromRoleID  = 1
 				BEGIN
-					--EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @amount 
 					EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @amount, @Type = 2
 				END
 
@@ -646,13 +644,13 @@ BEGIN
 						end, @ErrCode = 105		
 				
 				UPDATE dbo.Transfer WITH(ROWLOCK)
-				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0		
 				WHERE custid IN (@FromCustID, @ToCustID)
 					AND refno = @refno 
 					AND bettype = 21003
 				
 				UPDATE Transfer_Coll WITH(ROWLOCK)
-				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
+				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 				WHERE	custid in (@FromCustID, @ToCustID)
 						AND refno = @refno 
 						AND bettype = 21003
@@ -681,13 +679,13 @@ BEGIN
 						end, @ErrCode = 105	
 				
 				UPDATE dbo.Transfer WITH(ROWLOCK)
-				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0		
 				WHERE custid IN (@FromCustID, @ToCustID)
 					AND refno = @refno 
 					AND bettype = 21003
 				
 				UPDATE Transfer_Coll WITH(ROWLOCK)
-				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
+				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 				WHERE	custid in (@FromCustID, @ToCustID)
 						AND refno = @refno 
 						AND bettype = 21003
@@ -728,13 +726,13 @@ BEGIN
 						end, @ErrCode = 106
 				
 				UPDATE dbo.Transfer WITH(ROWLOCK)
-				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0		
 				WHERE custid IN (@FromCustID, @ToCustID)
 					AND refno = @refno 
 					AND bettype = 21003
 				
 				UPDATE Transfer_Coll WITH(ROWLOCK)
-				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
+				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 				WHERE	custid in (@FromCustID, @ToCustID)
 						AND refno = @refno 
 						AND bettype = 21003
@@ -746,7 +744,6 @@ BEGIN
 				---rollback @FromCustID
 				IF @FromRoleID  = 1
 				BEGIN
-					--EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @amount 
 					EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @amount, @Type = 2
 				END
 
@@ -776,13 +773,13 @@ BEGIN
 						end, @ErrCode = 106		
 				
 				UPDATE dbo.Transfer WITH(ROWLOCK)
-				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0		
 				WHERE custid IN (@FromCustID, @ToCustID)
 					AND refno = @refno 
 					AND bettype = 21003
 				
 				UPDATE Transfer_Coll WITH(ROWLOCK)
-				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
+				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 				WHERE	custid in (@FromCustID, @ToCustID)
 						AND refno = @refno 
 						AND bettype = 21003
@@ -809,13 +806,13 @@ BEGIN
 						end, @ErrCode = 106	
 				
 				UPDATE dbo.Transfer WITH(ROWLOCK)
-				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0		
 				WHERE custid IN (@FromCustID, @ToCustID)
 					AND refno = @refno 
 					AND bettype = 21003
 				
 				UPDATE Transfer_Coll WITH(ROWLOCK)
-				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
+				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 				WHERE	custid in (@FromCustID, @ToCustID)
 						AND refno = @refno 
 						AND bettype = 21003
@@ -831,7 +828,6 @@ BEGIN
 			IF @ToRoleID  = 1
 			BEGIN
 				SELECT @BalanceAmount = @amount * @ExchangeRate 
-				--EXEC Dot_BalanceUpdCredit @CustID = @ToCustID, @balance = @BalanceAmount 
 				EXEC Dot_BalanceCreditUpd @CustID = @ToCustID, @balance = @BalanceAmount, @Type = 2
 			END
 					
@@ -860,36 +856,18 @@ BEGIN
 									ELSE '' END			
 	END
 
-	DECLARE @curentSiteDBGroupID SMALLINT
-	SELECT @curentSiteDBGroupID = dbo.f_Get_SiteDBGroupID()
+	
+	EXEC DBCTG.bodb02.dbo.Acc_ExchangeRateCheckValid 
+		@FromExchangeID = @FromCurr, 
+		@ToExchangeID = @ToCurr, 
+		@ExchangeRate = @ExchangeRate,
+		@UserID = @UserID , 
+		@FromCust = @FromCustID, 
+		@ToCust = @ToCustID, 
+		@Amount = @Amt, 
+		@transDate =@transdate ,
+		@refNo = @refno
 
-	IF @curentSiteDBGroupID = 0
-	BEGIN	
-		--Write Log : Invalid Exchange Rate @Phuong20081023
-		EXEC dbo.Acc_ExchangeRateCheckValid 
-			@FromExchangeID = @FromCurr, 
-			@ToExchangeID = @ToCurr, 
-			@ExchangeRate = @ExchangeRate,
-			@UserID = @UserID , 
-			@FromCust = @FromCustID, 
-			@ToCust = @ToCustID, 
-			@Amount = @Amt, 
-			@transDate =@transdate ,
-			@refNo = @refno
-	END
-	ELSE
-	BEGIN
-		EXEC DBTXN.bodb02.dbo.Acc_ExchangeRateCheckValid 
-			@FromExchangeID = @FromCurr, 
-			@ToExchangeID = @ToCurr, 
-			@ExchangeRate = @ExchangeRate,
-			@UserID = @UserID , 
-			@FromCust = @FromCustID, 
-			@ToCust = @ToCustID, 
-			@Amount = @Amt, 
-			@transDate =@transdate ,
-			@refNo = @refno
-	END
 
 	BEGIN TRY
 		EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @FromCustID, @ToCustID = @ToCustID, @IP = @IP, @Doing = @LogData

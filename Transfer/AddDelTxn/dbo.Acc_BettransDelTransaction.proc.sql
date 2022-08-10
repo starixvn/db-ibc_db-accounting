@@ -225,7 +225,7 @@ BEGIN
 		IF @@ERROR <> 0
 		BEGIN
 			UPDATE dbo.Transfer WITH(ROWLOCK)
-			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
 			WHERE transid IN (SELECT transid FROM @TransIDs)
 	
 			UPDATE Transfer_Coll WITH(ROWLOCK)
@@ -254,7 +254,7 @@ BEGIN
 		IF @@ERROR <> 0
 		BEGIN
 			UPDATE dbo.Transfer WITH(ROWLOCK)
-			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0		
 			WHERE transid IN (SELECT transid FROM @TransIDs)
 	
 			UPDATE Transfer_Coll WITH(ROWLOCK)
@@ -279,7 +279,7 @@ BEGIN
 		IF @@ERROR <> 0
 		BEGIN
 			UPDATE dbo.Transfer WITH(ROWLOCK)
-			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0		
 			WHERE transid IN (SELECT transid FROM @TransIDs)
 	
 			UPDATE Transfer_Coll WITH(ROWLOCK)
@@ -316,7 +316,7 @@ BEGIN
 			IF @ErrCode <> 0
 				BEGIN
 					UPDATE dbo.Transfer WITH(ROWLOCK)
-					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0		
 					WHERE transid IN (SELECT transid FROM @TransIDs)
 	
 					UPDATE Transfer_Coll WITH(ROWLOCK)
@@ -351,7 +351,7 @@ BEGIN
 				IF @ErrCode <> 0
 					BEGIN
 						UPDATE dbo.Transfer WITH(ROWLOCK)
-						SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+						SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0		
 						WHERE transid IN (SELECT transid FROM @TransIDs)
 	
 						UPDATE Transfer_Coll WITH(ROWLOCK)

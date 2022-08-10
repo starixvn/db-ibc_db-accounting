@@ -13,6 +13,11 @@ AS
 
 	Revisions:
 		- 20220803@Danny: Update LicenseeTransfer_Pool status [Redmine: #175253]
+
+	@newStatus					VARCHAR(10) = 'New'
+	@statusInProgress			VARCHAR(10) = 'InProgress'
+	@completedStatus			VARCHAR(10) = 'Completed'
+	@failedStatus				VARCHAR(10) = 'Failed'
 		 
 */
 BEGIN
