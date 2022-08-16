@@ -70,6 +70,8 @@ BEGIN
 			@ForexMrecommend	INT,
 			@ForexSrecommend	INT
 
+	DECLARE @TransIDs AS TABLE (transID BIGINT)
+
 	DECLARE @CustInfo TABLE (Username NVARCHAR(50), currency INT, CurrName NVARCHAR(10), recommend INT, mrecommend INT, srecommend INT, CustID INT, actualrate FLOAT, roleid TINYINT)
 			
 	DECLARE @SiteGroupInfo TABLE(SiteDBGroupID SMALLINT, LinkedServerName  VARCHAR(512), ClientAccessName VARCHAR(512), AGIP VARCHAR (50))
@@ -235,6 +237,7 @@ BEGIN
 		INSERT INTO dbo.Transfer (transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 							 winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 							 scomm, swinlost,ip,statusID, RepUpdateTime)
+		OUTPUT INSERTED.TransID INTO @TransIDs
 		VALUES(@TransID, @UserID, @FromCustID, @FromUsername, @refno, @transdate, 21003, 'To Customer: ' + @ForexUsername + '('+ @Remark +')' + @RemarkToCurr, 
 							CASE WHEN @FromAmount > 0 THEN @FromAmount ELSE 0 END , CASE WHEN @FromAmount > 0 THEN 0 ELSE ABS(@FromAmount) END,
 							@winlostdate, @FromCurrency, @FromExRate, @FromCurrName, @FromRecommend, @FromMrecommend, @FromSrecommend,
@@ -252,18 +255,18 @@ BEGIN
 			UPDATE dbo.Transfer WITH(ROWLOCK)
 			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
 			WHERE custid IN (@FromCustID, @ToCustID, @ForexCustID)
-				AND refno = @refno 
+				AND TransID IN (SELECT TransID FROM @TransIDs)
 				AND bettype = 21003
 				
 			UPDATE Transfer_Coll WITH(ROWLOCK)
 			SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 			WHERE	custid in (@FromCustID, @ToCustID, @ForexCustID)
-					AND refno = @refno 
+					AND TransID IN (SELECT TransID FROM @TransIDs)
 					AND bettype = 21003
 
 			UPDATE TransferInfo WITH(ROWLOCK)
 			SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-			WHERE  TransID = @TransID
+			WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 			
 			--- rollback credit
 			IF @FromAmount < 0 AND @FromRoleID = 1
@@ -292,21 +295,22 @@ BEGIN
 								 END, 
 						@ErrCode = 104
 
+				
 				UPDATE dbo.Transfer WITH(ROWLOCK)
 				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
 				WHERE custid IN (@FromCustID, @ToCustID, @ForexCustID)
-					AND refno = @refno 
+					AND TransID IN (SELECT TransID FROM @TransIDs)
 					AND bettype = 21003
 				
 				UPDATE Transfer_Coll WITH(ROWLOCK)
 				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 				WHERE	custid in (@FromCustID, @ToCustID, @ForexCustID)
-						AND refno = @refno 
+						AND TransID IN (SELECT TransID FROM @TransIDs)
 						AND bettype = 21003
 
 				UPDATE TransferInfo WITH(ROWLOCK)
 				SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-				WHERE  TransID = @TransID
+				WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 				
 				--- rollback credit
 				IF @FromAmount < 0 AND @FromRoleID = 1
@@ -329,21 +333,22 @@ BEGIN
 							ELSE N'Transfer failed. Please try again.'
 						END, @ErrCode = 104		
 				
+				
 				UPDATE dbo.Transfer WITH(ROWLOCK)
 				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
 				WHERE custid IN (@FromCustID, @ToCustID, @ForexCustID)
-					AND refno = @refno 
+					AND TransID IN (SELECT TransID FROM @TransIDs)
 					AND bettype = 21003
 				
 				UPDATE Transfer_Coll WITH(ROWLOCK)
 				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 				WHERE	custid in (@FromCustID, @ToCustID, @ForexCustID)
-						AND refno = @refno 
+						AND TransID IN (SELECT TransID FROM @TransIDs)
 						AND bettype = 21003
 
 				UPDATE TransferInfo WITH(ROWLOCK)
 				SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-				WHERE  TransID = @TransID
+				WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 
 				IF @FromAmount < 0 AND @FromRoleID = 1
 					EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2
@@ -361,6 +366,7 @@ BEGIN
 		INSERT INTO dbo.Transfer (transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 							winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 							 scomm, swinlost,ip,statusID, RepUpdateTime)
+		OUTPUT INSERTED.TransID INTO @TransIDs
 		VALUES(@TransID, @UserID,@ForexCustID,@ForexUsername, @refno, @transdate, 21003, 'From Customer: ' + @FromUsername + '('+ @Remark +')' + @RemarkFromCurr, 
 							CASE WHEN @FromAmount > 0 THEN 0 ELSE ABS(@FromAmount)*@FromExRate END, CASE WHEN @FromAmount > 0 THEN @FromAmount*@FromExRate ELSE 0 END,
 							@winlostdate, @ForexCurrency, @ForexActualRate, @ForexCurrName, @ForexRecommend, @ForexMrecommend, @ForexSrecommend,
@@ -378,18 +384,18 @@ BEGIN
 			UPDATE dbo.Transfer WITH(ROWLOCK)
 			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
 			WHERE custid IN (@FromCustID, @ToCustID, @ForexCustID)
-				AND refno = @refno 
+				AND TransID IN (SELECT TransID FROM @TransIDs)
 				AND bettype = 21003
 				
 			UPDATE Transfer_Coll WITH(ROWLOCK)
 			SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 			WHERE	custid in (@FromCustID, @ToCustID, @ForexCustID)
-					AND refno = @refno 
+					AND TransID IN (SELECT TransID FROM @TransIDs)
 					AND bettype = 21003
 
 			UPDATE TransferInfo WITH(ROWLOCK)
 			SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-			WHERE  TransID = @TransID
+			WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 		
 			IF @ForexSiteDBGroupID = @FromSiteDBGroupID
 			BEGIN
@@ -425,18 +431,18 @@ BEGIN
 				UPDATE dbo.Transfer WITH(ROWLOCK)
 				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
 				WHERE custid IN (@FromCustID, @ToCustID, @ForexCustID)
-					AND refno = @refno 
+					AND TransID IN (SELECT TransID FROM @TransIDs)
 					AND bettype = 21003
 				
 				UPDATE Transfer_Coll WITH(ROWLOCK)
 				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 				WHERE	custid in (@FromCustID, @ToCustID, @ForexCustID)
-						AND refno = @refno 
+						AND TransID IN (SELECT TransID FROM @TransIDs)
 						AND bettype = 21003
 
 				UPDATE TransferInfo WITH(ROWLOCK)
 				SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-				WHERE  TransID = @TransID
+				WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 
 				IF @ForexSiteDBGroupID = @FromSiteDBGroupID
 				BEGIN
@@ -466,18 +472,18 @@ BEGIN
 				UPDATE dbo.Transfer WITH(ROWLOCK)
 				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
 				WHERE custid IN (@FromCustID, @ToCustID, @ForexCustID)
-					AND refno = @refno 
+					AND TransID IN (SELECT TransID FROM @TransIDs)
 					AND bettype = 21003
 				
 				UPDATE Transfer_Coll WITH(ROWLOCK)
 				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 				WHERE	custid in (@FromCustID, @ToCustID, @ForexCustID)
-						AND refno = @refno 
+						AND TransID IN (SELECT TransID FROM @TransIDs)
 						AND bettype = 21003
 
 				UPDATE TransferInfo WITH(ROWLOCK)
 				SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-				WHERE  TransID = @TransID
+				WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 
 				IF @ForexSiteDBGroupID = @FromSiteDBGroupID
 				BEGIN
@@ -497,6 +503,7 @@ BEGIN
 		INSERT INTO dbo.Transfer (transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 							 winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 							 scomm, swinlost,ip,statusID,RepUpdateTime)
+		OUTPUT INSERTED.TransID INTO @TransIDs
 		VALUES(@TransID, @UserID,@ForexCustID,@ForexUsername, @refno, @transdate,21003, 'To Customer: ' + @ToUsername + '('+ @Remark +')' + @RemarkToCurr, 
 							CASE WHEN @FromAmount > 0 THEN @ToAmount*@ToExRate ELSE 0 END, CASE WHEN @FromAmount > 0 THEN 0 ELSE ABS(@ToAmount)*@ToExRate END,
 							@winlostdate, @ForexCurrency, @ForexActualRate, @ForexCurrName, @ForexRecommend, @ForexMrecommend, @ForexSrecommend,
@@ -515,18 +522,18 @@ BEGIN
 			UPDATE dbo.Transfer WITH(ROWLOCK)
 			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
 			WHERE custid IN (@FromCustID, @ToCustID, @ForexCustID)
-				AND refno = @refno 
+				AND TransID IN (SELECT TransID FROM @TransIDs)
 				AND bettype = 21003
 				
 			UPDATE Transfer_Coll WITH(ROWLOCK)
 			SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 			WHERE	custid in (@FromCustID, @ToCustID, @ForexCustID)
-					AND refno = @refno 
+					AND TransID IN (SELECT TransID FROM @TransIDs)
 					AND bettype = 21003
 
 			UPDATE TransferInfo WITH(ROWLOCK)
 			SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-				WHERE  TransID = @TransID
+			WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 			
 			IF @ForexSiteDBGroupID = @FromSiteDBGroupID
 			BEGIN
@@ -562,18 +569,18 @@ BEGIN
 				UPDATE dbo.Transfer WITH(ROWLOCK)
 				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
 				WHERE custid IN (@FromCustID, @ToCustID, @ForexCustID)
-					AND refno = @refno 
+					AND TransID IN (SELECT TransID FROM @TransIDs)
 					AND bettype = 21003
 				
 				UPDATE Transfer_Coll WITH(ROWLOCK)
 				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 				WHERE	custid in (@FromCustID, @ToCustID, @ForexCustID)
-						AND refno = @refno 
+						AND TransID IN (SELECT TransID FROM @TransIDs)
 						AND bettype = 21003
 
 				UPDATE TransferInfo WITH(ROWLOCK)
 				SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-				WHERE  TransID = @TransID
+				WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 
 				IF @ForexSiteDBGroupID = @FromSiteDBGroupID
 				BEGIN
@@ -604,18 +611,19 @@ BEGIN
 				UPDATE dbo.Transfer WITH(ROWLOCK)
 				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
 				WHERE custid IN (@FromCustID, @ToCustID, @ForexCustID)
-					AND refno = @refno 
+					AND TransID IN (SELECT TransID FROM @TransIDs)
 					AND bettype = 21003
 				
 				UPDATE Transfer_Coll WITH(ROWLOCK)
 				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 				WHERE	custid in (@FromCustID, @ToCustID, @ForexCustID)
-						AND refno = @refno 
+						AND TransID IN (SELECT TransID FROM @TransIDs)
 						AND bettype = 21003
 
 				UPDATE TransferInfo WITH(ROWLOCK)
 				SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-				WHERE  TransID = @TransID
+				WHERE  TransID IN (SELECT TransID FROM @TransIDs)
+
 
 				IF @ForexSiteDBGroupID = @FromSiteDBGroupID
 				BEGIN
@@ -651,18 +659,18 @@ BEGIN
 			UPDATE dbo.Transfer WITH(ROWLOCK)
 			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
 			WHERE custid IN (@FromCustID, @ToCustID, @ForexCustID)
-				AND refno = @refno 
+				AND TransID IN (SELECT TransID FROM @TransIDs)
 				AND bettype = 21003
 				
 			UPDATE Transfer_Coll WITH(ROWLOCK)
 			SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 			WHERE	custid in (@FromCustID, @ToCustID, @ForexCustID)
-					AND refno = @refno 
+					AND TransID IN (SELECT TransID FROM @TransIDs)
 					AND bettype = 21003
 
 			UPDATE TransferInfo WITH(ROWLOCK)
 			SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-			WHERE  TransID = @TransID
+			WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 
 			IF @ToSiteDBGroupID = @FromSiteDBGroupID
 			BEGIN
@@ -680,6 +688,7 @@ BEGIN
 		INSERT INTO dbo.Transfer (transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 							 winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 							 scomm, swinlost,ip,statusID, RepUpdateTime)
+		OUTPUT INSERTED.TransID INTO @TransIDs
 		VALUES(@TransID, @UserID, @ToCustID, @ToUsername, @refno, @transdate, 21003, 'From Customer: ' + @ForexUsername + '('+ @Remark +')' + @RemarkFromCurr, 
 							CASE WHEN @FromAmount > 0 THEN 0 ELSE ABS(@ToAmount) END, CASE WHEN @FromAmount > 0 THEN ABS(@ToAmount) ELSE 0 END,
 							@winlostdate, @ToCurrency, @ToExRate, @ToCurrName, @ToRecommend, @ToMrecommend, @ToSrecommend,
@@ -697,18 +706,18 @@ BEGIN
 			UPDATE dbo.Transfer WITH(ROWLOCK)
 			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
 			WHERE custid IN (@FromCustID, @ToCustID, @ForexCustID)
-				AND refno = @refno 
+				AND TransID IN (SELECT TransID FROM @TransIDs)
 				AND bettype = 21003
 				
 			UPDATE Transfer_Coll WITH(ROWLOCK)
 			SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 			WHERE	custid in (@FromCustID, @ToCustID, @ForexCustID)
-					AND refno = @refno 
+					AND TransID IN (SELECT TransID FROM @TransIDs)
 					AND bettype = 21003
 
 			UPDATE TransferInfo WITH(ROWLOCK)
 			SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-			WHERE  TransID = @TransID
+			WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 
 			IF @ToSiteDBGroupID = @FromSiteDBGroupID
 			BEGIN
@@ -748,18 +757,18 @@ BEGIN
 				UPDATE dbo.Transfer WITH(ROWLOCK)
 				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
 				WHERE custid IN (@FromCustID, @ToCustID, @ForexCustID)
-					AND refno = @refno 
+					AND TransID IN (SELECT TransID FROM @TransIDs)
 					AND bettype = 21003
 				
 				UPDATE Transfer_Coll WITH(ROWLOCK)
 				SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 				WHERE	custid in (@FromCustID, @ToCustID, @ForexCustID)
-						AND refno = @refno 
+						AND TransID IN (SELECT TransID FROM @TransIDs)
 						AND bettype = 21003
 
 				UPDATE TransferInfo WITH(ROWLOCK)
 				SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-				WHERE  TransID = @TransID
+				WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 
 				IF @ToSiteDBGroupID = @FromSiteDBGroupID
 				BEGIN
@@ -792,18 +801,18 @@ BEGIN
 			UPDATE dbo.Transfer WITH(ROWLOCK)
 			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
 			WHERE custid IN (@FromCustID, @ToCustID, @ForexCustID)
-				AND refno = @refno 
+				AND TransID IN (SELECT TransID FROM @TransIDs)
 				AND bettype = 21003
 				
 			UPDATE Transfer_Coll WITH(ROWLOCK)
 			SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 			WHERE	custid in (@FromCustID, @ToCustID, @ForexCustID)
-					AND refno = @refno 
+					AND TransID IN (SELECT TransID FROM @TransIDs)
 					AND bettype = 21003
 
 			UPDATE TransferInfo WITH(ROWLOCK)
 			SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-			WHERE  TransID = @TransID
+			WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 
 			IF @ToSiteDBGroupID = @FromSiteDBGroupID
 			BEGIN

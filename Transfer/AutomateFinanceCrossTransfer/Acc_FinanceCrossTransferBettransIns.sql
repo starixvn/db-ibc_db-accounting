@@ -187,8 +187,6 @@ BEGIN
 		END
 	END
 
-	DELETE @TransIDs
-	
 	EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
 	INSERT INTO dbo.Transfer (transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 						 winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
@@ -222,7 +220,7 @@ BEGIN
 
 		UPDATE TransferInfo WITH(ROWLOCK)
 		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-		WHERE  TransID = @TransID
+		WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 			
 		--- rollback credit
 		IF @FromAmount < 0 AND @FromRoleID = 1
@@ -240,7 +238,7 @@ BEGIN
 				TransID, RefNo, Username, Recommend, MRecommend, SRecommend, 
 				Creator ,TransDesc, IP, SYSDATETIME()
 		FROM dbo.Transfer WITH (NOLOCK) 
-		WHERE TransID IN (SELECT TransID FROM @TransIDs)
+		WHERE TransID = @TransID
 		
 		IF @@ERROR <> 0
 		BEGIN
@@ -265,7 +263,7 @@ BEGIN
 
 			UPDATE TransferInfo WITH(ROWLOCK)
 			SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-			WHERE  TransID = @TransID
+			WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 				
 			--- rollback credit
 			IF @FromAmount < 0 AND @FromRoleID = 1
@@ -277,7 +275,7 @@ BEGIN
 		INSERT INTO TransferInfo (TransId, IsCollection, RepUpdateTime)
 		SELECT TransId, @isCollection, SYSDATETIME()
 		FROM dbo.Transfer WITH (NOLOCK) 
-		WHERE TransID IN (SELECT TransID FROM @TransIDs)
+		WHERE TransID = @TransID
 
 		if @@Error <> 0
 		BEGIN
@@ -302,7 +300,7 @@ BEGIN
 
 				UPDATE TransferInfo WITH(ROWLOCK)
 				SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-				WHERE  TransID = @TransID
+				WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 
 			--- rollback credit
 			IF @FromAmount < 0 AND @FromRoleID = 1
@@ -314,8 +312,6 @@ BEGIN
 	---- update @FromCustID's credit if this action increase balance
 	IF @FromAmount > 0 AND @FromRoleID = 1	
 		EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2
-
-	DELETE @TransIDs
 
 	EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
 	INSERT INTO dbo.Transfer (transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
@@ -350,7 +346,7 @@ BEGIN
 
 		UPDATE TransferInfo WITH(ROWLOCK)
 		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-		WHERE  TransID = @TransID
+		WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 		
 		IF @FromAmount > 0 AND @FromRoleID = 1	
 						EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1
@@ -370,7 +366,7 @@ BEGIN
 				TransID, RefNo, Username, Recommend, MRecommend, SRecommend, 
 				Creator ,TransDesc, IP, SYSDATETIME()
 		FROM dbo.Transfer WITH (NOLOCK) 
-		WHERE TransID IN (SELECT TransID FROM @TransIDs)
+		WHERE TransID = @TransID
 	
 		IF @@ERROR <> 0
 		BEGIN
@@ -395,7 +391,7 @@ BEGIN
 
 			UPDATE TransferInfo WITH(ROWLOCK)
 			SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-			WHERE  TransID = @TransID
+			WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 
 			IF @FromAmount > 0 AND @FromRoleID = 1	
 							EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1
@@ -409,7 +405,7 @@ BEGIN
 		INSERT INTO TransferInfo (TransId, IsCollection, RepUpdateTime)
 		SELECT TransId, @isCollection, SYSDATETIME()
 		FROM dbo.Transfer WITH (NOLOCK) 
-		WHERE TransID IN (SELECT TransID FROM @TransIDs)
+		WHERE TransID = @TransID
 
 		if @@Error <> 0
 		BEGIN
@@ -434,7 +430,7 @@ BEGIN
 
 			UPDATE TransferInfo WITH(ROWLOCK)
 			SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-			WHERE  TransID = @TransID
+			WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 
 			IF @FromAmount > 0 AND @FromRoleID = 1	
 							EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1
@@ -448,9 +444,7 @@ BEGIN
 	
 	SELECT	@RemarkFromCurr =   ' - ' + @ForexCurrName	+ ' '+ CONVERT(NVARCHAR(50),CONVERT(NUMERIC(20,4),@ToAmount* @ToExRate)),
 			@RemarkToCurr   =   ' - ' +	@ToCurrName		+ ' '+ CONVERT(NVARCHAR(50),@ToAmount )
-	
-	DELETE @TransIDs
-	
+
 	EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
 	INSERT INTO dbo.Transfer (transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 						 winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
@@ -485,7 +479,7 @@ BEGIN
 
 		UPDATE TransferInfo WITH(ROWLOCK)
 		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-		WHERE  TransID = @TransID
+		WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 
 		IF @FromAmount > 0 AND @FromRoleID = 1	
 						EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1
@@ -505,7 +499,7 @@ BEGIN
 				TransID, RefNo, Username, Recommend, MRecommend, SRecommend, 
 				Creator ,TransDesc, IP, SYSDATETIME()
 		FROM dbo.Transfer WITH (NOLOCK) 
-		WHERE TransID IN (SELECT TransID FROM @TransIDs)
+		WHERE TransID = @TransID
 	
 		IF @@ERROR <> 0
 		BEGIN
@@ -530,7 +524,7 @@ BEGIN
 
 			UPDATE TransferInfo WITH(ROWLOCK)
 			SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-			WHERE  TransID = @TransID
+			WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 
 			IF @FromAmount > 0 AND @FromRoleID = 1	
 							EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1
@@ -544,7 +538,7 @@ BEGIN
 		INSERT INTO TransferInfo (TransId, IsCollection, RepUpdateTime)
 		SELECT TransId, @isCollection, SYSDATETIME()
 		FROM dbo.Transfer WITH (NOLOCK) 
-		WHERE TransID IN (SELECT TransID FROM @TransIDs)
+		WHERE TransID = @TransID
 
 		if @@Error <> 0
 		BEGIN
@@ -569,7 +563,7 @@ BEGIN
 
 			UPDATE TransferInfo WITH(ROWLOCK)
 			SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-			WHERE  TransID = @TransID
+			WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 
 			IF @FromAmount > 0 AND @FromRoleID = 1	
 							EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1
@@ -606,7 +600,7 @@ BEGIN
 
 		UPDATE TransferInfo WITH(ROWLOCK)
 		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-		WHERE  TransID = @TransID
+		WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 
 		IF @FromAmount > 0 AND @FromRoleID = 1	
 						EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1
@@ -617,7 +611,6 @@ BEGIN
 	END
 
 	-------------------------
-	DELETE @TransIDs
 	
 	EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
 	INSERT INTO dbo.Transfer (transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
@@ -652,7 +645,7 @@ BEGIN
 
 		UPDATE TransferInfo WITH(ROWLOCK)
 		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-		WHERE  TransID = @TransID
+		WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 
 		IF @FromAmount > 0 AND @FromRoleID = 1	
 						EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1
@@ -674,7 +667,7 @@ BEGIN
 				TransID, RefNo, Username, Recommend, MRecommend, SRecommend, 
 				Creator ,TransDesc, IP, SYSDATETIME()
 		FROM dbo.Transfer WITH (NOLOCK) 
-		WHERE TransID IN (SELECT TransID FROM @TransIDs)
+		WHERE TransID = @TransID
 		
 		IF @@ERROR <> 0
 		BEGIN
@@ -699,7 +692,7 @@ BEGIN
 
 			UPDATE TransferInfo WITH(ROWLOCK)
 			SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-			WHERE  TransID = @TransID
+			WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 
 			IF @FromAmount > 0 AND @FromRoleID = 1	
 							EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1
@@ -715,7 +708,7 @@ BEGIN
 		INSERT INTO TransferInfo (TransId, IsCollection, RepUpdateTime)
 		SELECT TransId, @isCollection, SYSDATETIME()
 		FROM dbo.Transfer WITH (NOLOCK) 
-		WHERE TransID IN (SELECT TransID FROM @TransIDs)
+		WHERE TransID = @TransID
 
 		if @@Error <> 0
 		BEGIN
@@ -740,7 +733,7 @@ BEGIN
 
 			UPDATE TransferInfo WITH(ROWLOCK)
 			SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-			WHERE  TransID = @TransID
+			WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 
 			IF @FromAmount > 0 AND @FromRoleID = 1	
 							EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1
