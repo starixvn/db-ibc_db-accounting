@@ -50,7 +50,7 @@ BEGIN
 
 	DECLARE @roleID TINYINT, @srecommend INT, @ID INT = 1
 
-	SELECT  @roleID = roleid , @srecommend = srecommend FROM CustDB.dbo.custInfo WITH(NOLOCK) WHERE custid = @custID
+	SELECT  @roleID = roleid , @srecommend = srecommend FROM DBCUST.CustDB.dbo.custInfo WITH(NOLOCK) WHERE custid = @custID
 	
 	IF ISNULL(@roleID, 5) > 4
 	BEGIN
@@ -486,7 +486,7 @@ BEGIN
 		INSERT INTO #BalanceInfo (superCash, yesterday_superCash, superOutstanding, masterCash, yesterday_masterCash, agentCash, yesterday_agentCash, memberCash, yesterday_memberCash, memberOutstanding)
 		SELECT 0, 0, SUM(ABS(actual_stake*spositiontaking)), 0, 0, 0, 0, 0, 0, SUM(ABS(actual_stake))
 	    FROM dbo.translog t WITH(NOLOCK)
-		WHERE EXISTS (SELECT TOP 1 1 FROM CustDB.dbo.custInfo c WITH(NOLOCK) WHERE c.srecommend = @custid AND c.roleid = 3 AND t.mrecommend = c.custid)
+		WHERE srecommend = @custid
 			AND statusID IN (0,1)
 
 		-- bettrans 
