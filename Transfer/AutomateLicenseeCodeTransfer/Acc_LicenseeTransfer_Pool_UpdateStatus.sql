@@ -4,7 +4,8 @@ CREATE PROCEDURE dbo.Acc_LicenseeTransfer_Pool_UpdateStatus
 	@Error		VARCHAR(200),
 	@EndMonthDate	DATE,
 	@FromCustId	INT,
-	@ToCustID	INT
+	@ToCustID	INT,
+	@currentDate DATETIME
 AS
 /*
 	Create: 20220803@Danny
@@ -22,12 +23,23 @@ AS
 */
 BEGIN
 	SET NOCOUNT ON
-
-	UPDATE dbo.LicenseeTransferPool WITH(ROWLOCK, UPDLOCK)
-	SET	 [Status] = @Status, Error = @Error
-	WHERE MonthDate = @EndMonthDate	
-		AND FromCustId = @fromCustID 
-		AND ToCustID = @toCustId
+	IF @Status = 'InProgress'
+	BEGIN
+		-- UPDATE InProgress
+		UPDATE dbo.LicenseeTransferPool WITH(ROWLOCK, UPDLOCK)
+		SET [Status] = @Status, MonthDate = @endMonthDate, TransferDate = @currentDate
+		WHERE MonthDate = @endMonthDate	
+			AND FromCustId = @fromCustID 
+			AND ToCustID = @toCustId
+	END
+	ELSE
+	BEGIN
+		UPDATE dbo.LicenseeTransferPool WITH(ROWLOCK, UPDLOCK)
+		SET	 [Status] = @Status, Error = @Error
+		WHERE MonthDate = @EndMonthDate	
+			AND FromCustId = @fromCustID 
+			AND ToCustID = @toCustId
+	END
 
 END
 GO

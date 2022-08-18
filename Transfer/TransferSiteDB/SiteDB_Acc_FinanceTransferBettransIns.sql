@@ -284,7 +284,34 @@ BEGIN
 				--update credit balance of @FromCustID
 				IF @FromRoleID  = 1
 				BEGIN
-					EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @amount, @type = 2
+					EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @amount, @type = 2, @ErrCode = @ErrCode OUTPUT
+					IF @ErrCode <> 0
+					BEGIN
+						SELECT @ErrMsg = CASE @Language 
+								WHEN 'E' THEN 'Transfer failed. Please try again.'
+								WHEN 'CS' THEN N'Transfer failed. Please try again.'
+								WHEN 'J' THEN N'払戻処理上にエラーが発生しました。もう一度確認してください。'
+								ELSE N'Transfer failed. Please try again.'
+							END, @ErrCode = 103		
+				
+						UPDATE dbo.Transfer WITH(ROWLOCK)
+						SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
+						WHERE custid IN (@FromCustID, @ToCustID)
+							AND TransID IN (SELECT TransID FROM @TransIDs)
+							AND bettype = 21003
+				
+						UPDATE Transfer_Coll WITH(ROWLOCK)
+						SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
+						WHERE	custid in (@FromCustID, @ToCustID)
+								AND TransID IN (SELECT TransID FROM @TransIDs)
+								AND bettype = 21003
+
+						UPDATE TransferInfo WITH(ROWLOCK)
+						SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+						WHERE   TransID IN (SELECT TransID FROM @TransIDs)
+
+						RETURN
+					END
 				END 
 				----------------------------------------------------------------------		
 			END
@@ -719,7 +746,34 @@ BEGIN
 				IF @ToRoleID  = 1
 				BEGIN
 					SELECT @BalanceAmount = @amount * @ExchangeRate 
-					EXEC Dot_BalanceCreditUpd @CustID = @ToCustID, @balance = @BalanceAmount, @type = 2
+					EXEC Dot_BalanceCreditUpd @CustID = @ToCustID, @balance = @BalanceAmount, @type = 2, @ErrCode = @ErrCode OUTPUT
+					IF @ErrCode <> 0
+					BEGIN
+						SELECT @ErrMsg = CASE @Language 
+								WHEN 'E' THEN 'Transfer failed. Please try again.'
+								WHEN 'CS' THEN N'Transfer failed. Please try again.'
+								WHEN 'J' THEN N'払戻処理上にエラーが発生しました。もう一度確認してください。'
+								ELSE N'Transfer failed. Please try again.'
+							END, @ErrCode = 103		
+				
+						UPDATE dbo.Transfer WITH(ROWLOCK)
+						SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
+						WHERE custid IN (@FromCustID, @ToCustID)
+							AND TransID IN (SELECT TransID FROM @TransIDs)
+							AND bettype = 21003
+				
+						UPDATE Transfer_Coll WITH(ROWLOCK)
+						SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
+						WHERE	custid in (@FromCustID, @ToCustID)
+								AND TransID IN (SELECT TransID FROM @TransIDs)
+								AND bettype = 21003
+
+						UPDATE TransferInfo WITH(ROWLOCK)
+						SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+						WHERE   TransID IN (SELECT TransID FROM @TransIDs)
+
+						RETURN
+					END
 				END
 			END
 			SELECT @LogData = 'Finance Transfer from Customer ' + @ToUserName + ' to Customer ' + @FromUserName + ' with amount ' + convert(varchar(20), @Amt) + ' Ref.No ' + convert(varchar(20), @refno)+ ' SiteDBGroupID ' +  CONVERT(varchar(20),@SiteDBGroupID)
@@ -750,7 +804,3 @@ BEGIN
 		EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @FromCustID, @ToCustID = @ToCustID, @IP = @IP, @Doing = @LogData
 	END CATCH
 END
-GO
-GRANT EXECUTE ON [dbo].[Acc_FinanceTransferBettransIns] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_FinanceTransferBettransIns] TO [vnteam] AS [dbo]

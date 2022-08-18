@@ -53,7 +53,6 @@ BEGIN
 	Declare @refno bigint, @winlostdate datetime, @transdate datetime, @BalanceAmount MONEY, @TransID BIGINT 
 	DECLARE @TransIDs AS TABLE (transID BIGINT)	
 
-
 	select  @RemarkFromCurr='',  @RemarkToCurr=''
 	select @Amt = @Amount 
 	select @transdate = current_timestamp 	
@@ -222,7 +221,7 @@ BEGIN
 			FROM dbo.Transfer WITH (NOLOCK) 
 			WHERE TransID = @TransID
 
-			if @@Error <> 0
+			IF @@Error <> 0
 			BEGIN
 				Select @ErrMsg = case @Language 
 							when 'E' then 'Transfer failed. Please try again.'
@@ -250,11 +249,37 @@ BEGIN
 				RETURN
 			END		
 			
-		
 			--update credit balance of @FromCustID
 			IF @FromRoleID  = 1
 			BEGIN
-				EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @amount, @type = 2
+				EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @amount, @type = 2, @ErrCode = @ErrCode OUTPUT
+				IF @ErrCode <> 0
+				BEGIN
+					Select @ErrMsg = case @Language 
+							when 'E' then 'Transfer failed. Please try again.'
+							when 'CS' then N'Transfer failed. Please try again.'
+							when 'J' then N'払戻処理上にエラーが発生しました。もう一度確認してください。'
+							else N'Transfer failed. Please try again.'
+						end, @ErrCode = 103		
+				
+					UPDATE dbo.Transfer WITH(ROWLOCK)
+					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
+					WHERE custid IN (@FromCustID, @ToCustID)
+						AND refno = @refno 
+						AND bettype = 21003
+				
+					UPDATE Transfer_Coll WITH(ROWLOCK)
+					SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
+					WHERE	custid in (@FromCustID, @ToCustID)
+							AND refno = @refno 
+							AND bettype = 21003
+
+					UPDATE TransferInfo WITH(ROWLOCK)
+					SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+					WHERE  TransID IN (SELECT TransID FROM @TransIDs)
+
+					RETURN
+				END
 			END 
 			
 			----------------------------------------------------------------------		
@@ -297,8 +322,7 @@ BEGIN
 				@winlostdate, @ToCurr, @ToActualrate, @ToCurrName, @ToRecommend, @ToMrecommend, @ToSrecommend, 
 				 0, 0,@ip,131,SYSDATETIME())
 			
-		
-			if @@Error <> 0
+			IF @@Error <> 0
 			BEGIN
 				Select @ErrMsg = case @Language 
 							when 'E' then 'Transfer failed. Please try again.'
@@ -718,7 +742,39 @@ BEGIN
 			IF @ToRoleID  = 1
 			BEGIN
 				SELECT @BalanceAmount = @amount * @ExchangeRate 
-				EXEC Dot_BalanceCreditUpd @CustID = @ToCustID, @balance = @BalanceAmount, @type = 2
+				EXEC Dot_BalanceCreditUpd @CustID = @ToCustID, @balance = @BalanceAmount, @type = 2, @ErrCode = @ErrCode OUTPUT
+				IF @ErrCode <> 0 
+				BEGIN
+					Select @ErrMsg = case @Language 
+							when 'E' then 'Transfer failed. Please try again.'
+							when 'CS' then N'Transfer failed. Please try again.'
+							when 'J' then N'払戻処理上にエラーが発生しました。もう一度確認してください。'
+							else N'Transfer failed. Please try again.'
+						end, @ErrCode = 103		
+				
+					UPDATE dbo.Transfer WITH(ROWLOCK)
+					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
+					WHERE custid IN (@FromCustID, @ToCustID)
+						AND refno = @refno 
+						AND bettype = 21003
+				
+					UPDATE Transfer_Coll WITH(ROWLOCK)
+					SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
+					WHERE	custid in (@FromCustID, @ToCustID)
+							AND refno = @refno 
+							AND bettype = 21003
+
+					UPDATE TransferInfo WITH(ROWLOCK)
+					SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+					WHERE  TransID IN (SELECT TransID FROM @TransIDs)
+
+					--rollback balance @FromCustID
+					IF @FromRoleID  = 1
+					BEGIN
+						EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @amount, @type = 2
+					END
+					RETURN
+				END
 			END
 
 			Select @LogData = 'Finance Transfer from Customer ' + @ToUserName + ' to Customer ' + @FromUserName + ' with amount ' + convert(varchar(20), @Amt) + ' Ref.No ' + convert(varchar(20), @refno)		
@@ -751,7 +807,3 @@ BEGIN
 		EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @FromCustID, @ToCustID = @ToCustID, @IP = @IP, @Doing = @LogData
 	END CATCH
 END
-GO
-GRANT EXECUTE ON [dbo].[Acc_FinanceTransferBettransIns] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_FinanceTransferBettransIns] TO [vnteam] AS [dbo]

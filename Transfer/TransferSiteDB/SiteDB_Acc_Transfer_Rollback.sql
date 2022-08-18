@@ -151,19 +151,22 @@ BEGIN
 				IF @ErrCode <> 0
 				BEGIN
 					ROLLBACK TRANSACTION
-					SELECT @ErrMsg = 'Revert failed', @ErrCode = 103 
+					SELECT @ErrMsg = 'Rollback failed', @ErrCode = 103 
 					RETURN
 				END
 
 				SELECT @rn = @rn + 1
 			END TRY
 			BEGIN CATCH
-				SELECT @ErrMsg = 'Revert failed', @ErrCode = 103 
+				SELECT @ErrMsg = 'Rollback failed', @ErrCode = 103 
 				ROLLBACK TRANSACTION
 				RETURN
 			END CATCH
 		END
 	COMMIT TRANSACTION
+
+	-- Delete data Invalid Transfer ExchangeRate
+	EXEC DBCTG.bodb02.dbo.Acc_ExchangeRate_InvalidTransfer_Del @refNo = @refno
 
 	BEGIN TRY
 		EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = 0, @ToCustID = @CustID, @IP = @IP, @Doing = @LogData
