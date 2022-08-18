@@ -326,15 +326,13 @@ BEGIN
 				--rollback balance of @FromCustID
 				IF @FromRoleID  = 1
 				BEGIN
-					--EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @amount 
-									EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @amount, @type = 2, @IsForced = 1
+					EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @amount, @type = 2, @IsForced = 1
 				END 
 			
 				--rollback balance of @ToCustID
 				IF @ToRoleID  = 1
 				BEGIN
 					SELECT @BalanceAmount = @amount * @ExchangeRate
-					--EXEC Dot_BalanceUpdCredit @CustID = @ToCustID, @balance = @BalanceAmount 
 					EXEC Dot_BalanceCreditUpd @CustID = @ToCustID, @balance = @BalanceAmount, @type = 2
 				END		
 				return
@@ -448,8 +446,7 @@ BEGIN
 			--update debit balance of @FromCustID
 			IF @FromRoleID  = 1
 			BEGIN
-				--EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @amount 
-							EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @amount, @type = 2, @IsForced = 1, @errCode = @ErrCode OUTPUT
+				EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @amount, @type = 2, @IsForced = 1, @errCode = @ErrCode OUTPUT
 				IF @ErrCode <> 0
 				BEGIN
 					Select @ErrMsg = case @Language 

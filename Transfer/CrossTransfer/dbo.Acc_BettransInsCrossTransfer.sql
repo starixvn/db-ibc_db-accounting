@@ -213,8 +213,7 @@ BEGIN
 	IF @FromAmount < 0 AND @FromRoleID = 1	
 	BEGIN		
 		SET @tmp = ABS(@FromAmount)
-		--EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @tmp
-				EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @tmp, @type = 2, @IsForced = 1, @errCode = @ErrCode OUTPUT
+		EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @tmp, @type = 2, @IsForced = 1, @errCode = @ErrCode OUTPUT
 		IF @ErrCode <> 0
 		BEGIN
 			SELECT  @ErrMsg = CASE @Language WHEN 'E'  THEN 'Transfer failed. Please try again.'
@@ -227,8 +226,7 @@ BEGIN
 		END
 	END
 
-	--- Insert Bettrans
-	
+	--- Insert Transfer
 	EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
 	INSERT INTO dbo.Transfer (transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 						 winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
@@ -266,7 +264,7 @@ BEGIN
 
 		--- rollback credit
 		IF @FromAmount < 0 AND @FromRoleID = 1
-			EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @tmp
+			EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2
 		RETURN
 	END
 	
@@ -310,7 +308,7 @@ BEGIN
 
 		--- rollback credit
 		IF @FromAmount < 0 AND @FromRoleID = 1
-			EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @tmp
+			EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2 
 		RETURN
 	END
 
@@ -347,7 +345,7 @@ BEGIN
 		
 		--- rollback credit
 		IF @FromAmount < 0 AND @FromRoleID = 1
-			EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @tmp
+			EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2
 		RETURN
 
 		return
@@ -355,11 +353,10 @@ BEGIN
 	
 	---- update @FromCustID's credit if this action increase balance
 	IF @FromAmount > 0 AND @FromRoleID = 1	
-	EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @FromAmount	
+	EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2
 
 	
 	---- update Forex account's credit
-	
 	EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
 	INSERT INTO dbo.Transfer (transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 						winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
@@ -396,9 +393,9 @@ BEGIN
 		WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 			
 		IF @FromAmount > 0 AND @FromRoleID = 1	--- rollback for add to credit
-				EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1 --EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @FromAmount	
+			EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1 	
 		IF @FromAmount < 0 AND @FromRoleID = 1	--- rollback for add to debit
-		EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @tmp		
+			EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2
 		RETURN
 	END
 	
@@ -440,9 +437,9 @@ BEGIN
 		WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 
 		IF @FromAmount > 0 AND @FromRoleID = 1	--- rollback for add to credit
-				EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1 --EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @FromAmount	
+			EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1 	
 		IF @FromAmount < 0 AND @FromRoleID = 1	--- rollback for add to debit
-		EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @tmp		
+			EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2
 		RETURN
 	END
 
@@ -478,9 +475,9 @@ BEGIN
 		WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 		
 		IF @FromAmount > 0 AND @FromRoleID = 1	--- rollback for add to credit
-				EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1 --EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @FromAmount	
+			EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1	
 		IF @FromAmount < 0 AND @FromRoleID = 1	--- rollback for add to debit
-		EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @tmp		
+			EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2	
 		RETURN
 	END		
 
@@ -532,9 +529,9 @@ BEGIN
 		WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 		
 		IF @FromAmount > 0 AND @FromRoleID = 1	--- rollback for add to credit
-				EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1 --EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @FromAmount	
+			EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1	
 		IF @FromAmount < 0 AND @FromRoleID = 1	--- rollback for add to debit
-		EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @tmp	
+			EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2
 
 		RETURN
 	END
@@ -578,9 +575,9 @@ BEGIN
 		WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 		
 		IF @FromAmount > 0 AND @FromRoleID = 1	--- rollback for add to credit
-				EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1 --EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @FromAmount	
+			EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1	
 		IF @FromAmount < 0 AND @FromRoleID = 1	--- rollback for add to debit
-		EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @tmp	
+			EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2
 
 		RETURN
 	END
@@ -617,9 +614,9 @@ BEGIN
 		WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 		
 		IF @FromAmount > 0 AND @FromRoleID = 1	--- rollback for add to credit
-				EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1 --EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @FromAmount	
+			EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1
 		IF @FromAmount < 0 AND @FromRoleID = 1	--- rollback for add to debit
-		EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @tmp	
+			EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2
 
 		RETURN
 	END		
@@ -628,7 +625,7 @@ BEGIN
 	--- update @ToCustID's credit if this action reduce balance, then insert transfer transaction into bettrans
 	--- whereas this action increase balance, insert bettrans first then update credit
 	IF @FromAmount > 0 AND @ToRoleID = 1		
-				EXEC Dot_BalanceDebitUpd @CustID = @ToCustID, @balance = @ToAmount, @type = 2, @IsForced = 1, @errCode = @ErrCode OUTPUT --EXEC Dot_BalanceUpdDebit @CustID = @ToCustID, @balance = @ToAmount
+		EXEC Dot_BalanceDebitUpd @CustID = @ToCustID, @balance = @ToAmount, @type = 2, @IsForced = 1, @errCode = @ErrCode OUTPUT --EXEC Dot_BalanceUpdDebit @CustID = @ToCustID, @balance = @ToAmount
 	IF @ErrCode <> 0
 	BEGIN
 		SELECT  @ErrMsg = CASE @Language WHEN 'E'  THEN 'Transfer failed. Please try again.'
@@ -655,9 +652,9 @@ BEGIN
 		WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 	
 		IF @FromAmount > 0 AND @FromRoleID = 1	--- rollback for add to credit
-				EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1 --EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @FromAmount	
+			EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1	
 		IF @FromAmount < 0 AND @FromRoleID = 1	--- rollback for add to debit
-		EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @tmp			
+			EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2		
 		RETURN
 	END
 	
@@ -697,12 +694,12 @@ BEGIN
 		WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 	
 		IF @FromAmount > 0 AND @FromRoleID = 1	--- rollback for add to credit
-						EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1 --EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @FromAmount	
+			EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1
 		IF @FromAmount < 0 AND @FromRoleID = 1	--- rollback for add to debit
-			EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @tmp	
+			EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2	
 
 		IF @FromAmount > 0 AND @ToRoleID = 1
-			EXEC Dot_BalanceCreditUpd @CustID = @ToCustID, @balance = @ToAmount, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @ToCustID, @balance = @ToAmount
+			EXEC Dot_BalanceCreditUpd @CustID = @ToCustID, @balance = @ToAmount, @type = 2
 		RETURN
 	END
 	
@@ -744,12 +741,12 @@ BEGIN
 		WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 	
 		IF @FromAmount > 0 AND @FromRoleID = 1	--- rollback for add to credit
-						EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1 --EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @FromAmount	
+			EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1	
 		IF @FromAmount < 0 AND @FromRoleID = 1	--- rollback for add to debit
-			EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @tmp	
+			EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2
 
 		IF @FromAmount > 0 AND @ToRoleID = 1
-			EXEC Dot_BalanceCreditUpd @CustID = @ToCustID, @balance = @ToAmount, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @ToCustID, @balance = @ToAmount
+			EXEC Dot_BalanceCreditUpd @CustID = @ToCustID, @balance = @ToAmount, @type = 2 
 		RETURN
 	END
 	
@@ -785,12 +782,12 @@ BEGIN
 		WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 		
 		IF @FromAmount > 0 AND @FromRoleID = 1	--- rollback for add to credit
-						EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1 --EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @FromAmount	
+			EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1	
 		IF @FromAmount < 0 AND @FromRoleID = 1	--- rollback for add to debit
-			EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @tmp	
+			EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2 
 
 		IF @FromAmount > 0 AND @ToRoleID = 1
-			EXEC Dot_BalanceCreditUpd @CustID = @ToCustID, @balance = @ToAmount, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @ToCustID, @balance = @ToAmount
+			EXEC Dot_BalanceCreditUpd @CustID = @ToCustID, @balance = @ToAmount, @type = 2
 
 		RETURN
 	END		
@@ -800,7 +797,6 @@ BEGIN
 	IF @FromAmount < 0 AND @ToRoleID = 1
 	BEGIN
 		SET @amtTo = ABS(@ToAmount)
-		--EXEC Dot_BalanceUpdCredit @CustID = @ToCustID, @balance = @amtTo
 		EXEC Dot_BalanceCreditUpd @CustID = @ToCustID, @balance = @amtTo, @type = 2
 	END	
 	

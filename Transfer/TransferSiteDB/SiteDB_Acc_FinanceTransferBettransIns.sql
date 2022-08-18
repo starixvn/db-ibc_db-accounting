@@ -284,7 +284,6 @@ BEGIN
 				--update credit balance of @FromCustID
 				IF @FromRoleID  = 1
 				BEGIN
-					--EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @amount 
 					EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @amount, @type = 2
 				END 
 				----------------------------------------------------------------------		
@@ -505,6 +504,12 @@ BEGIN
 					UPDATE TransferInfo WITH(ROWLOCK)
 					SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
 					WHERE   TransID IN (SELECT TransID FROM @TransIDs)
+
+					--rollback balance @FromCustID
+					IF @FromRoleID  = 1
+					BEGIN
+						EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @amount, @type = 2
+					END
 				
 					RETURN
 				END
@@ -545,7 +550,12 @@ BEGIN
 					UPDATE TransferInfo WITH(ROWLOCK)
 					SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
 					WHERE   TransID IN (SELECT TransID FROM @TransIDs)
-				
+
+					IF @FromRoleID  = 1
+					BEGIN
+						EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @amount, @type = 2
+					END
+			
 					RETURN
 				END
 

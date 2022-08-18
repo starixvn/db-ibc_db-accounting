@@ -313,7 +313,7 @@ BEGIN
 				SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
 				WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 					
-				return
+				RETURN
 			END		
 
 			---Insert into Transfer_Info
@@ -347,13 +347,12 @@ BEGIN
 				SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
 				WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 					
-				return
+				RETURN
 			END		
 
 			--- update balance credit for @FromCustID
 			IF @FromRoleID  = 1
 			BEGIN
-				--EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @amount 
 				EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @amount, @Type = 2
 			END 
 
@@ -363,8 +362,7 @@ BEGIN
 			IF @ToRoleID  = 1
 			BEGIN
 				SELECT @BalanceAmount = @amount * @ExchangeRate
-				--EXEC Dot_BalanceUpdDebit @CustID = @ToCustID, @balance = @BalanceAmount 
-							EXEC Dot_BalanceDebitUpd @CustID = @ToCustID, @balance = @BalanceAmount, @Type = 2, @IsForced = 1, @ErrCode = @ErrCode OUTPUT
+				EXEC Dot_BalanceDebitUpd @CustID = @ToCustID, @balance = @BalanceAmount, @Type = 2, @IsForced = 1, @ErrCode = @ErrCode OUTPUT
 				if @ErrCode <> 0
 				BEGIN
 					Select @ErrMsg = case @Language 
@@ -376,8 +374,7 @@ BEGIN
 					--- rollback @FromCustID
 					IF @FromRoleID  = 1
 					BEGIN
-						--EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @amount 
-											EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @amount, @Type = 2, @IsForced = 1
+						EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @amount, @Type = 2, @IsForced = 1
 					END 
 
 					UPDATE dbo.Transfer WITH(ROWLOCK)
@@ -430,8 +427,7 @@ BEGIN
 				--- rollback @FromCustID
 				IF @FromRoleID  = 1
 				BEGIN
-					--EXEC Dot_BalanceUpdDebit @CustID = @FromCustID, @balance = @amount 
-									EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @amount, @Type = 2, @IsForced = 1
+					EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @amount, @Type = 2, @IsForced = 1
 				END 
 
 				UPDATE dbo.Transfer WITH(ROWLOCK)
@@ -454,11 +450,10 @@ BEGIN
 				IF @ToRoleID  = 1
 				BEGIN
 					SELECT @BalanceAmount = @amount * @ExchangeRate
-					--EXEC Dot_BalanceUpdCredit @CustID = @ToCustID, @balance = @BalanceAmount 
 					EXEC Dot_BalanceCreditUpd @CustID = @ToCustID, @balance = @BalanceAmount, @Type = 2
 				END
 				
-				return
+				RETURN
 			END	
 
 			---Insert into Transfer_Coll
@@ -480,7 +475,13 @@ BEGIN
 							when 'CS' then N'Transfer failed. Please try again.'
 							when 'J' then N'払戻処理上にエラーが発生しました。もう一度確認してください。'
 							else N'Transfer failed. Please try again.'
-						end, @ErrCode = 103		
+						end, @ErrCode = 103	
+						
+				--- rollback @FromCustID
+				IF @FromRoleID  = 1
+				BEGIN
+					EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @amount, @Type = 2, @IsForced = 1
+				END 
 				
 				UPDATE dbo.Transfer WITH(ROWLOCK)
 				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0		
@@ -497,6 +498,13 @@ BEGIN
 				UPDATE TransferInfo WITH(ROWLOCK)
 				SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
 				WHERE  TransID IN (SELECT TransID FROM @TransIDs)
+					
+				--- rollback @ToCustID
+				IF @ToRoleID  = 1
+				BEGIN
+					SELECT @BalanceAmount = @amount * @ExchangeRate
+					EXEC Dot_BalanceCreditUpd @CustID = @ToCustID, @balance = @BalanceAmount, @Type = 2
+				END
 					
 				return
 			END
@@ -515,6 +523,12 @@ BEGIN
 							when 'J' then N'払戻処理上にエラーが発生しました。もう一度確認してください。'
 							else N'Transfer failed. Please try again.'
 						end, @ErrCode = 103		
+
+				--- rollback @FromCustID
+				IF @FromRoleID  = 1
+				BEGIN
+					EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @amount, @Type = 2, @IsForced = 1
+				END 
 				
 				UPDATE dbo.Transfer WITH(ROWLOCK)
 				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0		
@@ -531,8 +545,15 @@ BEGIN
 				UPDATE TransferInfo WITH(ROWLOCK)
 				SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
 				WHERE  TransID IN (SELECT TransID FROM @TransIDs)
+
+				--- rollback @ToCustID
+				IF @ToRoleID  = 1
+				BEGIN
+					SELECT @BalanceAmount = @amount * @ExchangeRate
+					EXEC Dot_BalanceCreditUpd @CustID = @ToCustID, @balance = @BalanceAmount, @Type = 2
+				END
 					
-				return
+				RETURN
 			END		
 		
 			Select @LogData = 'Transfer from Customer ' + @FromUserName + ' to Customer ' + @ToUserName + ' with amount ' + convert(varchar(20), @Amt) + ' Ref.No ' + convert(varchar(20), @refno)
@@ -546,7 +567,7 @@ BEGIN
 			IF @FromRoleID  = 1
 			BEGIN
 				EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @amount, @Type = 2, @IsForced = 1, @ErrCode = @ErrCode OUTPUT
-				if @ErrCode <> 0
+				IF @ErrCode <> 0
 				BEGIN
 					Select @ErrMsg = case @Language 
 								when 'E' then 'Transfer failed. Please try again.'
@@ -555,7 +576,7 @@ BEGIN
 								else N'Transfer failed. Please try again.'
 							end, @ErrCode = 105					
 
-					return
+					RETURN
 				END
 			END
 			
@@ -607,7 +628,7 @@ BEGIN
 					EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @amount, @Type = 2
 				END
 
-				return
+				RETURN
 			END
 			
 			---Insert into Transfer_Coll
@@ -646,8 +667,14 @@ BEGIN
 				UPDATE TransferInfo WITH(ROWLOCK)
 				SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
 				WHERE  TransID IN (SELECT TransID FROM @TransIDs)
+
+				---rollback @FromCustID
+				IF @FromRoleID  = 1
+				BEGIN
+					EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @amount, @Type = 2
+				END
 					
-				return
+				RETURN
 			END		
 
 			---Insert into Transfer_Info
@@ -680,8 +707,14 @@ BEGIN
 				UPDATE TransferInfo WITH(ROWLOCK)
 				SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
 				WHERE  TransID IN (SELECT TransID FROM @TransIDs)
+
+				---rollback @FromCustID
+				IF @FromRoleID  = 1
+				BEGIN
+					EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @amount, @Type = 2
+				END
 					
-				return
+				RETURN
 			END		
 
 			--------------------------------------------------------------
@@ -701,7 +734,7 @@ BEGIN
 				 @winlostdate, @ToCurr, @ToActualrate, @ToCurrName, @ToRecommend, @ToMrecommend, @ToSrecommend, 
 				 0, 0,@ip,131, @TotalCash3, SYSDATETIME())
 						
-			if @@Error <> 0
+			IF @@Error <> 0
 			BEGIN
 				Select @ErrMsg = case @Language 
 							when 'E' then 'Transfer failed. Please try again.'
@@ -732,7 +765,7 @@ BEGIN
 					EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @amount, @Type = 2
 				END
 
-				return
+				RETURN
 			END
 			
 			---Insert into Transfer_Coll
@@ -772,6 +805,12 @@ BEGIN
 				UPDATE TransferInfo WITH(ROWLOCK)
 				SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
 				WHERE  TransID IN (SELECT TransID FROM @TransIDs)
+
+				---rollback @FromCustID
+				IF @FromRoleID  = 1
+				BEGIN
+					EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @amount, @Type = 2
+				END
 				return
 			END		
 
@@ -805,7 +844,13 @@ BEGIN
 				UPDATE TransferInfo WITH(ROWLOCK)
 				SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
 				WHERE  TransID IN (SELECT TransID FROM @TransIDs)
-					
+				
+				---rollback @FromCustID
+				IF @FromRoleID  = 1
+				BEGIN
+					EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @amount, @Type = 2
+				END
+
 				return
 			END		
 

@@ -16,7 +16,8 @@ AS
 	DB: DBTXN/bodb02
 
 	Revisions:
-		- 20180808@Helen: DB05.DBPOLICY migration -  Move to DBTRANS [Redmine:99462]				   
+		- 20180808@Helen: DB05.DBPOLICY migration -  Move to DBTRANS [Redmine:99462]		
+		- 20220818@Danny: change code to handle duplicate data problem [Redmine: #175253]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -52,7 +53,8 @@ BEGIN
 	SET @MinExchangeRate = @Actualrate *(1 - @xMin)
 	SET @MaxExchangeRate = @Actualrate *(1 + @xMax)
 
-	IF @ExchangeRate < @MinExchangeRate OR  @ExchangeRate > @MaxExchangeRate
+	IF ((@ExchangeRate < @MinExchangeRate) OR  (@ExchangeRate > @MaxExchangeRate))
+	AND NOT EXISTS (SELECT 1 FROM Acc_ExchangeRate_InvalidTransfer WITH(NOLOCK) WHERE refno = @refNo AND  FromCust = @FromCust AND  ToCust = @ToCust AND  Amount = @Amount)
 	BEGIN
 		--Write Log
 		INSERT INTO Acc_ExchangeRate_InvalidTransfer(TransDate,UserID,FromCust,ToCust,FromExchangeID,ToExchangeID,

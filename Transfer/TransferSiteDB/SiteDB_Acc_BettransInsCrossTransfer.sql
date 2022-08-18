@@ -308,7 +308,7 @@ BEGIN
 					
 			--- rollback credit
 			IF @FromAmount < 0 AND @FromRoleID = 1
-				EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @tmp
+				EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2
 			RETURN
 		END
 	
@@ -351,7 +351,7 @@ BEGIN
 
 			--- rollback credit
 			IF @FromAmount < 0 AND @FromRoleID = 1
-				EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @tmp
+				EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2
 			RETURN
 		END
 
@@ -388,13 +388,13 @@ BEGIN
 		
 			--- rollback credit
 			IF @FromAmount < 0 AND @FromRoleID = 1
-				EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @tmp
+				EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2
 			RETURN
 		END		
 	
 		---- update @FromCustID's credit if this action increase balance
 		IF @FromAmount > 0 AND @FromRoleID = 1	
-		EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2 --EXEC Dot_BalanceUpdCredit @CustID = @FromCustID, @balance = @FromAmount	
+		EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2	
 
 	END
 
@@ -861,11 +861,14 @@ BEGIN
 			UPDATE TransferInfo WITH(ROWLOCK)
 			SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
 			WHERE  TransID IN (SELECT TransID FROM @TransIDs)
-		
-			IF @FromAmount > 0 AND @FromRoleID = 1
-							EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1
-			IF @FromAmount < 0 AND @FromRoleID = 1
-				EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2
+			
+			IF @ToSiteDBGroupID = @FromSiteDBGroupID
+			BEGIN
+				IF @FromAmount > 0 AND @FromRoleID = 1
+					EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1
+				IF @FromAmount < 0 AND @FromRoleID = 1
+					EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2
+			END
 
 			IF @FromAmount > 0 AND @ToRoleID = 1
 				EXEC Dot_BalanceCreditUpd @CustID = @ToCustID, @balance = @ToAmount, @type = 2
@@ -881,7 +884,6 @@ BEGIN
 			EXEC Dot_BalanceCreditUpd @CustID = @ToCustID, @balance = @amtTo, @type = 2
 		END	
 	END
-	
 	
 	DECLARE @SystemExRate	FLOAT,
 			@TransExRate	FLOAT,
