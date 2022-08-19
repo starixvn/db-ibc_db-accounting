@@ -834,7 +834,7 @@ BEGIN
 		SELECT @LogData = @LogData + ' is Credit Collection'
 	END
 	
-
+	
 	EXEC DBCTG.bodb02.dbo.Acc_ExchangeRateCheckValid 
 			@FromExchangeID = @FromCurrency, 
 			@ToExchangeID	= @ToCurrency, 
@@ -844,9 +844,46 @@ BEGIN
 			@ToCust			= @ToCustID, 
 			@Amount			= @FromAmount, 
 			@transDate		= @transdate ,
-			@refNo			= @refno
+			@refNo			= @refno,
+			@ErrCode		= @ErrCode OUTPUT,
+			@ErrMsg			= @ErrMsg OUTPUT
 	
+	IF @ErrCode <> 0
+	BEGIN
+		Select @ErrMsg = case @Language 
+					when 'E' then 'Transfer failed. Please try again.'
+					when 'CS' then N'Transfer failed. Please try again.'
+					when 'J' then N'払戻処理上にエラーが発生しました。もう一度確認してください。'
+					else N'Transfer failed. Please try again.'
+				end, @ErrCode = 107		
+				
+		UPDATE dbo.Transfer WITH(ROWLOCK)
+		SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
+		WHERE custid IN (@FromCustID, @ToCustID, @ForexCustID)
+			AND refno = @refno 
+			AND bettype = 21003
 	
+		UPDATE Transfer_Coll WITH(ROWLOCK)
+		SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
+		WHERE	custid in (@FromCustID, @ToCustID, @ForexCustID)
+				AND refno = @refno 
+				AND bettype = 21003
+
+		UPDATE TransferInfo WITH(ROWLOCK)
+		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+		WHERE  TransID IN (SELECT TransID FROM @TransIDs)
+
+		IF @FromAmount > 0 AND @FromRoleID = 1	
+			EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1
+		IF @FromAmount < 0 AND @FromRoleID = 1
+			EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2
+		IF @FromAmount > 0 AND @ToRoleID = 1
+			EXEC Dot_BalanceCreditUpd @CustID = @ToCustID, @balance = @ToAmount, @type = 2
+		IF @FromAmount < 0 AND @ToRoleID = 1
+			EXEC Dot_BalanceDebitUpd @CustID = @ToCustID, @balance = @ToAmount, @type = 2, @IsForced = 1, @errCode = @ErrCode OUTPUT
+
+		RETURN
+	END 
 
 	BEGIN TRY
 		EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @FromCustID, @ToCustID = @ToCustID, @IP = @IP, @Doing = @LogData

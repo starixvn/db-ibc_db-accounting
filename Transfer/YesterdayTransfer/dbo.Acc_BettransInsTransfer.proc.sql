@@ -947,8 +947,53 @@ BEGIN
 		@ToCust = @ToCustID, 
 		@Amount = @Amt, 
 		@transDate =@transdate ,
-		@refNo = @refno
+		@refNo = @refno,
+		@ErrCode = @ErrCode OUTPUT,
+		@ErrMsg = @ErrMsg OUTPUT
+	IF @ErrCode <> 0
+	BEGIN 
+		Select @ErrMsg = case @Language 
+					when 'E' then 'Transfer failed. Please try again.'
+					when 'CS' then N'Transfer failed. Please try again.'
+					when 'J' then N'払戻処理上にエラーが発生しました。もう一度確認してください。'
+					else N'Transfer failed. Please try again.'
+				end, @ErrCode = 106	
+				
+		UPDATE dbo.Transfer WITH(ROWLOCK)
+		SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0		
+		WHERE custid IN (@FromCustID, @ToCustID)
+			AND refno = @refno 
+			AND bettype = 21003
+				
+		UPDATE Transfer_Coll WITH(ROWLOCK)
+		SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
+		WHERE	custid in (@FromCustID, @ToCustID)
+				AND refno = @refno 
+				AND bettype = 21003
 
+		UPDATE TransferInfo WITH(ROWLOCK)
+		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+		WHERE  TransID IN (SELECT TransID FROM @TransIDs)
+
+		IF @amount > 0
+		BEGIN
+			IF @FromRoleID = 1
+				EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @amount, @Type = 2, @IsForced = 1, @ErrCode = @ErrCode OUTPUT
+			IF @ToRoleID = 1
+				EXEC Dot_BalanceCreditUpd @CustID = @ToCustID, @balance = @BalanceAmount, @Type = 2
+		END
+
+		IF @amount < 0
+		BEGIN
+			IF @FromRoleID = 1
+				EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @amount, @Type = 2
+
+			IF @ToRoleID = 1
+				EXEC Dot_BalanceDebitUpd @CustID = @ToCustID, @balance = @BalanceAmount, @Type = 2, @IsForced = 1, @ErrCode = @ErrCode OUTPUT
+		END
+		RETURN
+		
+	END
 
 	BEGIN TRY
 		EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @FromCustID, @ToCustID = @ToCustID, @IP = @IP, @Doing = @LogData

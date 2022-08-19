@@ -91,7 +91,7 @@ BEGIN
 	WHILE @@FETCH_STATUS = 0  
 	BEGIN
 		INSERT INTO @SiteGroupInfo (SiteDBGroupID, LinkedServerName, ClientAccessName, AGIP)
-		EXEC DBCUST.CustDB.dbo.Acc_SiteDBConfigSel @CustID = @cs_CustID
+		EXEC CustDB.dbo.Acc_SiteDBConfigSel @CustID = @cs_CustID
 
 		UPDATE @SiteGroupInfo SET CustID = @cs_CustID WHERE CustID IS NULL
 

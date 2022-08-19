@@ -202,21 +202,21 @@ BEGIN
 
 	-- Get @SiteGroupInfo
 	INSERT INTO @SiteGroupInfo(SiteDBGroupID, LinkedServerName, ClientAccessName, AGIP)
-	EXEC DBCUST.CustDB.dbo.Acc_SiteDBConfigSel @CustID = @FromCustID
+	EXEC CustDB.dbo.Acc_SiteDBConfigSel @CustID = @FromCustID
 
 	SELECT	@FromSiteDBGroupID = SiteDBGroupID
 	FROM	@SiteGroupInfo
 
 	DELETE  @SiteGroupInfo
 	INSERT INTO @SiteGroupInfo(SiteDBGroupID, LinkedServerName, ClientAccessName, AGIP)
-	EXEC DBCUST.CustDB.dbo.Acc_SiteDBConfigSel @CustID = @ToCustID
+	EXEC CustDB.dbo.Acc_SiteDBConfigSel @CustID = @ToCustID
 
 	SELECT	@ToSiteDBGroupID = SiteDBGroupID
 	FROM	@SiteGroupInfo
 
 	DELETE  @SiteGroupInfo
 	INSERT INTO @SiteGroupInfo(SiteDBGroupID, LinkedServerName, ClientAccessName, AGIP)
-	EXEC DBCUST.CustDB.dbo.Acc_SiteDBConfigSel @CustID = @ForexCustID
+	EXEC CustDB.dbo.Acc_SiteDBConfigSel @CustID = @ForexCustID
 
 	SELECT	@ForexSiteDBGroupID = SiteDBGroupID
 	FROM	@SiteGroupInfo
@@ -961,7 +961,8 @@ BEGIN
 					  ' Trans Ex.Rate' + '(' + @FromCurrName + '/' + @ToCurrName + ') ' + CONVERT(VARCHAR(20),@TransExRate) + ')' + 
 					  ' Ref.No ' + CONVERT(VARCHAR(20), @refno) +
 					  ' SiteDBGroupID ' +  CONVERT(varchar(20),@SiteDBGroupID)
-
+	
+	
 	EXEC DBCTG.bodb02.dbo.Acc_ExchangeRateCheckValid 
 			@FromExchangeID = @FromCurrency, 
 			@ToExchangeID	= @ToCurrency, 
@@ -971,7 +972,52 @@ BEGIN
 			@ToCust			= @ToCustID, 
 			@Amount			= @FromAmount, 
 			@transDate		= @transdate ,
-			@refNo			= @refno
+			@refNo			= @refno,
+			@ErrCode = @ErrCode OUTPUT,
+			@ErrMsg = @ErrMsg OUTPUT
+	
+	IF @ErrCode <> 0
+	BEGIN
+		SELECT @ErrMsg = CASE @Language 
+					WHEN 'E' THEN 'Transfer failed. Please try again.'
+					WHEN 'CS' THEN N'Transfer failed. Please try again.'
+					WHEN 'J' THEN N'払戻処理上にエラーが発生しました。もう一度確認してください。'
+					ELSE N'Transfer failed. Please try again.'
+				END, @ErrCode = 107		
+				
+			UPDATE dbo.Transfer WITH(ROWLOCK)
+			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
+			WHERE custid IN (@FromCustID, @ToCustID, @ForexCustID)
+				AND TransID IN (SELECT TransID FROM @TransIDs)
+				AND bettype = 21003
+				
+			UPDATE Transfer_Coll WITH(ROWLOCK)
+			SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
+			WHERE	custid in (@FromCustID, @ToCustID, @ForexCustID)
+					AND TransID IN (SELECT TransID FROM @TransIDs)
+					AND bettype = 21003
+
+			UPDATE TransferInfo WITH(ROWLOCK)
+			SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+			WHERE  TransID IN (SELECT TransID FROM @TransIDs)
+			
+			IF  @FromSiteDBGroupID = @SiteDBGroupID
+			BEGIN
+				IF @FromAmount > 0 AND @FromRoleID = 1
+					EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @FromAmount, @type = 2, @IsForced = 1
+				IF @FromAmount < 0 AND @FromRoleID = 1
+					EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @tmp, @type = 2
+			END
+
+			IF  @ToSiteDBGroupID = @SiteDBGroupID
+			BEGIN
+				IF @FromAmount > 0 AND @ToRoleID = 1
+					EXEC Dot_BalanceCreditUpd @CustID = @ToCustID, @balance = @ToAmount, @type = 2
+				IF @FromAmount < 0 AND @ToRoleID = 1
+					EXEC Dot_BalanceDebitUpd @CustID = @ToCustID, @balance = @ToAmount, @type = 2, @IsForced = 1, @errCode = @ErrCode OUTPUT
+			END
+			RETURN
+	END 
 	
 	BEGIN TRY
 		EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = @FromCustID, @ToCustID = @ToCustID, @IP = @IP, @Doing = @LogData
