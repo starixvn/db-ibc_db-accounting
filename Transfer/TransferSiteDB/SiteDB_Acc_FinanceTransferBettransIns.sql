@@ -131,14 +131,14 @@ BEGIN
 
 	-- Get @SiteGroupInfo
 	INSERT INTO @SiteGroupInfo(SiteDBGroupID, LinkedServerName, ClientAccessName, AGIP)
-	EXEC DBCUST.CustDB.dbo.Acc_SiteDBConfigSel @CustID = @FromCustID
+	EXEC CustDB.dbo.Acc_SiteDBConfigSel @CustID = @FromCustID
 
 	SELECT	@FromSiteDBGroupID = SiteDBGroupID
 	FROM	@SiteGroupInfo
 
 	DELETE  @SiteGroupInfo
 	INSERT INTO @SiteGroupInfo(SiteDBGroupID, LinkedServerName, ClientAccessName, AGIP)
-	EXEC DBCUST.CustDB.dbo.Acc_SiteDBConfigSel @CustID = @ToCustID
+	EXEC CustDB.dbo.Acc_SiteDBConfigSel @CustID = @ToCustID
 
 	SELECT	@ToSiteDBGroupID = SiteDBGroupID
 	FROM	@SiteGroupInfo

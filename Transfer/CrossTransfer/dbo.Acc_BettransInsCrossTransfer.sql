@@ -928,7 +928,7 @@ BEGIN
 				IF @FromAmount > 0 AND @ToRoleID = 1
 					EXEC Dot_BalanceCreditUpd @CustID = @ToCustID, @balance = @ToAmount, @type = 2
 				IF @FromAmount < 0 AND @ToRoleID = 1
-					EXEC Dot_BalanceDebitUpd @CustID = @ToCustID, @balance = @ToAmount, @type = 2, @IsForced = 1, @errCode = @ErrCode OUTPUT
+					EXEC Dot_BalanceDebitUpd @CustID = @ToCustID, @balance = @amtTo, @type = 2, @IsForced = 1, @errCode = @ErrCode OUTPUT
 			END
 			RETURN
 	END 
