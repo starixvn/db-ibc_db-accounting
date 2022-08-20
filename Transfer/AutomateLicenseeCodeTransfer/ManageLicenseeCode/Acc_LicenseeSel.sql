@@ -10,6 +10,7 @@ AS
 		- 20200615@Sol: NAP - Auto Assign Licensee code to the Licensee accordingly - [Redmine: #120670]
 		- 20210506@Sol: NAP - Remove Saba789 from auto mail informing the code needed - [Redmine: #154676]
 		- 20210802@Sol: NAP - Remove Athena000 and Sabademo from auto mail informing the code needed - [Redmine: #159565]
+		- 20220822@Danny: change code to support SiteDB [Redmine: #175253]
 
 */
 BEGIN
@@ -21,9 +22,12 @@ BEGIN
 			INNER JOIN bodb02.dbo.Dep_CustSuper cs WITH(NOLOCK)
 				on cs.[site] = l.LicenseeName
 	WHERE 
-		l.IsActive = 1
-		AND cs.currency <> 20
-		AND l.LicenseeName NOT IN ('Saba789','Athena000','Sabademo','spondemo')
+		( 
+			l.IsActive = 1 	AND cs.currency <> 20 AND l.LicenseeName NOT IN ('Saba789','Sabademo') 
+		)
+		OR LicenseeName  IN ('Athena000', 'spondemo', 'SampleSite') 
+	
+
 	ORDER BY l.LicenseeName
 
 END

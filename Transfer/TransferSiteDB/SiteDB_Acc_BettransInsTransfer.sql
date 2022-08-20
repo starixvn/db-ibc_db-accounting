@@ -75,12 +75,10 @@ BEGIN
 	DECLARE @CustInfo TABLE (Username NVARCHAR(50), currency INT, CurrName NVARCHAR(10), recommend INT, mrecommend INT, srecommend INT, CustID INT, actualrate FLOAT, roleid TINYINT)
 			
 	DECLARE @SiteGroupInfo TABLE(SiteDBGroupID SMALLINT, LinkedServerName  VARCHAR(512), ClientAccessName VARCHAR(512), AGIP VARCHAR (50))
-	DECLARE @Str VARCHAR(4000), @FromSiteDBGroupID SMALLINT, @ToSiteDBGroupID SMALLINT
+	DECLARE @FromSiteDBGroupID SMALLINT, @ToSiteDBGroupID SMALLINT
 
-	SELECT @Str = '
-	SELECT username, currency, CurrName, recommend, mrecommend, srecommend, CustID, actualrate, roleid
-	FROM OPENQUERY (DBCUST,'' 
-		SELECT	c.username, 
+	INSERT INTO @CustInfo (username, currency, CurrName, recommend, mrecommend, srecommend, CustID, actualrate, roleid)
+	SELECT	c.username, 
 				c.currency,
 				e.currency AS CurrName,
 				c.recommend,
@@ -89,13 +87,9 @@ BEGIN
 				c.CustID,
 				e.actualrate,
 				c.roleid
-		FROM CustDB.dbo.Custinfo c with (NOLOCK)
-			INNER JOIN CustDB.dbo.Exchange e with (NOLOCK) on c.currency = e.exchangeid 
-		where c.CustID =' + CAST(@FromCustID AS VARCHAR(50)) + ' OR c.username = ''''' + @ToUserName + ''''' '')
-	'
-
-	INSERT INTO @CustInfo (username, currency, CurrName, recommend, mrecommend, srecommend, CustID, actualrate, roleid)
-	EXEC (@Str)
+	FROM CustDB.dbo.Custinfo c with (NOLOCK)
+		INNER JOIN CustDB.dbo.Exchange e with (NOLOCK) on c.currency = e.exchangeid 
+	where c.CustID = @FromCustID OR c.username = @ToUserName
 
 	SELECT @FromUsername = c.username, 
 		@FromCurr = c.currency,

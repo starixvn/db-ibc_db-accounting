@@ -5,7 +5,7 @@ AS
 /*
 	Created: N/A
 	Task : 
-	DB: DBTXN/bodb02
+	DB: DBCTG.bodb02
 
 	Revisions:
 		- 20220818@Danny: Create SP [Redmine:99462]				   

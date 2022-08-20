@@ -75,26 +75,21 @@ BEGIN
 	DECLARE @CustInfo TABLE (Username NVARCHAR(50), currency INT, CurrName NVARCHAR(10), recommend INT, mrecommend INT, srecommend INT, CustID INT, actualrate FLOAT, roleid TINYINT)
 			
 	DECLARE @SiteGroupInfo TABLE(SiteDBGroupID SMALLINT, LinkedServerName  VARCHAR(512), ClientAccessName VARCHAR(512), AGIP VARCHAR (50))
-	DECLARE @Str VARCHAR(4000), @FromSiteDBGroupID SMALLINT, @ToSiteDBGroupID SMALLINT, @ForexSiteDBGroupID SMALLINT
+	DECLARE @FromSiteDBGroupID SMALLINT, @ToSiteDBGroupID SMALLINT, @ForexSiteDBGroupID SMALLINT
 
-	SELECT @Str = '
-		SELECT username, currency, CurrName, recommend, mrecommend, srecommend, CustID, actualrate, roleid
-		FROM OPENQUERY (DBCUST,'' 
-			SELECT	c.username, 
-					c.currency,
-					e.currency AS CurrName,
-					c.recommend,
-					c.mrecommend,
-					c.srecommend,
-					c.CustID,
-					e.actualrate,
-					c.roleid
-			FROM CustDB.dbo.Custinfo c with (NOLOCK)
-				INNER JOIN CustDB.dbo.Exchange e with (NOLOCK) on c.currency = e.exchangeid 
-			WHERE c.CustID =' + CAST(@FromCustID AS VARCHAR(50)) + ' OR c.CustID = ''''' +CAST(@ToCustID AS VARCHAR(50)) + '''''' + ' OR c.username = ''''' + @ForexUsername + ''''' '')
-	'
 	INSERT INTO @CustInfo (username, currency, CurrName, recommend, mrecommend, srecommend, CustID, actualrate, roleid)
-	EXEC (@Str)
+	SELECT	c.username, 
+			c.currency,
+			e.currency AS CurrName,
+			c.recommend,
+			c.mrecommend,
+			c.srecommend,
+			c.CustID,
+			e.actualrate,
+			c.roleid
+	FROM CustDB.dbo.Custinfo c with (NOLOCK)
+		INNER JOIN CustDB.dbo.Exchange e with (NOLOCK) on c.currency = e.exchangeid 
+	WHERE c.CustID = @FromCustID  OR c.CustID = @ToCustID  OR c.username = @ForexUsername
 
 	--- Get @FromCustomer info 
 	SELECT 

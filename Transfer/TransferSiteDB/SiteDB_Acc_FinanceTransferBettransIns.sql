@@ -36,7 +36,7 @@ BEGIN
 	DECLARE @CustInfo TABLE (Username NVARCHAR(50), currency INT, CurrName NVARCHAR(10), recommend INT, mrecommend INT, srecommend INT, CustID INT, actualrate FLOAT, roleid TINYINT)
 			
 	DECLARE @SiteGroupInfo TABLE(SiteDBGroupID SMALLINT, LinkedServerName  VARCHAR(512), ClientAccessName VARCHAR(512), AGIP VARCHAR (50))
-	DECLARE @Str VARCHAR(4000), @FromSiteDBGroupID SMALLINT, @ToSiteDBGroupID SMALLINT
+	DECLARE @FromSiteDBGroupID SMALLINT, @ToSiteDBGroupID SMALLINT
 
 	SELECT @RemarkFromCurr='',  @RemarkToCurr=''
 	SELECT @Amt = @Amount 
@@ -45,25 +45,19 @@ BEGIN
 
 	DECLARE @TransIDs AS TABLE (transID BIGINT)
 
-	SELECT @Str = '
-	SELECT username, currency, CurrName, recommend, mrecommend, srecommend, CustID, actualrate, roleid
-	FROM OPENQUERY (DBCUST,'' 
-		SELECT	c.username, 
-				c.currency,
-				e.currency AS CurrName,
-				c.recommend,
-				c.mrecommend,
-				c.srecommend,
-				c.CustID,
-				e.actualrate,
-				c.roleid
-		FROM CustDB.dbo.Custinfo c with (NOLOCK)
-			INNER JOIN CustDB.dbo.Exchange e with (NOLOCK) on c.currency = e.exchangeid 
-		WHERE c.CustID =' + CAST(@FromCustID AS VARCHAR(50)) + ' OR c.username = ''''' + @ToUserName + ''''' '')
-	'
-
 	INSERT INTO @CustInfo (username, currency, CurrName, recommend, mrecommend, srecommend, CustID, actualrate, roleid)
-	EXEC (@Str)
+	SELECT	c.username, 
+			c.currency,
+			e.currency AS CurrName,
+			c.recommend,
+			c.mrecommend,
+			c.srecommend,
+			c.CustID,
+			e.actualrate,
+			c.roleid
+	FROM CustDB.dbo.Custinfo c with (NOLOCK)
+		INNER JOIN CustDB.dbo.Exchange e with (NOLOCK) on c.currency = e.exchangeid 
+	WHERE c.CustID = @FromCustID  OR c.username = @ToUserName
 
 	SELECT @FromUsername = c.username, 
 		@FromCurr = c.currency,
@@ -472,7 +466,7 @@ BEGIN
 					RETURN
 				END		
 			END
-			SELECT @LogData = 'Finance Transfer from Customer ' + @FromUserName + ' to Customer ' + @ToUserName + ' with amount ' + convert(varchar(20), @Amt) + ' Ref.No ' + convert(varchar(20), @refno) + ' LinkedServerName ' +  @SiteDBGroupID		
+			SELECT @LogData = 'Finance Transfer from Customer ' + @FromUserName + ' to Customer ' + @ToUserName + ' with amount ' + convert(varchar(20), @Amt) + ' Ref.No ' + convert(varchar(20), @refno) + ' LinkedServerName ' + convert(varchar(20), @SiteDBGroupID)		
 			
 		END
 		ELSE

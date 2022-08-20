@@ -5,7 +5,8 @@ ALTER PROCEDURE [dbo].[Acc_LicenseeTransfer_Job]
 	@ErrCode			INT = 0 OUTPUT,
 	@ErrMsg				VARCHAR(4000) = '' OUTPUT,
 	@EndMonthDate		DATE OUTPUT,
-	@currentDate		DATETIME OUTPUT
+	@currentDate		DATETIME OUTPUT,
+	@Environment		VARCHAR(50) =	'LOCAL'
 AS
 /*
 	Create: 20190712@Bobby
@@ -19,10 +20,20 @@ AS
 		- 20210315@Sol: NAP - Enhance Manage Licensee Code to support change base currency of licensees - [Redmine: #151607]
 		- 20220810@Danny: Add check failed data step [Redmine: #175670]
 		- 20220802@Danny: change code to support SiteDB [Redmine: #175253]
+
+		@Environment: LOCAL, SIT, UAT, PROD
 		 
 */
 BEGIN
 	SET NOCOUNT ON	
+
+	DECLARE @LicenseeNameByEnvironment TABLE (LicenseeName VARCHAR(50))
+
+	IF @Environment = 'UAT'
+	BEGIN
+		INSERT INTO @LicenseeNameByEnvironment (LicenseeName)
+		VALUES ('Athena000'),('spondemo'),('SampleSite')
+	END
 	
 	DECLARE @isCollection 			BIT = 0
 		,@language					VARCHAR(2)= 'E'
@@ -104,13 +115,22 @@ BEGIN
 	IF EXISTS(
 			SELECT TOP 1 1 AS StatusCode
 			FROM dbo.LicenseeTransferPool WITH(NOLOCK)
-			WHERE MonthDate = @endMonthDate
+			WHERE MonthDate = @endMonthDate AND 
+			(
+				( LicenseeName IN (SELECT z.LicenseeName FROM @LicenseeNameByEnvironment z)  AND @Environment = 'UAT' )
+				OR @Environment <> 'UAT'
+			)
 			
 			UNION ALL
 			SELECT TOP 1 1 AS StatusCode
 			FROM DBCUST.bodb_licensee.dbo.LicenseeTransferCode sc WITH(NOLOCK)
 			WHERE LastMonthDate = @endMonthDate
 				AND @TransferMonthDate BETWEEN sc.FromDate AND sc.ToDate
+				AND 
+				(
+					( sc.LicenseeName IN (SELECT z.LicenseeName FROM @LicenseeNameByEnvironment z)  AND @Environment = 'UAT' )
+					OR @Environment <> 'UAT'
+				)
 	)
 	BEGIN
 		-- COLLECT the last status for the month if any
@@ -165,7 +185,12 @@ BEGIN
 		INNER JOIN CustDB.dbo.custInfo ci WITH(NOLOCK) ON sc.CustID = ci.CustID
 		INNER JOIN CustDB.dbo.Dep_CustSuper cs WITH(NOLOCK) ON sc.LicenseeName = cs.[site]
 	WHERE @TransferMonthDate BETWEEN sc.FromDate AND sc.ToDate
-		AND cs.currency <> 20
+		AND 
+			(
+				( sc.LicenseeName IN (SELECT z.LicenseeName FROM @LicenseeNameByEnvironment z)  AND @Environment = 'UAT' )
+				OR  
+				( @Environment <> 'UAT' AND cs.currency <> 20)
+			)
 	
 	-- load exchange rate from system and oanda
 	INSERT INTO #transferExrate (FromCurrency, ToCurrency, ExRate, IsSystem)

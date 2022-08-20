@@ -409,7 +409,7 @@ BEGIN
 
 					UPDATE TransferInfo WITH(ROWLOCK)
 					SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-					WHERE  TransID = @TransID
+					WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 				
 					RETURN
 				END
@@ -975,7 +975,7 @@ BEGIN
 		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
 		WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 
-		IF @amount > 0
+		IF @Amt > 0
 		BEGIN
 			IF @FromRoleID = 1
 				EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @amount, @Type = 2, @IsForced = 1, @ErrCode = @ErrCode OUTPUT
@@ -983,7 +983,7 @@ BEGIN
 				EXEC Dot_BalanceCreditUpd @CustID = @ToCustID, @balance = @BalanceAmount, @Type = 2
 		END
 
-		IF @amount < 0
+		IF @Amt < 0
 		BEGIN
 			IF @FromRoleID = 1
 				EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @amount, @Type = 2
