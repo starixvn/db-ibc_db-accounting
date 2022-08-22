@@ -27,14 +27,12 @@ AS
 BEGIN
 	SET NOCOUNT ON	
 
-	DECLARE @LicenseeNameByEnvironment TABLE (LicenseeName VARCHAR(50))
+	DECLARE @SuperUUSAllowTransferList TABLE (CustID INT)
+	INSERT INTO @SuperUUSAllowTransferList (CustID)
+	SELECT CustID
+	FROM CustDB.dbo.Customer WITH(NOLOCK)
+	WHERE username IN ('SPONSuperUUS','Athena000SuperUUS','SampleSiteSuperUUS')
 
-	IF @Environment = 'UAT'
-	BEGIN
-		INSERT INTO @LicenseeNameByEnvironment (LicenseeName)
-		VALUES ('Athena000'),('spondemo'),('SampleSite')
-	END
-	
 	DECLARE @isCollection 			BIT = 0
 		,@language					VARCHAR(2)= 'E'
 		,@startMonthDate			DATE
@@ -115,21 +113,20 @@ BEGIN
 	IF EXISTS(
 			SELECT TOP 1 1 AS StatusCode
 			FROM dbo.LicenseeTransferPool WITH(NOLOCK)
-			WHERE MonthDate = @endMonthDate AND 
-			(
-				( LicenseeName IN (SELECT z.LicenseeName FROM @LicenseeNameByEnvironment z)  AND @Environment = 'UAT' )
-				OR @Environment <> 'UAT'
-			)
+			WHERE MonthDate = @endMonthDate 
+			AND (
+					( FromCustId IN (SELECT z.CustID FROM @SuperUUSAllowTransferList z) AND @Environment IN ('LOCAL','UAT','SIT') )
+					OR @Environment  = 'PROD'
+				)
 			
 			UNION ALL
 			SELECT TOP 1 1 AS StatusCode
 			FROM DBCUST.bodb_licensee.dbo.LicenseeTransferCode sc WITH(NOLOCK)
 			WHERE LastMonthDate = @endMonthDate
 				AND @TransferMonthDate BETWEEN sc.FromDate AND sc.ToDate
-				AND 
-				(
-					( sc.LicenseeName IN (SELECT z.LicenseeName FROM @LicenseeNameByEnvironment z)  AND @Environment = 'UAT' )
-					OR @Environment <> 'UAT'
+				AND (
+					( LicenseeName IN ('Athena000', 'spondemo', 'SampleSite') AND @Environment IN ('LOCAL','UAT','SIT') )
+					OR @Environment  = 'PROD'
 				)
 	)
 	BEGIN
@@ -139,6 +136,10 @@ BEGIN
 			,@newCount = SUM (CASE WHEN [Status] = @newStatus THEN 1 ELSE 0 END)
 		FROM dbo.LicenseeTransferPool pol  WITH(NOLOCK)
 		WHERE MonthDate = @endMonthDate 
+			 AND (
+					( FromCustId IN (SELECT z.CustID FROM @SuperUUSAllowTransferList z) AND @Environment IN ('LOCAL','UAT','SIT') )
+					OR @Environment  = 'PROD'
+				)
 		
 		-- MARK the month as completed
 		IF(@failedCount = 0 AND @newCount = 0)
@@ -185,12 +186,10 @@ BEGIN
 		INNER JOIN CustDB.dbo.custInfo ci WITH(NOLOCK) ON sc.CustID = ci.CustID
 		INNER JOIN CustDB.dbo.Dep_CustSuper cs WITH(NOLOCK) ON sc.LicenseeName = cs.[site]
 	WHERE @TransferMonthDate BETWEEN sc.FromDate AND sc.ToDate
-		AND 
-			(
-				( sc.LicenseeName IN (SELECT z.LicenseeName FROM @LicenseeNameByEnvironment z)  AND @Environment = 'UAT' )
-				OR  
-				( @Environment <> 'UAT' AND cs.currency <> 20)
-			)
+		AND ( 
+			( cs.currency <> 20 AND @Environment = 'PROD')
+			OR @Environment IN ('LOCAL','SIT','UAT')
+		)
 	
 	-- load exchange rate from system and oanda
 	INSERT INTO #transferExrate (FromCurrency, ToCurrency, ExRate, IsSystem)
@@ -258,6 +257,7 @@ BEGIN
 		   , @MoveBetsDay		= @MoveBetsDay
 		   , @BatchNumber		= @batchNumber
 		   , @CompanyWinloss	= @companyWinloss OUTPUT
+		   , @Environment       = @Environment
 	END TRY
 	BEGIN CATCH
 		SELECT @ErrCode		= 104
@@ -339,8 +339,11 @@ BEGIN
 	IF OBJECT_ID(N'LicenseeTransferPool') IS NOT NULL
 	BEGIN
 		-- just keep the last transfer transactions
-		DELETE dbo.LicenseeTransferPool
-
+		DELETE dbo.LicenseeTransferPool 
+		WHERE  
+			( FromCustId IN (SELECT z.CustID FROM @SuperUUSAllowTransferList z) AND @Environment IN ('LOCAL','UAT','SIT') )
+				OR @Environment  = 'PROD'
+	
 		-- keep all transfer transactions month by month
 		--DELETE dbo.LicenseeTransferPool WHERE MonthDate = @endMonthDate
 	END
@@ -371,7 +374,11 @@ BEGIN
 		, [Status]
 		, MonthDate
 	FROM #tempLicenseeTransfer
-	WHERE TransferEnable = 1
+	WHERE TransferEnable = 1 
+	AND   (
+			( FromCustId IN (SELECT z.CustID FROM @SuperUUSAllowTransferList z) AND @Environment IN ('LOCAL','UAT','SIT') )
+				OR @Environment  = 'PROD'
+		   ) 
 	ORDER BY LicenseeName, FromCustId, ToCustID
 	
 	DECLARE @directTransfer		BIT
@@ -428,7 +435,11 @@ BEGIN
 	FROM dbo.LicenseeTransferPool p WITH(NOLOCK) 
 		INNER JOIN CustDB.dbo.Dep_CustSuper CS WITH(NOLOCK) ON P.FromCustId = CS.custid
 		INNER JOIN CustDB.dbo.exchange EX WITH(NOLOCK) ON P.ToCurrency = EX.exchangeid
-	WHERE MonthDate = @endMonthDate	AND [Status] = @newStatus
+	WHERE MonthDate = @endMonthDate	AND [Status] IN (@newStatus, @failedStatus)
+	AND (
+			( p.FromCustId IN (SELECT z.CustID FROM @SuperUUSAllowTransferList z) AND @Environment IN ('LOCAL','UAT','SIT') )
+			OR @Environment  = 'PROD'
+				)
 
 	-- cleanup
 	DROP TABLE #transferExrate

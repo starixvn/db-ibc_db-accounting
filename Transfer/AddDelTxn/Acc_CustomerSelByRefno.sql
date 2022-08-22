@@ -31,7 +31,7 @@ BEGIN
 
 	IF EXISTS (SELECT 1 FROM @transferDetail WHERE IsDel = 1)
 	BEGIN
-		SELECT @ErrMsg =  'Input Refno is invalid.' ,  @ErrCode = 102
+		SELECT @ErrMsg =  'Unable to delete this transaction due to it is marked as "Deleted"!' ,  @ErrCode = 102
 		RETURN
 	END
 

@@ -4,7 +4,8 @@ CREATE PROCEDURE dbo.Acc_LicenseeTransferCode_Update
 	@EndMonthDate		DATE,
 	@currentDate		DATETIME,
 	@ErrCode			INT = 0 OUTPUT,
-	@ErrMsg				VARCHAR(4000) = '' OUTPUT
+	@ErrMsg				VARCHAR(4000) = '' OUTPUT,
+	@Environment		VARCHAR(50) =	'LOCAL'
 
 AS
 /*
@@ -40,6 +41,10 @@ BEGIN
 						ON c.LicenseeName = pol.LicenseeName AND pol.ToCustID = c.CustId 
 							AND @TransferMonthDate BETWEEN c.FromDate AND c.ToDate
 				WHERE MonthDate = @endMonthDate 
+					AND (
+							( pol.LicenseeName IN ('Athena000', 'spondemo', 'SampleSite') AND @Environment IN ('LOCAL','UAT','SIT') )
+							OR @Environment  = 'PROD'
+						)
 				GROUP BY pol.LicenseeName, pol.ToCustID, c.FromDate
 			) AS r
 			WHERE r.FailedCount = 0 AND r.NewCount = 0 -- ALL completed

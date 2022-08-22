@@ -183,7 +183,7 @@ BEGIN
 		END
 
 		UPDATE dbo.Transfer WITH(ROWLOCK)
-		SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+		SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, SRecommend = 0, MRecommend = 0	
 		WHERE custid = @custid AND RefNo = @RefNo
 
 
@@ -215,7 +215,7 @@ BEGIN
 			END
 
 			UPDATE dbo.Transfer WITH(ROWLOCK)
-			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME()	
+			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, SRecommend = 0, MRecommend = 0	
 			WHERE custid = @custid AND RefNo = @RefNo
 
 			Select @ErrMsg = 'Insert trans failed. Please try again.', @ErrCode = 104		
@@ -229,7 +229,17 @@ BEGIN
 	BEGIN 
 		IF @balance > 0 
 		BEGIN 
-			EXEC Dot_BalanceCreditUpd @CustID = @custid, @balance = @balance, @type = 2
+			EXEC Dot_BalanceCreditUpd @CustID = @custid, @balance = @balance, @type = 2,  @errCode = @ErrCode OUTPUT
+			IF @ErrCode <> 0 
+			BEGIN
+				Select @ErrMsg = 'Insert trans failed. Please try again.', @ErrCode = 104
+
+				UPDATE dbo.Transfer WITH(ROWLOCK)
+				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, SRecommend = 0, MRecommend = 0	
+				WHERE custid = @custid AND RefNo = @RefNo
+
+				RETURN
+			END
 		END
 	END
 

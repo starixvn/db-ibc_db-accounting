@@ -183,7 +183,7 @@ BEGIN
 		RETURN
 	END
 
-	IF @ToAmount/@FromAmount <= 0 OR @FromExRate <=0 OR @ToExRate <=0
+	IF (@ToAmount/@FromAmount <= 0 OR @FromExRate <=0 OR @ToExRate <=0) AND @FromUsername NOT IN ('SPONSuperUUS','Athena000SuperUUS','SampleSiteSuperUUS')
 	BEGIN	
 		SELECT @ErrMsg =CASE @Language
 							WHEN 'E' THEN 'Invalid amount or exchange rate.'
@@ -943,6 +943,3 @@ BEGIN
 END
 
 GO
-GRANT EXECUTE ON [dbo].[Acc_BettransInsCrossTransfer] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_BettransInsCrossTransfer] TO [vnteam] AS [dbo]
