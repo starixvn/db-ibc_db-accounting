@@ -6,7 +6,8 @@ ALTER PROCEDURE [dbo].[Acc_DailyTxn_UpdChecker]
 @IsVerified		BIT = 0, 
 @IP				VARCHAR(45),
 @ErrCode		INT = 0 OUTPUT,
-@ErrMsg			NVARCHAR(200) = '' OUTPUT
+@ErrMsg			NVARCHAR(200) = '' OUTPUT,
+@SiteDBGroupID	SMALLINT
 AS
 /*
 Created by: Jamie
@@ -21,6 +22,7 @@ Revisions:
 	- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 	- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 	- 20220315@Evan: SQL Server Upgrade STRING_SPLIT [Redmine: #168783]
+	- 20220825@Danny: change code to support SiteDB [Redmine: #175253]
 	
 Param's Explanation:
 	@TransIDs   : '1111,2341,...'
@@ -36,14 +38,39 @@ BEGIN
 	DECLARE	@UserID INT, @ActionID INT, @UserName VARCHAR(50)
 	SELECT	@UserID = @CheckerID, @Username = @CheckerName , @ActionID = 1600 
 
-	DECLARE	@tmpTransID TABLE (transID BIGINT, checktime DATETIME, RepUpdateTime DATETIME2(7))
+	DECLARE	@tmpTransID TABLE (transID BIGINT, checktime DATETIME, RepUpdateTime DATETIME2(7), custID INT)
 	DECLARE	@tmpTransferInfoID TABLE (transID BIGINT)
+	DECLARE @SiteGroupInfo TABLE(CustID INT, SiteDBGroupID SMALLINT, LinkedServerName  VARCHAR(512), ClientAccessName VARCHAR(512), AGIP VARCHAR (50))
+	DECLARE @CustList TABLE (CustID INT, ID INT IDENTITY(1,1) )
 
-	INSERT INTO @tmpTransID(transID, checktime, RepUpdateTime)
-	SELECT	transID, checktime, RepUpdateTime	FROM dbo.transfer WITH (NOLOCK) 
+	INSERT INTO @tmpTransID(transID, checktime, RepUpdateTime, custID)
+	SELECT	transID, checktime, RepUpdateTime, CustId	FROM dbo.transfer WITH (NOLOCK) 
 	WHERE	refno IN (	SELECT	CONVERT(bigint, value)
 						FROM	STRING_SPLIT (@Refnos, ',' ))
 			AND bettype > 20000 
+	
+	-- get CustList by SiteDbGroupID
+	INSERT INTO @CustList(CustID) SELECT DISTINCT CustID FROM  @tmpTransID
+
+	DECLARE @cs_CustID INT
+	DECLARE @i INT = 1
+
+	WHILE EXISTS (SELECT TOP 1 1 FROM @CustList WHERE ID = @i)
+	BEGIN
+		SELECT @cs_CustID = CustID FROM @CustList WHERE ID = @i
+
+		INSERT INTO @SiteGroupInfo (SiteDBGroupID, LinkedServerName, ClientAccessName, AGIP)
+		EXEC CustDB.dbo.Acc_SiteDBConfigSel @CustID = @cs_CustID
+
+		UPDATE @SiteGroupInfo SET CustID = @cs_CustID WHERE CustID IS NULL
+
+		SELECT @i = @i + 1
+	END
+
+	DELETE t
+	FROM @tmpTransID t
+	WHERE t.CustID IN (SELECT z.CustID FROM  @SiteGroupInfo z WHERE z.SiteDBGroupID <> @SiteDBGroupID )
+	-- END get CustList by SiteDbGroupID
 
 	INSERT INTO @tmpTransferInfoID(transID) 
 	SELECT transID	FROM dbo.Transfer WITH (NOLOCK) 
@@ -109,6 +136,3 @@ BEGIN
 	END CATCH
 END
 GO
-GRANT EXECUTE ON [dbo].[Acc_DailyTxn_UpdChecker] TO [bodbAdminNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Acc_DailyTxn_UpdChecker] TO [vnteam]

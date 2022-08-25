@@ -8,7 +8,7 @@ AS
 	DB: DBCTG.bodb02
 
 	Revisions:
-		- 20220818@Danny: Create SP [Redmine:99462]				   
+		- 20220818@Danny: delete invalid transfer exchange Rate [Redmine:175253]				   
 */
 BEGIN
 	SET NOCOUNT ON 

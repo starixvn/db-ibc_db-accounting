@@ -240,8 +240,13 @@ BEGIN
 			SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 107	
 
 			--Rollback transaction
-			DELETE dbo.Transfer WITH (ROWLOCK) WHERE TransID = @TransID
-			DELETE dbo.TransferInfo WITH (ROWLOCK) WHERE TransID = @TransID
+			UPDATE dbo.Transfer WITH (ROWLOCK) 
+			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
+			WHERE TransID = @TransID
+
+			UPDATE TransferInfo WITH(ROWLOCK)
+			SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+			WHERE TransID = @TransID
 
 			SELECT @TransID = 0
 
@@ -277,8 +282,13 @@ BEGIN
 			SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 108	
 			
 			--Rollback transaction
-			DELETE dbo.Transfer WITH (ROWLOCK) WHERE TransID = @TransID
-			DELETE dbo.TransferInfo WITH (ROWLOCK) WHERE TransID = @TransID
+			UPDATE dbo.Transfer WITH (ROWLOCK) 
+			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
+			WHERE TransID = @TransID
+
+			UPDATE TransferInfo WITH(ROWLOCK)
+			SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+			WHERE TransID = @TransID
 
 			--rollback balance
 			IF @Amount < 0 

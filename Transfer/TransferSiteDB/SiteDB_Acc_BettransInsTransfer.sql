@@ -22,6 +22,7 @@ Revisions:
 	- 20220719@Danny: Init. SP [Redmine: #175253]
 					   
 Param's Explanation:
+Orig SP: Acc_BettransInsTransfer
 */
 BEGIN
 	SET NOCOUNT ON

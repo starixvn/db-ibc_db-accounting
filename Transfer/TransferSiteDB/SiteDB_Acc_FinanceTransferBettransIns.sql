@@ -17,10 +17,10 @@ AS
 /*
 Created: 20220719@Danny
 DB: DBTXN/BODB02
-
+Orig SP: Acc_FinanceTransferBettransIns
 Revisions:
 	- 20220719@Danny: Init. SP [Redmine: #175253]
-	
+
 Param's Explanation:
 
 */

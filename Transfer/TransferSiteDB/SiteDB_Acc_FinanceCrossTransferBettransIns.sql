@@ -21,7 +21,7 @@ AS
 	Create: 20220719@Danny
 	Task: Insert transfer transactions
 	DB: DBTXN/BODB02
-
+	Orig SP: Acc_FinanceCrossTransferBettransIns
 	Revisions:
 		- 20220719@Danny: Init. SP [Redmine: #175253]
 */

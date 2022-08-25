@@ -41,6 +41,7 @@ AS
 		- 20200828@Sol: hotfix - transfer - duplicated transid by page split/nolock [Redmine:140461]
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 		- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
+		- 20220801@Danny: change code to support SiteDB [Redmine: #175253]
 */
 BEGIN
 
@@ -83,7 +84,7 @@ BEGIN
 		)
 
 		DECLARE @TransIDs AS TABLE (transID BIGINT, seq TINYINT)
-		DECLARE @tblUniqueCustIds TABLE (CustId INT)
+		DECLARE @tblUniqueCustIds TABLE (CustId INT, ID INT IDENTITY(1,1))
 
 		----get unique custid to use in where condition of inserting @Reversal for index seek used
 		INSERT INTO @tblUniqueCustIds (custid)
@@ -94,25 +95,19 @@ BEGIN
 		-- handle sitegroup DB
 		DECLARE @SiteGroupInfo TABLE(CustID INT, SiteDBGroupID SMALLINT, LinkedServerName  VARCHAR(512), ClientAccessName VARCHAR(512), AGIP VARCHAR (50))
 		DECLARE @cs_CustID INT
+		DECLARE @i INT = 1
 
-		DECLARE CS_CustIDs
-		CURSOR FOR  
-		SELECT CustID FROM @tblUniqueCustIds 
-	   		 
-		OPEN CS_CustIDs  
-		FETCH NEXT FROM CS_CustIDs INTO @cs_CustID
-		WHILE @@FETCH_STATUS = 0  
+		WHILE EXISTS (SELECT TOP 1 1 FROM @tblUniqueCustIds WHERE ID = @i)
 		BEGIN
+			SELECT @cs_CustID = CustID FROM @tblUniqueCustIds WHERE ID = @i
+
 			INSERT INTO @SiteGroupInfo (SiteDBGroupID, LinkedServerName, ClientAccessName, AGIP)
-			EXEC DBCUST.CustDB.dbo.Acc_SiteDBConfigSel @CustID = @cs_CustID
+			EXEC CustDB.dbo.Acc_SiteDBConfigSel @CustID = @cs_CustID
 
 			UPDATE @SiteGroupInfo SET CustID = @cs_CustID WHERE CustID IS NULL
 
-			FETCH NEXT FROM CS_CustIDs INTO @cs_CustID
+			SELECT @i = @i + 1
 		END
-		
-		CLOSE CS_CustIDs  
-		DEALLOCATE CS_CustIDs  
 
 		----insert transfer data into @Reversal
 		INSERT INTO @Reversal 

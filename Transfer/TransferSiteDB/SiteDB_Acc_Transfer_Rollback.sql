@@ -13,7 +13,7 @@ Task: Check input
 Created: 
 DB: DBTXN/bodb02
 Revisions:
-	- 20220719@Danny: Init. SP rollback [Redmine: #175253]
+	- 20220719@Danny: Init. SP rollback balance by refno [Redmine: #175253]
 						   
 Param's Explanation:
 */
