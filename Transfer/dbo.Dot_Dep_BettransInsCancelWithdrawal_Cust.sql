@@ -34,6 +34,7 @@ Revisions:
 	- 20151230@Cooper: add  @IsForced = 1  for execute sp Dot_BalanceDebitUpd
 	- 20211112@Sol: Support IPv6 - Phase 2 - Add [Convert Ipv6 to dummy IPv4] - [Redmine: #163963]
 	- 20211111@Sol: Split Transfer out of bettrans/Support IPv6 - [RedmineID: #164301]
+	- 20220721@Evan: Integrate new transid [Redmine: #175640]
 
 Input 
     1) CustID (For Double check) 
@@ -142,7 +143,7 @@ BEGIN
 				or a.username = left(@username, charindex('Super', @username)-1) +'ACC' + @currencyName + '01')
 END
 	
-DECLARE @TransID_TEMP as table(transid bigint, custid int, balance money )
+DECLARE @TransID_TEMP as table(RowID int IDENTITY(1,1), transid bigint, custid int, balance money )
 
 INSERT INTO @TransID_TEMP
 SELECT TransID , custid, (winlost - actual_stake) as balance 
@@ -188,35 +189,51 @@ BEGIN
 END
 
 ---update debit balance
-	DECLARE	@curCustID		INT,	
-			@curBalance		MONEY
+DECLARE	@curCustID		INT,	
+		@curBalance		MONEY
 		
 			
-	DECLARE CUR CURSOR FOR	SELECT	CustID, Balance 
-							FROM	@Balance_TEMP 
-							WHERE	IsPos = 0
-	OPEN CUR
-	FETCH NEXT FROM CUR INTO @curCustID, @curBalance 
-	WHILE @@FETCH_STATUS = 0
-	BEGIN
+DECLARE CUR CURSOR FOR	SELECT	CustID, Balance 
+						FROM	@Balance_TEMP 
+						WHERE	IsPos = 0
+OPEN CUR
+FETCH NEXT FROM CUR INTO @curCustID, @curBalance 
+WHILE @@FETCH_STATUS = 0
+BEGIN
 		
-		--EXEC Dot_BalanceUpdDebit @CustID = @curCustID, @Balance = @curBalance 
-		EXEC Dot_BalanceDebitUpd @CustID = @curCustID, @balance = @curBalance, @type = 2 , @IsForced = 1  -- 20151230 cooper add @IsForced = 1
+	--EXEC Dot_BalanceUpdDebit @CustID = @curCustID, @Balance = @curBalance 
+	EXEC Dot_BalanceDebitUpd @CustID = @curCustID, @balance = @curBalance, @type = 2 , @IsForced = 1  -- 20151230 cooper add @IsForced = 1
 
-		FETCH NEXT FROM CUR INTO @curCustID, @curBalance 
-	END
-	CLOSE CUR 
-	DEALLOCATE CUR
+	FETCH NEXT FROM CUR INTO @curCustID, @curBalance 
+END
+CLOSE CUR 
+DEALLOCATE CUR
 
 
 select @transdate = current_timestamp
-	
-INSERT INTO dbo.Transfer 
-	(custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, 
+
+DECLARE @Cur_TransID bigint;
+DECLARE @MaxRowID INT, @Cnt INT = 1;
+SElECT @MaxRowID = MAX(RowID) FROM @TransID_TEMP
+
+WHILE @Cnt <= @MaxRowID
+BEGIN
+	---get new transid 
+	EXEC Get_Bettrans_TransID @TransID = @NewTransID OUTPUT
+
+	SELECT @Cur_TransID = transid FROM @TransID_TEMP WHERe RowID = @Cnt
+
+	INSERT INTO dbo.Transfer 
+	(TransId, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, 
 	 creator,recommend,mrecommend,srecommend,currency, actualrate, currencyName, statusID, ip, RepUpdateTime)
-select custid, username, @refno, @transdate, @DCAN, @transdesc, actual_stake, winlost, @winlostdate,
-	 creator, recommend, mrecommend, srecommend, currency, @actualrate, currencyname, 131, @ip, SYSDATETIME()
-from dbo.Transfer t WITH(nolock) where transid in (select transid from @TransID_TEMP)
+	select @NewTransID, custid, username, @refno, @transdate, @DCAN, @transdesc, actual_stake, winlost, @winlostdate,
+		 creator, recommend, mrecommend, srecommend, currency, @actualrate, currencyname, 131, @ip, SYSDATETIME()
+	from dbo.Transfer t WITH(nolock) where transid = @Cur_TransID
+
+	SET @Cnt = @Cnt + 1
+	SET @Cur_TransID = NULL
+
+END
 
 if @@ERROR <> 0
 BEGIN
@@ -244,7 +261,6 @@ BEGIN
 	
 	return
 END
-Select @NewTransID = @@IDENTITY
 
 Update dbo.Transfer WITH(ROWLOCK, UPDLOCK)
 	SET transdesc = transdesc + ' (withdrawal cancelled)',
