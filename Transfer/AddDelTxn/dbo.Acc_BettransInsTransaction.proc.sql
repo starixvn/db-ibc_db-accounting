@@ -44,6 +44,7 @@ Revisions:
 	- 20180808@Helen: GET CODE FROM PRODUCTION + DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 	- 20190812@Bobby: AddDelTXN - Update checking constraint [Redmine:118530]
 	- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
+	- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
 	
 Param's Explanation:
 */
@@ -157,14 +158,14 @@ BEGIN
 	END
 
 	----Insert transaction
-	EXEC dbo.Acc_SelRefNo @refNo = @RefNo OUTPUT
+	EXEC Get_Refno_Transid @RefNo = @RefNo OUTPUT
 
-	select @RefNo = @RefNo + 100000000000
+	EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
 
-	INSERT INTO dbo.transfer( custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
+	INSERT INTO dbo.transfer( TransID, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 						  winlostdate, creator,recommend,mrecommend,srecommend,currency, currencyName,
 						  actualrate,ip,statusID, RepUpdateTime)
-	VALUES (@CustID, @username, @RefNo, current_timestamp, @bettype, @transdesc, @creditamt, @debitamt, 
+	VALUES (@TransID, @CustID, @username, @RefNo, current_timestamp, @bettype, @transdesc, @creditamt, @debitamt, 
 			@winlostdate, @UserID, @Recommend, @MRecommend, @SRecommend, @curr, @currName,
 			@actualrate, @ip,131,SYSDATETIME())
 
@@ -184,7 +185,6 @@ BEGIN
 		Select @ErrMsg = 'Insert trans failed. Please try again.', @ErrCode = 103		
 		return
 	END
-	Select @TransID = @@IDENTITY
 
 	-- Update Transfer Amount in bodb_report.dbo.rptStatement table before move bet day
 	

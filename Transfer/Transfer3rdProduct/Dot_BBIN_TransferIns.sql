@@ -35,6 +35,7 @@ AS
 
 		- 20211112@Sol: Support IPv6 - Phase 2 - Add [Convert Ipv6 to dummy IPv4] - [Redmine: #163963]
 		- 20211111@Sol: Split Transfer out of bettrans/Support IPv6 - [RedmineID: #164301]
+		- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
 	
 	Param's Explanation:
 	
@@ -180,8 +181,7 @@ BEGIN
 	------------------Insert trans into DB---------------------------------------------------------------
 	IF ISNULL(@BatchRefNo,0) = 0  	
 	BEGIN	
-		EXEC dbo.Acc_SelRefNo @RefNo = @RefNo OUTPUT
-		SELECT @RefNo = @RefNo + 100000000000			
+		EXEC Get_Refno_Transid @RefNo = @RefNo OUTPUT	
 	END
 	ELSE
 	BEGIN 
@@ -217,16 +217,14 @@ BEGIN
 			---get transid into table variable
 			DECLARE @Transfer TABLE(TransId BIGINT)
 
-			INSERT INTO dbo.Transfer 
-				(custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, 
-				 creator, recommend, mrecommend, srecommend, currency, actualrate, currencyName, statusID, ip, SerialNo, RepUpdateTime)
-			OUTPUT INSERTED.TransId INTO @Transfer(TransId)
-			VALUES 
-				(@CustID, @username, @RefNo, @transdate, @bettype, @transdesc, @winlost, @actual_stake, convert(nvarchar(10), @transdate, 120), 
-				 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency, @ActualRate, @CurrencyName, 131, @ip, @BetCheck, SYSDATETIME())
+			EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
 
-			---insert into new table transferinfo
-			SELECT TOP 1 @TransId = TransId FROM @Transfer
+			INSERT INTO dbo.Transfer 
+				(transid, custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, 
+				 creator, recommend, mrecommend, srecommend, currency, actualrate, currencyName, statusID, ip, SerialNo, RepUpdateTime)
+			VALUES 
+				(@TransID, @CustID, @username, @RefNo, @transdate, @bettype, @transdesc, @winlost, @actual_stake, convert(nvarchar(10), @transdate, 120), 
+				 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency, @ActualRate, @CurrencyName, 131, @ip, @BetCheck, SYSDATETIME())
 
 			INSERT INTO dbo.TransferInfo
 				(TransId, CheckerId, APositiontaking, MPositiontaking, SPositiontaking, EPositiontaking, 
@@ -237,7 +235,6 @@ BEGIN
 		END TRY
 		BEGIN CATCH
 		
-			
 			SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 107	
 
 			--Rollback transaction

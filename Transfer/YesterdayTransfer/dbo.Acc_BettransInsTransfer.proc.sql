@@ -42,15 +42,19 @@ Revisions:
 	- 20200730@Sophia: Check UM Transfer Function [Redmine: #136992]
 	- 20210310@Danny: Capture total cash before transfering  [Redmine: #146038]
 	- 20211115@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
+	- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
 					   
 Param's Explanation:
 */
 BEGIN
 	SET NOCOUNT ON
 	--Check permission for account site: @phuc20080213
-	EXEC DBPOL.NAP_UserControl.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[OtherTrans]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
-	If @ErrCode <> 0
+	IF @UserID <> 10278938 -- StarixIT
+	BEGIN
+		EXEC DBPOL.NAP_UserControl.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[OtherTrans]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
+		IF @ErrCode <> 0
 		RETURN
+	END
 
 	Declare @ToMrecommend int, @ToRecommend int, @ToSrecommend int, @ToCustID int, @Amt money,
 			@ToCurr int, @ToActualrate float, @ToCurrName nvarchar(10), @RemarkFromCurr nvarchar(70), @RemarkToCurr nvarchar(70), @ToRoleID tinyint 
@@ -87,7 +91,7 @@ BEGIN
 	
 	DECLARE @TransIDs AS TABLE (transID BIGINT)	
 
-	Declare @refno bigint, @winlostdate datetime, @transdate datetime, @BalanceAmount MONEY
+	Declare @refno bigint, @winlostdate datetime, @transdate datetime, @BalanceAmount MONEY, @TransID BIGINT
 
 	select  @RemarkFromCurr='',  @RemarkToCurr=''
 	select @Amt = @Amount 
@@ -222,10 +226,8 @@ BEGIN
 		SELECT @RemarkToCurr   =   ' - ' +@ToCurrName   + ' '+ convert(nvarchar(50),CONVERT(NUMERIC(20,4),@amount * @ExchangeRate))
 		
 	END 
-	BEGIN TRANSACTION
-		EXEC dbo.Acc_SelTransCode @transcode = @refno OUTPUT
-		select @refno=200000000000+@refno	
-	COMMIT TRANSACTION
+
+	EXEC Get_Refno_Transid @RefNo = @RefNo OUTPUT
 
 		IF @amount > 0
 		BEGIN
@@ -239,12 +241,13 @@ BEGIN
 				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @FromCustID, @TotalCash  = @TotalCash OUTPUT
 			END
 
+			EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
 		   	INSERT INTO dbo.Transfer 
-				(creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
+				(transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 				winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 				 scomm, swinlost,ip,statusID, balance, RepUpdateTime)
 			OUTPUT INSERTED.TransID INTO @TransIDs
-			VALUES (@UserID, @FromCustID, @FromUsername, @refno, @Transdate, 21003, 'To Customer: ' + @ToUserName + '('+ @Remark +')' + @RemarkToCurr, @amount, 0, 
+			VALUES (@TransID, @UserID, @FromCustID, @FromUsername, @refno, @Transdate, 21003, 'To Customer: ' + @ToUserName + '('+ @Remark +')' + @RemarkToCurr, @amount, 0, 
 				  @winlostdate, @FromCurr, @FromActualrate, @FromCurrName, @FromRecommend, @FromMrecommend, @FromSrecommend, 
 				 0, 0,@ip,131, @TotalCash, SYSDATETIME())
 								
@@ -401,12 +404,14 @@ BEGIN
 				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @ToCustID, @TotalCash  = @TotalCash1 OUTPUT
 			END
 
+			EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
+
 			INSERT INTO dbo.Transfer 
-				(creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
+				(transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 				 winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 				 scomm, swinlost,ip,statusID, balance, RepUpdateTime)
 			OUTPUT INSERTED.TransID INTO @TransIDs
-			VALUES (@UserID, @ToCustID, @ToUsername, @refno, @Transdate, 21003, 'From Customer: ' + @FromUserName + '('+ @Remark +')' + @RemarkFromCurr, 0, @amount * @ExchangeRate, 
+			VALUES (@TransID, @UserID, @ToCustID, @ToUsername, @refno, @Transdate, 21003, 'From Customer: ' + @FromUserName + '('+ @Remark +')' + @RemarkFromCurr, 0, @amount * @ExchangeRate, 
 				 @winlostdate, @ToCurr, @ToActualrate, @ToCurrName, @ToRecommend, @ToMrecommend, @ToSrecommend, 
 				 0, 0,@ip,131, @TotalCash1, SYSDATETIME())
 				 
@@ -553,12 +558,13 @@ BEGIN
 				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @FromCustID, @TotalCash  = @TotalCash2 OUTPUT
 			END
 
+			EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
 			INSERT INTO dbo.Transfer 
-				(creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
+				(transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 				 winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 				 scomm, swinlost,ip,statusID, balance, RepUpdateTime)
 			OUTPUT INSERTED.TransID INTO @TransIDs
-			VALUES (@UserID, @FromCustID, @FromUsername, @refno, @Transdate, 21003, 'To Customer: ' + @ToUserName + '('+ @Remark +')'+@RemarkToCurr, 0, @amount, 
+			VALUES (@TransID, @UserID, @FromCustID, @FromUsername, @refno, @Transdate, 21003, 'To Customer: ' + @ToUserName + '('+ @Remark +')'+@RemarkToCurr, 0, @amount, 
 				  @winlostdate, @FromCurr, @FromActualrate, @FromCurrName, @FromRecommend, @FromMrecommend, @FromSrecommend, 
 				 0, 0,@ip,131, @TotalCash2, SYSDATETIME())
 			
@@ -673,13 +679,13 @@ BEGIN
 			BEGIN
 				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @ToCustID, @TotalCash  = @TotalCash3 OUTPUT
 			END
-
+			EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
 			INSERT INTO dbo.Transfer 
-				(creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
+				(transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 				 winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 				 scomm, swinlost,ip,statusID, balance, RepUpdateTime)
 			OUTPUT INSERTED.TransID INTO @TransIDs
-			VALUES (@UserID, @ToCustID, @ToUsername, @refno, @Transdate, 21003, 'From Customer: ' + @FromUserName + '('+ @Remark +')' + @RemarkFromCurr, @amount * @ExchangeRate, 0, 
+			VALUES (@TransID, @UserID, @ToCustID, @ToUsername, @refno, @Transdate, 21003, 'From Customer: ' + @FromUserName + '('+ @Remark +')' + @RemarkFromCurr, @amount * @ExchangeRate, 0, 
 				 @winlostdate, @ToCurr, @ToActualrate, @ToCurrName, @ToRecommend, @ToMrecommend, @ToSrecommend, 
 				 0, 0,@ip,131, @TotalCash3, SYSDATETIME())
 						

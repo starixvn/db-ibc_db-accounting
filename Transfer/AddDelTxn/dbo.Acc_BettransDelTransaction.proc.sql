@@ -39,6 +39,7 @@ AS
 		- 20190812@Bobby: AddDelTXN - Update checking constraint [Redmine:118530]
 		- 20200828@Sol: hotfix - transfer - duplicated transid by page split/nolock [Redmine:140461]
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
+		- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
 */
 BEGIN
 
@@ -54,9 +55,9 @@ BEGIN
 				@liveindicator	BIT,
 				@transdesc		NVARCHAR(300),
 				@IsCollection   BIT
-				
-
+		
 		DECLARE @Reversal TABLE (	
+									Seq INT IDENTITY(1,1) PRIMARY KEY,
 									TransID BIGINT,
 									custid INT,
 									transdate DATETIME,
@@ -80,7 +81,7 @@ BEGIN
 									OddsID INT
 								)
 
-		DECLARE @TransIDs AS TABLE (transID BIGINT)
+		DECLARE @TransIDs AS TABLE (transID BIGINT, seq TINYINT)
 		DECLARE @tblUniqueCustIds TABLE (CustId INT)
 
 		----get unique custid to use in where condition of inserting @Reversal for index seek used
@@ -92,7 +93,7 @@ BEGIN
 		----insert transfer data into @Reversal
 		INSERT INTO @Reversal 
 			(	transid, custid, transdate, Username, refno, winlost, actual_stake, winlostdate, transdesc, creator,
-				bettype, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, ip, statusID, liveindicator, OddsID )
+				bettype, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, ip, statusID, liveindicator, OddsID)
 		SELECT	t.transid, custid, transdate, Username, refno, winlost, actual_stake, winlostdate, transdesc, creator,
 				bettype, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, ip, statusID, ISNULL(ti.IsDel,0), ISNULL(ti.IsCollection,0)
 		FROM	dbo.transfer t WITH (NOLOCK)
@@ -100,6 +101,11 @@ BEGIN
 		WHERE	refno = @refno  AND bettype > 20000 
 				AND custid IN (SELECT custid FROM @tblUniqueCustIds)
 
+		DECLARE @rowCount TINYINT = 0
+		SELECT @rowCount = COUNT(1) FROM @Reversal
+
+		INSERT INTO @TransIDs (seq, TransID)
+		EXEC Get_bettrans_transid_Range @total_transid = @rowCount
 
 		SELECT	top 1 @winlostdate = winlostdate, @liveindicator = liveindicator, @transdesc = transdesc, @IsCollection = OddsID
 		FROM	@Reversal
@@ -165,16 +171,16 @@ BEGIN
 				AND b.custid IN (SELECT custid FROM @tblUniqueCustIds)
 		GROUP BY b.CustID
 		
-	---- Begin reversal
+		---- Begin reversal
 		SET @transdesc = '(Reversal) ' + @transdesc
 		
 		-----transfer
-		INSERT INTO dbo.transfer (custid, transdate, Username, refno, winlost, actual_stake, winlostdate, transdesc, creator,
+		INSERT INTO dbo.transfer (transid, custid, transdate, Username, refno, winlost, actual_stake, winlostdate, transdesc, creator,
 								bettype, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, ip, statusID,RepUpdateTime)
-		OUTPUT  INSERTED.transid into @TransIDs
-		SELECT	custid, CURRENT_TIMESTAMP, Username, refno, actual_stake, winlost, winlostdate, @transdesc, @UserID,
+		SELECT	t.TransID, custid, CURRENT_TIMESTAMP, Username, refno, actual_stake, winlost, winlostdate, @transdesc, @UserID,
 				bettype, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, @IP, statusID, SYSDATETIME()
-		FROM	@Reversal
+		FROM	@Reversal r
+		INNER JOIN @TransIDs t ON r.Seq = t.seq
 
 		IF @@ERROR <> 0
 		BEGIN

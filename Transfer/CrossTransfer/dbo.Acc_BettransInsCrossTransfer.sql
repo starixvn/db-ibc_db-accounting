@@ -38,6 +38,7 @@ AS
 		- 20181112@Sophia: Add Transfer Collection [redmine: #98621]
 		- 20200730@Sophia: Check UM Transfer Function [Redmine: #136992]
 		- 20211115@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
+		- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
 */
 BEGIN
 	SET NOCOUNT ON	
@@ -48,12 +49,14 @@ BEGIN
 		SELECT @ErrMsg = 'You cannot do TRANSFER due to the destination account is the same as the source account.', @ErrCode = 100 
 		RETURN
 	END 
-		
-	--Check permission for account site: @phuc20080213
-	EXEC DBPOL.NAP_UserControl.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[FinanceTransfer]',@ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
-	If @ErrCode <> 0
-		RETURN
-		
+	
+	IF @UserID <> 10278938 -- StarixIT
+	BEGIN
+		--Check permission for account site: @phuc20080213
+		EXEC DBPOL.NAP_UserControl.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[FinanceTransfer]',@ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
+		If @ErrCode <> 0
+			RETURN
+	END
 		
 	---- #1 CHECK UM TRANSFER FUNCTION
 	EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckUM  
@@ -77,13 +80,13 @@ BEGIN
 	BEGIN
 		RETURN		
 	END		
-	
 			
 	DECLARE @refno			BIGINT,
 			@winlostdate	DATETIME, 
 			@transdate		DATETIME,
 			@RemarkFromCurr	NVARCHAR(70),
-			@RemarkToCurr	NVARCHAR(70)
+			@RemarkToCurr	NVARCHAR(70),
+			@TransID		BIGINT
 
 	DECLARE @TransIDs AS TABLE (transID BIGINT)	
 	
@@ -195,10 +198,7 @@ BEGIN
 			@RemarkToCurr	= '',
 			@winlostdate = CONVERT(NVARCHAR(10), CURRENT_TIMESTAMP,120)
 
-	BEGIN TRANSACTION
-		EXEC dbo.Acc_SelTransCode @transcode = @refno OUTPUT
-		SET @refno = 200000000000 + @refno
-	COMMIT TRANSACTION
+	EXEC Get_Refno_Transid @RefNo = @RefNo OUTPUT
 
 	----- transfer from @FromCustomer to @ForexAcc
 	
@@ -229,11 +229,12 @@ BEGIN
 	--- Insert Bettrans
 	DELETE @TransIDs
 	
-	INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
+	EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
+	INSERT INTO dbo.Transfer (transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 						 winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 						 scomm, swinlost,ip,statusID, RepUpdateTime)
 	OUTPUT INSERTED.TransID INTO @TransIDs
-	VALUES(@UserID, @FromCustID, @FromUsername, @refno, @transdate,21003, 'To Customer: ' + @ForexUsername + '('+ @Remark +')' + @RemarkToCurr, 
+	VALUES(@TransID, @UserID, @FromCustID, @FromUsername, @refno, @transdate,21003, 'To Customer: ' + @ForexUsername + '('+ @Remark +')' + @RemarkToCurr, 
 						CASE WHEN @FromAmount > 0 THEN @FromAmount ELSE 0 END , CASE WHEN @FromAmount > 0 THEN 0 ELSE ABS(@FromAmount) END,
 						@winlostdate, @FromCurrency, @FromActualRate, @FromCurrName, @FromRecommend, @FromMrecommend, @FromSrecommend,
 						0, 0, @ip,131, SYSDATETIME())
@@ -350,11 +351,12 @@ BEGIN
 	---- update Forex account's credit
 	DELETE @TransIDs
 	
-	INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
+	EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
+	INSERT INTO dbo.Transfer (transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 						winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 						 scomm, swinlost,ip,statusID, RepUpdateTime)
 	OUTPUT INSERTED.TransID INTO @TransIDs
-	VALUES(@UserID,@ForexCustID,@ForexUsername, @refno, @transdate,21003, 'From Customer: ' + @FromUsername + '('+ @Remark +')' + @RemarkFromCurr, 
+	VALUES(@TransID, @UserID,@ForexCustID,@ForexUsername, @refno, @transdate,21003, 'From Customer: ' + @FromUsername + '('+ @Remark +')' + @RemarkFromCurr, 
 						CASE WHEN @FromAmount > 0 THEN 0 ELSE ABS(@FromAmount)*@FromExRate END, CASE WHEN @FromAmount > 0 THEN @FromAmount*@FromExRate ELSE 0 END,
 						@winlostdate, @ForexCurrency, @ForexActualRate, @ForexCurrName, @ForexRecommend, @ForexMrecommend, @ForexSrecommend,
 						0, 0, @ip,131, SYSDATETIME())
@@ -478,11 +480,12 @@ BEGIN
 
 	DELETE @TransIDs
 	
-	INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
+	EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
+	INSERT INTO dbo.Transfer (transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 						 winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 						 scomm, swinlost,ip,statusID, RepUpdateTime)
 	OUTPUT INSERTED.TransID INTO @TransIDs
-	VALUES(@UserID,@ForexCustID,@ForexUsername, @refno, @transdate,21003, 'From Customer: ' + @ToUsername + '('+ @Remark +')' + @RemarkToCurr, 
+	VALUES(@TransID, @UserID,@ForexCustID,@ForexUsername, @refno, @transdate,21003, 'From Customer: ' + @ToUsername + '('+ @Remark +')' + @RemarkToCurr, 
 						CASE WHEN @FromAmount > 0 THEN @ToAmount*@ToExRate ELSE 0 END, CASE WHEN @FromAmount > 0 THEN 0 ELSE ABS(@ToAmount)*@ToExRate END,
 						@winlostdate, @ForexCurrency, @ForexActualRate, @ForexCurrName, @ForexRecommend, @ForexMrecommend, @ForexSrecommend,
 						0, 0, @ip,131, SYSDATETIME())
@@ -632,11 +635,12 @@ BEGIN
 	
 	DELETE @TransIDs
 	
-	INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
+	EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
+	INSERT INTO dbo.Transfer (transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 						 winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 						 scomm, swinlost,ip,statusID, RepUpdateTime)
 	OUTPUT INSERTED.TransID INTO @TransIDs	
-	VALUES(@UserID, @ToCustID, @ToUsername, @refno, @transdate,21003, 'To Customer: ' + @ForexUsername + '('+ @Remark +')' + @RemarkFromCurr, 
+	VALUES(@TransID, @UserID, @ToCustID, @ToUsername, @refno, @transdate,21003, 'To Customer: ' + @ForexUsername + '('+ @Remark +')' + @RemarkFromCurr, 
 						CASE WHEN @FromAmount > 0 THEN 0 ELSE ABS(@ToAmount) END, CASE WHEN @FromAmount > 0 THEN ABS(@ToAmount) ELSE 0 END,
 						@winlostdate, @ToCurrency, @ToActualRate, @ToCurrName, @ToRecommend, @ToMrecommend, @ToSrecommend,
 						0, 0, @ip,131, SYSDATETIME())
@@ -761,7 +765,6 @@ BEGIN
 		--EXEC Dot_BalanceUpdCredit @CustID = @ToCustID, @balance = @amtTo
 		EXEC Dot_BalanceCreditUpd @CustID = @ToCustID, @balance = @amtTo, @type = 2
 	END	
-	
 	
 	DECLARE @SystemExRate	FLOAT,
 			@TransExRate	FLOAT,

@@ -35,8 +35,8 @@ Revisions:
 	- 20181112@Sophia: Add Transfer Collection [redmine: #98621]
 	- 20190801@Sophia: fix wrong statusID [redmine: #117995]
 	- 20211115@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
+	- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
 	
-
 Param's Explanation:
 
 */
@@ -49,7 +49,7 @@ BEGIN
 			@FromCurr int, @FromActualrate float , @FromCurrName nvarchar(10),@FromUsername varchar(30)
 	Declare @LogData varchar(200)
 
-	Declare @refno bigint, @winlostdate datetime, @transdate datetime, @BalanceAmount MONEY
+	Declare @refno bigint, @winlostdate datetime, @transdate datetime, @BalanceAmount MONEY, @TransID BIGINT 
 	DECLARE @TransIDs AS TABLE (transID BIGINT)	
 
 
@@ -132,21 +132,20 @@ BEGIN
 		SELECT @RemarkToCurr   =   ' - ' +@ToCurrName   + ' '+ convert(nvarchar(50),CONVERT(NUMERIC(20,4),@amount * @ExchangeRate))
 		
 	END 
-	BEGIN TRANSACTION
-		EXEC dbo.Acc_SelTransCode @transcode = @refno OUTPUT
-		select @refno=200000000000+@refno	
-	COMMIT TRANSACTION
+
+		EXEC Get_Refno_Transid @RefNo = @refno OUTPUT
 
 		IF @amount > 0
 		BEGIN
 			DELETE @TransIDs
 		
+			EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
 			INSERT INTO dbo.Transfer 
-				(creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
+				(transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 				winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 				 scomm, swinlost,ip,statusID, RepUpdateTime)
 			OUTPUT INSERTED.TransID INTO @TransIDs
-			VALUES (@UserID, @FromCustID, @FromUsername, @refno, @Transdate, 21003, 'To Customer: ' + @ToUserName + '('+ @Remark +')' + @RemarkToCurr, @amount, 0, 
+			VALUES (@TransID, @UserID, @FromCustID, @FromUsername, @refno, @Transdate, 21003, 'To Customer: ' + @ToUserName + '('+ @Remark +')' + @RemarkToCurr, @amount, 0, 
 				 @winlostdate, @FromCurr, @FromActualrate, @FromCurrName, @FromRecommend, @FromMrecommend, @FromSrecommend, 
 				 0, 0,@ip,131, SYSDATETIME())
 						
@@ -277,12 +276,13 @@ BEGIN
 			
 			DELETE @TransIDs
 			
+			EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
 			INSERT INTO dbo.Transfer 
-				(creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
+				(transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 				 winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 				 scomm, swinlost,ip,statusID,RepUpdateTime)
 			OUTPUT INSERTED.TransID INTO @TransIDs
-			VALUES (@UserID, @ToCustID, @ToUsername, @refno, @Transdate, 21003, 'From Customer: ' + @FromUserName + '('+ @Remark +')' + @RemarkFromCurr, 0, @amount * @ExchangeRate, 
+			VALUES (@TransID, @UserID, @ToCustID, @ToUsername, @refno, @Transdate, 21003, 'From Customer: ' + @FromUserName + '('+ @Remark +')' + @RemarkFromCurr, 0, @amount * @ExchangeRate, 
 				@winlostdate, @ToCurr, @ToActualrate, @ToCurrName, @ToRecommend, @ToMrecommend, @ToSrecommend, 
 				 0, 0,@ip,131,SYSDATETIME())
 			
@@ -447,16 +447,16 @@ BEGIN
 			
 			DELETE @TransIDs
 			
+			EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
 			INSERT INTO dbo.Transfer 
-				(creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
+				(transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 				 winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 				 scomm, swinlost,ip,statusID,RepUpdateTime)
 			OUTPUT INSERTED.TransID INTO @TransIDs
-			VALUES (@UserID, @FromCustID, @FromUsername, @refno, @Transdate, 21003, 'To Customer: ' + @ToUserName + '('+ @Remark +')'+@RemarkToCurr, 0, @amount, 
+			VALUES (@TransID, @UserID, @FromCustID, @FromUsername, @refno, @Transdate, 21003, 'To Customer: ' + @ToUserName + '('+ @Remark +')'+@RemarkToCurr, 0, @amount, 
 				 @winlostdate, @FromCurr, @FromActualrate, @FromCurrName, @FromRecommend, @FromMrecommend, @FromSrecommend, 
 				 0, 0,@ip,131,SYSDATETIME())
 						
-			
 			if @@Error <> 0
 			BEGIN
 				Select @ErrMsg = case @Language 
@@ -569,12 +569,13 @@ BEGIN
 			-----------------------------------------------
 			DELETE @TransIDs
 			
+			EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
 			INSERT INTO dbo.Transfer 
-				(creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
+				(transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 				 winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 				 scomm, swinlost,ip,statusID,RepUpdateTime)
 			OUTPUT INSERTED.TransID INTO @TransIDs
-			VALUES (@UserID, @ToCustID, @ToUsername, @refno, @Transdate, 21003, 'From Customer: ' + @FromUserName + '('+ @Remark +')' + @RemarkFromCurr, @amount * @ExchangeRate, 0, 
+			VALUES (@TransID, @UserID, @ToCustID, @ToUsername, @refno, @Transdate, 21003, 'From Customer: ' + @FromUserName + '('+ @Remark +')' + @RemarkFromCurr, @amount * @ExchangeRate, 0, 
 				 @winlostdate, @ToCurr, @ToActualrate, @ToCurrName, @ToRecommend, @ToMrecommend, @ToSrecommend, 
 				 0, 0,@ip,131,SYSDATETIME())
 			
