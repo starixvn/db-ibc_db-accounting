@@ -1,7 +1,4 @@
 /*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet,bodbExtAccNet" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
 ALTER PROCEDURE [dbo].[Acc_StatementFinanceByRefno]
     @RefNo BIGINT,
     @FromDate DATETIME,
@@ -22,6 +19,7 @@ AS
 		- 20190114@Sophia: Move table transfer_fi from DBSUM.bodb_summary to DBARC.bodb_archive [Redmine: #105415]
 		- 20191113@Louis: Hot Fix Credit Collection BK [Redmine: #123812]
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
+		- 20220830@Danny: Remove orphan ticket [Redmine: #175253]
 
     Param's Explanation:
     
@@ -72,6 +70,7 @@ INSERT INTO @StatementTable(TransID, TransDate, TransType, TransDesc, TotalAmt, 
         LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = b.bettype 
     WHERE b.bettype > 20000 
         AND b.refno = @_RefNo
+		AND b.CustId <> 0
 
 IF NOT EXISTS( SELECT 1 FROM @StatementTable )
 BEGIN

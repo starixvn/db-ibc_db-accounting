@@ -54,7 +54,7 @@ BEGIN
 	IF @refno <> 0 
 	BEGIN
 		DECLARE	@winlostdate	DATETIME,
-				@liveindicator	BIT,
+				@IsDel	BIT,
 				@transdesc		NVARCHAR(300),
 				@IsCollection   BIT
 		
@@ -79,8 +79,8 @@ BEGIN
 				CurrencyName NVARCHAR(50),
 				ip VARCHAR(45) ,
 				statusID TINYINT,
-				liveindicator BIT,
-				OddsID INT
+				isDel BIT,
+				IsCollection BIT
 		)
 
 		DECLARE @TransIDs AS TABLE (transID BIGINT, seq TINYINT)
@@ -112,13 +112,14 @@ BEGIN
 		----insert transfer data into @Reversal
 		INSERT INTO @Reversal 
 			(	transid, custid, transdate, Username, refno, winlost, actual_stake, winlostdate, transdesc, creator,
-				bettype, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, ip, statusID, liveindicator, OddsID)
+				bettype, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, ip, statusID, isDel, IsCollection)
 		SELECT	t.transid, custid, transdate, Username, refno, winlost, actual_stake, winlostdate, transdesc, creator,
 				bettype, actualrate, recommend, mrecommend, srecommend, currency, CurrencyName, ip, statusID, ISNULL(ti.IsDel,0), ISNULL(ti.IsCollection,0)
 		FROM	dbo.transfer t WITH (NOLOCK)
 		LEFT JOIN dbo.TransferInfo ti WITH (NOLOCK) ON t.TransId = ti.TransId
 		WHERE	refno = @refno  AND bettype > 20000 
 				AND t.custid IN (SELECT custid FROM @SiteGroupInfo WHERE SiteDBGroupID = @SiteDBGroupID)
+				AND t.CustId <> 0
 
 		DECLARE @rowCount TINYINT = 0
 		SELECT @rowCount = COUNT(1) FROM @Reversal
@@ -126,7 +127,7 @@ BEGIN
 		INSERT INTO @TransIDs (seq, TransID)
 		EXEC Get_bettrans_transid_Range @total_transid = @rowCount
 
-		SELECT	top 1 @winlostdate = winlostdate, @liveindicator = liveindicator, @transdesc = transdesc, @IsCollection = OddsID
+		SELECT	top 1 @winlostdate = winlostdate, @isDel = isDel, @transdesc = transdesc, @IsCollection = IsCollection
 		FROM	@Reversal
 
 		--------------------------vvvvv-------------------------------------
@@ -163,7 +164,7 @@ BEGIN
 		----------------------^^^^^^----------------------------------
 
 		------ Check transaction had been deleted or not
-		IF @liveindicator = 1
+		IF @IsDel = 1
 		BEGIN 
 			SELECT	@ErrMsg ='Unable to delete this transaction due to it is marked as "Deleted"!',
 					@ErrCode = 102
@@ -322,7 +323,6 @@ BEGIN
 					SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
 					WHERE  transid IN (SELECT transid FROM @TransIDs)
 						
-					--20150808@Elodie: rollback liveindicator = 0
 					UPDATE	dbo.TransferInfo WITH (ROWLOCK) 
 					SET		IsDel = 0, RepUpdateTime = SYSDATETIME()
 					WHERE	transid IN (Select transid from @Reversal)

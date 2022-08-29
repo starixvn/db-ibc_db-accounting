@@ -26,7 +26,7 @@ BEGIN
 	SELECT t.transid, t.CustID, ISNULL(u.IsDel,0), Currency, bettype
 	FROM dbo.transfer t WITH(NOLOCK) 
 	LEFT JOIN dbo.transferInfo u WITH(NOLOCK) ON t.TransId = u.TransId
-	WHERE t.refno = @refno
+	WHERE t.refno = @refno AND t.CustID <> 0
 
 
 	IF EXISTS (SELECT 1 FROM @transferDetail WHERE IsDel = 1)
