@@ -32,7 +32,8 @@ AS
   - 20200414@Sophia: add BBIN bettype [Redmine: #131358]  
   - 20210819@Evan: NAP - Prevent reversal near BU [Redmine: #160439]
   - 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
-  
+  - 20220830@Danny: add filter to Remove orphan ticket [Redmine: #175253]
+
     Param's Explanation:  
         - @FilterBy: 1:winlostdate - 2:transdate  
         - @IncludeAccBal: 1:include - 0:exclude  
@@ -175,6 +176,7 @@ BEGIN
 			WHERE  b.refno = @_RefNo
 				AND b.bettype >= 20000 
 				AND (@GroupId = 1 OR ISNULL(cr.IsView, ~l.IsInternal) = 1 OR (@GroupId = 0 AND ISNULL(cr.IsView, 1) = 1))
+				AND b.CustId <> 0
 
             
             

@@ -38,7 +38,7 @@ BEGIN
 	SELECT	t.transid, t.custid, t.Winlost, t.Actual_Stake, ISNULL(ti.IsDel,0) IsDel, winlostdate, TransDesc
 	FROM	dbo.Transfer t WITH (NOLOCK)
 	LEFT JOIN dbo.TransferInfo ti WITH (NOLOCK) ON t.TransId = ti.TransId
-	WHERE	refno = @refno AND bettype > 20000
+	WHERE	refno = @refno AND bettype > 20000 AND custid <> 0
 
 	IF (	@Refno IS NULL  -- Refno is invalid
 			OR @Refno = 0   -- Refno is invalid
@@ -194,6 +194,8 @@ BEGIN
 				RETURN
 		END CATCH
 	COMMIT TRANSACTION
+
+	EXEC DBCTG.bodb02.dbo.Acc_ExchangeRateUpdisDeleted @refNo = @refno, @isDeleted = 0
 
 	BEGIN TRY
 		EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer @UserID = @UserID, @FromCustID = 0, @ToCustID = 0, @IP = @IP, @Doing = @LogData

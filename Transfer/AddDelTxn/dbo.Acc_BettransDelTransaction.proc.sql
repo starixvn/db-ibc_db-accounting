@@ -90,7 +90,7 @@ BEGIN
 		INSERT INTO @tblUniqueCustIds (custid)
 		SELECT	DISTINCT custid
 		FROM	dbo.Transfer WITH (NOLOCK)
-		WHERE	refno = @refno AND bettype > 20000
+		WHERE	refno = @refno AND bettype > 20000 AND CustId <> 0
 
 		-- handle sitegroup DB
 		DECLARE @SiteGroupInfo TABLE(CustID INT, SiteDBGroupID SMALLINT, LinkedServerName  VARCHAR(512), ClientAccessName VARCHAR(512), AGIP VARCHAR (50))
@@ -119,7 +119,6 @@ BEGIN
 		LEFT JOIN dbo.TransferInfo ti WITH (NOLOCK) ON t.TransId = ti.TransId
 		WHERE	refno = @refno  AND bettype > 20000 
 				AND t.custid IN (SELECT custid FROM @SiteGroupInfo WHERE SiteDBGroupID = @SiteDBGroupID)
-				AND t.CustId <> 0
 
 		DECLARE @rowCount TINYINT = 0
 		SELECT @rowCount = COUNT(1) FROM @Reversal
@@ -423,7 +422,7 @@ BEGIN
 		CLOSE CS_MemBal  
 		DEALLOCATE CS_MemBal  
 
-		EXEC dbo.Acc_ExchangeRateUpdisDeleted @refNo = @refno
+		EXEC DBCTG.bodb02.dbo.Acc_ExchangeRateUpdisDeleted @refNo = @refno
 
 		declare @LogData varchar(200)
 		Select @LogData = 'Delete transaction for custid :' + convert(varchar(20), @CustID) + ' Ref.NO ' + convert(varchar(20), @RefNo)

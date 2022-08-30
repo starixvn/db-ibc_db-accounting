@@ -23,6 +23,7 @@ Revisions:
 	- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 	- 20220315@Evan: SQL Server Upgrade STRING_SPLIT [Redmine: #168783]
 	- 20220825@Danny: change code to support SiteDB [Redmine: #175253]
+	- 20220830@Danny: add filter to Remove orphan ticket [Redmine: #175253]
 	
 Param's Explanation:
 	@TransIDs   : '1111,2341,...'
@@ -48,6 +49,7 @@ BEGIN
 	WHERE	refno IN (	SELECT	CONVERT(bigint, value)
 						FROM	STRING_SPLIT (@Refnos, ',' ))
 			AND bettype > 20000 
+			AND CustID <> 0
 	
 	-- get CustList by SiteDbGroupID
 	INSERT INTO @CustList(CustID) SELECT DISTINCT CustID FROM  @tmpTransID
