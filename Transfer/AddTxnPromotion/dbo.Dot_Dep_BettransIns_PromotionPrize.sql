@@ -35,7 +35,29 @@ AS
 */
 BEGIN
 	SET NOCOUNT ON
+	
+	DECLARE @Cust_SiteDBGroupID SMALLINT, @Server_SiteDBGroupID SMALLINT;
+	DECLARE @SiteGroupInfo TABLE
+	(	
+		CustID INT,
+		SiteDBGroupID SMALLINT,
+		LinkedServerName  VARCHAR(512),
+		ClientAccessName VARCHAR(512),
+		AGIP VARCHAR (50)
+	)
+	INSERT INTO @SiteGroupInfo (SiteDBGroupID, LinkedServerName, ClientAccessName, AGIP)
+	EXEC CustDB.dbo.Acc_SiteDBConfigSel @CustID = @CustID
 
+	SELECT @Cust_SiteDBGroupID = SiteDBGroupID FROM @SiteGroupInfo
+	SELECT @Server_SiteDBGroupID = dbo.f_Get_SiteDBGroupID()
+	
+	--Check the SiteDBGroupID of CustID and Server is match
+	IF ISNULL(@Cust_SiteDBGroupID,-1) <> @Server_SiteDBGroupID
+	BEGIN
+		SELECT @ErrMsg = 'Executing on invalid server. Please check SiteDBGroupID information.', @ErrCode = 107	
+		RETURN		
+	END
+	
 	DECLARE @username		VARCHAR(50)
 		, @currency			TINYINT
 		, @currencyName		VARCHAR(5)
