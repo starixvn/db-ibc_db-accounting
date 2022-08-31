@@ -824,7 +824,7 @@ BEGIN
 		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
 		WHERE  TransID IN (SELECT TransID FROM @TransIDs)
 
-		IF @amount > 0
+		IF @Amt > 0
 		BEGIN
 			IF @FromRoleID = 1
 				EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @amount, @type = 2, @IsForced = 1
@@ -833,7 +833,7 @@ BEGIN
 				EXEC Dot_BalanceCreditUpd @CustID = @ToCustID, @balance = @BalanceAmount, @type = 2
 		END
 
-		IF @amount < 0
+		IF @Amt < 0
 		BEGIN
 			IF @FromRoleID = 1
 				EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @amount, @type = 2

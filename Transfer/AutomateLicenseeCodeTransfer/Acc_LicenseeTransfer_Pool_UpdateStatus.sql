@@ -1,4 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCTG-bodb02" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE dbo.Acc_LicenseeTransfer_Pool_UpdateStatus
 	@Status		VARCHAR(10),
 	@Error		VARCHAR(200),

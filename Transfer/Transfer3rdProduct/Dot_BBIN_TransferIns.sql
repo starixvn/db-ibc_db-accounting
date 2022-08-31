@@ -36,6 +36,7 @@ AS
 		- 20211112@Sol: Support IPv6 - Phase 2 - Add [Convert Ipv6 to dummy IPv4] - [Redmine: #163963]
 		- 20211111@Sol: Split Transfer out of bettrans/Support IPv6 - [RedmineID: #164301]
 		- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
+		- 20220801@Danny: change code to support SiteDB [Redmine: #175253]
 	
 	Param's Explanation:
 	
@@ -216,8 +217,6 @@ BEGIN
 		BEGIN TRY
 			---get transid into table variable
 			DECLARE @Transfer TABLE(TransId BIGINT)
-
-			EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
 
 			EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
 

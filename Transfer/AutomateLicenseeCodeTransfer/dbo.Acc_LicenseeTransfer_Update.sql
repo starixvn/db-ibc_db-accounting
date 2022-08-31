@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-bodb_Licensee" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-bodb_Licensee" executers="bodbAdminNet" isFunction="0" isNested="1"></info>*/
 CREATE PROCEDURE dbo.Acc_LicenseeTransfer_Update
 	@LicenseeInfo		VARCHAR(MAX)
 	,@LastMonthDate		SMALLDATETIME

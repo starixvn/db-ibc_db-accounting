@@ -19,6 +19,7 @@ AS
 		- 20190718@Percy: Update total opening/closing balance [RedmineID: #109293]
 		- 20190819@Sophia: Fix bug when add TXN on BU day [Redmine: #118530]
 		- 20190917@Bobby: Implement headline - Statement [Redmine: #119289]
+		- 20220809@Danny: Handle NULL Transfer Amt [Redmine: #175253]
     
 	Param's Explanation:
 */
@@ -226,7 +227,7 @@ BEGIN
 		BEGIN TRY
 			UPDATE r WITH (ROWLOCK)
 			SET	r.openingbalance = r.openingbalance + CASE WHEN r.custid = @custid AND r.winlostdate > @winlostdate THEN @Amount ELSE 0 END
-				,r.transferamt = r.transferamt + CASE WHEN r.custid = @custid AND r.winlostdate = @winlostdate THEN @Amount ELSE 0 END
+				,r.transferamt = ISNULL(r.transferamt, 0) + CASE WHEN r.custid = @custid AND r.winlostdate = @winlostdate THEN @Amount ELSE 0 END
 				,r.closingbalance = r.closingbalance + CASE WHEN r.custid = @custid THEN @Amount ELSE 0 END
 				,r.OpeningTotalBalance = r.OpeningTotalBalance + CASE WHEN r.winlostdate > @winlostdate THEN @Amount ELSE 0 END
 			FROM @tblCustId c

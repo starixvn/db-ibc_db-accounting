@@ -238,13 +238,13 @@ BEGIN
 
 		-----Transfer_Coll 
 		IF @IsCollection = 1
-		INSERT INTO Transfer_Coll 
-				(CustId, WinlostDate, TransDate, Bettype, Debit, Credit, Currency, ActualRate, 
-				TransID, RefNo, Username, Recommend, MRecommend, SRecommend, Creator ,TransDesc, IP , RepUpdateTime)
-		SELECT 	CustId, WinlostDate, TransDate, Bettype, Actual_Stake, Winlost, Currency, ActualRate, 
-				TransID, RefNo, Username, Recommend, MRecommend, SRecommend, Creator ,TransDesc, IP, SYSDATETIME()
-		FROM 	dbo.transfer WITH (NOLOCK) 
-		WHERE 	TransID IN (SELECT transid FROM @TransIDs)
+			INSERT INTO Transfer_Coll 
+					(CustId, WinlostDate, TransDate, Bettype, Debit, Credit, Currency, ActualRate, 
+					TransID, RefNo, Username, Recommend, MRecommend, SRecommend, Creator ,TransDesc, IP , RepUpdateTime)
+			SELECT 	CustId, WinlostDate, TransDate, Bettype, Actual_Stake, Winlost, Currency, ActualRate, 
+					TransID, RefNo, Username, Recommend, MRecommend, SRecommend, Creator ,TransDesc, IP, SYSDATETIME()
+			FROM 	dbo.transfer WITH (NOLOCK) 
+			WHERE 	TransID IN (SELECT transid FROM @TransIDs)
 		
 		IF @@ERROR <> 0
 		BEGIN
@@ -259,6 +259,10 @@ BEGIN
 			UPDATE TransferInfo WITH(ROWLOCK)
 			SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
 			WHERE  transid IN (SELECT transid FROM @TransIDs)
+
+			UPDATE	transferInfo WITH (ROWLOCK) 
+			SET		isDel = 0, RepUpdateTime = SYSDATETIME()
+			WHERE	transid IN (Select transid from @Reversal)
 					
 			SELECT	@ErrMsg ='Delete the transaction unsuccessfully!',
 					@ErrCode = 104

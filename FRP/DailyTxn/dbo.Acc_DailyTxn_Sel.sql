@@ -21,7 +21,6 @@ Revisions:
 	- 20111015@Lukas: remove paging
 	- 20181105@Louis: Credit Collection Summary  [RedmineID: #98621]
 	- 20211115@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
-	- 20220830@Danny: add filter to Remove orphan ticket [Redmine: #175253]
 
 Param's Explanation: Daily transaction
 	@Type   : Dep, Trac, ..
@@ -83,7 +82,6 @@ begin
 			when @checkerID = 0 then ISNULL(t.CheckerId,0)
 			when @checkerID = 1 then @checkerID  				
 			end = @checkerID 
-		AND b.CustId <> 0
 	
 end 
 ELSE 
@@ -119,7 +117,6 @@ BEGIN
 		AND case when @Creator <> '' then creator.username else @Creator end = @Creator 
 		and case when @checkerName <> '' then t.CheckerName else @checkerName end = @checkerName 
 		and ISNULL(t.CheckerId,0)<> 0 
-		AND b.CustId <> 0
 END 
 
 

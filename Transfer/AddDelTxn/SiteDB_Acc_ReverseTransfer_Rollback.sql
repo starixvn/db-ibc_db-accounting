@@ -142,7 +142,7 @@ BEGIN
 			WHERE	transid IN (Select transid from @Reversal)
 
 			UPDATE	dbo.TransferInfo WITH (ROWLOCK) 
-			SET		IsDel = 0, RepUpdateTime = SYSDATETIME()
+			SET		IsDel = 1, RepUpdateTime = SYSDATETIME()
 			WHERE	transid IN (Select transid from @remove)
 
 			DECLARE @tblPending TABLE (CustID INT, Balance	MONEY)

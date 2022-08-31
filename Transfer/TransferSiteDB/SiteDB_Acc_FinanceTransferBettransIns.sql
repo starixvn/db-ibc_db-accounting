@@ -819,17 +819,17 @@ BEGIN
 
 		IF  @FromSiteDBGroupID = @SiteDBGroupID
 		BEGIN
-			IF @amount > 0 AND @FromRoleID = 1
+			IF @Amt > 0 AND @FromRoleID = 1
 				EXEC Dot_BalanceDebitUpd @CustID = @FromCustID, @balance = @amount, @type = 2, @IsForced = 1, @errCode = @ErrCode OUTPUT
-			IF @amount < 0 AND @FromRoleID = 1
+			IF @Amt < 0 AND @FromRoleID = 1
 				EXEC Dot_BalanceCreditUpd @CustID = @FromCustID, @balance = @amount, @type = 2
 		END
 
 		IF  @ToSiteDBGroupID = @SiteDBGroupID
 		BEGIN
-			IF @amount > 0 AND @ToRoleID = 1
+			IF @Amt > 0 AND @ToRoleID = 1
 				EXEC Dot_BalanceCreditUpd @CustID = @ToCustID, @balance = @BalanceAmount, @type = 2
-			IF @amount < 0 AND @ToRoleID = 1
+			IF @Amt < 0 AND @ToRoleID = 1
 				EXEC Dot_BalanceDebitUpd @CustID = @ToCustID, @balance = @BalanceAmount, @type = 2, @IsForced = 1, @errCode = @ErrCode OUTPUT
 		END
 		RETURN
