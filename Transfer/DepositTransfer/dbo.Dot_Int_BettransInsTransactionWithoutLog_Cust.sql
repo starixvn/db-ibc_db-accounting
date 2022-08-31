@@ -1,4 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="Dot_Member" isFunction="0" isNested="1"></info>*/
+/*<info serverAlias="DBTXN-bodb02" executers="Dot_Member,Dot_Evolution" isFunction="0" isNested="1"></info>*/
 ALTER PROCEDURE [dbo].[Dot_Int_BettransInsTransactionWithoutLog_Cust]
 	@amount				MONEY,	
 	@custid				INT,
