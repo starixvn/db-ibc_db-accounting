@@ -77,7 +77,7 @@ BEGIN
 		AGIP VARCHAR (50)
 	)
 	INSERT INTO @SiteGroupInfo (SiteDBGroupID, LinkedServerName, ClientAccessName, AGIP)
-	EXEC CustDB.dbo.Acc_SiteDBConfigSel @CustID = @custid
+	EXEC DBCUST.CustDB.dbo.Acc_SiteDBConfigSel @CustID = @custid
 
 	SELECT @Cust_SiteDBGroupID = SiteDBGroupID FROM @SiteGroupInfo
 	SELECT @Server_SiteDBGroupID = dbo.f_Get_SiteDBGroupID()
