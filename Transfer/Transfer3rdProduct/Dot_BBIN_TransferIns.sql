@@ -36,7 +36,6 @@ AS
 		- 20211112@Sol: Support IPv6 - Phase 2 - Add [Convert Ipv6 to dummy IPv4] - [Redmine: #163963]
 		- 20211111@Sol: Split Transfer out of bettrans/Support IPv6 - [RedmineID: #164301]
 		- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
-		- 20220801@Danny: change code to support SiteDB [Redmine: #175253]
 	
 	Param's Explanation:
 	
@@ -239,13 +238,8 @@ BEGIN
 			SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 107	
 
 			--Rollback transaction
-			UPDATE dbo.Transfer WITH (ROWLOCK) 
-			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
-			WHERE TransID = @TransID
-
-			UPDATE TransferInfo WITH(ROWLOCK)
-			SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-			WHERE TransID = @TransID
+			DELETE dbo.Transfer WITH (ROWLOCK) WHERE TransID = @TransID
+			DELETE dbo.TransferInfo WITH (ROWLOCK) WHERE TransID = @TransID
 
 			SELECT @TransID = 0
 
@@ -281,13 +275,8 @@ BEGIN
 			SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 108	
 			
 			--Rollback transaction
-			UPDATE dbo.Transfer WITH (ROWLOCK) 
-			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
-			WHERE TransID = @TransID
-
-			UPDATE TransferInfo WITH(ROWLOCK)
-			SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-			WHERE TransID = @TransID
+			DELETE dbo.Transfer WITH (ROWLOCK) WHERE TransID = @TransID
+			DELETE dbo.TransferInfo WITH (ROWLOCK) WHERE TransID = @TransID
 
 			--rollback balance
 			IF @Amount < 0 
