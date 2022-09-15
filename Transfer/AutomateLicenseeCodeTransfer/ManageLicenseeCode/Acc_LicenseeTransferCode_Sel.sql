@@ -22,6 +22,7 @@ AS
 		- 20210330@Sol: NAP - Enhance Manage Licensee Code to support change base currency of licensees - Phase 2 - [Redmine: #152056]
 		- 20210506@Sol: NAP - Remove Saba789 from auto mail informing the code needed - [Redmine: #154676]
 		- 20210802@Sol: NAP - Remove Athena000 and Sabademo from auto mail informing the code needed - [Redmine: #159565]
+		- 20220901@Danny: NAP - Change code to support test Licensee [Redmine: #175253]
 
 	Param Info:
 		- @MoveBetsDay: movebet get from sp [age_SelBalanceUpDay]
@@ -73,6 +74,10 @@ BEGIN
 	IF EXISTS (SELECT TOP 1 1 FROM dbo.strSplit(@StatusIds,',') t WHERE t.val IN (3, 4))
 	BEGIN
 
+		DECLARE @TestLicenseeIDs TABLE (LicenseeId INT)
+		INSERT INTO @TestLicenseeIDs(LicenseeId)
+		SELECT LicenseeId FROM dbo.Licensees l WITH(NOLOCK) WHERE l.LicenseeName IN ('Athena000','SampleSite','spondemo')
+
 		INSERT INTO @tblLicenseeList(LicenseeId, LicenseeName, CustSuperId)
 		SELECT l.LicenseeID, l.LicenseeName, cs.custid
 		FROM dbo.Licensees l WITH(NOLOCK)
@@ -86,7 +91,7 @@ BEGIN
 					lc.LicenseeName IS NULL
 					OR @BillingMonth NOT BETWEEN lc.FromDate AND lc.ToDate
 				)
-			AND cs.currency <> 20
+			AND (cs.currency <> 20 OR l.LicenseeName IN ('Athena000','SampleSite','spondemo') )
 			AND (
 					l.LicenseeID IN (SELECT val FROM dbo.strSplit(@LicenseeIds,',') t) 
 					OR @LicenseeIds = 'ALL'
@@ -105,7 +110,7 @@ BEGIN
 			INNER JOIN @tblLicenseeList t
 				ON i.srecommend = t.CustSuperId
 		WHERE
-			la.Currency <> 20 
+			(la.Currency <> 20  OR la.LicenseeId IN (SELECT z.LicenseeID FROM @TestLicenseeIDs z) )
 			AND (
 					la.LicenseeID IN (SELECT val FROM dbo.strSplit(@LicenseeIds,',') t) 
 					OR @LicenseeIds = 'ALL'
@@ -186,7 +191,10 @@ BEGIN
 			lc.LicenseeID IN (SELECT val FROM dbo.strSplit(@LicenseeIds,',') t)
 			OR @LicenseeIds = 'ALL'
 		)
-		AND lc.LicenseeName NOT IN ('Saba789','Athena000','Sabademo','spondemo')
+		AND (
+				(lc.LicenseeName NOT IN ('Saba789','Athena000','Sabademo','spondemo','sampleSite') AND @ForEmail = 1)
+				OR @ForEmail = 0
+			)
 
 	--return data
 	SELECT @TotalRows = MAX(RowNumber) FROM #LicenseeCodeFinal

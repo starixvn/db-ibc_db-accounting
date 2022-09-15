@@ -1,4 +1,4 @@
-/*<info serverAlias="DBBOF-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView,bodbExtAccNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBBOF-bodb02,DBSIG-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView,bodbExtAccNet" isFunction="0" isNested="0"></info>*/
 
 ALTER PROCEDURE [dbo].[Acc_OutstandingMemberSel]
 	@CustId			INT
@@ -13,6 +13,7 @@ AS
 	Revisions:
 		- 20190723@Percy: Initialize SP [RedmineID: #117334]
 		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
+		- 20220802@Sophia: Scale out DBTrans, add metadata call at SiteDB [RedmineID: #175253]
 		
 */
 

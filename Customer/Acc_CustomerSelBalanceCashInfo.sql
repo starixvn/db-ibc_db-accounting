@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView,bodbExtAccNet" isFunction="0" isNested="1"></info>*/
+/*<info serverAlias="DBAGE-bodb02,DBSIG-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView,bodbExtAccNet" isFunction="0" isNested="1"></info>*/
 ALTER PROCEDURE [dbo].[Acc_CustomerSelBalanceCashInfo]
 	@CustId INT
 AS
@@ -18,6 +18,7 @@ AS
 		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
+		- 20220801@Sophia: Scale out DBTRANS, add metadata at SiteDB, remove DisableAutoMPT [RedmineID: #175253]
 	
 	Param's Explaination:
 		- @CustId: custid
@@ -49,7 +50,7 @@ BEGIN
 
 	DECLARE @roleID TINYINT, @srecommend INT, @ID INT = 1
 
-	SELECT  @roleID = roleid , @srecommend = srecommend FROM dbo.custInfo WITH(NOLOCK) WHERE custid = @custID
+	SELECT  @roleID = roleid , @srecommend = srecommend FROM DBCUST.CustDB.dbo.custInfo WITH(NOLOCK) WHERE custid = @custID
 	
 	IF ISNULL(@roleID, 5) > 4
 	BEGIN
@@ -281,10 +282,7 @@ BEGIN
     END
     ELSE IF @roleid = 3
     BEGIN
-	    DECLARE @DisableAutoMPT BIT
-	    --Get disable auto MPT
-	    SELECT @DisableAutoMPT = DisableAutoMPT FROM CustMaster (nolock) WHERE CustID = @CustID
-
+	   
 	    SELECT @UsedCredit = SUM(credit)  
 	    FROM DBCUST.CustDB.dbo.custinfo WITH(NOLOCK) 
 	    WHERE roleid=2 
@@ -419,8 +417,7 @@ BEGIN
 			SUM(memberOutstanding) AS customerOutstanding,
 			SUM(PendingTransfer3rd) AS PendingTransfer3rd,
 			@transdate AS lastTxn,
-			@UsedCredit AS masterUsedCredit,
-			ISNULL(@DisableAutoMPT,0) as DisableAutoMPT
+			@UsedCredit AS masterUsedCredit
 		FROM #BalanceInfo
     END
     ELSE IF @roleid = 4
@@ -489,7 +486,7 @@ BEGIN
 		INSERT INTO #BalanceInfo (superCash, yesterday_superCash, superOutstanding, masterCash, yesterday_masterCash, agentCash, yesterday_agentCash, memberCash, yesterday_memberCash, memberOutstanding)
 		SELECT 0, 0, SUM(ABS(actual_stake*spositiontaking)), 0, 0, 0, 0, 0, 0, SUM(ABS(actual_stake))
 	    FROM dbo.translog t WITH(NOLOCK)
-		WHERE EXISTS (SELECT TOP 1 1 FROM dbo.custInfo c WITH(NOLOCK) WHERE c.srecommend = @custid AND c.roleid = 3 AND t.mrecommend = c.custid)
+		WHERE srecommend = @custid
 			AND statusID IN (0,1)
 
 		-- bettrans 

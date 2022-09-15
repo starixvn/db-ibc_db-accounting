@@ -45,6 +45,7 @@ Revisions:
 	- 20190812@Bobby: AddDelTXN - Update checking constraint [Redmine:118530]
 	- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 	- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
+	- 20220801@Danny: change code to support SiteDB [Redmine: #175253]
 	
 Param's Explanation:
 */
@@ -181,7 +182,11 @@ BEGIN
 			END
 		END
 
-		delete dbo.transfer WITH(ROWLOCK) where custid = @custid and refno = @refno
+		UPDATE dbo.Transfer WITH(ROWLOCK)
+		SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, SRecommend = 0, MRecommend = 0	
+		WHERE custid = @custid AND RefNo = @RefNo
+
+
 		Select @ErrMsg = 'Insert trans failed. Please try again.', @ErrCode = 103		
 		return
 	END
@@ -209,7 +214,10 @@ BEGIN
 				END
 			END
 
-			delete dbo.Transfer WITH(ROWLOCK) where custid = @custid and refno = @refno
+			UPDATE dbo.Transfer WITH(ROWLOCK)
+			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, SRecommend = 0, MRecommend = 0	
+			WHERE custid = @custid AND RefNo = @RefNo
+
 			Select @ErrMsg = 'Insert trans failed. Please try again.', @ErrCode = 104		
 			return
 		END
@@ -221,7 +229,17 @@ BEGIN
 	BEGIN 
 		IF @balance > 0 
 		BEGIN 
-			EXEC Dot_BalanceCreditUpd @CustID = @custid, @balance = @balance, @type = 2
+			EXEC Dot_BalanceCreditUpd @CustID = @custid, @balance = @balance, @type = 2,  @errCode = @ErrCode OUTPUT
+			IF @ErrCode <> 0 
+			BEGIN
+				Select @ErrMsg = 'Insert trans failed. Please try again.', @ErrCode = 104
+
+				UPDATE dbo.Transfer WITH(ROWLOCK)
+				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, SRecommend = 0, MRecommend = 0	
+				WHERE custid = @custid AND RefNo = @RefNo
+
+				RETURN
+			END
 		END
 	END
 
