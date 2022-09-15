@@ -16,6 +16,7 @@ Original:
 
 	Revisions:
 		- 20210204@Danny: Initialize SP [Redmine: #150053]
+		- 20220811@Danny: Replicate data dbo.Acc_ManualMovebetConfig [Redmine: #176449] 
 		
 	Param's Explanation:
 	- @FromDate	: User input in UI
@@ -61,7 +62,7 @@ BEGIN
 	DECLARE @MBU TABLE ( MoveBetsDay SMALLDATETIME, BalanceUpDay SMALLDATETIME)
 
 	INSERT INTO @MBU (BalanceUpDay, MoveBetsDay)
-	EXEC DBEXT.bodb02.dbo.Age_SelBalanceUpDay
+	EXEC dbo.Age_SelBalanceUpDay
 
 
 	SELECT @MoveBetsDay = MoveBetsDay, @BalanceUpDay = BalanceUpDay
@@ -402,14 +403,15 @@ BEGIN
 					@IsBackDay7 = IsBackDay7
 			FROM #input WHERE ID = @i
 
-			EXEC dbo.ExecRep_11  @MBDate = @MBDate, 
+			EXEC DBPRO.bodb02.dbo.ExecRep_APL_07  @MBDate = @MBDate, 
 								@IsBackDay1 = @IsBackDay1,
 								@IsBackDay2 = @IsBackDay2,
 								@IsBackDay3 = @IsBackDay3,
 								@IsBackDay4 = @IsBackDay4,
 								@IsBackDay5 = @IsBackDay5,
 								@IsBackDay6 = @IsBackDay6,
-								@IsBackDay7 = @IsBackDay7
+								@IsBackDay7 = @IsBackDay7,
+								@TableName  = 'Acc_ManualMovebetConfig'
 			SELECT @i = @i + 1
 		END
 	END TRY
