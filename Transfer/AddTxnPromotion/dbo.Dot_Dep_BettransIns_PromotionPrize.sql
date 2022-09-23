@@ -30,11 +30,34 @@ AS
 		- 20191003@Bobby: Initialize SP [RedmineID: #121453]
 		- 20211112@Sol: Support IPv6 - Phase 2 - [Redmine: #163963]
 		- 20220721@Evan: Integrate new transid - [Redmine: #175640]
+		- 20220724@Evan: Revise code rollback for scale-out [Redmine: #175297]
 
 */
 BEGIN
 	SET NOCOUNT ON
+	
+	DECLARE @Cust_SiteDBGroupID SMALLINT, @Server_SiteDBGroupID SMALLINT;
+	DECLARE @SiteGroupInfo TABLE
+	(	
+		CustID INT,
+		SiteDBGroupID SMALLINT,
+		LinkedServerName  VARCHAR(512),
+		ClientAccessName VARCHAR(512),
+		AGIP VARCHAR (50)
+	)
+	INSERT INTO @SiteGroupInfo (SiteDBGroupID, LinkedServerName, ClientAccessName, AGIP)
+	EXEC CustDB.dbo.Acc_SiteDBConfigSel @CustID = @CustID
 
+	SELECT @Cust_SiteDBGroupID = SiteDBGroupID FROM @SiteGroupInfo
+	SELECT @Server_SiteDBGroupID = dbo.f_Get_SiteDBGroupID()
+	
+	--Check the SiteDBGroupID of CustID and Server is match
+	IF ISNULL(@Cust_SiteDBGroupID,-1) <> @Server_SiteDBGroupID
+	BEGIN
+		SELECT @ErrMsg = 'Executing on invalid server. Please check SiteDBGroupID information.', @ErrCode = 107	
+		RETURN		
+	END
+	
 	DECLARE @username		VARCHAR(50)
 		, @currency			TINYINT
 		, @currencyName		VARCHAR(5)
@@ -245,7 +268,22 @@ BEGIN
 				,@result = 'failed-balance'
 
 			--Manually rollback bettrans
-			DELETE dbo.bettrans WHERE transid = @TransID
+			UPDATE dbo.bettrans WITH(ROWLOCK)
+			SET custid = 0,
+				srecommend = 0,
+				mrecommend = 0,
+				recommend = 0,
+				ruben = 1,
+				[status] = 'Completed',
+				statusID = 131,
+				winlost = 0,
+				swinlost = 0,
+				mwinlost = 0,
+				awinlost = 0,
+				actual_stake = 0,
+				stake = 0,
+				RepUpdateTime = SYSDATETIME()
+			WHERE transid = @TransID
 				
 			GOTO FINISH
 		END
@@ -260,7 +298,22 @@ BEGIN
 			,@result = 'failed-bet'
 				
 		--Manually rollback bettrans
-		DELETE dbo.bettrans WHERE transid = @TransID
+		UPDATE dbo.bettrans WITH(ROWLOCK)
+		SET custid = 0,
+			srecommend = 0,
+			mrecommend = 0,
+			recommend = 0,
+			ruben = 1,
+			[status] = 'Completed',
+			statusID = 131,
+			winlost = 0,
+			swinlost = 0,
+			mwinlost = 0,
+			awinlost = 0,
+			actual_stake = 0,
+			stake = 0,
+			RepUpdateTime = SYSDATETIME()
+		WHERE transid = @TransID
 				
 		GOTO FINISH
 	END CATCH
