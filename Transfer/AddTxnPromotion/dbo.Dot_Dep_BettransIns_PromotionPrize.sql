@@ -31,6 +31,7 @@ AS
 		- 20211112@Sol: Support IPv6 - Phase 2 - [Redmine: #163963]
 		- 20220721@Evan: Integrate new transid - [Redmine: #175640]
 		- 20220724@Evan: Revise code rollback for scale-out [Redmine: #175297]
+		- 20220924@Sophia: Fix SiteDBGroupID missing in bettrans [Redmine: #178163]
 
 */
 BEGIN
@@ -217,6 +218,7 @@ BEGIN
 			, NULL AS WalletType
 			, NULL AS BonusID
 			, NULL AS RefCode
+			, @Cust_SiteDBGroupID AS SiteDBGroupID
 		)
 		INSERT INTO dbo.bettrans (
 			TransId, custid, oddsid, oddsspread, hdp1, hdp2,
@@ -230,7 +232,7 @@ BEGIN
 			scomm, acomm, comm, playercomm,
 			winlost,swinlost, mwinlost, awinlost,
 			[ip], Username, CurrencyName, betcheck, oddstype,
-			balance, transid2,recommdate,betid,ruben,comstatus,betdaqid,ExtraInfo,WalletType,BonusID,RefCode, RepUpdateTime
+			balance, transid2,recommdate,betid,ruben,comstatus,betdaqid,ExtraInfo,WalletType,BonusID,RefCode, RepUpdateTime, SiteDBGroupID
 		) 
 		SELECT 
 			TransId, custid, oddsid, oddsspread, hdp1, hdp2,
@@ -244,7 +246,7 @@ BEGIN
 			scomm, acomm, comm, playercomm,
 			winlost,swinlost, mwinlost, awinlost,
 			[ip], Username, CurrencyName, betcheck, oddstype, 
-			balance, transid2,recommdate,betid,ruben,comstatus,betdaqid,ExtraInfo,WalletType,BonusID,RefCode, SYSDATETIME()
+			balance, transid2,recommdate,betid,ruben,comstatus,betdaqid,ExtraInfo,WalletType,BonusID,RefCode, SYSDATETIME(), SiteDBGroupID
 		FROM CTE_tempPromotionPrize
 
 		SELECT @doneinsert = CURRENT_TIMESTAMP
