@@ -103,14 +103,28 @@ BEGIN
         Bettype         SMALLINT
     )
 
-    CREATE TABLE #tmpTransfer
-    (
-        Custid      INT,
-        Transdate   DATETIME,
-        TotalAmt    MONEY,
-        TransDesc   NVARCHAR(1000),
-        TransType   NVARCHAR(100)
-    )
+    CREATE TABLE #tmpTransfer  
+    (  
+        Custid      INT,  
+        Transdate   DATETIME,  
+        WinlostDate SMALLDATETIME,  
+        Recommend       INT,  
+        Mrecommend      INT,  
+        Srecommend      INT,  
+        TotalAmt    MONEY,  
+        TransDesc   NVARCHAR(1000),  
+        TransType   NVARCHAR(100),
+        winlost     MONEY,
+        actual_stake    MONEY,
+        awinlost    MONEY,
+        mwinlost    MONEY,
+        swinlost    MONEY,
+        Comm        MONEY,  
+        scomm       MONEY,
+        acomm       MONEY,
+        Playercomm  MONEY,
+        Bettype     SMALLINT  
+    )  
 
     IF @_ToDate >= @_BalanceUpDay
     BEGIN
@@ -173,21 +187,28 @@ BEGIN
         GROUP BY Winlostdate,Custid,Recommend,Mrecommend,Srecommend,StatusID,b.gameID
 
         -- Transfer
-        INSERT INTO #tmpTransfer (Transdate,Custid,TotalAmt,TransType,TransDesc)
-        SELECT  
-                TransDate,
-                Custid,
-                SUM(winlost-actual_stake) AS TotalAmt,
-                CASE WHEN ISNULL(ti.IsCollection,0) = 0 THEN bt.typenamee ELSE 'Coll' END  AS TransType,
-                TransDesc
-        FROM        Transfer b WITH (NOLOCK) 
-        INNER JOIN  bettype bt WITH (NOLOCK) ON b.bettype = bt.typeid 
-        LEFT JOIN   TransferInfo ti WITH (NOLOCK) ON b.TransId = ti.TransId 
-        WHERE
-            bettype > 20000            
-            AND b.CustId IN (SELECT custid FROM #TEMP_USER_LIST)
+        INSERT INTO #tmpTransfer (Transdate,WinlostDate,Custid,Recommend,Mrecommend,Srecommend,TotalAmt,TransType,TransDesc,winlost,actual_stake,awinlost,mwinlost,swinlost,Comm,scomm,acomm,Playercomm,Bettype)  
+        SELECT    
+                TransDate,  
+                WinlostDate,  
+                Custid,Recommend,Mrecommend,Srecommend,
+                SUM(winlost-actual_stake) AS TotalAmt,  
+                CASE WHEN ISNULL(ti.IsCollection,0) = 0 THEN bt.typenamee ELSE 'Coll' END  AS TransType,  
+                TransDesc,
+                SUM(winlost),SUM(actual_stake),SUM(awinlost),SUM(mwinlost),SUM(swinlost),SUM(Comm),SUM(scomm),SUM(acomm),SUM(Playercomm),Bettype
+        FROM        Transfer b WITH (NOLOCK)   
+        INNER JOIN  bettype bt WITH (NOLOCK) ON b.bettype = bt.typeid   
+        LEFT JOIN   TransferInfo ti WITH (NOLOCK) ON b.TransId = ti.TransId   
+        WHERE  
+            (bettype > 20000  
+            OR (bettype = 19999  AND winlostdate <= @MoveBetsDay))
             AND winlostdate BETWEEN @_FromDate AND @_ToDate
-        GROUP BY TransDate,Custid,TransDesc,ti.IsCollection,bt.typenamee
+            AND (b.custid IN (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 1)  
+                    OR b.recommend  IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 2)  
+                    OR b.mrecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 3)  
+                    OR b.srecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 4)  
+                )  
+        GROUP BY Bettype,TransDate,WinlostDate,Custid,Recommend,Mrecommend,Srecommend,TransDesc,ti.IsCollection,bt.typenamee
         
         --IF @Roleid = 1
         IF EXISTS (SELECT 1 FROM #TEMP_USER_LIST WHERE Roleid = 1)
@@ -267,18 +288,30 @@ BEGIN
                 AND PayoutStatusId IN (4, 5)  ----- 'Completed', 'Expired'
             GROUP BY winlostdate,t.UserName,t.Currency
             
-            -- Transfer
-            INSERT INTO #BetPosCom(Custid,accdate,bet_totalamt,com_totalamt)
-            SELECT b.Custid,winlostdate,SUM(winlost-actual_stake),SUM(playercomm)
-            FROM        Transfer b WITH (NOLOCK) 
-            INNER JOIN  #TEMP_USER_LIST t 
-                    ON  b.custid = t.Custid AND t.Roleid = 1
-            WHERE
-                bettype = 19999
-                AND winlostdate BETWEEN @_FromDate AND @_ToDate
-                AND winlostdate <= @MoveBetsDay
+            -- Transfer  
+            INSERT INTO #BetPosCom(Custid,accdate,bet_totalamt,com_totalamt)  
+            SELECT b.Custid,winlostdate,SUM(winlost-actual_stake),SUM(playercomm)  
+            FROM        #tmpTransfer b    
+            INNER JOIN  #TEMP_USER_LIST t   
+                    ON  b.custid = t.Custid AND t.Roleid = 1  
+            WHERE  
+                bettype = 19999  
             GROUP BY b.Custid,winlostdate
             
+            INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency)  
+            SELECT  
+                Transdate AS Accdate,  
+                TotalAmt,  
+                TransType,  
+                TransDesc,  
+                1 AS Roleid,  
+                UserName,   
+                Currency  
+            FROM        #tmpTransfer b   
+            INNER JOIN  #TEMP_USER_LIST t   
+                    ON  b.Custid = t.Custid AND Roleid = 1  
+            WHERE bettype > 19999
+
             INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency)
             SELECT
                 p.AccDate,
@@ -307,19 +340,6 @@ BEGIN
                     ON  p.Custid = t.Custid AND Roleid = 1 
             WHERE bet_totalamt <> 0
 
-            INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency)
-            SELECT
-                Transdate AS Accdate,
-                TotalAmt,
-                TransType,
-                TransDesc,
-                1 AS Roleid,
-                UserName, 
-                Currency
-            FROM        #tmpTransfer b 
-            INNER JOIN  #TEMP_USER_LIST t 
-                    ON  b.Custid = t.Custid AND Roleid = 1
-           
             IF @_FromDate <= @MoveBetsDay
             BEGIN
                 -- For get data on zzzbettrans table --
@@ -443,7 +463,7 @@ BEGIN
             FROM        #tmpTransfer b 
             INNER JOIN  #TEMP_USER_LIST t 
                     ON  b.Custid = t.Custid AND Roleid = 2
-               
+
             INSERT INTO #BetPosCom(Custid,accdate,pos_totalamt,com_totalamt)
             SELECT t.Custid, WinlostDate, SUM(awinlost), SUM(Comm-Playercomm)
             FROM        #tmpBettrans b 
@@ -454,6 +474,16 @@ BEGIN
             WHERE   WinlostDate >= @Yesterday 
                     OR (WinlostDate < @Yesterday AND s.RefTable IS NULL)
             GROUP BY t.Custid, WinlostDate
+
+            -- Transfer  
+            INSERT INTO #BetPosCom(Custid,accdate,pos_totalamt,com_totalamt)  
+            SELECT t.Custid,winlostdate,SUM(awinlost),SUM(comm-playercomm)  
+            FROM        #tmpTransfer b 
+            INNER JOIN  #TEMP_USER_LIST t   
+                    ON  b.Recommend = t.Custid AND t.Roleid = 2  
+            WHERE  
+                bettype = 19999  
+            GROUP BY t.Custid,winlostdate 
 
             INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency)
             SELECT
@@ -501,7 +531,7 @@ BEGIN
             FROM        #tmpTransfer b 
             INNER JOIN  #TEMP_USER_LIST t 
                     ON  b.Custid = t.Custid AND Roleid = 3
-      
+
             INSERT INTO #BetPosCom(Custid,accdate,pos_totalamt,com_totalamt)
             SELECT t.Custid, WinlostDate, SUM(mWinlost) ,SUM(acomm-comm)
             FROM        #tmpBettrans b 
@@ -512,6 +542,16 @@ BEGIN
             WHERE   WinlostDate >= @Yesterday 
                     OR (WinlostDate < @Yesterday AND s.RefTable IS NULL)
             GROUP BY t.Custid, WinlostDate
+
+            -- Transfer  
+            INSERT INTO #BetPosCom(Custid,accdate,pos_totalamt,com_totalamt)  
+            SELECT t.Custid,winlostdate,SUM(mwinlost),SUM(acomm-comm)  
+            FROM        #tmpTransfer b 
+            INNER JOIN  #TEMP_USER_LIST t   
+                    ON  b.Mrecommend = t.Custid AND t.Roleid = 3  
+            WHERE  
+                bettype = 19999  
+            GROUP BY t.Custid,winlostdate 
 
             INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency)
             SELECT
@@ -559,9 +599,9 @@ BEGIN
             FROM        #tmpTransfer b 
             INNER JOIN  #TEMP_USER_LIST t 
                     ON  b.Custid = t.Custid AND Roleid = 4
-        
+
             INSERT INTO #BetPosCom(Custid,accdate,pos_totalamt,com_totalamt)
-            SELECT t.Custid, WinlostDate, SUM(sWinlost) ,SUM(Scomm-Acomm)
+            SELECT t.Custid, WinlostDate, SUM(swinlost),SUM(scomm-acomm) 
             FROM        #tmpBettrans b 
             INNER JOIN  #TEMP_USER_LIST t 
                     ON  b.Srecommend = t.Custid AND Roleid = 4
@@ -570,6 +610,16 @@ BEGIN
             WHERE   WinlostDate >= @Yesterday 
                     OR (WinlostDate < @Yesterday AND s.RefTable IS NULL)
             GROUP BY t.Custid, WinlostDate
+
+            -- Transfer  
+            INSERT INTO #BetPosCom(Custid,accdate,pos_totalamt,com_totalamt)  
+            SELECT t.Custid,winlostdate,SUM(swinlost),SUM(scomm-acomm)  
+            FROM        #tmpTransfer b 
+            INNER JOIN  #TEMP_USER_LIST t   
+                    ON  b.Srecommend = t.Custid AND t.Roleid = 4  
+            WHERE  
+                bettype = 19999  
+            GROUP BY t.Custid,winlostdate 
 
             INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency)
             SELECT
