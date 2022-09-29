@@ -253,44 +253,45 @@ BEGIN
 		 creator, recommend, mrecommend, srecommend, currency, @actualrate, currencyname, 131, @ip, SYSDATETIME()
 	FROM dbo.Transfer t WITH(NOLOCK) WHERE transid = @Cur_TransID
 
+	IF @@ERROR <> 0
+	BEGIN
+	
+		SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 106
+		--Manually rollback
+		UPDATE dbo.Transfer WITH(ROWLOCK)
+		SET	custid = 0, 
+			Recommend = 0, 
+			MRecommend = 0, 
+			SRecommend = 0, 
+			Winlost = 0, 
+			Actual_Stake = 0, 
+			RepUpdateTime = SYSDATETIME()
+		WHERE refno = @RefNo AND bettype = @DCAN AND CustId IN (SELECT custid FROM @TransID_TEMP)
+	
+		--rollback balance
+		DECLARE CUR CURSOR FOR	SELECT	CustID, Balance 
+								FROM	@Balance_TEMP 
+								WHERE	IsPos = 0
+		OPEN CUR
+		FETCH NEXT FROM CUR INTO @curCustID, @curBalance 
+		WHILE @@FETCH_STATUS = 0
+		BEGIN
+ 
+ 			EXEC Dot_BalanceCreditUpd @CustID = @curCustID, @balance = @curBalance, @type = 2
+
+			FETCH NEXT FROM CUR INTO @curCustID, @curBalance 
+		END
+		CLOSE CUR 
+		DEALLOCATE CUR
+	
+		RETURN
+	END
+
 	SET @Cnt = @Cnt + 1
 	SET @Cur_TransID = NULL
 
 END
 
-IF @@ERROR <> 0
-BEGIN
-	
-	SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 106
-	--Manually rollback
-	UPDATE dbo.Transfer WITH(ROWLOCK)
-	SET	custid = 0, 
-		Recommend = 0, 
-		MRecommend = 0, 
-		SRecommend = 0, 
-		Winlost = 0, 
-		Actual_Stake = 0, 
-		RepUpdateTime = SYSDATETIME()
-	WHERE refno = @RefNo AND bettype = @DCAN AND CustId IN (SELECT custid FROM @TransID_TEMP)
-	
-	--rollback balance
-	DECLARE CUR CURSOR FOR	SELECT	CustID, Balance 
-							FROM	@Balance_TEMP 
-							WHERE	IsPos = 0
-	OPEN CUR
-	FETCH NEXT FROM CUR INTO @curCustID, @curBalance 
-	WHILE @@FETCH_STATUS = 0
-	BEGIN
- 
- 		EXEC Dot_BalanceCreditUpd @CustID = @curCustID, @balance = @curBalance, @type = 2
-
-		FETCH NEXT FROM CUR INTO @curCustID, @curBalance 
-	END
-	CLOSE CUR 
-	DEALLOCATE CUR
-	
-	RETURN
-END
 
 	UPDATE dbo.Transfer WITH(ROWLOCK, UPDLOCK)
 		SET transdesc = transdesc + ' (withdrawal cancelled)',
