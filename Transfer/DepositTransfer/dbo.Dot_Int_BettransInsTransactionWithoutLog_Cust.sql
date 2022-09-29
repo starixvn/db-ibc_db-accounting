@@ -66,6 +66,7 @@ Revision:
 	- 20211111@Sol: Split Transfer out of bettrans/Support IPv6 - [RedmineID: #164301]
 	- 20220721@Evan: Integrate new transid [Redmine: #175640]
 	- 20220721@Evan: Revise code rollback, get balance from 8 table balance [Redmine: #175297]
+	- 20220923@Evan: Revise code rollback (issue) [Redmine: #178135]
 
 Param's Explanation:
 @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction
@@ -242,7 +243,7 @@ BEGIN
 			ELSE @bettype
 		END	
 	
-	If @bettype IN (22006, 22010, 22014, 22016, 22018, 22008, 22020) --TRANSFER BETWEEN IBC AND THIRD PARTY SYSTEM, USE @BalanceType = 3
+	IF @bettype IN (22006, 22010, 22014, 22016, 22018, 22008, 22020) --TRANSFER BETWEEN IBC AND THIRD PARTY SYSTEM, USE @BalanceType = 3
 		SELECT @BalanceType = 3
 	ELSE
 		SELECT @BalanceType = 2
@@ -339,7 +340,7 @@ BEGIN
 	DECLARE @BonusAmount	MONEY = 0;
 	-- Get Member's Balance, Check enough balance for withdrawing
 	EXEC dbo.Dot_BalanceMemberSel @CustID = @CustID, @Balance = @beforebalance OUT, @BonusWalletFlag = @BonusWalletFlag, @Amount = @BonusAmount OUT 
-	SELECT @postbalance = @beforebalance + @winlost - @actual_stake
+	SELECT @postbalance = ISNULL(@beforebalance, 0) + @winlost - @actual_stake
 
 	IF (@bettype = @DWIT AND @IsCharge = 0) OR (@bettype = @DTRATP AND @amount < 0) --only check when not Charge transaction, and is Withdrawal
 	BEGIN
@@ -375,7 +376,7 @@ BEGIN
 		----------------------------------
 		IF @BonusWalletFlag = 1
 		BEGIN
-			IF (@postbalance-@BonusAmount) <0 
+			IF (@postbalance - @BonusAmount) <0 
 			BEGIN
 				SELECT @ErrMsg = 
 					CASE @bettype 
@@ -449,8 +450,7 @@ BEGIN
 		--Update BalanceDebit 
 		IF @Cust_Balance < 0 
 		BEGIN
-			--EXEC dbo.Dot_BalanceUpdDebit @custid = @CustID, @Balance = @Cust_Balance_ABS
-			EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_balance_ABS, @type = @BalanceType, @IsForced = @IsForced, @errCode = @ErrCode OUTPUT
+ 			EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_balance_ABS, @type = @BalanceType, @IsForced = @IsForced, @errCode = @ErrCode OUTPUT
 			IF @ErrCode <> 0
 			BEGIN
 				SELECT	@ErrCode = 105	
@@ -469,7 +469,7 @@ BEGIN
 			(TransId, custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, balance,
 			 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID,ip, SerialNo, RepUpdateTime)
 		VALUES 
-			(@TransId, @CustID, @username, @RefNo, @transdate, @bettype, @transdesc,@winlost, @actual_stake, CONVERT(NVARCHAR(10), @transdate, 120), @beforebalance,
+			(@TransId, @CustID, @username, @RefNo, @transdate, @bettype, @transdesc,@winlost, @actual_stake, CONVERT(NVARCHAR(10), @transdate, 120), ISNULL(@beforebalance, 0),
 			 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency,@actualrate, @currencyName, 131,@ip, @betcheck, SYSDATETIME())
 
 		---insert into new table transferinfo
@@ -498,24 +498,27 @@ BEGIN
 		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
 		WHERE TransId = @TransId
 
+		--Rollback BalanceDebit 
+		IF @Cust_balance < 0 
+		BEGIN 
+ 			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_Balance_ABS, @type = @BalanceType
+		END 
+
 		SELECT 
 			@ErrCode = 105	
 			,@ErrMsg = 'Insert transaction failed.' + ' STEP: ' + CONVERT(NVARCHAR(1), @Count) + '. ERROR_MESSAGE: ' + CONVERT(NVARCHAR(100), LEFT(ERROR_MESSAGE(),100)) + ' - ERROR_NUMBER: ' + CONVERT(VARCHAR(20), ERROR_NUMBER())
 
-		--Rollback BalanceDebit 
-		IF @Cust_balance < 0 
-		BEGIN 
-			--EXEC dbo.Dot_BalanceUpdCredit @custid = @CustID, @Balance = @Cust_Balance_ABS
-			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_Balance_ABS, @type = @BalanceType
-		END 
 		RETURN
 	END CATCH
 
 	IF @Cust_Balance > 0  --Update BalanceCredit 
 	BEGIN
-		--EXEC dbo.Dot_BalanceUpdCredit @custid = @CustID, @Balance = @Cust_Balance
-		EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_Balance, @type = @BalanceType
+ 		EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_Balance, @type = @BalanceType
 	END 
+
+	-------------------------------------------------------------------------------------------------
+	-------------------------------------------------------------------------------------------------
+	-------------------------------------------------------------------------------------------------
 
 	---get new transid 
 	EXEC Get_Bettrans_TransID @TransID = @bal_transid OUTPUT
@@ -523,10 +526,10 @@ BEGIN
 	BEGIN TRY
 		----ADD DUMMY TRANSACTION
 		INSERT INTO dbo.Transfer 
-			(TransId, custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, balance,
+			(TransId, custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, 
 			 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID,ip, RepUpdateTime)
 		VALUES 
-			(@bal_transid, @bal_custID, @bal_Username, @RefNo, @transdate, @bettype, @transdesc, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, CONVERT(NVARCHAR(10), @transdate, 120), @beforebalance,
+			(@bal_transid, @bal_custID, @bal_Username, @RefNo, @transdate, @bettype, @transdesc, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, CONVERT(NVARCHAR(10), @transdate, 120), 
 			 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 131,@ip, SYSDATETIME())
 		 
 		---insert into new table transferinfo
@@ -541,6 +544,13 @@ BEGIN
 	
 		SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 106
 		
+		--Rollback Balance Table  
+		
+		IF @Cust_balance > 0  --Rollback BalanceCredit 
+		BEGIN
+			EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_Balance, @type = @BalanceType, @IsForced = 1
+		END	
+
 		--Manually rollback
 		UPDATE dbo.Transfer WITH(ROWLOCK)
 		SET	custid = 0, 
@@ -556,17 +566,11 @@ BEGIN
 		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
 		WHERE TransId IN (@transid, @bal_transid)
 
-	--Rollback Balance Table  
 		IF @Cust_balance < 0  --Rollback BalanceDebit 
 		BEGIN 
-			--EXEC dbo.Dot_BalanceUpdCredit @custid = @CustID, @Balance = @Cust_Balance_ABS
-			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_Balance_ABS, @type = @BalanceType
+ 			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_Balance_ABS, @type = @BalanceType
 		END 
-		ELSE  --Rollback BalanceCredit 
-		BEGIN
-			--EXEC dbo.Dot_BalanceUpdDebit @custid = @CustID, @Balance = @Cust_Balance
-			EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_Balance, @type = @BalanceType, @IsForced = 1
-		END	
+
 		RETURN
 	END CATCH
 	
