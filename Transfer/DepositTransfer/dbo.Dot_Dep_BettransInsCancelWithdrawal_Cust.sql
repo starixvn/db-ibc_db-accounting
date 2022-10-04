@@ -1,12 +1,12 @@
 /*<info serverAlias="DBTXN-bodb02" executers="Dot_Member,Dot_Bonus" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Dot_Dep_BettransInsCancelWithdrawal_Cust]		
-	@custid		int,
-	@transid	bigint,	
-	@transdesc	nvarchar(300) = '',
-	@ip			varchar(45)='',
-	@NewTransID bigint = 0 OUTPUT,	
-	@ErrCode int = 0 OUTPUT,
-	@ErrMsg nvarchar(200) = '' OUTPUT
+	@custid		INT,
+	@transid	BIGINT,	
+	@transdesc	NVARCHAR(300) = '',
+	@ip			VARCHAR(45)='',
+	@NewTransID BIGINT = 0 OUTPUT,	
+	@ErrCode INT = 0 OUTPUT,
+	@ErrMsg NVARCHAR(200) = '' OUTPUT
 AS
 /*
 DB: DBTXN/bodb02
@@ -36,6 +36,7 @@ Revisions:
 	- 20211111@Sol: Split Transfer out of bettrans/Support IPv6 - [RedmineID: #164301]
 	- 20220721@Evan: Integrate new transid [Redmine: #175640]
 	- 20220724@Evan: Revise code rollback for scale-out [Redmine: #175297]
+	- 20220923@Evan: Revise code rollback (issue) [Redmine: #178135]
 
 Input 
     1) CustID (For Double check) 
@@ -78,140 +79,137 @@ EXEC DBCUST.CustDB.dbo.Acc_SiteDBConfigSel @CustID = @custid
 SELECT @Cust_SiteDBGroupID = SiteDBGroupID FROM @SiteGroupInfo
 SELECT @Server_SiteDBGroupID = dbo.f_Get_SiteDBGroupID()
 
---Check the SiteDBGroupID of CustID and Server is match
+--Check the SiteDBGroupID of CustID AND Server is match
 IF ISNULL(@Cust_SiteDBGroupID,-1) <> @Server_SiteDBGroupID
 BEGIN
 	SELECT @ErrMsg = 'Executing on invalid server. Please check SiteDBGroupID information.', @ErrCode = 108	
 	RETURN		
 END
 
-
-
-
-declare @trans_custid int,
-	@username varchar(50),
-	@currency tinyint,
-	@currencyName varchar(5),
-	@transdate datetime,
-	@bettype int,
-	@newBettype int,
-	@amount money,
+DECLARE @trans_custid INT,
+	@username VARCHAR(50),
+	@currency TINYINT,
+	@currencyName VARCHAR(5),
+	@transdate DATETIME,
+	@bettype INT,
+	@newBettype INT,
+	@amount MONEY,
 	
-	@actualrate float,
-	@winlost money,
-	@actual_stake money,
-	@mrecommend int,
-	@recommend int,
-	@srecommend int,
-	@roleid tinyint,
-	@balance money,
-	@site varchar(20),
+	@actualrate FLOAT,
+	@winlost MONEY,
+	@actual_stake MONEY,
+	@mrecommend INT,
+	@recommend INT,
+	@srecommend INT,
+	@roleid TINYINT,
+	@balance MONEY,
+	@site VARCHAR(20),
 	
 	--Balance Account info
-	@bal_custid int,
-	@bal_mrecommend int,
-	@bal_recommend int,
-	@bal_srecommend int,
-	@bal_Username varchar(50),
-	@winlostdate smalldatetime,
+	@bal_custid INT,
+	@bal_mrecommend INT,
+	@bal_recommend INT,
+	@bal_srecommend INT,
+	@bal_Username VARCHAR(50),
+	@winlostdate SMALLDATETIME,
 	
-	@RefNo bigint,
-	@DDEP int,
-	@DWIT int,
-	@DCAN int
+	@RefNo BIGINT,
+	@DDEP INT,
+	@DWIT INT,
+	@DCAN INT
 
-Select @ErrCode = 0,
+SELECT @ErrCode = 0,
 	@ErrMsg = '',
 	@DDEP = 22001,
 	@DWIT = 22002,
 	@DCAN = 22003
 
-select @amount = actual_stake,
+SELECT @amount = actual_stake,
 		@bettype = bettype,
 		@RefNo = refno,
 		@trans_custid = custid,		
 		@currency = currency,
 		@currencyName = currencyName,
 		@srecommend = srecommend
-from dbo.Transfer t with(nolock)
-where transid = @transid
+FROM dbo.Transfer t WITH(NOLOCK)
+WHERE transid = @transid
 
-if @trans_custid <> @custid
+IF @trans_custid <> @custid
 BEGIN
-	Select @ErrMsg = 'Invalid CustID.', @ErrCode = 101
-	return
+	SELECT @ErrMsg = 'Invalid CustID.', @ErrCode = 101
+	RETURN
 END
 
-SELECT @site = site, @username = username from CustDB.dbo.DEP_custsuper d with(nolock) where custid=@srecommend
+SELECT @site = site, @username = username FROM CustDB.dbo.DEP_custsuper d WITH(NOLOCK) WHERE custid=@srecommend
 
-IF @@rowcount = 0
-	SELECT @site = site, @username = username from DBCUST.CustDB.dbo.DEP_custsuper d with(nolock) where custid=@srecommend
+IF @@ROWCOUNT = 0
+	SELECT @site = site, @username = username FROM DBCUST.CustDB.dbo.DEP_custsuper d WITH(NOLOCK) WHERE custid=@srecommend
 
-declare @CustIDs as table (custid int, isReal bit)
+DECLARE @CustIDs AS TABLE (custid INT, isReal BIT)
 
-INSERT INTO @CustIDs (custid, isreal) values (@custid, 1)
+INSERT INTO @CustIDs (custid, isreal) VALUES (@custid, 1)
 
 INSERT INTO @CustIDs (custid, isreal)
 SELECT c.custid, 0
-from CustDB.dbo.custinfo c with(nolock)
-	inner join CustDB.dbo.custinfo a with(nolock) on a.custid = c.recommend
-where c.roleid = 1
-	and ( a.username = LTRIM(RTRIM(@site))+'ACC' + @currencyName + '01'
-			or a.username = left(@username, charindex('Super', @username)-1) +'ACC' + @currencyName + '01')
-IF @@rowcount = 0
+FROM CustDB.dbo.custinfo c WITH(NOLOCK)
+	INNER JOIN CustDB.dbo.custinfo a WITH(NOLOCK) on a.custid = c.recommend
+WHERE c.roleid = 1
+	AND ( a.username = LTRIM(RTRIM(@site))+'ACC' + @currencyName + '01'
+			or a.username = LEFT(@username, CHARINDEX('Super', @username)-1) +'ACC' + @currencyName + '01')
+IF @@ROWCOUNT = 0
 BEGIN
 	INSERT INTO @CustIDs (custid, isreal)
 	SELECT c.custid, 0
-	from DBCUST.CustDB.dbo.custinfo c with(nolock)
-		inner join DBCUST.CustDB.dbo.custinfo a with(nolock) on a.custid = c.recommend
-	where c.roleid = 1
-		and ( a.username = LTRIM(RTRIM(@site))+'ACC' + @currencyName + '01'
-				or a.username = left(@username, charindex('Super', @username)-1) +'ACC' + @currencyName + '01')
+	FROM DBCUST.CustDB.dbo.custinfo c WITH(NOLOCK)
+		INNER JOIN DBCUST.CustDB.dbo.custinfo a WITH(NOLOCK) on a.custid = c.recommend
+	WHERE c.roleid = 1
+		AND ( a.username = LTRIM(RTRIM(@site))+'ACC' + @currencyName + '01'
+				or a.username = LEFT(@username, CHARINDEX('Super', @username)-1) +'ACC' + @currencyName + '01')
 END
 	
-DECLARE @TransID_TEMP as table(RowID int IDENTITY(1,1), transid bigint, custid int, balance money )
+DECLARE @TransID_TEMP AS TABLE(RowID INT IDENTITY(1,1), transid BIGINT, custid INT, balance MONEY )
 
 INSERT INTO @TransID_TEMP
 SELECT TransID , custid, (winlost - actual_stake) as balance 
-FROM dbo.transfer t with(nolock) 
+FROM dbo.transfer t WITH(NOLOCK) 
 WHERE bettype = 22002
-	and custid in (select custid from @CustIDs)
-	and refno = @refno
+	AND custid in (SELECT custid FROM @CustIDs)
+	AND refno = @refno
  
 IF @@ROWCOUNT = 0
 BEGIN
-	Select @ErrMsg = 'transfer data not found.', @ErrCode = 105
-	return
+	SELECT @ErrMsg = 'transfer data not found.', @ErrCode = 105
+	RETURN
 END
 
-DECLARE @Balance_TEMP as table(custid int, balance money, isPos bit)
+DECLARE @Balance_TEMP AS TABLE(custid INT, balance MONEY, isPos BIT)
 INSERT INTO @Balance_TEMP
-SELECT custid, ABS(SUM(balance)) as balance, CASE WHEN sum(balance) > 0 THEN 0 ELSE 1 END  
+SELECT custid, ABS(SUM(balance)) as balance, CASE WHEN SUM(balance) > 0 THEN 0 ELSE 1 END  
 FROM @TransID_TEMP 
 GROUP BY custid
  
-select @actualrate = actualrate
-from CustDB.dbo.exchange e with(NOLOCK)
-where exchangeid = @currency
+SELECT @actualrate = actualrate
+FROM CustDB.dbo.exchange e WITH(NOLOCK)
+WHERE exchangeid = @currency
 
-IF @@rowcount = 0	
-	select @actualrate = actualrate
-	from DBCUST.CustDB.dbo.exchange e with(NOLOCK)
-	where exchangeid = @currency
+IF @@ROWCOUNT = 0	
+	SELECT @actualrate = actualrate
+	FROM DBCUST.CustDB.dbo.exchange e WITH(NOLOCK)
+	WHERE exchangeid = @currency
 
 --20080926: Get winlostdate as today date
-select @winlostdate = convert(nvarchar(10), current_timestamp, 120)
+SELECT @winlostdate = CONVERT(NVARCHAR(10), CURRENT_TIMESTAMP, 120)
 
-if @bettype <> @DWIT
+IF @bettype <> @DWIT
 BEGIN
-	Select @ErrMsg = 'This transaction is not a withdrawal.', @ErrCode = 102		
-	return
+	SELECT @ErrMsg = 'This transaction is not a withdrawal.', @ErrCode = 102		
+	RETURN
 END
 
-if exists (select 1 from dbo.Transfer t with(nolock) where refno = @RefNo and bettype = @DCAN and custid = @custid)
+IF exists (SELECT 1 FROM dbo.Transfer t WITH(NOLOCK) WHERE refno = @RefNo AND bettype = @DCAN AND custid = @custid)
 BEGIN
-	Select @ErrMsg = 'This transaction has been cancelled before.', @ErrCode = 103		
-	return
+	SELECT @ErrMsg = 'This transaction has been cancelled before.', @ErrCode = 103		
+	RETURN
 END
 
 ---update debit balance
@@ -227,7 +225,6 @@ FETCH NEXT FROM CUR INTO @curCustID, @curBalance
 WHILE @@FETCH_STATUS = 0
 BEGIN
 		
-	--EXEC Dot_BalanceUpdDebit @CustID = @curCustID, @Balance = @curBalance 
 	EXEC Dot_BalanceDebitUpd @CustID = @curCustID, @balance = @curBalance, @type = 2 , @IsForced = 1  -- 20151230 cooper add @IsForced = 1
 
 	FETCH NEXT FROM CUR INTO @curCustID, @curBalance 
@@ -236,9 +233,9 @@ CLOSE CUR
 DEALLOCATE CUR
 
 
-select @transdate = current_timestamp
+SELECT @transdate = CURRENT_TIMESTAMP
 
-DECLARE @Cur_TransID bigint;
+DECLARE @Cur_TransID BIGINT;
 DECLARE @MaxRowID INT, @Cnt INT = 1;
 SElECT @MaxRowID = MAX(RowID) FROM @TransID_TEMP
 
@@ -252,32 +249,26 @@ BEGIN
 	INSERT INTO dbo.Transfer 
 	(TransId, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, 
 	 creator,recommend,mrecommend,srecommend,currency, actualrate, currencyName, statusID, ip, RepUpdateTime)
-	select @NewTransID, custid, username, @refno, @transdate, @DCAN, @transdesc, actual_stake, winlost, @winlostdate,
+	SELECT @NewTransID, custid, username, @refno, @transdate, @DCAN, @transdesc, actual_stake, winlost, @winlostdate,
 		 creator, recommend, mrecommend, srecommend, currency, @actualrate, currencyname, 131, @ip, SYSDATETIME()
-	from dbo.Transfer t WITH(nolock) where transid = @Cur_TransID
+	FROM dbo.Transfer t WITH(NOLOCK) WHERE transid = @Cur_TransID
 
-	SET @Cnt = @Cnt + 1
-	SET @Cur_TransID = NULL
-
-END
-
-if @@ERROR <> 0
-BEGIN
-
-	--Manually rollback
-	UPDATE dbo.Transfer WITH(ROWLOCK)
-	SET	custid = 0, 
-		Recommend = 0, 
-		MRecommend = 0, 
-		SRecommend = 0, 
-		Winlost = 0, 
-		Actual_Stake = 0, 
-		RepUpdateTime = SYSDATETIME()
-	WHERE refno = @RefNo and bettype = @DCAN AND CustId IN (select custid from @TransID_TEMP)
+	IF @@ERROR <> 0
+	BEGIN
 	
-	Select @ErrMsg = 'Insert transaction failed.', @ErrCode = 106
-	--rollback balance
-			
+		SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 106
+		--Manually rollback
+		UPDATE dbo.Transfer WITH(ROWLOCK)
+		SET	custid = 0, 
+			Recommend = 0, 
+			MRecommend = 0, 
+			SRecommend = 0, 
+			Winlost = 0, 
+			Actual_Stake = 0, 
+			RepUpdateTime = SYSDATETIME()
+		WHERE refno = @RefNo AND bettype = @DCAN AND CustId IN (SELECT custid FROM @TransID_TEMP)
+	
+		--rollback balance
 		DECLARE CUR CURSOR FOR	SELECT	CustID, Balance 
 								FROM	@Balance_TEMP 
 								WHERE	IsPos = 0
@@ -285,24 +276,29 @@ BEGIN
 		FETCH NEXT FROM CUR INTO @curCustID, @curBalance 
 		WHILE @@FETCH_STATUS = 0
 		BEGIN
-			
-			--EXEC Dot_BalanceUpdCredit @CustID = @curCustID, @Balance = @curBalance 
-			EXEC Dot_BalanceCreditUpd @CustID = @curCustID, @balance = @curBalance, @type = 2
+ 
+ 			EXEC Dot_BalanceCreditUpd @CustID = @curCustID, @balance = @curBalance, @type = 2
 
 			FETCH NEXT FROM CUR INTO @curCustID, @curBalance 
 		END
 		CLOSE CUR 
 		DEALLOCATE CUR
 	
-	return
+		RETURN
+	END
+
+	SET @Cnt = @Cnt + 1
+	SET @Cur_TransID = NULL
+
 END
 
-Update dbo.Transfer WITH(ROWLOCK, UPDLOCK)
-	SET transdesc = transdesc + ' (withdrawal cancelled)',
-		RepUpdateTime = SYSDATETIME()
-WHERE transid in (select transid from @TransID_TEMP)
-	
----update credit balance		
+
+	UPDATE dbo.Transfer WITH(ROWLOCK, UPDLOCK)
+		SET transdesc = transdesc + ' (withdrawal cancelled)',
+			RepUpdateTime = SYSDATETIME()
+	WHERE transid in (SELECT transid FROM @TransID_TEMP)
+		
+	---update credit balance		
 	DECLARE CUR CURSOR FOR	SELECT	CustID, Balance 
 							FROM	@Balance_TEMP 
 							WHERE	IsPos > 0
@@ -310,7 +306,6 @@ WHERE transid in (select transid from @TransID_TEMP)
 	FETCH NEXT FROM CUR INTO @curCustID, @curBalance  
 	WHILE @@FETCH_STATUS = 0
 	BEGIN
-		--EXEC Dot_BalanceUpdCredit @CustID = @curCustID, @Balance = @curBalance 
 		EXEC Dot_BalanceCreditUpd @CustID = @curCustID, @balance = @curBalance, @type = 2
 		FETCH NEXT FROM CUR INTO @curCustID, @curBalance 
 	END
@@ -320,10 +315,10 @@ WHERE transid in (select transid from @TransID_TEMP)
 
 ---------------------------------------------------------------------------------------------------
 
-declare @LogData varchar(300)
+DECLARE @LogData VARCHAR(300)
 
-Select @LogData = 
-			'Cancel withdrawal trans custid = ' + convert(varchar(20), @custid) + ', old transid = ' + convert(varchar(20), @transid) + ', amount = ' + convert(varchar(20), @amount)
+SELECT @LogData = 
+			'Cancel withdrawal trans custid = ' + CONVERT(VARCHAR(20), @custid) + ', old transid = ' + CONVERT(VARCHAR(20), @transid) + ', amount = ' + CONVERT(VARCHAR(20), @amount)
 
 EXEC dbo.WriteLog_UserLog @UserID = @custid, @Doing = @LogData
 

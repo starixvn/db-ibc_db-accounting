@@ -1,19 +1,19 @@
 /*<info serverAlias="DBTXN-bodb02" executers="Dot_Member,Dot_Bonus" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Dot_Dep_BettransInsTransaction_V2_Cust] 
-	@amount money,	
-	@custid int,
-	@bal_custid int,	
-	@transdesc nvarchar(300),
-	@transid bigint = 0 OUTPUT,	
-	@ErrCode int = 0 OUTPUT,
-	@ErrMsg nvarchar(200) = '' OUTPUT,
-	@bettype smallint = 22001,
-	@IsCharge bit = 0,	
-	@ip	varchar(45)='',
-	@RefNo bigint = 0 OUTPUT,
-	@ExchangeRate smallmoney = 1,
-	@bal_transid bigint = 0 OUTPUT,
-	@transdate DateTime = NULL OUTPUT,
+	@amount MONEY,	
+	@custid INT,
+	@bal_custid INT,	
+	@transdesc NVARCHAR(300),
+	@transid BIGINT = 0 OUTPUT,	
+	@ErrCode INT = 0 OUTPUT,
+	@ErrMsg NVARCHAR(200) = '' OUTPUT,
+	@bettype SMALLINT = 22001,
+	@IsCharge BIT = 0,	
+	@ip	VARCHAR(45)='',
+	@RefNo BIGINT = 0 OUTPUT,
+	@ExchangeRate SMALLMONEY = 1,
+	@bal_transid BIGINT = 0 OUTPUT,
+	@transdate DATETIME = NULL OUTPUT,
 	@BetCheck NVARCHAR(50) = NULL,
 	@BonusID INT = NULL
 
@@ -63,6 +63,8 @@ Revisions:
 	- 20211111@Sol: Split Transfer out of bettrans/Support IPv6 - [RedmineID: #164301]
 	- 20220721@Evan: Integrate new transid [Redmine: #175640]
 	- 20220724@Evan: Revise code rollback, get balance from 8 table balance [Redmine: #175297]
+	- 20220923@Evan: Revise code rollback (issue) [Redmine: #178135]
+					 
 
 Param's Explanation:
 ? @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction
@@ -138,44 +140,44 @@ BEGIN
 		RETURN		
 	END
 
-	declare @username varchar(50),
-		@currency tinyint,
-		@currencyName varchar(5),
+	DECLARE @username VARCHAR(50),
+		@currency TINYINT,
+		@currencyName VARCHAR(5),
 		-- @transdate datetime,	
-		@actualrate float,
-		@winlost money,	
-		@actual_stake money,
-		@mrecommend int,
-		@recommend int,
-		@srecommend int,
-		@roleid tinyint,
-		@balance money,
+		@actualrate FLOAT,
+		@winlost MONEY,	
+		@actual_stake MONEY,
+		@mrecommend INT,
+		@recommend INT,
+		@srecommend INT,
+		@roleid TINYINT,
+		@beforebalance MONEY,
+		@postbalance MONEY,
 	
 		--Balance Account info
-		@bal_mrecommend int,
-		@bal_recommend int,
-		@bal_srecommend int,
-		@bal_Username varchar(50),
-		@bal_currency tinyint,
-		@bal_actualrate float,
-		@bal_currencyName nvarchar(5),
+		@bal_mrecommend INT,
+		@bal_recommend INT,
+		@bal_srecommend INT,
+		@bal_Username VARCHAR(50),
+		@bal_currency TINYINT,
+		@bal_actualrate FLOAT,
+		@bal_currencyName NVARCHAR(5),
 
-		@DDEP smallint,
-		@DWIT smallint,
-		@DBON smallint,
-		@DADJ smallint,
-		@DTRA smallint,
-		@Cust_balance money,
-		@Cust_balance_ABS money,
+		@DDEP SMALLINT,
+		@DWIT SMALLINT,
+		@DBON SMALLINT,
+		@DADJ SMALLINT,
+		@DTRA SMALLINT,
+		@Cust_balance MONEY,
+		@Cust_balance_ABS MONEY,
 		@IsForced BIT,
 		@WalletType TINYINT,
 		@BonusWalletFlag BIT, 
 		-- Rebate bonus
-		@DBONRTRA smallint,
-		@DBONRADJ smallint
+		@DBONRTRA SMALLINT,
+		@DBONRADJ SMALLINT
 
-
-	Select @ErrCode = 0,
+	SELECT @ErrCode = 0,
 			@ErrMsg = '',
 			@RefNo = isnull(@RefNo,0),
 			@amount = @amount,
@@ -188,23 +190,23 @@ BEGIN
 			@DBONRADJ = 22203,
 			@WalletType = CASE	WHEN @bettype IN (@DBONRTRA, @DBONRADJ) THEN 1 -- Rebate bonus
 								WHEN @BonusID > 0 THEN 2
-								ELSE NULL END,
+								ELSE NULL end,
 			@BonusWalletFlag = 0
 
-	select @bettype = 
-		case @bettype when 103 then 21003 
-			when 107 then 22001 
-			when 108 then 22002
-			when 110 then 22004
-			when 111 then 22005
-			when 115 then 22006
-			else @bettype
-		end
+	SELECT @bettype = 
+		CASE @bettype WHEN 103 THEN 21003 
+			WHEN 107 THEN 22001 
+			WHEN 108 THEN 22002
+			WHEN 110 THEN 22004
+			WHEN 111 THEN 22005
+			WHEN 115 THEN 22006
+			ELSE @bettype
+		END
 
-	if @amount = 0
+	IF @amount = 0
 	BEGIN
-		Select @ErrMsg = 'Sorry, amount is invalid.', @ErrCode = 101	
-		return		
+		SELECT @ErrMsg = 'Sorry, amount is invalid.', @ErrCode = 101	
+		RETURN		
 	END
 
 	SELECT @username = username
@@ -221,8 +223,8 @@ BEGIN
 	WHERE ci.custid = @custid
 
 	
-		IF @@rowcount = 0
-		BEGIN
+	IF @@ROWCOUNT = 0
+	BEGIN
 		SELECT @username = username
 			,@currency = ci.currency
 			,@currencyName = e.currency
@@ -235,40 +237,39 @@ BEGIN
 		FROM DBCUST.CustDB.dbo.custinfo AS ci WITH(NOLOCK)
 		INNER JOIN DBCUST.CustDB.dbo.exchange AS e WITH(NOLOCK) ON ci.currency = e.exchangeid
 		WHERE ci.custid = @custid
+	END
 
-		END
+		SELECT @transdesc = @username + ' - ' +
+							CASE @bettype WHEN @DDEP THEN 'Deposit'
+											WHEN @DWIT THEN 'Withdraw'
+											WHEN @DBON THEN 'Bonus'
+											WHEN @DADJ THEN 'Adjustment'
+											WHEN @DTRA THEN 'Transfer'
+											WHEN @DBONRTRA THEN 'Bonus'
+											WHEN @DBONRADJ THEN 'Bonus'
+											ELSE '' END				
+						+ CASE WHEN @transdesc <> '' THEN ' - ' + @transdesc END
 
-		select @transdesc = @username + ' - ' +
-							case @bettype when @DDEP then 'Deposit'
-											when @DWIT then 'Withdraw'
-											when @DBON then 'Bonus'
-											when @DADJ then 'Adjustment'
-											when @DTRA then 'Transfer'
-											when @DBONRTRA then 'Bonus'
-											when @DBONRADJ then 'Bonus'
-											else '' end				
-						+ case when @transdesc <> '' then ' - ' + @transdesc end
+		SELECT 
+			@winlost = CASE WHEN @bettype IN (@DDEP, @DBON, @DTRA, @DADJ, @DBONRTRA, @DBONRADJ) THEN @amount 
+							ELSE 0 end,
+			@actual_stake = CASE @bettype WHEN @DWIT THEN abs(@amount) ELSE 0 END
 
-		select 
-			@winlost = case 
-				when @bettype IN (@DDEP, @DBON, @DTRA, @DADJ, @DBONRTRA, @DBONRADJ) then @amount 
-				else 0 end,
-			@actual_stake = case @bettype when @DWIT then abs(@amount) else 0 end
-
-		if @winlost < 0 --then swap the winlost and actual_stake
+		IF @winlost < 0 --then swap the winlost and actual_stake
 		BEGIN	
-			select @actual_stake = -@winlost, @winlost = 0	
+			SELECT @actual_stake = -@winlost, @winlost = 0	
 		END
 
-		if @roleid <> 1
+		IF @roleid <> 1
 		BEGIN
-			Select @ErrMsg = 'Invalid Role ID.', @ErrCode = 102		
-			return
+			SELECT @ErrMsg = 'Invalid Role ID.', @ErrCode = 102		
+			RETURN
 		END
 
+		
 		----------------------------------
 		--Check enough balance for withdrawing
-		if @bettype=@DWIT
+		IF @bettype=@DWIT
 			AND @IsCharge = 0 --only check when not Charge transaction, and is Withdrawal
 		BEGIN
 			--//1st check: MB/BU is running?
@@ -284,18 +285,20 @@ BEGIN
 				SELECT @ErrMsg = @ErrMsg, @ErrCode = 333
 				RETURN
 			END
-
+			
 			/*
-				Check Member's Balance for Withdrawal 
+			Check Member's Balance
 			*/
 
 			DECLARE @BonusAmount MONEY = 0 
 
-			EXEC dbo.Dot_BalanceMemberSel @CustID = @CustID, @Balance = @Balance OUT, @BonusWalletFlag = @BonusWalletFlag, @Amount = @BonusAmount OUT 
+			EXEC dbo.Dot_BalanceMemberSel @CustID = @CustID, @Balance = @beforebalance OUT, @BonusWalletFlag = @BonusWalletFlag, @Amount = @BonusAmount OUT 
 
-				--//2nd check: MB/BU is running?
+			SELECT @postbalance = ISNULL(@beforebalance, 0) + @winlost - @actual_stake
+
+			--//2nd check: MB/BU is running?
 			EXEC dbo.Acc_Core_IsMainProcessRunning
-				  @CustId = @custid
+					@CustId = @custid
 				, @UplineId = @recommend
 				, @IsDepositMember = 1
 				, @ErrCode = @ErrCode OUTPUT
@@ -307,7 +310,7 @@ BEGIN
 				RETURN
 			END
 
-			IF (ISNULL(@balance, 0) + @winlost - @actual_stake) < 0
+			IF (@postbalance < 0)
 			BEGIN
 				SELECT @ErrMsg = 'Sorry, you do not have enough money to withdraw.', @ErrCode = 103				
 				RETURN		
@@ -317,7 +320,7 @@ BEGIN
 			----------------------------------
 			IF @BonusWalletFlag = 1
 			BEGIN
-				IF (ISNULL(@balance, 0) + @winlost - @actual_stake - @BonusAmount) <0 
+				IF (@postbalance - @BonusAmount) <0 
 				BEGIN
 					SELECT	@ErrMsg = 'Sorry, you do not have enough money to withdraw.', @ErrCode = 201	
 					RETURN
@@ -355,11 +358,10 @@ BEGIN
 		WHERE c.custid = @bal_custid
 		END
 
-
-		if @bal_mrecommend is NULL 
+		IF @bal_mrecommend is NULL 
 		BEGIN
-			Select @ErrMSg = 'Invalid balance account.', @ErrCode = 104			
-				return
+			SELECT @ErrMSg = 'Invalid balance account.', @ErrCode = 104			
+				RETURN
 		END
 		----------------------------------
 
@@ -377,7 +379,7 @@ BEGIN
 		ELSE 
 			SELECT @IsForced = 0
 
-		IF @RefNo <> 0 Set @IsForced = 1   -- if @Refno <> 0 = Approved action
+		IF @RefNo <> 0 Set @IsForced = 1   -- IF @Refno <> 0 = Approved action
 		------------------Insert trans into DB---------------------------------------------------------------
 		IF @RefNo = 0
 		BEGIN
@@ -389,16 +391,16 @@ BEGIN
 		IF @Cust_balance < 0 
 		BEGIN 
 			SELECT @Cust_balance_ABS = ABS(@Cust_balance)
-			--EXEC Dot_BalanceUpdDebit @custid = @CustID, @Balance = @Cust_balance_ABS
+
 			EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_balance_ABS, @type = 2, @IsForced = @IsForced, @errCode = @ErrCode OUTPUT
 			IF @ErrCode <> 0
 			BEGIN
-				Select @ErrMsg = 'Insert transaction failed.', @ErrCode = 105	
-				return
+				SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 105	
+				RETURN
 			END
 		END 
 
-		select @transdate = current_timestamp
+		SELECT @transdate = current_timestamp
 		---get new transid 
 		EXEC Get_Bettrans_TransID @TransID = @TransId OUTPUT
 
@@ -408,8 +410,8 @@ BEGIN
 				(TransId, custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, 
 				 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID, ip, SerialNo, RepUpdateTime)
 			VALUES 
-				(@TransId, @CustID, @username, @RefNo, @transdate, @bettype, @transdesc,@winlost, @actual_stake, convert(nvarchar(10), @transdate, 120), 
-				 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency,@actualrate, @currencyName, 131, @ip, @BetCheck, SYSDATETIME())
+				(@TransId, @CustID, @username, @RefNo, @transdate, @bettype, @transdesc,@winlost, @actual_stake, CONVERT(NVARCHAR(10), @transdate, 120),
+				 @CustID, @recommend, @mrecommend, @srecommend, @Currency,@actualrate, @currencyName, 131, @ip, @BetCheck, SYSDATETIME())
 
 			---insert into new table transferinfo
 
@@ -422,8 +424,8 @@ BEGIN
 		END TRY
 		BEGIN CATCH
 							
-			Select @ErrMsg = 'Insert transaction failed.', @ErrCode = 105	
-			
+			SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 105	
+
 			--Manually rollback
 			UPDATE dbo.Transfer WITH(ROWLOCK)
 			SET	custid = 0, 
@@ -438,12 +440,11 @@ BEGIN
 			UPDATE TransferInfo WITH(ROWLOCK)
 			SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
 			WHERE TransId = @TransId
-		
+
 			--rollback balance
 			IF @Cust_balance < 0 
 			BEGIN 
 				SELECT @Cust_balance_ABS = ABS(@Cust_balance)
-				--EXEC Dot_BalanceUpdCredit @custid = @CustID, @Balance = @Cust_balance_ABS
 				EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_balance_ABS, @type = 2
 			END  
 
@@ -454,9 +455,12 @@ BEGIN
 		---Update Credit Balance	
 		IF @Cust_balance > 0 
 		BEGIN 
-			--EXEC Dot_BalanceUpdCredit @custid = @CustID, @Balance = @Cust_balance
 			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_balance, @type = 2
 		END 
+
+		-------------------------------------------------------------------------------------------------
+		-------------------------------------------------------------------------------------------------
+		-------------------------------------------------------------------------------------------------
 
 		--get new transid 
 		EXEC Get_Bettrans_TransID @TransID = @bal_transid OUTPUT
@@ -467,7 +471,7 @@ BEGIN
 				(TransId, custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, 
 				 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID, ip, SerialNo, RepUpdateTime)
 			VALUES 
-				(@bal_transid, @bal_custID, @bal_Username, @RefNo, @transdate, @bettype, @transdesc, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, convert(nvarchar(10), @transdate, 120), 
+				(@bal_transid, @bal_custID, @bal_Username, @RefNo, @transdate, @bettype, @transdesc, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, CONVERT(NVARCHAR(10), @transdate, 120), 
 				 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 131, @ip, @BetCheck, SYSDATETIME())
 
 			---insert into new table transferinfo
@@ -482,14 +486,19 @@ BEGIN
 		END TRY
 		BEGIN CATCH
 		
-			Select @ErrMsg = 'Insert transaction failed.', @ErrCode = 106
-
+			SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 106
+			
+			IF @Cust_balance > 0 
+			BEGIN 
+				EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_balance, @type = 2, @isForced = 1
+			END 	
+			
 			--Manually rollback
 			UPDATE dbo.Transfer WITH(ROWLOCK)
 			SET	custid = 0, 
 				Recommend = 0, 
 				MRecommend = 0, 
-				SRecommend = 0, 
+				SRecommend = 0,  
 				Winlost = 0, 
 				Actual_Stake = 0, 
 				RepUpdateTime = SYSDATETIME()
@@ -503,15 +512,8 @@ BEGIN
 			IF @Cust_balance < 0 
 			BEGIN 
 				SELECT @Cust_balance_ABS = ABS(@Cust_balance)
-				--EXEC Dot_BalanceUpdCredit @custid = @CustID, @Balance = @Cust_balance_ABS
 				EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_balance_ABS, @type = 2
 			END 
-			ELSE
-			IF @Cust_balance > 0 
-			BEGIN 
-				--EXEC Dot_BalanceUpdDebit @custid = @CustID, @Balance = @Cust_balance
-				EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_balance, @type = 2, @isForced = 1
-			END 	
 
 			RETURN
 
@@ -519,12 +521,13 @@ BEGIN
 
 		SET @transdate = CONVERT(CHAR(30),@transdate, 121)
 	
-		declare @LogData varchar(300)
+		DECLARE @LogData VARCHAR(300)
 
-		Select @LogData = 
-					'Insert trans custid = ' + convert(varchar(20), @custid) + ', bettype = ' + convert(varchar(20), @bettype) + ', amount = ' + convert(varchar(20), @amount) 
-					+ CASE WHEN @BonusId > 0 THEN ', bonusId = ' + convert(varchar(20), @BonusId) ELSE '' END
-	BEGIN TRY
+		SELECT @LogData = 
+					'Insert trans custid = ' + CONVERT(VARCHAR(20), @custid) + ', bettype = ' + CONVERT(VARCHAR(20), @bettype) + ', amount = ' + CONVERT(VARCHAR(20), @amount) 
+					+ CASE WHEN @BonusId > 0 THEN ', bonusId = ' + CONVERT(VARCHAR(20), @BonusId) ELSE '' END
+
+	BEGIN TRY	
 		EXEC dbo.WriteLog_UserLog @UserID = @custid, @Doing = @LogData
 	END TRY
 	BEGIN CATCH
