@@ -70,6 +70,7 @@ AS
 		- 20220112@Evan: Add SG Jackpot & revise SP [Redmine: #166685]
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 		- 20220425@Evan: Change product name and remove Casino Jackpot Amount [Redmine: #171865]
+		- 20221005@Danny: Remove not valid user in automail for reset winning's change [Redmine: #178761]
 		
 	Explanation's Param:
 	    @mode:  0 _ view report
@@ -604,7 +605,7 @@ BEGIN
 										
 				IF @Istest = 0 AND @@SERVERNAME = 'DB061'
 					SELECT	@recipients = 'kudanaga@enpine.com'
-							,@copy_recipients = 'jetyee88@enpine.com;kwongyong@enpine.com;seanlau@enpine.com;byronchia@enpine.com;foo.mv@enpine.com;eric.lu@onelab.tw;tp@enpine.com;it@starixvn.com;jackyting@enpine.com;vh@enpine.com'
+							,@copy_recipients = 'jetyee88@enpine.com;kwongyong@enpine.com;seanlau@enpine.com;foo.mv@enpine.com;tp@enpine.com;it@starixvn.com;jackyting@enpine.com;vh@enpine.com'
 							,@blind_copy_recipients = 'automail@enpine.com'
 				ELSE
 					SELECT  @recipients = 'dba_local@starixvn.com'
