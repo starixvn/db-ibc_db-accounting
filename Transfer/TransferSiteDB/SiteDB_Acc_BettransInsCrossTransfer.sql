@@ -26,6 +26,7 @@ AS
 	Orig SP: Acc_BettransInsCrossTransfer
 	Revisions:
 		- 20220719@Danny: Init. SP [Redmine: #175253]
+		- 20221006@Danny: fix issue wrong currency name [Redmine: #178818]
 */
 BEGIN
 	SET NOCOUNT ON	
@@ -127,7 +128,7 @@ BEGIN
 		@FromUsername	= c.username,
 		@FromCurrency	= c.currency,
 		@FromActualRate = c.actualrate,
-		@FromCurrName	= c.currency,
+		@FromCurrName	= c.CurrName,
 		@FromRecommend	= c.recommend,
 		@FromMrecommend	= c.mrecommend,
 		@FromSrecommend	= c.srecommend,
@@ -140,7 +141,7 @@ BEGIN
 		@ToUsername		= c.username,
 		@ToCurrency		= c.currency,
 		@ToActualRate	= c.actualrate,
-		@ToCurrName		= c.currency,
+		@ToCurrName		= c.CurrName,
 		@ToRecommend	= c.recommend,
 		@ToMrecommend	= c.mrecommend,
 		@ToSrecommend	= c.srecommend,
@@ -153,7 +154,7 @@ BEGIN
 		@ForexCustID	= c.custID,
 		@ForexCurrency	= c.currency,
 		@ForexActualRate= c.actualrate,
-		@ForexCurrName	= c.currency,
+		@ForexCurrName	= c.CurrName,
 		@ForexRecommend	= c.recommend,
 		@ForexMrecommend= c.mrecommend,
 		@ForexSrecommend= c.srecommend
