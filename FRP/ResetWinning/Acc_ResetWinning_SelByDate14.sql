@@ -73,6 +73,7 @@ AS
 		- 20221005@Danny: Remove not valid user in automail for reset winning's change [Redmine: #178761]
 		- 20230522@Lewis: Call sum Sps on other servers - [RedmineID: #188463]
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
+		- 20221024@Sol: Database - Sync-up Standby Server data - [RedmineID: #167261]
 		
 	Explanation's Param:
 	    @mode:  0 _ view report
@@ -491,7 +492,11 @@ BEGIN
 					@seq		  smallint = 0,
 					@maxseq		  smallint = 0,
 					@ip			  VARCHAR(45) = '',
-					@LogData	  NVARCHAR(200) = ''
+					@LogData	  NVARCHAR(200) = '',
+					---
+					@alias VARCHAR(100), 
+					@sqlCommand VARCHAR(MAX),
+					@doNotRunInServer VARCHAR(1000)
                 
 			SELECT @seq = 1 
 
@@ -542,34 +547,22 @@ BEGIN
 					IF (@ErrCode <> 0) BREAK
 					
 					----Adjust statement
-					EXEC bodb_report.dbo.[Acc_StatementUpdateTransfer]
-						@custid = @custid
-						,@Amount = @variance
-						,@winlostdate = @winlostdate
-						,@ErrCode = @ErrCode OUTPUT
-						,@ErrMsg = @ErrMsg OUTPUT
+					--EXEC bodb_report.dbo.[Acc_StatementUpdateTransfer]
+					--	@custid = @custid
+					--	,@Amount = @variance
+					--	,@winlostdate = @winlostdate
+					--	,@ErrCode = @ErrCode OUTPUT
+					--	,@ErrMsg = @ErrMsg OUTPUT							
 
-					IF @@SERVERNAME ='DB062'
-					BEGIN
-					EXEC DB061.bodb_report.dbo.[Acc_StatementUpdateTransfer]
-						@custid = @custid
-						,@Amount = @variance
-						,@winlostdate = @winlostdate
-						,@ErrCode = @ErrCode OUTPUT
-						,@ErrMsg = @ErrMsg OUTPUT
-					END
-					ELSE IF @@SERVERNAME = 'DB061'
-					BEGIN
-					EXEC DB062.bodb_report.dbo.[Acc_StatementUpdateTransfer]
-						@custid = @custid
-						,@Amount = @variance
-						,@winlostdate = @winlostdate
-						,@ErrCode = @ErrCode OUTPUT
-						,@ErrMsg = @ErrMsg OUTPUT
-					END							
+					--IF (@ErrCode <> 0) BREAK
 
-					IF (@ErrCode <> 0) BREAK
-					
+					----Adjust statement
+					SELECT TOP 1 @doNotRunInServer = ServerName FROM bodb02.dbo.f_Get_ServerName_By_Alias('DBTXN') 
+					SELECT 
+						@alias = 'DBACC', 
+						@SqlCommand = CONCAT('EXEC bodb_report.dbo.[Acc_StatementUpdateTransfer] ', ' @custid = ',@custid,' ,@Amount = ',@variance,' ,@winlostdate = ''',@winlostdate, '''')
+
+					EXEC DBTXN.bodb02.dbo.ExecRep_NAP_Admin_10 @ServerName = '', @AliasName = @alias, @SqlCommand = @SqlCommand, @doNotRunInServer = @doNotRunInServer, @Remark = '', @PriorityOrder = 2, @RunningMode = 2
 					
                     --- write log 
 					BEGIN TRY
