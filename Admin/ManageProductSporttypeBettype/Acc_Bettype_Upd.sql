@@ -18,6 +18,7 @@ Original:
 		- 20200917@Danny: NAP Manage Bettype add column LicSpreadBetTypeGroupId [Redmine: #131241]
 		- 20200930@Danny: NAP Manage Bettype add column Is3rdParty [Redmine: #131241]
 		- 20211115@Malcolm: Add RepUpdateTime column [Redmine: #164321]
+		- 20221025@Eddie: Enhance Bettype Function [Redmine: #178092]
 		
 */
 
@@ -244,7 +245,7 @@ BEGIN
 		  OR Is3rdParty NOT IN (0,1)
 							
 
-	IF @ValueError <> 0
+	IF (@ValueError <> 0 OR ISNULL(@ValueError, '') = '') AND @ErrCode <> 0
 		BEGIN
 			IF @ErrCode = 1007
 				SELECT @ErrMsg = 'Row "' + @BettypeError + 
