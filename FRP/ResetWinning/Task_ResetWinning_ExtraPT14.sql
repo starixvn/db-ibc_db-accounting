@@ -5,6 +5,7 @@ ALTER PROCEDURE [dbo].[Task_ResetWinning_ExtraPT14]
 	@mode     TINYINT = 0,
 	@creator  INT = 5838421,
 	@ip       VARCHAR(45) = '',
+	@RequestID VARCHAR(4000) = '',
 	@ErrCode  INT = 0 OUTPUT,
     @ErrMsg   VARCHAR(100) = '' OUTPUT
 AS
@@ -210,9 +211,14 @@ BEGIN
             RETURN
         END
 
+		---get server name that dont need to run
+		EXEC DBTXN.bodb02.dbo.Get_ServerName_By_Alias @Alias  = 'DBTXN', @ServerName = @doNotRunInServer OUTPUT
+		SET @alias = 'DBACC'
+
         WHILE (@seq <= @maxseq)
         BEGIN
             SET @variance = 0
+			SET @sqlCommand = ''
 
             SELECT @variance = Variance,
                    @custid = CustID
@@ -251,12 +257,9 @@ BEGIN
 				--IF (@ErrCode <> 0) BREAK					                             
 
 				----Adjust statement
-				SELECT TOP 1 @doNotRunInServer = ServerName FROM bodb02.dbo.f_Get_ServerName_By_Alias('DBTXN') 
-				SELECT 
-					@alias = 'DBACC', 
-					@SqlCommand = CONCAT('EXEC bodb_report.dbo.[Acc_StatementUpdateTransfer] ', ' @custid = ',@custid,' ,@Amount = ',@variance,' ,@winlostdate = ''',@winlostdate, '''')
+				SELECT @SqlCommand = CONCAT('EXEC bodb_report.dbo.[Acc_StatementUpdateTransfer] ', ' @custid = ',@custid,' ,@Amount = ',@variance,' ,@winlostdate = ''',@winlostdate, '''')
 
-				EXEC DBTXN.bodb02.dbo.ExecRep_NAP_Admin_10 @ServerName = '', @AliasName = @alias, @SqlCommand = @SqlCommand, @doNotRunInServer = @doNotRunInServer, @Remark = '', @PriorityOrder = 2, @RunningMode = 2
+				EXEC DBTXN.bodb02.dbo.ExecRep_NAP_Admin_10 @RequestID = @RequestID, @ServerName = '', @AliasName = @alias, @SqlCommand = @SqlCommand, @doNotRunInServer = @doNotRunInServer, @Remark = '', @PriorityOrder = 2, @RunningMode = 2
 
 				--- write log 
 				BEGIN TRY
