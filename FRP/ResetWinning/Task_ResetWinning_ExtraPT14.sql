@@ -194,7 +194,8 @@ BEGIN
 				---
 				@alias VARCHAR(100), 
 				@sqlCommand VARCHAR(MAX),
-				@doNotRunInServer VARCHAR(1000)
+				@doNotRunInServer VARCHAR(1000),
+				@remark VARCHAR(4000)
                 
         SELECT @winlostdate = @fromdate
 
@@ -213,7 +214,7 @@ BEGIN
 
 		---get server name that dont need to run
 		EXEC DBTXN.bodb02.dbo.Get_ServerName_By_Alias @Alias  = 'DBTXN', @ServerName = @doNotRunInServer OUTPUT
-		SET @alias = 'DBACC'
+		SELECT @alias = 'DBACC', @remark = CASE WHEN ISNULL(@RequestID,'') = '' THEN '' ELSE 'step 5.2' END
 
         WHILE (@seq <= @maxseq)
         BEGIN
@@ -259,7 +260,13 @@ BEGIN
 				----Adjust statement
 				SELECT @SqlCommand = CONCAT('EXEC bodb_report.dbo.[Acc_StatementUpdateTransfer] ', ' @custid = ',@custid,' ,@Amount = ',@variance,' ,@winlostdate = ''',@winlostdate, '''')
 
-				EXEC DBTXN.bodb02.dbo.ExecRep_NAP_Admin_10 @RequestID = @RequestID, @ServerName = '', @AliasName = @alias, @SqlCommand = @SqlCommand, @doNotRunInServer = @doNotRunInServer, @Remark = '', @PriorityOrder = 2, @RunningMode = 2
+				EXEC DBTXN.bodb02.dbo.Task_ExecRep_Wrapper 
+					@RequestID = @RequestID, 
+					@ServerName = '', 
+					@AliasName = @alias, 
+					@SqlCommand = @SqlCommand, 
+					@doNotRunInServer = @doNotRunInServer, 
+					@Remark = @remark
 
 				--- write log 
 				BEGIN TRY
