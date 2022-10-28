@@ -1,10 +1,11 @@
 /*<info serverAlias="DBPRO-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE  dbo.Acc_Bettype_Upd
 	@File		NVARCHAR(MAX),
-	@LoginIP	VARCHAR(20)='',
+	@LoginIP	VARCHAR(20) = '',
 	@ErrCode	INT = 0 OUTPUT,
 	@ErrMsg		NVARCHAR(4000) = '' OUTPUT,
-	@UserID		INT
+	@UserID		INT,
+	@IsMultiple BIT = 0
 AS
 
 /*
@@ -19,7 +20,8 @@ Original:
 		- 20200930@Danny: NAP Manage Bettype add column Is3rdParty [Redmine: #131241]
 		- 20211115@Malcolm: Add RepUpdateTime column [Redmine: #164321]
 		- 20221025@Eddie: Enhance Bettype Function [Redmine: #178092]
-		
+	Param's Explanation:
+		- @IsMultiple: 0 - Edit, 1 - Update By Exel
 */
 
 BEGIN
@@ -63,7 +65,7 @@ BEGIN
 		Is3rdParty		BIT
 		)
 
-		CREATE TABLE #inputTmp
+	CREATE TABLE #inputTmp
 	(    
 		typeid          NVARCHAR(MAX),
 		typenamee       NVARCHAR(MAX),
@@ -181,13 +183,71 @@ BEGIN
 		RETURN
 	END CATCH
 
-	UPDATE #inputTmp
-	SET typeid			 = CASE WHEN LEN(typeid)			= 0 THEN  NULL ELSE typeid			END,
-		ParentTypeid     = CASE WHEN LEN(ParentTypeid)		= 0 THEN  NULL ELSE ParentTypeid	END,
-		DisplayedTypeID  = CASE WHEN LEN(DisplayedTypeID)	= 0 THEN  NULL ELSE DisplayedTypeID END,
-		LicSpreadBetTypeGroupId = CASE WHEN LEN(LicSpreadBetTypeGroupId)	= 0 THEN  NULL ELSE LicSpreadBetTypeGroupId END,
-		Is3rdParty		 = CASE WHEN LEN(Is3rdParty)	= 0 THEN  NULL ELSE Is3rdParty END
-	WHERE LEN(typeid) = 0  OR LEN(ParentTypeid) = 0 OR LEN(DisplayedTypeID) = 0 OR LEN(LicSpreadBetTypeGroupId)	= 0 OR LEN(Is3rdParty)	= 0 
+	IF @IsMultiple = 0
+	BEGIN
+		UPDATE #inputTmp
+		SET typeid			 = CASE WHEN LEN(typeid)			= 0 THEN  NULL ELSE typeid			END,
+			ParentTypeid     = CASE WHEN LEN(ParentTypeid)		= 0 THEN  NULL ELSE ParentTypeid	END,
+			DisplayedTypeID  = CASE WHEN LEN(DisplayedTypeID)	= 0 THEN  NULL ELSE DisplayedTypeID END,
+			LicSpreadBetTypeGroupId = CASE WHEN LEN(LicSpreadBetTypeGroupId)	= 0 THEN  NULL ELSE LicSpreadBetTypeGroupId END,
+			Is3rdParty		 = CASE WHEN LEN(Is3rdParty)	= 0 THEN  NULL ELSE Is3rdParty END
+		WHERE LEN(typeid) = 0  OR LEN(ParentTypeid) = 0 OR LEN(DisplayedTypeID) = 0 OR LEN(LicSpreadBetTypeGroupId)	= 0 OR LEN(Is3rdParty)	= 0
+	END
+	ELSE
+	BEGIN 
+		UPDATE it
+		SET it.typeid		 = t.typeid,
+		    it.typenamee	 = CASE WHEN ISNULL(it.typenamee,   '') = '' THEN t.typenamee  ELSE it.typenamee END,
+		    it.typenamec	 = CASE WHEN ISNULL(it.typenamec,   '') = '' THEN t.typenamec  ELSE it.typenamec END,
+		    it.typedesc		 = CASE WHEN ISNULL(it.typedesc,    '') = '' THEN t.typedesc   ELSE it.typedesc END,
+		    it.typenamec_uni = CASE WHEN ISNULL(it.typenamec_uni,'') = '' THEN t.typenamec_uni  ELSE it.typenamec_uni END,
+		    it.typenamej     = CASE WHEN ISNULL(it.typenamej,   '') = '' THEN t.typenamej  ELSE it.typenamej END,
+		    it.typenamcn     = CASE WHEN ISNULL(it.typenamcn,   '') = '' THEN t.typenamcn  ELSE it.typenamcn END,
+		    it.typenamecn    = CASE WHEN ISNULL(it.typenamecn,  '') = '' THEN t.typenamecn ELSE it.typenamecn END,
+		    it.typenameth    = CASE WHEN ISNULL(it.typenameth,  '') = '' THEN t.typenameth ELSE it.typenameth END,
+		    it.typenameit    = CASE WHEN ISNULL(it.typenameit,  '') = '' THEN t.typenameit ELSE it.typenameit END,
+		    it.typenameko    = CASE WHEN ISNULL(it.typenameko,  '') = '' THEN t.typenameko ELSE it.typenameko END,
+		    it.typenameES    = CASE WHEN ISNULL(it.typenameES,  '') = '' THEN t.typenameES ELSE it.typenameES END,
+		    it.typenameVN    = CASE WHEN ISNULL(it.typenameVN,  '') = '' THEN t.typenameVN ELSE it.typenameVN END,
+		    it.typenameEL    = CASE WHEN ISNULL(it.typenameEL,  '') = '' THEN t.typenameEL ELSE it.typenameEL END,
+		    it.typenamee_Eu  = CASE WHEN ISNULL(it.typenamee_Eu,'') = '' THEN t.typenamee_Eu ELSE it.typenamee_Eu END,
+		    it.typenameRU    = CASE WHEN ISNULL(it.typenameRU,  '') = '' THEN t.typenameRU ELSE it.typenameRU END,
+		    it.typenameID    = CASE WHEN ISNULL(it.typenameID,  '') = '' THEN t.typenameID ELSE it.typenameID END,
+		    it.typenamePT    = CASE WHEN ISNULL(it.typenamePT,  '') = '' THEN t.typenamePT ELSE it.typenamePT END,
+		    it.typenameFR    = CASE WHEN ISNULL(it.typenameFR,  '') = '' THEN t.typenameFR ELSE it.typenameFR END,
+		    it.ParentTypeid  = CASE WHEN ISNULL(it.ParentTypeid,'') = '' THEN t.ParentTypeid ELSE it.ParentTypeid END,
+		    it.typenameMMR   = CASE WHEN ISNULL(it.typenameMMR, '') = '' THEN t.typenameMMR ELSE it.typenameMMR END,
+		    it.typenameHI    = CASE WHEN ISNULL(it.typenameHI,  '') = '' THEN t.typenameHI ELSE it.typenameHI END,
+		    it.DisplayedTypeID	= CASE WHEN ISNULL(it.DisplayedTypeID,'') = '' THEN t.DisplayedTypeID ELSE it.DisplayedTypeID END,
+		    it.LicSpreadBetTypeGroupId = CASE WHEN ISNULL(it.LicSpreadBetTypeGroupId,'') = '' THEN t.LicSpreadBetTypeGroupId ELSE it.LicSpreadBetTypeGroupId END,
+		    it.Is3rdParty	 = CASE WHEN ISNULL(it.Is3rdParty,  '') = '' THEN t.Is3rdParty ELSE it.Is3rdParty END
+		FROM bettype t WITH(ROWLOCK)
+			INNER JOIN #inputTmp it ON t.typeid = it.typeid  
+		WHERE (ISNULL(it.typenamee,    '') = '')
+		   OR (ISNULL(it.typenamec,    '') = '')
+		   OR (ISNULL(it.typedesc,     '') = '')
+		   OR (ISNULL(it.typenamec_uni,'') = '')
+		   OR (ISNULL(it.typenamej,    '') = '')
+		   OR (ISNULL(it.typenamcn,    '') = '')
+		   OR (ISNULL(it.typenamecn,   '') = '')
+		   OR (ISNULL(it.typenameth,   '') = '')
+		   OR (ISNULL(it.typenameit,   '') = '')
+		   OR (ISNULL(it.typenameko,   '') = '')
+		   OR (ISNULL(it.typenameES,   '') = '')
+		   OR (ISNULL(it.typenameVN,   '') = '')
+		   OR (ISNULL(it.typenameEL,   '') = '')
+		   OR (ISNULL(it.typenamee_Eu, '') = '')
+		   OR (ISNULL(it.typenameRU,   '') = '')
+		   OR (ISNULL(it.typenameID,   '') = '')
+		   OR (ISNULL(it.typenamePT,   '') = '')
+		   OR (ISNULL(it.typenameFR,   '') = '')
+		   OR (ISNULL(it.ParentTypeid, '') = '')
+		   OR (ISNULL(it.typenameMMR,  '') = '')
+		   OR (ISNULL(it.typenameHI,   '') = '')
+		   OR (ISNULL(it.DisplayedTypeID, '') = '')
+		   OR (ISNULL(it.LicSpreadBetTypeGroupId,'') = '')
+		   OR (ISNULL(it.Is3rdParty,   '') = '')
+	END
 
 
 	SELECT TOP(1) @BettypeError = typeid, 
