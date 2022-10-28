@@ -190,12 +190,7 @@ BEGIN
                 @transDesc		NVARCHAR(1000)= '',
 				@seq			TINYINT = 1,
 				@maxseq			TINYINT,
-				@LogData  		NVARCHAR(200) = '',
-				---
-				@alias VARCHAR(100), 
-				@sqlCommand VARCHAR(MAX),
-				@doNotRunInServer VARCHAR(1000),
-				@remark VARCHAR(4000)
+				@LogData  		NVARCHAR(200) = ''
                 
         SELECT @winlostdate = @fromdate
 
@@ -212,14 +207,9 @@ BEGIN
             RETURN
         END
 
-		---get server name that dont need to run
-		EXEC DBTXN.bodb02.dbo.Get_ServerName_By_Alias @Alias  = 'DBTXN', @ServerName = @doNotRunInServer OUTPUT
-		SELECT @alias = 'DBACC', @remark = CASE WHEN ISNULL(@RequestID,'') = '' THEN '' ELSE 'step 5.2' END
-
         WHILE (@seq <= @maxseq)
         BEGIN
             SET @variance = 0
-			SET @sqlCommand = ''
 
             SELECT @variance = Variance,
                    @custid = CustID
@@ -242,6 +232,7 @@ BEGIN
 	                @creator = @creator,
 	                @ip = @ip,
 					@isExtraPT = 1,
+					@RequestID = @RequestID,
 	                @ErrCode = @ErrCode OUTPUT,
                     @ErrMsg = @ErrMsg OUTPUT
 
@@ -256,17 +247,6 @@ BEGIN
 				--	,@ErrMsg = @ErrMsg OUTPUT							
 
 				--IF (@ErrCode <> 0) BREAK					                             
-
-				----Adjust statement
-				SELECT @SqlCommand = CONCAT('EXEC bodb_report.dbo.[Acc_StatementUpdateTransfer] ', ' @custid = ',@custid,' ,@Amount = ',@variance,' ,@winlostdate = ''',@winlostdate, '''')
-
-				EXEC DBTXN.bodb02.dbo.Task_ExecRep_Wrapper 
-					@RequestID = @RequestID, 
-					@ServerName = '', 
-					@AliasName = @alias, 
-					@SqlCommand = @SqlCommand, 
-					@doNotRunInServer = @doNotRunInServer, 
-					@Remark = @remark
 
 				--- write log 
 				BEGIN TRY
