@@ -16,6 +16,7 @@ Original:
 		- 20200328@Malcolm: NAP Manage Products/Sporttype/Bettype [Redmine: #131241]
 		- 20200917@Danny: NAP Manage Bettype add column LicSpreadBetTypeGroupId [Redmine: #131241]
 		- 20200930@Danny: NAP Manage Bettype add column Is3rdParty [Redmine: #131241]
+		- 20221031@Eddie: Enhance Bettype Function [Redmine: #178092]
 	Param's Explanation:
 	- @Fie:		
 		<ROOT>
@@ -54,8 +55,7 @@ BEGIN
     SET NOCOUNT ON
 	
 	IF ISNULL(@File, '') = ''
-			RETURN
-
+		RETURN
 
 	DECLARE @iDoc INT, @RowTotal INT = 0, @CurrentRow INT = 0, @BettypeError NVARCHAR(MAX) = '', @ValueError NVARCHAR(MAX) = '', @LimitValue BIGINT, @ColumnName VARCHAR(100)
 
@@ -89,7 +89,7 @@ BEGIN
 		DisplayedTypeID INT,
 		LicSpreadBetTypeGroupId TINYINT,
 		Is3rdParty		BIT
-		)
+	)
 
 	CREATE TABLE #inputTmp
 	(    
@@ -119,7 +119,7 @@ BEGIN
 		DisplayedTypeID NVARCHAR(MAX),
 		LicSpreadBetTypeGroupId NVARCHAR(MAX),
 		Is3rdParty		NVARCHAR(MAX)
-		)
+	)
 
 	BEGIN TRY
 			EXEC sp_xml_preparedocument @iDoc OUTPUT, @File
@@ -243,13 +243,24 @@ BEGIN
 		DisplayedTypeID			= CASE WHEN LEN(DisplayedTypeID)	= 0 THEN  NULL ELSE DisplayedTypeID END,
 		LicSpreadBetTypeGroupId = CASE WHEN LEN(LicSpreadBetTypeGroupId)	= 0 THEN  0 ELSE LicSpreadBetTypeGroupId END,
 		Is3rdParty				= CASE WHEN LEN(Is3rdParty)	= 0 THEN  0 ELSE Is3rdParty END
-
 	WHERE LEN(typeid)				= 0 
 	      OR LEN(ParentTypeid)		= 0
 		  OR LEN(DisplayedTypeID)	= 0
 		  OR LEN(LicSpreadBetTypeGroupId)= 0
 		  OR LEN(Is3rdParty)= 0
-
+	
+	SELECT @ErrCode = 1010
+	FROM #inputTmp it
+	WHERE EXISTS( SELECT 1 FROM bettype t WITH(ROWLOCK) WHERE t.typeid = it.typeid )
+	
+	IF @ErrCode = 1010
+	BEGIN
+		SELECT TOP(1) @ErrMsg = 'Bet Type: ' + ISNULL(it.typeid, '')  + ' - ' + it.typenamee + ' already exists in the system.'
+		FROM #inputTmp it
+		WHERE EXISTS( SELECT 1 FROM bettype t WITH(ROWLOCK) WHERE t.typeid = it.typeid)
+		RETURN
+	END
+	
 	SELECT TOP(1) @BettypeError = ID, 
 	              @ValueError   = CASE WHEN LEN(typenamee)		> 128 THEN typenamee
 									   WHEN LEN(typenamec)		> 128 THEN typenamec
@@ -277,9 +288,7 @@ BEGIN
 											  OR Is3rdParty IS NULL
 											  OR Is3rdParty NOT IN (0,1) THEN 1008 ELSE 1007 END,
 					@ColumnName = CASE WHEN LicSpreadBetTypeGroupId IS NULL OR LicSpreadBetTypeGroupId NOT BETWEEN 0 AND 255 THEN 'LicSpreadBetTypeGroupId'
-									   WHEN Is3rdParty IS NULL OR Is3rdParty NOT IN (0,1) THEN 'Is3rdParty' ELSE NULL END
-										
-					
+									   WHEN Is3rdParty IS NULL OR Is3rdParty NOT IN (0,1) THEN 'Is3rdParty' ELSE NULL END				
 	FROM #inputTmp
 	WHERE LEN(typenamee)		  > 128 
 		  OR LEN(typenamec)		  > 128
@@ -307,7 +316,7 @@ BEGIN
 		  OR Is3rdParty NOT IN (0,1)
 							
 
-	IF @ErrCode <> 0
+	IF (@ValueError <> 0 OR ISNULL(@ValueError, '') = '') AND @ErrCode <> 0
 		BEGIN
 			IF @ErrCode = 1007
 				SELECT @ErrMsg = 'Row "' + @BettypeError + 
