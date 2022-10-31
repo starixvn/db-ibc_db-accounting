@@ -202,15 +202,15 @@ BEGIN
 		
 		IF @ErrCode = 1009
 		BEGIN
-			SELECT @ErrMsg = 'Bet Type: <' 
+			SELECT @ErrMsg = 'Bet Type: ' 
 				+ ( SELECT it.typeid
 					FROM #inputTmp it
 					WHERE  NOT EXISTS( SELECT 1 FROM bettype t WITH(ROWLOCK) WHERE t.typeid = it.typeid))
-				+ '> - <'
+				+ ' - '
 				+ ( SELECT it.typenamee
 					FROM #inputTmp it
 					WHERE  NOT EXISTS( SELECT 1 FROM bettype t WITH(ROWLOCK) WHERE t.typeid = it.typeid))
-				+ '> does not exist in the system.'
+				+ ' does not exist in the system.'
 			RETURN
 		END
 		
