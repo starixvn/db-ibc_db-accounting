@@ -198,7 +198,7 @@ BEGIN
 		
 		SELECT @ErrCode = 1009
 		FROM #inputTmp it
-		WHERE  NOT EXISTS( SELECT 1 FROM bettype t WITH(ROWLOCK) WHERE t.typeid = it.typeid)
+		WHERE  NOT EXISTS( SELECT 1 FROM bettype t WITH(ROWLOCK) WHERE t.typeid = it.typeid )
 		
 		IF @ErrCode = 1009
 		BEGIN
@@ -406,7 +406,7 @@ BEGIN
 				t.DisplayedTypeID = i.DisplayedTypeID,
 				t.LicSpreadBetTypeGroupId = i.LicSpreadBetTypeGroupId,
 				t.Is3rdParty	  = i.Is3rdParty,
-				t.RepUpdateTime   = SYSDATETIME()
+				t.RepUpdateTime   = 	()
 			FROM bettype t WITH(ROWLOCK)
 				INNER JOIN  #input i ON  t.typeid = i.typeid
 			WHERE ID = @CurrentRow
