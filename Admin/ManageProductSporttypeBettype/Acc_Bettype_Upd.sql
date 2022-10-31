@@ -406,7 +406,7 @@ BEGIN
 				t.DisplayedTypeID = i.DisplayedTypeID,
 				t.LicSpreadBetTypeGroupId = i.LicSpreadBetTypeGroupId,
 				t.Is3rdParty	  = i.Is3rdParty,
-				t.RepUpdateTime   = 	()
+				t.RepUpdateTime   = SYSDATETIME()
 			FROM bettype t WITH(ROWLOCK)
 				INNER JOIN  #input i ON  t.typeid = i.typeid
 			WHERE ID = @CurrentRow
