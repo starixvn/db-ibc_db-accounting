@@ -183,7 +183,7 @@ BEGIN
 		RETURN
 	END CATCH
 
-	IF @IsMultiple = 0
+	IF @IsMultiple = 0 -- edit
 	BEGIN
 		UPDATE #inputTmp
 		SET typeid			 = CASE WHEN LEN(typeid)			= 0 THEN  NULL ELSE typeid			END,
@@ -193,8 +193,27 @@ BEGIN
 			Is3rdParty		 = CASE WHEN LEN(Is3rdParty)	= 0 THEN  NULL ELSE Is3rdParty END
 		WHERE LEN(typeid) = 0  OR LEN(ParentTypeid) = 0 OR LEN(DisplayedTypeID) = 0 OR LEN(LicSpreadBetTypeGroupId)	= 0 OR LEN(Is3rdParty)	= 0
 	END
-	ELSE
+	ELSE -- update by excel
 	BEGIN 
+		
+		SELECT @ErrCode = 1009
+		FROM #inputTmp it
+		WHERE  NOT EXISTS( SELECT 1 FROM bettype t WITH(ROWLOCK) WHERE t.typeid = it.typeid)
+		
+		IF @ErrCode = 1009
+		BEGIN
+			SELECT @ErrMsg = 'Bet Type: <' 
+				+ ( SELECT it.typeid
+					FROM #inputTmp it
+					WHERE  NOT EXISTS( SELECT 1 FROM bettype t WITH(ROWLOCK) WHERE t.typeid = it.typeid))
+				+ '> - <'
+				+ ( SELECT it.typenamee
+					FROM #inputTmp it
+					WHERE  NOT EXISTS( SELECT 1 FROM bettype t WITH(ROWLOCK) WHERE t.typeid = it.typeid))
+				+ '> does not exist in the system.'
+			RETURN
+		END
+		
 		UPDATE it
 		SET it.typeid		 = t.typeid,
 		    it.typenamee	 = CASE WHEN ISNULL(it.typenamee,   '') = '' THEN t.typenamee  ELSE it.typenamee END,
@@ -308,10 +327,10 @@ BEGIN
 	IF (@ValueError <> 0 OR ISNULL(@ValueError, '') = '') AND @ErrCode <> 0
 		BEGIN
 			IF @ErrCode = 1007
-				SELECT @ErrMsg = 'Row "' + @BettypeError + 
+				SELECT @ErrMsg = 'Bet Type "' + @BettypeError + 
 								'" - The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
 			IF @ErrCode = 1008
-				SELECT @ErrMsg = 'Invalid "' + @ColumnName + '" on row "' + @BettypeError + '".Please check them again.'
+				SELECT @ErrMsg = 'Invalid "' + @ColumnName + '" on Bet Type "' + @BettypeError + '".Please check them again.'
 
 			RETURN
 		END
