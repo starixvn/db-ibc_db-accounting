@@ -255,7 +255,7 @@ BEGIN
 	
 	IF @ErrCode = 1010
 	BEGIN
-		SELECT TOP(1) @ErrMsg = 'Bet Type: ' + ISNULL(it.typeid, '')  + ' - ' + it.typenamee + ' already exists in the system.'
+		SELECT TOP(1) @ErrMsg = 'Bet Type: ' + ISNULL(it.typeid, '') + ' already exists in the system.'
 		FROM #inputTmp it
 		WHERE EXISTS( SELECT 1 FROM bettype t WITH(ROWLOCK) WHERE t.typeid = it.typeid)
 		RETURN
