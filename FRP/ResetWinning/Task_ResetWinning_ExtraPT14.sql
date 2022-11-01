@@ -5,7 +5,6 @@ ALTER PROCEDURE [dbo].[Task_ResetWinning_ExtraPT14]
 	@mode     TINYINT = 0,
 	@creator  INT = 5838421,
 	@ip       VARCHAR(45) = '',
-	@RequestID VARCHAR(4000) = '',
 	@ErrCode  INT = 0 OUTPUT,
     @ErrMsg   VARCHAR(100) = '' OUTPUT
 AS
@@ -232,7 +231,6 @@ BEGIN
 	                @creator = @creator,
 	                @ip = @ip,
 					@isExtraPT = 1,
-					@RequestID = @RequestID,
 	                @ErrCode = @ErrCode OUTPUT,
                     @ErrMsg = @ErrMsg OUTPUT
 

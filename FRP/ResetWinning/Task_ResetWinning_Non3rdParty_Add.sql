@@ -8,7 +8,6 @@ ALTER PROCEDURE [dbo].[Task_ResetWinning_Non3rdParty_Add]
 	@creator     INT,
 	@ip          VARCHAR(45),
 	@isExtraPT	 BIT = 0,
-	@RequestID	VARCHAR(4000) = '',
 	@ErrCode     INT = 0 OUTPUT,  
     @ErrMsg      VARCHAR(100) = '' OUTPUT
 )
@@ -107,16 +106,16 @@ BEGIN
 	BEGIN
 		-- get move bet date
 		DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
-		DECLARE @MoveBetsDay SMALLDATETIME, @BalanceUpDay SMALLDATETIME
+		DECLARE @MoveBetsDay SMALLDATETIME
 
 		INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
 		EXEC bodb02.dbo.Age_SelBalanceUpDay
 	
 		-- GET the current MB date
-		SELECT @MoveBetsDay = MoveBetsDay, @BalanceUpDay = BalanceUpDay FROM @tblMoveBetBalanceUp
+		SELECT @MoveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 
 		---run only in range 14
-		IF (@winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay)
+		IF (@winlostdate <= @MoveBetsDay)
 		BEGIN
 			DECLARE
 				@alias VARCHAR(100), 
@@ -126,12 +125,11 @@ BEGIN
 
 			---get server name that dont need to run
 			EXEC bodb02.dbo.Get_ServerName_By_Alias @Alias  = 'DBTXN', @ServerName = @doNotRunInServer OUTPUT
-			SELECT @alias = 'DBACC', @remark = CASE WHEN ISNULL(@RequestID,'') = '' THEN '' ELSE 'step 5.1 -> Task_ResetWinning_Non3rdParty_Add -> Acc_StatementUpdateTransfer' END
+			SELECT @alias = 'DBACC', @remark = 'step 5.1/5.2 -> Task_ResetWinning_Non3rdParty_Add -> Acc_StatementUpdateTransfer'
 
 			SELECT @SqlCommand = CONCAT('EXEC bodb_report.dbo.[Acc_StatementUpdateTransfer] ', ' @custid = ',@custid,' ,@Amount = ',@amount,' ,@winlostdate = ''',@winlostdate, '''')
 
 			EXEC bodb02.dbo.Task_ExecRep_Wrapper 
-				@RequestID = @RequestID, 
 				@ServerName = '', 
 				@AliasName = @alias, 
 				@SqlCommand = @SqlCommand, 

@@ -4,7 +4,6 @@ ALTER PROCEDURE [dbo].[Acc_ResetWinning_SelByDate14]
 	@TotalBalance	MONEY = 0 OUTPUT, 
 	@Mode			BIT = 0,
 	@Creator		INT = 10278938,   --- starixIT
-	@RequestID		VARCHAR(4000) = '',
 	@ErrCode		INT = 0 OUTPUT,
     @ErrMsg			VARCHAR(100) = '' OUTPUT
 AS
@@ -537,7 +536,6 @@ BEGIN
 						@transdesc = @transDesc,
 						@creator = @creator,
 						@ip = @ip,
-						@RequestID = @RequestID,
 						@ErrCode = @ErrCode OUTPUT,
 						@ErrMsg = @ErrMsg OUTPUT
 						
