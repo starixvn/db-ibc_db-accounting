@@ -322,8 +322,8 @@ BEGIN
 	IF (@ValueError <> '' OR @ErrCode <> 0)
 	BEGIN
 		IF @ErrCode = 1007
-			SELECT @ErrMsg = 'Bet Type "' + @BettypeError + 
-							'" - The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
+			SELECT @ErrMsg = 'Bet Type ' + @BettypeError + 
+							' - The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
 		IF @ErrCode = 1008
 			SELECT @ErrMsg = 'Invalid "' + @ColumnName + '" on Bet Type "' + @BettypeError + '".Please check them again.'
 
