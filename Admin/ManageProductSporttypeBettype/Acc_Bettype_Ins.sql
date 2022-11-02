@@ -281,7 +281,8 @@ BEGIN
 							           WHEN LEN(typenamePT)		> 128 THEN typenamePT
 							           WHEN LEN(typenameFR)		> 128 THEN typenameFR
 							           WHEN LEN(typenameMMR)	> 128 THEN typenameMMR
-							           ELSE typenameHI END,
+							           WHEN LEN(typenameHI)		> 128 THEN typenameHI
+							           ELSE '' END,
 					@LimitValue = 128,
 					@ErrCode	= CASE WHEN LicSpreadBetTypeGroupId IS NULL
 											  OR LicSpreadBetTypeGroupId NOT BETWEEN 0 AND 255
@@ -316,7 +317,7 @@ BEGIN
 		  OR Is3rdParty NOT IN (0,1)
 							
 
-	IF (@ValueError <> 0 OR ISNULL(@ValueError, '') = '') AND @ErrCode <> 0
+	IF (@ValueError <> '' OR @ErrCode <> 0)
 		BEGIN
 			IF @ErrCode = 1007
 				SELECT @ErrMsg = 'Row "' + @BettypeError + 
