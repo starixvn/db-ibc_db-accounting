@@ -316,17 +316,16 @@ BEGIN
 		  OR Is3rdParty IS NULL
 		  OR Is3rdParty NOT IN (0,1)
 							
-
 	IF (@ValueError <> '' OR @ErrCode <> 0)
-		BEGIN
-			IF @ErrCode = 1007
-				SELECT @ErrMsg = 'Row ' + @BettypeError + 
-								' - The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
-			IF @ErrCode = 1008
-				SELECT @ErrMsg = 'Invalid "' + @ColumnName + '" on row "' + @BettypeError + '".Please check them again.'
+	BEGIN
+		IF @ErrCode = 1007
+			SELECT @ErrMsg = 'Row ' + @BettypeError + 
+							' - The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
+		IF @ErrCode = 1008
+			SELECT @ErrMsg = 'Invalid "' + @ColumnName + '" on row "' + @BettypeError + '".Please check them again.'
 
-			RETURN
-		END
+		RETURN
+	END
 	   
 	BEGIN TRY
 		INSERT INTO #input
@@ -498,7 +497,6 @@ BEGIN
 					@TrackingValue = @LogSPData,
 					@duration = @duration
 	END
-	
 	DROP TABLE #input
 	DROP TABLE #inputTmp
 END

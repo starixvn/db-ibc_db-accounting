@@ -7,7 +7,6 @@ CREATE PROCEDURE  dbo.Acc_Bettype_Upd
 	@UserID		INT,
 	@IsMultiple BIT = 0
 AS
-
 /*
 Created: 20200328@Malcolm
 Task :  NAP Manage Products/Sporttype/Bettype
@@ -30,7 +29,6 @@ BEGIN
 	IF ISNULL(@File, '') = ''
 			RETURN
  
-
 	DECLARE @iDoc INT, @RowTotal INT = 0, @CurrentRow INT = 0, @Bettype INT, @BettypeError NVARCHAR(MAX) = '', @ValueError NVARCHAR(MAX) = '', @LimitValue BIGINT, @ColumnName VARCHAR(100)
 
 	DECLARE @startRun DATETIME, @endRun DATETIME, @duration INT, @LogSPData NVARCHAR(MAX), @LogSPData2 NVARCHAR(MAX)
@@ -67,6 +65,7 @@ BEGIN
 
 	CREATE TABLE #inputTmp
 	(    
+		ID              INT IDENTITY (1,1),
 		typeid          NVARCHAR(MAX),
 		typenamee       NVARCHAR(MAX),
 		typenamec		NVARCHAR(MAX),
@@ -191,7 +190,11 @@ BEGIN
 			DisplayedTypeID  = CASE WHEN LEN(DisplayedTypeID)	= 0 THEN  NULL ELSE DisplayedTypeID END,
 			LicSpreadBetTypeGroupId = CASE WHEN LEN(LicSpreadBetTypeGroupId)	= 0 THEN  NULL ELSE LicSpreadBetTypeGroupId END,
 			Is3rdParty		 = CASE WHEN LEN(Is3rdParty)	= 0 THEN  NULL ELSE Is3rdParty END
-		WHERE LEN(typeid) = 0  OR LEN(ParentTypeid) = 0 OR LEN(DisplayedTypeID) = 0 OR LEN(LicSpreadBetTypeGroupId)	= 0 OR LEN(Is3rdParty)	= 0
+		WHERE LEN(typeid) = 0  
+			  OR LEN(ParentTypeid) = 0 
+			  OR LEN(DisplayedTypeID) = 0 
+			  OR LEN(LicSpreadBetTypeGroupId) = 0 
+			  OR LEN(Is3rdParty) = 0
 	END
 	ELSE -- update by excel
 	BEGIN 
@@ -262,8 +265,7 @@ BEGIN
 		   OR (ISNULL(it.Is3rdParty,   '') = '')
 	END
 
-
-	SELECT TOP(1) @BettypeError = typeid, 
+	SELECT TOP(1) @BettypeError = ID, 
 	              @ValueError   = CASE WHEN LEN(typenamee)		> 128 THEN typenamee
 									   WHEN LEN(typenamec)		> 128 THEN typenamec
 									   WHEN LEN(typedesc)		> 128 THEN typedesc
@@ -318,21 +320,71 @@ BEGIN
 		  OR Is3rdParty IS NULL
 		  OR Is3rdParty NOT IN (0,1)
 							
-
 	IF (@ValueError <> '' OR @ErrCode <> 0)
 	BEGIN
 		IF @ErrCode = 1007
-			SELECT @ErrMsg = 'Bet Type ' + @BettypeError + 
+			SELECT @ErrMsg = 'Row ' + @BettypeError + 
 							' - The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
 		IF @ErrCode = 1008
-			SELECT @ErrMsg = 'Invalid "' + @ColumnName + '" on Bet Type "' + @BettypeError + '".Please check them again.'
+			SELECT @ErrMsg = 'Invalid "' + @ColumnName + '" on row "' + @BettypeError + '".Please check them again.'
 
 		RETURN
 	END
 	   
 	BEGIN TRY
 		INSERT INTO #input
-		SELECT *
+		(
+				typeid
+				,typenamee
+				,typenamec
+				,typedesc
+				,typenamec_uni
+				,typenamej
+				,typenamcn
+				,typenamecn
+				,typenameth
+				,typenameit
+				,typenameko
+				,typenameES
+				,typenameVN
+				,typenameEL
+				,typenamee_Eu
+				,typenameRU
+				,typenameID
+				,typenamePT
+				,typenameFR
+				,ParentTypeid
+				,typenameMMR
+				,typenameHI
+				,DisplayedTypeID
+				,LicSpreadBetTypeGroupId
+				,Is3rdParty
+		)
+		SELECT	typeid
+			    ,typenamee
+			    ,typenamec
+			    ,typedesc
+			    ,typenamec_uni
+			    ,typenamej
+			    ,typenamcn
+			    ,typenamecn
+			    ,typenameth
+			    ,typenameit
+			    ,typenameko
+			    ,typenameES
+			    ,typenameVN
+			    ,typenameEL
+			    ,typenamee_Eu
+			    ,typenameRU
+			    ,typenameID
+			    ,typenamePT
+			    ,typenameFR
+			    ,ParentTypeid
+			    ,typenameMMR
+			    ,typenameHI
+			    ,DisplayedTypeID
+			    ,LicSpreadBetTypeGroupId
+			    ,Is3rdParty
 		FROM #inputTmp
 	END TRY
 
@@ -345,7 +397,7 @@ BEGIN
 
 	WHILE @CurrentRow <> @RowTotal
 	BEGIN
-		SELECT @CurrentRow= @CurrentRow + 1, @startRun = GETDATE();
+		SELECT @CurrentRow = @CurrentRow + 1, @startRun = GETDATE();
 
 		SELECT @Bettype = typeid
 		FROM #input 
@@ -418,7 +470,6 @@ BEGIN
 			RETURN
 		END CATCH
 		
-
 		SELECT @LogSPData =   '<R typeid="'+ COALESCE(CAST(typeid AS VARCHAR(15)), SPACE(1)) + '" ' +
 								'DisplayedTypeID="' + COALESCE(CAST(DisplayedTypeID  AS VARCHAR(15)), SPACE(1)) + '" ' +
 								'ParentTypeid="' + COALESCE(CAST(ParentTypeid  AS VARCHAR(15)), SPACE(1)) + '" ' +
