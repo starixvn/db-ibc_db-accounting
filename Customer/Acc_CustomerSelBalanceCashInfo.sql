@@ -19,6 +19,7 @@ AS
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 		- 20220801@Sophia: Scale out DBTRANS, add metadata at SiteDB, remove DisableAutoMPT [RedmineID: #175253]
+		- 20221104@Evan: Enhance performance get max transid [RedmineID: #180141]
 	
 	Param's Explaination:
 		- @CustId: custid
@@ -84,6 +85,7 @@ BEGIN
 				UNION ALL
 				SELECT MAX(transdate) AS transdate
 				FROM dbo.Transfer WITH(NOLOCK) WHERE custid = @custid
+				OPTION (OPTIMIZE FOR(@custid = -1))
 			) x
 
 		-- bettransRNG
@@ -170,6 +172,7 @@ BEGIN
 		SELECT @transferid = MAX(transid) FROM dbo.Transfer WITH (NOLOCK) 
 		WHERE recommend = @custid
 		AND bettype NOT IN (20000,19999)
+		OPTION (OPTIMIZE FOR(@custid = -1))
 
 		SELECT @transdate = MAX(transdate)
 		FROM 
@@ -295,7 +298,8 @@ BEGIN
 		SELECT @transferid = MAX(transid) FROM dbo.Transfer WITH (NOLOCK) 
 		WHERE mrecommend = @custid
 			AND bettype NOT IN (20000,19999)
-		
+		OPTION (OPTIMIZE FOR(@custid = -1))
+
 		SELECT @transdate = MAX(transdate)
 		FROM
 		(
@@ -434,7 +438,8 @@ BEGIN
 		SELECT @transferid = MAX(transid) FROM dbo.Transfer WITH (NOLOCK) 
 		WHERE srecommend = @custid
 			AND bettype NOT IN (20000,19999)
-
+		OPTION (OPTIMIZE FOR(@custid = -1))
+		
 		SELECT @transdate = MAX(transdate) 
 		FROM (
 			SELECT transdate FROM bettrans WITH (NOLOCK) WHERE transid = @transid
