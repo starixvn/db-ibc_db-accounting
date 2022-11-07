@@ -78,15 +78,23 @@ BEGIN
 
     IF @roleid = 1
 	BEGIN
-		SELECT @transdate = MAX(transdate) 
+		
+		SELECT @transid = MAX(transid) FROM bettrans WITH (NOLOCK) 
+		WHERE custid = @custid
+		OPTION(OPTIMIZE FOR	UNKNOWN)
+
+		SELECT @transferid = MAX(transid) FROM dbo.Transfer WITH (NOLOCK) 
+		WHERE custid = @custid
+		AND bettype NOT IN (20000,19999)
+		OPTION (OPTIMIZE FOR(@custid = -1))
+
+		SELECT @transdate = MAX(transdate)
 		FROM 
-			(	SELECT MAX(transdate) AS transdate
-				FROM bettrans WITH(NOLOCK) WHERE custid = @custid
-				UNION ALL
-				SELECT MAX(transdate) AS transdate
-				FROM dbo.Transfer WITH(NOLOCK) WHERE custid = @custid
-				OPTION (OPTIMIZE FOR(@custid = -1))
-			) x
+		(
+			SELECT transdate FROM bettrans WITH (NOLOCK) WHERE transid = @transid
+			UNION ALL
+			SELECT transdate FROM dbo.Transfer WITH (NOLOCK) WHERE transid = @transferid
+		) x
 
 		-- bettransRNG
 		INSERT INTO #BalanceInfo (memberCash, yesterday_memberCash, memberOutstanding)
