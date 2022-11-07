@@ -46,6 +46,7 @@ Revisions:
 	- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 	- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
 	- 20220801@Danny: change code to support SiteDB [Redmine: #175253]
+	- 20221107@Danny: Database - Sync-up Standby Server data - [RedmineID: #167261]
 	
 Param's Explanation:
 */
@@ -195,33 +196,24 @@ BEGIN
 	
 	IF @winlostdate <= @MoveBetsDay
 	BEGIN
-		EXEC [DBRPT].bodb_report.dbo.[Acc_StatementUpdateTransfer]
-			@custid = @custid
-			,@Amount = @amount
-			,@winlostdate = @winlostdate
-			,@ErrCode = @ErrCode OUTPUT
-			,@ErrMsg = @ErrMsg OUTPUT
+		DECLARE
+			@alias VARCHAR(100), 
+			@sqlCommand VARCHAR(MAX),
+			@doNotRunInServer VARCHAR(1000),
+			@remark VARCHAR(4000)
 
-		if @@ERROR <> 0
-		BEGIN
-			--rollback Debit Balance
-			IF @roleID = 1
-			BEGIN 
-				IF @balance < 0 
-				BEGIN 
-					SELECT @balance_ABS = ABS(@balance)
-					EXEC Dot_BalanceCreditUpd @CustID = @custid, @balance = @balance_ABS, @type = 2
-				END
-			END
+		---get server name that dont need to run
+		EXEC bodb02.dbo.Get_ServerName_By_Alias @Alias  = 'DBTXN', @ServerName = @doNotRunInServer OUTPUT
+		SELECT @alias = 'DBRPT', @remark = 'Acc_BettransInsTransaction -> Acc_StatementUpdateTransfer'
 
-			UPDATE dbo.Transfer WITH(ROWLOCK)
-			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, SRecommend = 0, MRecommend = 0	
-			WHERE custid = @custid AND RefNo = @RefNo
+		SELECT @SqlCommand = CONCAT('EXEC bodb_report.dbo.[Acc_StatementUpdateTransfer] ', ' @custid = ',@custid,' ,@Amount = ',@amount,' ,@winlostdate = ''',@winlostdate, '''')
 
-			Select @ErrMsg = 'Insert trans failed. Please try again.', @ErrCode = 104		
-			return
-		END
-
+		EXEC bodb02.dbo.Task_ExecRep_Wrapper 
+			@ServerName = '', 
+			@AliasName = @alias, 
+			@SqlCommand = @SqlCommand, 
+			@doNotRunInServer = @doNotRunInServer,
+			@Remark = @remark
 	END
 
 	-----Update balance Credit

@@ -42,6 +42,7 @@ AS
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 		- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
 		- 20220801@Danny: change code to support SiteDB [Redmine: #175253]
+		- 20221107@Danny: Database - Sync-up Standby Server data - [RedmineID: #167261]
 */
 BEGIN
 
@@ -305,79 +306,38 @@ BEGIN
 		BEGIN
 			SELECT TOP 1 @custid = custid,@amount = -(b.winlost - b.actual_stake) FROM	@Reversal b
 
-			EXEC [DBRPT].bodb_report.dbo.[Acc_StatementUpdateTransfer]
-				@custid = @custid
-				,@Amount = @amount
-				,@winlostdate = @winlostdate
-				,@ErrCode = @ErrCode OUTPUT
-				,@ErrMsg = @ErrMsg OUTPUT
-			
-			IF @ErrCode <> 0
-				BEGIN
-					UPDATE dbo.Transfer WITH(ROWLOCK)
-					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0		
-					WHERE transid IN (SELECT transid FROM @TransIDs)
-	
-					UPDATE Transfer_Coll WITH(ROWLOCK)
-					SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
-					WHERE	transid IN (SELECT transid FROM @TransIDs)
+		DECLARE
+			@alias VARCHAR(100), 
+			@sqlCommand VARCHAR(MAX),
+			@doNotRunInServer VARCHAR(1000),
+			@remark VARCHAR(4000)
 
-					UPDATE TransferInfo WITH(ROWLOCK)
-					SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-					WHERE  transid IN (SELECT transid FROM @TransIDs)
-						
-					UPDATE	dbo.TransferInfo WITH (ROWLOCK) 
-					SET		IsDel = 0, RepUpdateTime = SYSDATETIME()
-					WHERE	transid IN (Select transid from @Reversal)
+			---get server name that dont need to run
+			EXEC bodb02.dbo.Get_ServerName_By_Alias @Alias  = 'DBTXN', @ServerName = @doNotRunInServer OUTPUT
+			SELECT @alias = 'DBRPT', @remark = 'Acc_BettransDelTransaction -> Acc_StatementUpdateTransfer'
 
-					SELECT	@ErrMsg ='Delete the transaction unsuccessfully!',
-							@ErrCode = 105
-					RETURN 
-				END
+			SELECT @SqlCommand = CONCAT('EXEC bodb_report.dbo.[Acc_StatementUpdateTransfer] ', ' @custid = ',@custid,' ,@Amount = ',@amount,' ,@winlostdate = ''',@winlostdate, '''')
+
+			EXEC bodb02.dbo.Task_ExecRep_Wrapper 
+				@ServerName = '', 
+				@AliasName = @alias, 
+				@SqlCommand = @SqlCommand, 
+				@doNotRunInServer = @doNotRunInServer,
+				@Remark = @remark
+
 						
 			SELECT TOP 1 @custid = custid,@amount = -(b.winlost - b.actual_stake) FROM	@Reversal b WHERE @custid <> custid
 
 			IF @@ROWCOUNT = 1
 			BEGIN
-				EXEC [DBRPT].bodb_report.dbo.[Acc_StatementUpdateTransfer]
-					@custid = @custid
-					,@Amount = @amount
-					,@winlostdate = @winlostdate
-					,@ErrCode = @ErrCode OUTPUT
-					,@ErrMsg = @ErrMsg OUTPUT		
-			
-				IF @ErrCode <> 0
-					BEGIN
-						UPDATE dbo.Transfer WITH(ROWLOCK)
-						SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0		
-						WHERE transid IN (SELECT transid FROM @TransIDs)
-	
-						UPDATE Transfer_Coll WITH(ROWLOCK)
-						SET		custid = 0, Debit = 0, Credit = 0, RepUpdateTime = SYSDATETIME()
-						WHERE	transid IN (SELECT transid FROM @TransIDs)
+				SELECT @SqlCommand = CONCAT('EXEC bodb_report.dbo.[Acc_StatementUpdateTransfer] ', ' @custid = ',@custid,' ,@Amount = ',@amount,' ,@winlostdate = ''',@winlostdate, '''')
 
-						UPDATE TransferInfo WITH(ROWLOCK)
-						SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-						WHERE  transid IN (SELECT transid FROM @TransIDs)
-
-						--20150808@Elodie: rollback liveindicator = 0
-						UPDATE	transferInfo WITH (ROWLOCK) 
-						SET		isDel = 0, RepUpdateTime = SYSDATETIME()
-						WHERE	transid IN (Select transid from @Reversal)
-
-						SELECT TOP 1 @custid = custid,@amount = (b.winlost - b.actual_stake) FROM	@Reversal b WHERE @custid <> custid
-
-						EXEC [DBRPT].bodb_report.dbo.[Acc_StatementUpdateTransfer]
-							@custid = @custid
-							,@Amount = @amount
-							,@winlostdate = @winlostdate
-							--,@ErrCode = @ErrCode OUTPUT
-							--,@ErrMsg = @ErrMsg OUTPUT
-		
-						SELECT	@ErrMsg ='Delete the transaction unsuccessfully!',
-								@ErrCode = 106
-						RETURN 
-					END		
+				EXEC bodb02.dbo.Task_ExecRep_Wrapper 
+					@ServerName = '', 
+					@AliasName = @alias, 
+					@SqlCommand = @SqlCommand, 
+					@doNotRunInServer = @doNotRunInServer,
+					@Remark = @remark
 			END
 		END
 
