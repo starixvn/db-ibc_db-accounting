@@ -81,7 +81,7 @@ BEGIN
 		
 		SELECT @transid = MAX(transid) FROM bettrans WITH (NOLOCK) 
 		WHERE custid = @custid
-		OPTION(OPTIMIZE FOR	UNKNOWN)
+		OPTION(OPTIMIZE FOR	(@custid = -1))
 
 		SELECT @transferid = MAX(transid) FROM dbo.Transfer WITH (NOLOCK) 
 		WHERE custid = @custid
@@ -175,7 +175,7 @@ BEGIN
 		
 		SELECT @transid = MAX(transid) FROM bettrans WITH (NOLOCK) 
 		WHERE recommend = @custid
-		OPTION(OPTIMIZE FOR	UNKNOWN)
+		OPTION(OPTIMIZE FOR	(@custid = -1))
 
 		SELECT @transferid = MAX(transid) FROM dbo.Transfer WITH (NOLOCK) 
 		WHERE recommend = @custid
@@ -301,7 +301,7 @@ BEGIN
 		
 		SELECT @transid = MAX(transid) FROM bettrans WITH (NOLOCK) 
 		WHERE mrecommend = @custid
-		OPTION(OPTIMIZE FOR	UNKNOWN)
+		OPTION(OPTIMIZE FOR	(@custid = -1))
 
 		SELECT @transferid = MAX(transid) FROM dbo.Transfer WITH (NOLOCK) 
 		WHERE mrecommend = @custid
@@ -441,7 +441,7 @@ BEGIN
 
 		SELECT @transid = MAX(transid) FROM bettrans WITH (NOLOCK) 
 		WHERE srecommend = @custid
-		OPTION(OPTIMIZE FOR	UNKNOWN)
+		OPTION(OPTIMIZE FOR	(@custid = -1))
 
 		SELECT @transferid = MAX(transid) FROM dbo.Transfer WITH (NOLOCK) 
 		WHERE srecommend = @custid
