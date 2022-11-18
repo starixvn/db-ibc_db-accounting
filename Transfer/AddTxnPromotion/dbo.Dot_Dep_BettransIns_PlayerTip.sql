@@ -58,19 +58,16 @@ BEGIN
 		, @srecommend		INT
 		, @roleid			TINYINT
 		, @sporttype		INT
-		, @oddsID			INT
-		, @odds             SMALLMONEY
 		, @betteam          NVARCHAR(10)
-		, @stake			MONEY
-		, @actual_stake		MONEY
-		, @winlost			MONEY
+		, @awinlost			MONEY
+		, @statusID			TINYINT
+		, @status			NVARCHAR(10)
 
 
 	DECLARE @startTime		DATETIME
 		, @insertData		NVARCHAR(4000)
 		, @result			VARCHAR(50)
 		, @doneinsert		DATETIME
-		, @BetTime			DATETIME
 		, @spname			VARCHAR(100)
         , @hostname			VARCHAR(100)
         , @Creator			INT
@@ -96,11 +93,9 @@ BEGIN
 		, @TransID		= 0
 		, @RefNo		= 100000000000
 		, @sporttype	= 157
-		, @oddsID		= 0
-		, @odds			= 0
-		, @stake		= 0
-		, @actual_stake = @Amount
-		, @winlost		= 0
+		, @awinlost		= @Amount * @APositiontaking
+		, @statusID		= 113
+		, @status		= 'LOSE'
 		, @Creator		= ISNULL(@Creator, @CustID)
 
 	SELECT @startTime	= CURRENT_TIMESTAMP
@@ -165,8 +160,8 @@ BEGIN
 			, @recommend AS recommend
 			, @mrecommend AS  mrecommend
 			, @srecommend AS srecommend
-			, @oddsid AS oddsid
-			, @odds AS odds
+			, 0 AS oddsid
+			, 0 AS odds
 			, @Creator	AS creator
 			, @ip AS [ip]
 			, @Balance AS balance
@@ -174,10 +169,10 @@ BEGIN
 			, @transdate AS transdate
 			, @bettype AS bettype
 			, @sporttype AS matchid
-			, @stake AS stake
-			, @actual_stake AS actual_stake
-			, @winlost AS winlost
-			, @betteam AS betteam
+			, @Amount AS stake
+			, @Amount AS actual_stake
+			, 0 AS winlost
+			, @betteam AS betteam 
 			, @Betfrom AS betfrom
 			, @TransDesc AS transdesc
 			, @ExtraInfo AS ExtraInfo
@@ -187,13 +182,13 @@ BEGIN
 			, NULL AS oddsspread
 			, 0 AS hdp1
 			, 0 AS hdp2
-			, 113 AS [statusID]
-			, 'LOSE' AS [status]
+			, @statusID AS [statusID]
+			, @status AS [status]
 			, 0 AS livehomescore
 			, 0 AS liveawayscore
 			, 0 AS liveindicator
 			, @RefNo AS refno
-			, 0 AS tpositiontaking
+			, @APositiontaking AS tpositiontaking
 			, @APositiontaking AS apositiontaking
 			, 0 AS mpositiontaking
 			, 0 AS spositiontaking
@@ -207,7 +202,7 @@ BEGIN
 			, 0 AS comm
 			, 0 AS acomm
 			, 0 AS scomm
-			, 0 AS awinlost
+			, @awinlost AS awinlost
 			, 0 AS mwinlost
 			, 0 AS swinlost
 			, NULL AS betcheck
@@ -256,10 +251,6 @@ BEGIN
 
 		SELECT @doneinsert = CURRENT_TIMESTAMP
 
-		-- GET final total balance
-		EXEC [dbo].[Dot_BalanceMemberSel]
-			@custID		= @CustID
-			, @balance	= @Balance OUTPUT
 	END TRY
 	BEGIN CATCH
 		SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 108
@@ -291,6 +282,10 @@ BEGIN
 	------------------
 	FINISH:
 	------------------
+	-- GET final total balance
+	EXEC [dbo].[Dot_BalanceMemberSel]
+		@custID		= @CustID
+		, @balance	= @Balance OUTPUT
 
 	SELECT @logInfo = ISNULL(@result, '')	
 				+ 'Insert Player Tips CustID: ' + CAST(@CustID AS VARCHAR(20)) 
@@ -300,7 +295,7 @@ BEGIN
 				+ ', creatorid:' + cast(isnull(@creator,0) as varchar(10))
 				+ ', (' + CAST(IsNull(DATEDIFF(millisecond, @StartTime, @doneinsert),0) as varchar(50)) + ':' + CAST(IsNull(DATEDIFF(millisecond, @StartTime, CURRENT_TIMESTAMP),0) as varchar(50)) + ' ms) '
 				+ N' (call ' + ISNULL(@spname, '--') + ' via ' + ISNULL(@hostname, '--') + ')'
-				+ N' BetTime:' +convert(varchar(23), isnull(@BetTime,CURRENT_TIMESTAMP), 121)
+				+ N' BetTime:' +convert(varchar(23), CURRENT_TIMESTAMP, 121) 
 	IF (@ErrCode <> 0)
 	BEGIN
 		SELECT @logInfo += N' . Error: ' + CAST(@ErrCode AS VARCHAR(10)) + '. ErrMessage: ' + @ErrMsg
@@ -321,9 +316,5 @@ BEGIN
 	BEGIN CATCH
 		-- IF write log error: not RETURN error code
 	END CATCH
-
-	-- RETURN loginfo to write log
-	SELECT @logInfo AS LogInfo
-
 END
 GO
