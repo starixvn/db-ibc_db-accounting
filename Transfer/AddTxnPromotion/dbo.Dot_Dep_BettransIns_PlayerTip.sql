@@ -20,7 +20,7 @@ AS
 /*
 	Created: 20221116@Evan
 	DB: DBTXN.bodb02
-	Task: Insert bet ticket Tips for Live Streamer [RedmineID: #180509]
+	Task: Insert bet ticket Player Tips [RedmineID: #180509]
 	Revisions:
 		- 20221116@Evan: Initialize SP [RedmineID: #180509]
 */
@@ -95,7 +95,7 @@ BEGIN
 	SELECT @TransDate	= CURRENT_TIMESTAMP
 		, @TransID		= 0
 		, @RefNo		= 100000000000
-		, @sporttype	= 246
+		, @sporttype	= 157
 		, @oddsID		= 0
 		, @odds			= 0
 		, @stake		= 0
@@ -153,7 +153,7 @@ BEGIN
 	
 	BEGIN TRY
 
-		;WITH CTE_tempSabaTip AS 
+		;WITH CTE_tempPlayerTip AS 
 		(
 			SELECT @TransId AS TransId
 			, @CustID AS CustId
@@ -252,7 +252,7 @@ BEGIN
 			winlost,swinlost, mwinlost, awinlost,
 			[ip], Username, CurrencyName, betcheck, oddstype, 
 			balance, transid2,recommdate,betid,ruben,comstatus,betdaqid,ExtraInfo,WalletType,BonusID,RefCode, SYSDATETIME(), SiteDBGroupID
-		FROM CTE_tempSabaTip
+		FROM CTE_tempPlayerTip
 
 		SELECT @doneinsert = CURRENT_TIMESTAMP
 
@@ -293,7 +293,7 @@ BEGIN
 	------------------
 
 	SELECT @logInfo = ISNULL(@result, '')	
-				+ 'Insert Tips For Live Stream - CustID: ' + CAST(@CustID AS VARCHAR(20)) 
+				+ 'Insert Player Tips CustID: ' + CAST(@CustID AS VARCHAR(20)) 
 				+ ', bettype:' +  cast(isnull( @bettype,0) as varchar(10)) 
 				+ ', Amount:' + CONVERT(varchar(50),isnull(@Amount,0)) 
 				+ ', transid:' +cast(isnull(@TransID,0) as varchar(20)) +';'	
@@ -306,12 +306,12 @@ BEGIN
 		SELECT @logInfo += N' . Error: ' + CAST(@ErrCode AS VARCHAR(10)) + '. ErrMessage: ' + @ErrMsg
 	END
 
-	-----------------Write Log Tips For Live Stream----------------------
+	-----------------Write Log Player Tips
 	BEGIN TRY
 		DECLARE @LogData VARCHAR(300)
 
 		SELECT @LogData = 
-				'Insert Tips For Live Stream CustID = ' + CAST(@CustID AS VARCHAR(20)) 
+				'Insert Player Tips = ' + CAST(@CustID AS VARCHAR(20)) 
 				+ ', Bettype = ' + CAST(@Bettype AS VARCHAR(10)) 
 				+ ', ExtraInfo = ' + @ExtraInfo
 				+ ', Amount = ' + CAST(@Amount AS VARCHAR(20))
