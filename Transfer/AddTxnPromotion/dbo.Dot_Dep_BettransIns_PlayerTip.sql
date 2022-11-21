@@ -5,9 +5,9 @@ ALTER PROCEDURE dbo.Dot_Dep_BettransIns_PlayerTip
 	, @Bettype		INT				= 8700
 	, @TransDesc	NVARCHAR(1000)	= ''
 	, @ExtraInfo	VARCHAR(1000)	= ''
-	, @IP			VARCHAR(45)		= ''
-	, @Betfrom		NVARCHAR(1)		= ''
-	, @APositiontaking	SMALLMONEY		= 0.5
+	, @IP			VARCHAR(45)		 
+	, @Betfrom		NVARCHAR(1)		 
+	, @APositiontaking	SMALLMONEY		
 	------------------------------------------
 	, @TransID 		BIGINT			= 0 OUTPUT
 	, @TransDate	DATETIME		= NULL OUTPUT
@@ -24,10 +24,11 @@ AS
 	Revisions:
 		- 20221116@Evan: Initialize SP [RedmineID: #180509]
 */
-BEGIN
+BEGIN 
 	SET NOCOUNT ON
 	
 	DECLARE @Cust_SiteDBGroupID SMALLINT, @Server_SiteDBGroupID SMALLINT;
+	DECLARE @APositiontakingFixed SMALLMONEY = 0.3;
 	DECLARE @SiteGroupInfo TABLE
 	(	
 		CustID INT,
@@ -42,6 +43,12 @@ BEGIN
 	SELECT @Cust_SiteDBGroupID = SiteDBGroupID FROM @SiteGroupInfo
 	SELECT @Server_SiteDBGroupID = dbo.f_Get_SiteDBGroupID()
 	
+	--Check the SiteDBGroupID of CustID and Server is match
+	IF ISNULL(@APositiontaking,0) <> @APositiontakingFixed
+	BEGIN
+		SELECT @ErrMsg = 'Invalid PT. The current PT setting is '+ CAST(@APositiontakingFixed AS VARCHAR(10)) , @ErrCode = 105
+		RETURN		
+	END
 	--Check the SiteDBGroupID of CustID and Server is match
 	IF ISNULL(@Cust_SiteDBGroupID,-1) <> @Server_SiteDBGroupID
 	BEGIN
@@ -286,21 +293,21 @@ BEGIN
 	EXEC [dbo].[Dot_BalanceMemberSel]
 		@custID		= @CustID
 		, @balance	= @Balance OUTPUT
-
-	SELECT @logInfo = ISNULL(@result, '')	
-				+ 'Insert Player Tips CustID: ' + CAST(@CustID AS VARCHAR(20)) 
-				+ ', bettype:' +  cast(isnull( @bettype,0) as varchar(10)) 
-				+ ', Amount:' + CONVERT(varchar(50),isnull(@Amount,0)) 
-				+ ', transid:' +cast(isnull(@TransID,0) as varchar(20)) +';'	
-				+ ', creatorid:' + cast(isnull(@creator,0) as varchar(10))
-				+ ', (' + CAST(IsNull(DATEDIFF(millisecond, @StartTime, @doneinsert),0) as varchar(50)) + ':' + CAST(IsNull(DATEDIFF(millisecond, @StartTime, CURRENT_TIMESTAMP),0) as varchar(50)) + ' ms) '
-				+ N' (call ' + ISNULL(@spname, '--') + ' via ' + ISNULL(@hostname, '--') + ')'
-				+ N' BetTime:' +convert(varchar(23), CURRENT_TIMESTAMP, 121) 
 	IF (@ErrCode <> 0)
 	BEGIN
 		SELECT @logInfo += N' . Error: ' + CAST(@ErrCode AS VARCHAR(10)) + '. ErrMessage: ' + @ErrMsg
 	END
 
+	SELECT @logInfo = ISNULL(@result, '')	
+				+ 'Insert Player Tips CustID: ' + CAST(@CustID AS VARCHAR(20)) 
+				+ ', Bettype:' +  cast(isnull( @bettype,0) as varchar(10)) 
+				+ ', Amount:' + CONVERT(varchar(50),isnull(@Amount,0)) 
+				+ ', Transid:' +cast(isnull(@TransID,0) as varchar(20)) +';'	
+				+ ', Creatorid:' + cast(isnull(@creator,0) as varchar(10))
+				+ ', (' + CAST(IsNull(DATEDIFF(millisecond, @StartTime, @doneinsert),0) as varchar(50)) + ':' + CAST(IsNull(DATEDIFF(millisecond, @StartTime, CURRENT_TIMESTAMP),0) as varchar(50)) + ' ms) '
+				+ N' (call ' + ISNULL(@spname, '--') + ' via ' + ISNULL(@hostname, '--') + ')'
+				+ N' BetTime:' +convert(varchar(23), CURRENT_TIMESTAMP, 121) 
+	
 	-----------------Write Log Player Tips
 	BEGIN TRY
 		DECLARE @LogData VARCHAR(300)
@@ -310,6 +317,7 @@ BEGIN
 				+ ', Bettype = ' + CAST(@Bettype AS VARCHAR(10)) 
 				+ ', ExtraInfo = ' + @ExtraInfo
 				+ ', Amount = ' + CAST(@Amount AS VARCHAR(20))
+				+ ', APositiontaking = ' + CAST(@APositiontaking AS VARCHAR(10))
 	
 		EXEC dbo.WriteLog_UserLog @UserID = @CustID, @Doing = @LogData
 	END TRY
