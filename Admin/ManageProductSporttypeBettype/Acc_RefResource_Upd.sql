@@ -47,7 +47,7 @@ Original:
 				Resource_de  = ""
 			/>
 		</ROOT>	
-	- @IsMultiple: 0 - Edit, 1 - Update By Exel
+	- @IsMultiple: 0 - Edit, 1 - Update By Excel
 */
 BEGIN
     SET NOCOUNT ON
