@@ -193,51 +193,114 @@ BEGIN
 		RETURN
 	END CATCH
 	
-	UPDATE #inputTmp
-	SET RefId		= CASE WHEN LEN(RefId)		 = 0 THEN NULL ELSE RefId		END,
-	    ResourceId	= CASE WHEN LEN(ResourceId)  = 0 THEN NULL ELSE ResourceId	END,
-		Resource_en = CASE WHEN LEN(Resource_en) = 0 THEN NULL ELSE Resource_en END,
-		Resource_ch = CASE WHEN LEN(Resource_ch) = 0 THEN NULL ELSE Resource_ch END,
-		Resource_cs = CASE WHEN LEN(Resource_cs) = 0 THEN NULL ELSE Resource_cs END,
-		Resource_jp = CASE WHEN LEN(Resource_jp) = 0 THEN NULL ELSE Resource_jp END,
-		Resource_it = CASE WHEN LEN(Resource_it) = 0 THEN NULL ELSE Resource_it END,
-		Resource_th = CASE WHEN LEN(Resource_th) = 0 THEN NULL ELSE Resource_th END,
-		Resource_ko = CASE WHEN LEN(Resource_ko) = 0 THEN NULL ELSE Resource_ko END,
-		Resource_es = CASE WHEN LEN(Resource_es) = 0 THEN NULL ELSE Resource_es END,
-		Sort1		= CASE WHEN LEN(Sort1)       = 0 THEN NULL ELSE Sort1		END,
-		Sort2		= CASE WHEN LEN(Sort2)       = 0 THEN NULL ELSE Sort2		END,
-		Resource_el = CASE WHEN LEN(Resource_el) = 0 THEN NULL ELSE Resource_el END,
-		Resource_vn = CASE WHEN LEN(Resource_vn) = 0 THEN NULL ELSE Resource_vn END,
-		Resource_pl = CASE WHEN LEN(Resource_pl) = 0 THEN NULL ELSE Resource_pl END,
-		Resource_id = CASE WHEN LEN(Resource_id) = 0 THEN NULL ELSE Resource_id END,
-		Resource_hi = CASE WHEN LEN(Resource_hi) = 0 THEN NULL ELSE Resource_hi END,
-		Resource_mm = CASE WHEN LEN(Resource_mm) = 0 THEN NULL ELSE Resource_mm END,
-		Resource_fr = CASE WHEN LEN(Resource_fr) = 0 THEN NULL ELSE Resource_fr END,
-		Resource_ru = CASE WHEN LEN(Resource_ru) = 0 THEN NULL ELSE Resource_ru END,
-		Resource_pt = CASE WHEN LEN(Resource_pt) = 0 THEN NULL ELSE Resource_pt END,
-		Resource_de = CASE WHEN LEN(Resource_de) = 0 THEN NULL ELSE Resource_de END
-	WHERE  LEN(RefId)		= 0 
-		OR LEN(ResourceId)	= 0 
-		OR LEN(Resource_en) = 0 
-		OR LEN(Resource_ch) = 0 
-		OR LEN(Resource_cs) = 0 
-		OR LEN(Resource_jp) = 0 
-		OR LEN(Resource_it) = 0 
-		OR LEN(Resource_th) = 0 
-		OR LEN(Resource_ko) = 0 
-		OR LEN(Resource_es) = 0 
-		OR LEN(Sort1)		= 0 
-		OR LEN(Sort2)		= 0 
-		OR LEN(Resource_el) = 0 
-		OR LEN(Resource_vn) = 0 
-		OR LEN(Resource_pl) = 0 
-		OR LEN(Resource_id) = 0 
-		OR LEN(Resource_hi) = 0 
-		OR LEN(Resource_mm) = 0 
-		OR LEN(Resource_fr) = 0 
-		OR LEN(Resource_ru) = 0 
-		OR LEN(Resource_pt) = 0 
-		OR LEN(Resource_de) = 0 
+	IF @IsMultiple = 0 -- edit
+	BEGIN
+		UPDATE #inputTmp
+		SET RefId		= CASE WHEN LEN(RefId)		 = 0 THEN NULL ELSE RefId		END,
+			ResourceId	= CASE WHEN LEN(ResourceId)  = 0 THEN NULL ELSE ResourceId	END,
+			Resource_en = CASE WHEN LEN(Resource_en) = 0 THEN NULL ELSE Resource_en END,
+			Resource_ch = CASE WHEN LEN(Resource_ch) = 0 THEN NULL ELSE Resource_ch END,
+			Resource_cs = CASE WHEN LEN(Resource_cs) = 0 THEN NULL ELSE Resource_cs END,
+			Resource_jp = CASE WHEN LEN(Resource_jp) = 0 THEN NULL ELSE Resource_jp END,
+			Resource_it = CASE WHEN LEN(Resource_it) = 0 THEN NULL ELSE Resource_it END,
+			Resource_th = CASE WHEN LEN(Resource_th) = 0 THEN NULL ELSE Resource_th END,
+			Resource_ko = CASE WHEN LEN(Resource_ko) = 0 THEN NULL ELSE Resource_ko END,
+			Resource_es = CASE WHEN LEN(Resource_es) = 0 THEN NULL ELSE Resource_es END,
+			Sort1		= CASE WHEN LEN(Sort1)       = 0 THEN NULL ELSE Sort1		END,
+			Sort2		= CASE WHEN LEN(Sort2)       = 0 THEN NULL ELSE Sort2		END,
+			Resource_el = CASE WHEN LEN(Resource_el) = 0 THEN NULL ELSE Resource_el END,
+			Resource_vn = CASE WHEN LEN(Resource_vn) = 0 THEN NULL ELSE Resource_vn END,
+			Resource_pl = CASE WHEN LEN(Resource_pl) = 0 THEN NULL ELSE Resource_pl END,
+			Resource_id = CASE WHEN LEN(Resource_id) = 0 THEN NULL ELSE Resource_id END,
+			Resource_hi = CASE WHEN LEN(Resource_hi) = 0 THEN NULL ELSE Resource_hi END,
+			Resource_mm = CASE WHEN LEN(Resource_mm) = 0 THEN NULL ELSE Resource_mm END,
+			Resource_fr = CASE WHEN LEN(Resource_fr) = 0 THEN NULL ELSE Resource_fr END,
+			Resource_ru = CASE WHEN LEN(Resource_ru) = 0 THEN NULL ELSE Resource_ru END,
+			Resource_pt = CASE WHEN LEN(Resource_pt) = 0 THEN NULL ELSE Resource_pt END,
+			Resource_de = CASE WHEN LEN(Resource_de) = 0 THEN NULL ELSE Resource_de END
+		WHERE  LEN(RefId)		= 0 
+			OR LEN(ResourceId)	= 0 
+			OR LEN(Resource_en) = 0 
+			OR LEN(Resource_ch) = 0 
+			OR LEN(Resource_cs) = 0 
+			OR LEN(Resource_jp) = 0 
+			OR LEN(Resource_it) = 0 
+			OR LEN(Resource_th) = 0 
+			OR LEN(Resource_ko) = 0 
+			OR LEN(Resource_es) = 0 
+			OR LEN(Sort1)		= 0 
+			OR LEN(Sort2)		= 0 
+			OR LEN(Resource_el) = 0 
+			OR LEN(Resource_vn) = 0 
+			OR LEN(Resource_pl) = 0 
+			OR LEN(Resource_id) = 0 
+			OR LEN(Resource_hi) = 0 
+			OR LEN(Resource_mm) = 0 
+			OR LEN(Resource_fr) = 0 
+			OR LEN(Resource_ru) = 0 
+			OR LEN(Resource_pt) = 0 
+			OR LEN(Resource_de) = 0
+	END
+	ELSE -- Update By Excel
+	BEGIN
+		SELECT @ErrCode = 1009
+		FROM #inputTmp it
+		WHERE  NOT EXISTS( SELECT 1 FROM dbo.RefResource rr WITH(ROWLOCK) WHERE rr.RefId = it.RefId AND rr.ResourceId = it.ResourceId)
+		
+		IF @ErrCode = 1009
+		BEGIN
+			SELECT TOP(1) @ErrMsg = 'RefID: ' + ISNULL(it.RefId, '') + '- ResourceID: ' + ISNULL(it.ResourceId, '') + ' does not exist in the system.'
+			FROM #inputTmp it
+			WHERE  NOT EXISTS( SELECT 1 FROM dbo.RefResource rr WITH(ROWLOCK) WHERE rr.RefId = it.RefId AND rr.ResourceId = it.ResourceId)
+			RETURN
+		END
+		
+		UPDATE it
+		SET it.RefId		 = rr.typeid
+			,it.ResourceId	 = rr.ResourceId
+		    ,it.Resource_en	 = CASE WHEN ISNULL(it.Resource_en, '') = '' THEN rr.Resource_en ELSE it.Resource_en END
+		    ,it.Resource_ch	 = CASE WHEN ISNULL(it.Resource_ch, '') = '' THEN rr.Resource_ch ELSE it.Resource_ch END
+		    ,it.Resource_cs	 = CASE WHEN ISNULL(it.Resource_cs, '') = '' THEN rr.Resource_cs ELSE it.Resource_cs END
+		    ,it.Resource_jp	 = CASE WHEN ISNULL(it.Resource_jp, '') = '' THEN rr.Resource_jp ELSE it.Resource_jp END
+		    ,it.Resource_it	 = CASE WHEN ISNULL(it.Resource_it, '') = '' THEN rr.Resource_it ELSE it.Resource_it END
+		    ,it.Resource_th	 = CASE WHEN ISNULL(it.Resource_th, '') = '' THEN rr.Resource_th ELSE it.Resource_th END
+		    ,it.Resource_ko	 = CASE WHEN ISNULL(it.Resource_ko, '') = '' THEN rr.Resource_ko ELSE it.Resource_ko END
+		    ,it.Resource_es	 = CASE WHEN ISNULL(it.Resource_es, '') = '' THEN rr.Resource_es ELSE it.Resource_es END
+		    ,it.Sort1,     	 = CASE WHEN ISNULL(it.Sort1,     , '') = '' THEN rr.Sort1,      ELSE it.Sort1,      END
+		    ,it.Sort2,     	 = CASE WHEN ISNULL(it.Sort2,     , '') = '' THEN rr.Sort2,      ELSE it.Sort2,      END
+		    ,it.Resource_el	 = CASE WHEN ISNULL(it.Resource_el, '') = '' THEN rr.Resource_el ELSE it.Resource_el END
+		    ,it.Resource_vn	 = CASE WHEN ISNULL(it.Resource_vn, '') = '' THEN rr.Resource_vn ELSE it.Resource_vn END
+		    ,it.Resource_pl	 = CASE WHEN ISNULL(it.Resource_pl, '') = '' THEN rr.Resource_pl ELSE it.Resource_pl END
+		    ,it.Resource_id	 = CASE WHEN ISNULL(it.Resource_id, '') = '' THEN rr.Resource_id ELSE it.Resource_id END
+		    ,it.Resource_hi	 = CASE WHEN ISNULL(it.Resource_hi, '') = '' THEN rr.Resource_hi ELSE it.Resource_hi END
+		    ,it.Resource_mm	 = CASE WHEN ISNULL(it.Resource_mm, '') = '' THEN rr.Resource_mm ELSE it.Resource_mm END
+		    ,it.Resource_fr	 = CASE WHEN ISNULL(it.Resource_fr, '') = '' THEN rr.Resource_fr ELSE it.Resource_fr END
+		    ,it.Resource_ru	 = CASE WHEN ISNULL(it.Resource_ru, '') = '' THEN rr.Resource_ru ELSE it.Resource_ru END
+		    ,it.Resource_pt	 = CASE WHEN ISNULL(it.Resource_pt, '') = '' THEN rr.Resource_pt ELSE it.Resource_pt END
+		    ,it.Resource_de	 = CASE WHEN ISNULL(it.Resource_de, '') = '' THEN rr.Resource_de ELSE it.Resource_de END
+		FROM dbo.RefResource rr WITH(ROWLOCK)
+			INNER JOIN #inputTmp it ON it.RefId = rr.RefId AND it.ResourceId = rr.ResourceId 
+		WHERE (ISNULL(it.Resource_en, '') = '')
+		   OR (ISNULL(it.Resource_ch, '') = '')
+		   OR (ISNULL(it.Resource_cs, '') = '')
+		   OR (ISNULL(it.Resource_jp, '') = '')
+		   OR (ISNULL(it.Resource_it, '') = '')
+		   OR (ISNULL(it.Resource_th, '') = '')
+		   OR (ISNULL(it.Resource_ko, '') = '')
+		   OR (ISNULL(it.Resource_es, '') = '')
+		   OR (ISNULL(it.Sort1,       '') = '')
+		   OR (ISNULL(it.Sort2,       '') = '')
+		   OR (ISNULL(it.Resource_el, '') = '')
+		   OR (ISNULL(it.Resource_vn, '') = '')
+		   OR (ISNULL(it.Resource_pl, '') = '')
+		   OR (ISNULL(it.Resource_id, '') = '')
+		   OR (ISNULL(it.Resource_hi, '') = '')
+		   OR (ISNULL(it.Resource_mm, '') = '')
+		   OR (ISNULL(it.Resource_fr, '') = '')
+		   OR (ISNULL(it.Resource_ru, '') = '')
+		   OR (ISNULL(it.Resource_pt, '') = '')
+		   OR (ISNULL(it.Resource_de, '') = '')
+	END
 
 	SELECT TOP(1) @RefResourceError = ID, 
 	              @ValueError = CASE WHEN LEN(RefId)        > 20 THEN RefId
@@ -259,7 +322,8 @@ BEGIN
 									 WHEN LEN(Resource_fr)	> 50 THEN Resource_fr	
 									 WHEN LEN(Resource_ru)	> 64 THEN Resource_ru
 									 WHEN LEN(Resource_pt)	> 50 THEN Resource_pt	
-								ELSE  Resource_de END,
+									 WHEN LEN(Resource_de)	> 50 THEN Resource_de	
+									 ELSE '' END,
 				  @LimitValue = CASE WHEN LEN(RefId) > 20 OR LEN(ResourceId) > 20 THEN 20
 									 WHEN LEN(Resource_ru) > 64 THEN 64
 									 ELSE 50 END
@@ -285,10 +349,10 @@ BEGIN
 		OR LEN(Resource_pt)	> 50
 		OR LEN(Resource_de)	> 50
 
-	IF @ValueError <> ''
+	IF (@ValueError <> '' OR @ErrCode <> 0)
 	BEGIN
 		SELECT @ErrCode = 1007, 
-		       @ErrMsg = 'The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) +'.'
+		       @ErrMsg = 'Row ' + @RefResourceError + '- The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) +'.'
 	    RETURN
 	END
 	   
@@ -349,7 +413,7 @@ BEGIN
 
 	SELECT @RefId = RefId, @ResourceId = ResourceId FROM #input
 
-	SELECT @LogSPData2 = (SELECT RefId       AS '@RefId'
+	SELECT @LogSPData2 = (SELECT RefId        AS '@RefId'
 								 ,ResourceId  AS '@ResourceId'
 								 ,Resource_en AS '@Resource_en'
 								 ,Resource_ch AS '@Resource_ch'
