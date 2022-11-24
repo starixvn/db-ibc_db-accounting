@@ -249,7 +249,7 @@ BEGIN
 		
 		IF @ErrCode = 1009
 		BEGIN
-			SELECT TOP(1) @ErrMsg = 'RefID: ' + ISNULL(it.RefId, '') + '- ResourceID: ' + ISNULL(it.ResourceId, '') + ' does not exist in the system.'
+			SELECT TOP(1) @ErrMsg = 'RefID: ' + ISNULL(it.RefId, '') + ' - ResourceID: ' + ISNULL(it.ResourceId, '') + ' does not exist in the system.'
 			FROM #inputTmp it
 			WHERE NOT EXISTS( SELECT 1 FROM dbo.RefResource rr WITH(ROWLOCK) WHERE rr.RefId = it.RefId AND rr.ResourceId = it.ResourceId)
 			RETURN
