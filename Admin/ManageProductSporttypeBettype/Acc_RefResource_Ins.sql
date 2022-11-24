@@ -59,7 +59,7 @@ BEGIN
 
 	CREATE TABLE #input 
 	(    
-		ID              INT
+		ID              INT IDENTITY (1,1)
 		,RefId			VARCHAR(20)
 		,ResourceId		VARCHAR(20)
 		,Resource_en	NVARCHAR(50)
