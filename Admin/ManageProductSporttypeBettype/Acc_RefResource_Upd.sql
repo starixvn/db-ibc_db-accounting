@@ -55,7 +55,7 @@ BEGIN
     IF ISNULL(@File, '') = ''
 		RETURN
 
-	DECLARE @iDoc INT, @RowTotal INT = 0, @CurrentRow INT = 0, @RefId VARCHAR(20), @ResourceId VARCHAR(20), @RefResourceError NVARCHAR(MAX) = '', @ValueError NVARCHAR(MAX) = '', @LimitValue BIGINT
+	DECLARE @iDoc INT, @RowTotal INT = 0, @CurrentRow INT = 0, @RefId VARCHAR(20), @ResourceId VARCHAR(20), @RefResourceError INT = 0, @ValueError NVARCHAR(MAX) = '', @LimitValue BIGINT
 
     DECLARE @startRun DATETIME = GETDATE(), @endRun DATETIME, @duration INT, @LogSPData NVARCHAR(MAX), @LogSPData2 NVARCHAR(MAX)
 	
@@ -354,7 +354,7 @@ BEGIN
 		IF @IsMultiple = 1 
 		BEGIN
 			SELECT @ErrCode = 1007, 
-				   @ErrMsg = 'Row ' + @RefResourceError + '- The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) +'.'
+				   @ErrMsg = 'Row "' + CONVERT(VARCHAR(10),@RefResourceError) + '" - The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
 		END
 		ELSE
 		BEGIN
