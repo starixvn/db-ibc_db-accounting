@@ -528,4 +528,3 @@ BEGIN
 	DROP TABLE #input
 	DROP TABLE #inputTmp
 END
-
