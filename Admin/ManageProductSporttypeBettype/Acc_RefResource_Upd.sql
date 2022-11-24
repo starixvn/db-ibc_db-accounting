@@ -57,7 +57,7 @@ BEGIN
 
 	DECLARE @iDoc INT, @RowTotal INT = 0, @CurrentRow INT = 0, @RefId VARCHAR(20), @ResourceId VARCHAR(20), @RefResourceError INT = 0, @ValueError NVARCHAR(MAX) = '', @LimitValue BIGINT
 
-    DECLARE @startRun DATETIME = GETDATE(), @endRun DATETIME, @duration INT, @LogSPData NVARCHAR(MAX), @LogSPData2 NVARCHAR(MAX)
+    DECLARE @startRun DATETIME, @endRun DATETIME, @duration INT, @LogSPData NVARCHAR(MAX), @LogSPData2 NVARCHAR(MAX)
 	
 	CREATE TABLE #input 
 	(    
@@ -256,7 +256,7 @@ BEGIN
 		END
 		
 		UPDATE it
-		SET it.RefId		 = rr.typeid
+		SET it.RefId		 = rr.RefId
 			,it.ResourceId	 = rr.ResourceId
 		    ,it.Resource_en	 = CASE WHEN ISNULL(it.Resource_en, '') = '' THEN rr.Resource_en ELSE it.Resource_en END
 		    ,it.Resource_ch	 = CASE WHEN ISNULL(it.Resource_ch, '') = '' THEN rr.Resource_ch ELSE it.Resource_ch END
@@ -266,8 +266,8 @@ BEGIN
 		    ,it.Resource_th	 = CASE WHEN ISNULL(it.Resource_th, '') = '' THEN rr.Resource_th ELSE it.Resource_th END
 		    ,it.Resource_ko	 = CASE WHEN ISNULL(it.Resource_ko, '') = '' THEN rr.Resource_ko ELSE it.Resource_ko END
 		    ,it.Resource_es	 = CASE WHEN ISNULL(it.Resource_es, '') = '' THEN rr.Resource_es ELSE it.Resource_es END
-		    ,it.Sort1,     	 = CASE WHEN ISNULL(it.Sort1,     , '') = '' THEN rr.Sort1,      ELSE it.Sort1,      END
-		    ,it.Sort2,     	 = CASE WHEN ISNULL(it.Sort2,     , '') = '' THEN rr.Sort2,      ELSE it.Sort2,      END
+		    ,it.Sort1     	 = CASE WHEN ISNULL(it.Sort1,       '') = '' THEN rr.Sort1       ELSE it.Sort1       END
+		    ,it.Sort2     	 = CASE WHEN ISNULL(it.Sort2,       '') = '' THEN rr.Sort2       ELSE it.Sort2       END
 		    ,it.Resource_el	 = CASE WHEN ISNULL(it.Resource_el, '') = '' THEN rr.Resource_el ELSE it.Resource_el END
 		    ,it.Resource_vn	 = CASE WHEN ISNULL(it.Resource_vn, '') = '' THEN rr.Resource_vn ELSE it.Resource_vn END
 		    ,it.Resource_pl	 = CASE WHEN ISNULL(it.Resource_pl, '') = '' THEN rr.Resource_pl ELSE it.Resource_pl END
@@ -359,7 +359,7 @@ BEGIN
 		ELSE
 		BEGIN
 			SELECT @ErrCode = 1007, 
-				   @ErrMsg = 'The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) +'.'
+				   @ErrMsg = 'The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
 		END
 	    RETURN
 	END
@@ -419,34 +419,42 @@ BEGIN
 		RETURN
 	END CATCH
 
-	SELECT @RefId = RefId, @ResourceId = ResourceId FROM #input
+	SELECT  @RowTotal = COUNT(*) FROM #input
+	
+	WHILE @CurrentRow <> @RowTotal
+	BEGIN
+		SELECT @CurrentRow = @CurrentRow + 1, @startRun = GETDATE();
+	
+		SELECT @RefId = RefId, @ResourceId = ResourceId 
+		FROM #input
+		WHERE ID = @CurrentRow
 
-	SELECT @LogSPData2 = (SELECT RefId        AS '@RefId'
-								 ,ResourceId  AS '@ResourceId'
-								 ,Resource_en AS '@Resource_en'
-								 ,Resource_ch AS '@Resource_ch'
-								 ,Resource_cs AS '@Resource_cs'
-								 ,Resource_jp AS '@Resource_jp'
-								 ,Resource_it AS '@Resource_it'
-								 ,Resource_th AS '@Resource_th'
-								 ,Resource_ko AS '@Resource_ko'
-								 ,Resource_es AS '@Resource_es'
-								 ,Sort1	      AS '@Sort1'
-								 ,Sort2       AS '@Sort2' 
-								 ,Resource_el AS '@Resource_el'
-								 ,Resource_vn AS '@Resource_vn'
-								 ,Resource_pl AS '@Resource_pl'
-								 ,Resource_id AS '@Resource_id'
-								 ,Resource_hi AS '@Resource_hi'
-								 ,Resource_mm AS '@Resource_mm'
-								 ,Resource_fr AS '@Resource_fr'
-								 ,Resource_ru AS '@Resource_ru'
-								 ,Resource_pt AS '@Resource_pt'
-								 ,Resource_de AS '@Resource_de'
-								 ,@LoginIP    AS '@LoginIP'
-						   FROM dbo.RefResource WITH(NOLOCK)
-						   WHERE RefId = @RefId AND ResourceId = @ResourceId
-						   FOR XML PATH('R'))	
+		SELECT @LogSPData2 = (SELECT RefId        AS '@RefId'
+									,ResourceId   AS '@ResourceId'
+									,Resource_en  AS '@Resource_en'
+									,Resource_ch  AS '@Resource_ch'
+									,Resource_cs  AS '@Resource_cs'
+									,Resource_jp  AS '@Resource_jp'
+									,Resource_it  AS '@Resource_it'
+									,Resource_th  AS '@Resource_th'
+									,Resource_ko  AS '@Resource_ko'
+									,Resource_es  AS '@Resource_es'
+									,Sort1	      AS '@Sort1'
+									,Sort2        AS '@Sort2' 
+									,Resource_el  AS '@Resource_el'
+									,Resource_vn  AS '@Resource_vn'
+									,Resource_pl  AS '@Resource_pl'
+									,Resource_id  AS '@Resource_id'
+									,Resource_hi  AS '@Resource_hi'
+									,Resource_mm  AS '@Resource_mm'
+									,Resource_fr  AS '@Resource_fr'
+									,Resource_ru  AS '@Resource_ru'
+									,Resource_pt  AS '@Resource_pt'
+									,Resource_de  AS '@Resource_de'
+									,@LoginIP     AS '@LoginIP'
+						      FROM dbo.RefResource WITH(NOLOCK)
+						      WHERE RefId = @RefId AND ResourceId = @ResourceId
+						      FOR XML PATH('R'))	
 		BEGIN TRY
 			UPDATE f
 			SET f.Resource_en    = t.Resource_en
@@ -471,7 +479,8 @@ BEGIN
 				,f.Resource_de   = t.Resource_de 
 				,f.RepUpdateTime = SYSDATETIME()
 			FROM dbo.RefResource f WITH(ROWLOCK)
-				INNER JOIN #input t ON  f.RefId = t.RefId AND f.ResourceId = t.ResourceId		
+				INNER JOIN #input t ON  f.RefId = t.RefId AND f.ResourceId = t.ResourceId
+			WHERE t.ID = @CurrentRow
 		END TRY
 
 		BEGIN CATCH
@@ -503,6 +512,7 @@ BEGIN
 									,Resource_de AS '@Resource_de'
 									,@LoginIP    AS '@LoginIP'
 							FROM #input
+							WHERE ID = @CurrentRow
 							FOR XML PATH('R'))
 							
 		SET @endRun   = GETDATE()
@@ -514,7 +524,7 @@ BEGIN
 			,@TrackingValue = @LogSPData
 			,@TrackingValue2 = @LogSPData2
 			,@duration = @duration
-
+	END
 	DROP TABLE #input
 	DROP TABLE #inputTmp
 END
