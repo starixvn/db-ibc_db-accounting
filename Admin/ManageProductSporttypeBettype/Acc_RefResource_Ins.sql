@@ -345,8 +345,7 @@ BEGIN
 	BEGIN TRY
 		INSERT INTO #input
 		(
-			   ID
-			   ,RefId
+			   RefId
 			   ,ResourceId
 			   ,Resource_en
 			   ,Resource_ch
@@ -369,8 +368,7 @@ BEGIN
 			   ,Resource_pt
 			   ,Resource_de
 		)
-		SELECT ID
-			   ,RefId
+		SELECT RefId
 			   ,ResourceId
 			   ,Resource_en
 			   ,Resource_ch
