@@ -373,6 +373,7 @@ BEGIN
 		IF @ErrCode = 1010
 		BEGIN
 			SELECT @ErrMsg = 'Resource_EN cannot be null.'
+			RETURN
 		END
 	END
 	   
