@@ -351,7 +351,7 @@ BEGIN
 
 	IF @ValueError <> ''
 	BEGIN
-		IF @IsMultiple = 1 
+		IF @IsMultiple = 1
 		BEGIN
 			SELECT @ErrCode = 1007, 
 				   @ErrMsg = 'Row "' + CONVERT(VARCHAR(10),@RefResourceError) + '" - The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
@@ -362,6 +362,18 @@ BEGIN
 				   @ErrMsg = 'The values "' + @ValueError + '" is exceeded max length ' + CONVERT(VARCHAR(8),@LimitValue) + '.'
 		END
 	    RETURN
+	END
+	
+	IF @IsMultiple = 0
+	BEGIN
+		SELECT @ErrCode = 1010
+		FROM #inputTmp
+		WHERE Resource_en IS NULL
+		
+		IF @ErrCode = 1010
+		BEGIN
+			SELECT @ErrMsg = 'Resource_EN cannot be null.'
+		END
 	END
 	   
 	BEGIN TRY
