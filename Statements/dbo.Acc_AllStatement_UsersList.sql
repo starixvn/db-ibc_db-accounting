@@ -73,6 +73,35 @@ BEGIN
     FROM    custinfo WITH (NOLOCK)
     WHERE   UserName IN (SELECT value FROM STRING_SPLIT(@UserList, ','))
 
+	DROP TABLE IF EXISTS #tempCust;
+	CREATE TABLE #tempCust (custid INT PRIMARY KEY);
+
+    INSERT INTO #tempCust (custid)
+    SELECT DISTINCT custid
+    FROM (
+	    SELECT custid
+	    FROM #TEMP_USER_LIST
+	
+	    UNION ALL
+	    SELECT ci.custid
+	    FROM #TEMP_USER_LIST t
+	    INNER JOIN dbo.custInfo ci WITH (NOLOCK) ON ci.recommend = t.Custid AND ci.roleid = 1
+	    WHERE t.Roleid = 2
+	
+	    UNION ALL
+	    SELECT ci.custid
+	    FROM #TEMP_USER_LIST t
+	    INNER JOIN dbo.custInfo ci WITH (NOLOCK) ON ci.mrecommend = t.Custid AND ci.roleid = 1
+	    WHERE t.Roleid = 3
+	
+	    UNION ALL
+	    SELECT ci.custid
+	    FROM #TEMP_USER_LIST t
+	    INNER JOIN dbo.custInfo ci WITH (NOLOCK) ON ci.srecommend = t.Custid AND ci.roleid = 1
+	    WHERE t.Roleid = 4
+    ) AS t
+
+
     CREATE TABLE #StatementTable
     (
         Accdate     SMALLDATETIME,
@@ -137,78 +166,82 @@ BEGIN
         END  
         -- bettrans
         INSERT INTO #tmpBettrans(Custid,Recommend,Mrecommend,Srecommend,WinlostDate,StatusID,b.Bettype,Winlost,aWinlost,mWinlost,sWinlost,Actual_stake,Playercomm,Scomm,Acomm,Comm)
-        SELECT      Custid,Recommend,Mrecommend,Srecommend,WinlostDate,StatusID,b.Bettype,SUM(Winlost),SUM(aWinlost),SUM(mWinlost),SUM(sWinlost),SUM(Actual_stake),SUM(Playercomm),SUM(Scomm),SUM(Acomm),SUM(Comm)
+        SELECT      b.Custid,Recommend,Mrecommend,Srecommend,WinlostDate,StatusID,b.Bettype,SUM(Winlost),SUM(aWinlost),SUM(mWinlost),SUM(sWinlost),SUM(Actual_stake),SUM(Playercomm),SUM(Scomm),SUM(Acomm),SUM(Comm)
         FROM        bettrans b WITH (NOLOCK)
+		INNER JOIN #tempCust u on u.Custid = b.custid
         LEFT JOIN   #SportBettype s 
                     ON s.bettype = b.bettype 
         WHERE
             b.bettype < 19999
-            AND (b.custid IN (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 1)
-                    OR b.recommend  IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 2)
-                    OR b.mrecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 3)
-                    OR b.srecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 4)
-                )
+            --AND (b.custid IN (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 1)
+            --        OR b.recommend  IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 2)
+            --        OR b.mrecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 3)
+            --        OR b.srecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 4)
+            --    )
             AND winlostdate BETWEEN @_FromDate AND @_ToDate
             AND (
                 winlostdate < @Yesterday
                 OR (winlostdate >= @Yesterday AND (s.RefTable IS NULL OR s.RefTable = 3)) -- exclude settle ticket on bettransRnG/LC today, yesterday
                 )
             AND winlostdate > @MoveBetsDay
-        GROUP BY Winlostdate,Custid,Recommend,Mrecommend,Srecommend,StatusID,b.Bettype
+        GROUP BY Winlostdate,b.Custid,Recommend,Mrecommend,Srecommend,StatusID,b.Bettype
         UNION ALL
         -- bettransRnG
-        SELECT  Custid,Recommend,Mrecommend,Srecommend,WinlostDate,StatusID,b.gameID,SUM(Winlost),SUM(aWinlost),SUM(mWinlost),SUM(sWinlost),SUM(Actual_stake),SUM(Playercomm),SUM(Scomm),SUM(Acomm),SUM(Comm)
-        FROM    bettransRnG b 
+        SELECT  b.Custid,Recommend,Mrecommend,Srecommend,WinlostDate,StatusID,b.gameID,SUM(Winlost),SUM(aWinlost),SUM(mWinlost),SUM(sWinlost),SUM(Actual_stake),SUM(Playercomm),SUM(Scomm),SUM(Acomm),SUM(Comm)
+        FROM    bettransRnG b  with(nolock)
+		INNER JOIN #tempCust u on u.Custid = b.custid
         WHERE   winlostdate BETWEEN @_FromDate AND @_ToDate 
-                AND (b.custid IN (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 1)
-                    OR b.recommend  IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 2)
-                    OR b.mrecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 3)
-                    OR b.srecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 4)
-                )
+                --AND (b.custid IN (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 1)
+                --    OR b.recommend  IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 2)
+                --    OR b.mrecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 3)
+                --    OR b.srecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 4)
+                --)
                 AND (
                     winlostdate >= @Yesterday 
                     OR StatusID IN (0, 1)
                     ) 
-        GROUP BY Winlostdate,Custid,Recommend,Mrecommend,Srecommend,StatusID,b.gameID
+        GROUP BY Winlostdate,b.Custid,Recommend,Mrecommend,Srecommend,StatusID,b.gameID
         UNION ALL
         -- bettransLC
-        SELECT  Custid,Recommend,Mrecommend,Srecommend,WinlostDate,StatusID,b.gameID,SUM(Winlost),SUM(aWinlost),SUM(mWinlost),SUM(sWinlost),SUM(Actual_stake),SUM(Playercomm),SUM(Scomm),SUM(Acomm),SUM(Comm)
-        FROM    bettransLC b 
+        SELECT  b.Custid,Recommend,Mrecommend,Srecommend,WinlostDate,StatusID,b.gameID,SUM(Winlost),SUM(aWinlost),SUM(mWinlost),SUM(sWinlost),SUM(Actual_stake),SUM(Playercomm),SUM(Scomm),SUM(Acomm),SUM(Comm)
+        FROM    bettransLC b with(nolock)
+		INNER JOIN #tempCust u on u.Custid = b.custid
         WHERE   winlostdate BETWEEN @_FromDate AND @_ToDate 
-                AND (b.custid IN (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 1)
-                    OR b.recommend  IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 2)
-                    OR b.mrecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 3)
-                    OR b.srecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 4)
-                )
+                --AND (b.custid IN (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 1)
+                --    OR b.recommend  IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 2)
+                --    OR b.mrecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 3)
+                --    OR b.srecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 4)
+                --)
                 AND (
                      winlostdate >= @Yesterday 
                      OR StatusID IN (0, 1)
                     ) 
-        GROUP BY Winlostdate,Custid,Recommend,Mrecommend,Srecommend,StatusID,b.gameID
+        GROUP BY Winlostdate,b.Custid,Recommend,Mrecommend,Srecommend,StatusID,b.gameID
 
         -- Transfer
         INSERT INTO #tmpTransfer (Transdate,WinlostDate,Custid,Recommend,Mrecommend,Srecommend,TotalAmt,TransType,TransDesc,winlost,actual_stake,awinlost,mwinlost,swinlost,Comm,scomm,acomm,Playercomm,Bettype)  
         SELECT    
                 TransDate,  
                 WinlostDate,  
-                Custid,Recommend,Mrecommend,Srecommend,
+                b.Custid,Recommend,Mrecommend,Srecommend,
                 SUM(winlost-actual_stake) AS TotalAmt,  
                 CASE WHEN ISNULL(ti.IsCollection,0) = 0 THEN bt.typenamee ELSE 'Coll' END  AS TransType,  
                 TransDesc,
                 SUM(winlost),SUM(actual_stake),SUM(awinlost),SUM(mwinlost),SUM(swinlost),SUM(Comm),SUM(scomm),SUM(acomm),SUM(Playercomm),Bettype
         FROM        Transfer b WITH (NOLOCK)   
+		INNER JOIN #tempCust u on u.Custid = b.custid
         INNER JOIN  bettype bt WITH (NOLOCK) ON b.bettype = bt.typeid   
         LEFT JOIN   TransferInfo ti WITH (NOLOCK) ON b.TransId = ti.TransId   
         WHERE  
             (bettype > 20000  
             OR (bettype = 19999  AND winlostdate <= @MoveBetsDay))
             AND winlostdate BETWEEN @_FromDate AND @_ToDate
-            AND (b.custid IN (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 1)  
-                    OR b.recommend  IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 2)  
-                    OR b.mrecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 3)  
-                    OR b.srecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 4)  
-                )  
-        GROUP BY Bettype,TransDate,WinlostDate,Custid,Recommend,Mrecommend,Srecommend,TransDesc,ti.IsCollection,bt.typenamee
+            --AND (b.custid IN (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 1)  
+            --        OR b.recommend  IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 2)  
+            --        OR b.mrecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 3)  
+            --        OR b.srecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 4)  
+            --    )  
+        GROUP BY Bettype,TransDate,WinlostDate,b.Custid,Recommend,Mrecommend,Srecommend,TransDesc,ti.IsCollection,bt.typenamee
         
         --IF @Roleid = 1
         IF EXISTS (SELECT 1 FROM #TEMP_USER_LIST WHERE Roleid = 1)
