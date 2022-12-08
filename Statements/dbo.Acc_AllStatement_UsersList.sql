@@ -21,6 +21,7 @@ AS
         - 20210823@Sol: Alpha - Allow more time to transfer (phase 2b) - [RedmineID: #160440]
         - 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
         - 20220519@Evan: Revise sp, Get Opening Balance from Statement_Accum table [Redmine: #168299]
+        - 20221208@Bobby: Fix bug (correct winlostdate vs RefTable) [Redmine: #181466]
 
 */
 BEGIN
@@ -173,11 +174,6 @@ BEGIN
                     ON s.bettype = b.bettype 
         WHERE
             b.bettype < 19999
-            --AND (b.custid IN (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 1)
-            --        OR b.recommend  IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 2)
-            --        OR b.mrecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 3)
-            --        OR b.srecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 4)
-            --    )
             AND winlostdate BETWEEN @_FromDate AND @_ToDate
             AND (
                 winlostdate < @Yesterday
@@ -191,11 +187,6 @@ BEGIN
         FROM    bettransRnG b  with(nolock)
 		INNER JOIN #tempCust u on u.Custid = b.custid
         WHERE   winlostdate BETWEEN @_FromDate AND @_ToDate 
-                --AND (b.custid IN (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 1)
-                --    OR b.recommend  IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 2)
-                --    OR b.mrecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 3)
-                --    OR b.srecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 4)
-                --)
                 AND (
                     winlostdate >= @Yesterday 
                     OR StatusID IN (0, 1)
@@ -207,11 +198,6 @@ BEGIN
         FROM    bettransLC b with(nolock)
 		INNER JOIN #tempCust u on u.Custid = b.custid
         WHERE   winlostdate BETWEEN @_FromDate AND @_ToDate 
-                --AND (b.custid IN (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 1)
-                --    OR b.recommend  IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 2)
-                --    OR b.mrecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 3)
-                --    OR b.srecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 4)
-                --)
                 AND (
                      winlostdate >= @Yesterday 
                      OR StatusID IN (0, 1)
@@ -236,11 +222,6 @@ BEGIN
             (bettype > 20000  
             OR (bettype = 19999  AND winlostdate <= @MoveBetsDay))
             AND winlostdate BETWEEN @_FromDate AND @_ToDate
-            --AND (b.custid IN (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 1)  
-            --        OR b.recommend  IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 2)  
-            --        OR b.mrecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 3)  
-            --        OR b.srecommend IN  (SELECT Custid FROM #TEMP_USER_LIST WHERE  Roleid = 4)  
-            --    )  
         GROUP BY Bettype,TransDate,WinlostDate,b.Custid,Recommend,Mrecommend,Srecommend,TransDesc,ti.IsCollection,bt.typenamee
         
         --IF @Roleid = 1
@@ -277,11 +258,8 @@ BEGIN
             FROM        #tmpBettrans b 
             INNER JOIN  #TEMP_USER_LIST t 
                     ON  b.custid = t.Custid AND t.Roleid = 1
-            LEFT JOIN   #SportBettype s   
-                    ON s.bettype = b.bettype
             WHERE   
                 playercomm <> 0
-                AND (WinlostDate >= @Yesterday OR (WinlostDate < @Yesterday AND s.RefTable IS NULL)) 
             GROUP BY winlostdate,t.UserName,t.Currency
             UNION ALL
 
@@ -502,10 +480,6 @@ BEGIN
             FROM        #tmpBettrans b 
             INNER JOIN  #TEMP_USER_LIST t 
                     ON  b.Recommend = t.Custid AND Roleid = 2
-            LEFT JOIN   #SportBettype s   
-                    ON s.bettype = b.bettype
-            WHERE   WinlostDate >= @Yesterday 
-                    OR (WinlostDate < @Yesterday AND s.RefTable IS NULL)
             GROUP BY t.Custid, WinlostDate
 
             -- Transfer  
@@ -570,10 +544,6 @@ BEGIN
             FROM        #tmpBettrans b 
             INNER JOIN  #TEMP_USER_LIST t 
                     ON  b.Mrecommend = t.Custid AND Roleid = 3
-            LEFT JOIN   #SportBettype s   
-                    ON s.bettype = b.bettype
-            WHERE   WinlostDate >= @Yesterday 
-                    OR (WinlostDate < @Yesterday AND s.RefTable IS NULL)
             GROUP BY t.Custid, WinlostDate
 
             -- Transfer  
@@ -638,10 +608,6 @@ BEGIN
             FROM        #tmpBettrans b 
             INNER JOIN  #TEMP_USER_LIST t 
                     ON  b.Srecommend = t.Custid AND Roleid = 4
-            LEFT JOIN   #SportBettype s   
-                    ON s.bettype = b.bettype
-            WHERE   WinlostDate >= @Yesterday 
-                    OR (WinlostDate < @Yesterday AND s.RefTable IS NULL)
             GROUP BY t.Custid, WinlostDate
 
             -- Transfer  
