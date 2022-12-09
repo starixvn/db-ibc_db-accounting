@@ -21,7 +21,7 @@ AS
         - 20210823@Sol: Alpha - Allow more time to transfer (phase 2b) - [RedmineID: #160440]
         - 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
         - 20220519@Evan: Revise sp, Get Opening Balance from Statement_Accum table [Redmine: #168299]
-        - 20221208@Bobby: Fix bug (correct winlostdate vs RefTable) [Redmine: #181466]
+        - 20221208@Bobby: Fix bug (correct winlostdate vs RefTable) [Redmine: #181466,181480]
 
 */
 BEGIN
@@ -670,6 +670,7 @@ BEGIN
                 ON  s.custid = t.Custid
         WHERE 
             s.Accdate BETWEEN @_FromDate AND @_ToDate 
+            AND s.Accdate < @_BalanceUpDay
             AND s.TransType <> 'BAL'
 
         INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency)
