@@ -53,7 +53,7 @@ BEGIN
 			RETURN
 
 	SET NOCOUNT ON
-	DECLARE @startRun DATETIME = GETDATE(), @endRun DATETIME, @duration INT, @LogSPData NVARCHAR(MAX), @LogSPData2 NVARCHAR(MAX)
+	DECLARE @startRun DATETIME = GETDATE(), @endRun DATETIME, @duration INT, @LogSPData NVARCHAR(MAX), @LogSPData2 NVARCHAR(MAX), @DuplData INT, @DuplRow VARCHAR(MAX), @DuplRefID NVARCHAR(MAX), @DuplResourceId NVARCHAR(MAX)
 	
 	DECLARE @iDoc INT, @RowTotal INT = 0, @CurrentRow INT = 0, @RefResourceError INT = 0, @ValueError NVARCHAR(MAX) = '', @LimitValue BIGINT
 
@@ -273,6 +273,8 @@ BEGIN
 		RETURN
 	END
 	
+	
+	
 	SELECT TOP(1) @RefResourceError = ID, 
 	              @ValueError = CASE WHEN LEN(RefId)        > 20 THEN RefId
 									 WHEN LEN(ResourceId)	> 20 THEN ResourceId
@@ -341,6 +343,8 @@ BEGIN
 			SELECT	@ErrMsg = 'Row "' + CONVERT(VARCHAR(10),@RefResourceError) + '" - Resource_EN cannot be null.'
 		RETURN
 	END
+	
+	
 
 	BEGIN TRY
 		INSERT INTO #input
