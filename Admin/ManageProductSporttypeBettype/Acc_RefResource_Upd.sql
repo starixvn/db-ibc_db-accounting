@@ -55,7 +55,7 @@ BEGIN
     IF ISNULL(@File, '') = ''
 		RETURN
 
-	DECLARE @iDoc INT, @RowTotal INT = 0, @CurrentRow INT = 0, @RefId VARCHAR(20), @ResourceId VARCHAR(20), @RefResourceError INT = 0, @ValueError NVARCHAR(MAX) = '', @LimitValue BIGINT
+	DECLARE @iDoc INT, @RowTotal INT = 0, @CurrentRow INT = 0, @RefId VARCHAR(20), @ResourceId VARCHAR(20), @RefResourceError INT = 0, @ValueError NVARCHAR(MAX) = '', @LimitValue BIGINT, @DuplData INT = 0, @DuplRow VARCHAR(MAX) = NULL, @DuplRefID NVARCHAR(MAX) = '', @DuplResourceId NVARCHAR(MAX) = ''
 
     DECLARE @startRun DATETIME, @endRun DATETIME, @duration INT, @LogSPData NVARCHAR(MAX), @LogSPData2 NVARCHAR(MAX)
 	
@@ -249,9 +249,26 @@ BEGIN
 		
 		IF @ErrCode = 1009
 		BEGIN
-			SELECT TOP(1) @ErrMsg = 'RefID: ' + ISNULL(it.RefId, '') + ' - ResourceID: ' + ISNULL(it.ResourceId, '') + ' does not exist in the system.'
+			SELECT TOP(1) @ErrMsg = 'RefID: "' + ISNULL(it.RefId, '') + '" - ResourceID: "' + ISNULL(it.ResourceId, '') + '" does not exist in the system.'
 			FROM #inputTmp it
 			WHERE NOT EXISTS( SELECT 1 FROM dbo.RefResource rr WITH(ROWLOCK) WHERE rr.RefId = it.RefId AND rr.ResourceId = it.ResourceId)
+			RETURN
+		END
+		
+		SELECT TOP(1) @DuplData = COUNT(1), @DuplRefID = RefId, @DuplResourceId = ResourceId
+		FROM #inputTmp
+		GROUP BY RefId, ResourceId
+		HAVING COUNT(1) > 1
+		
+		IF @DuplData > 1
+		BEGIN
+			SELECT @DuplRow = COALESCE(@DuplRow + ',', '') + CONVERT(VARCHAR(50), ID)
+			FROM #inputTmp
+			WHERE RefId = @DuplRefID AND ResourceId = @DuplResourceId
+			
+			SELECT @ErrCode = 1011,
+				   @ErrMsg = 'Row ' + @DuplRow + 
+				           ': RefID "' + @DuplRefID + '" - ResourceID "' + @DuplResourceId + '" is duplicated data on file.'
 			RETURN
 		END
 		
