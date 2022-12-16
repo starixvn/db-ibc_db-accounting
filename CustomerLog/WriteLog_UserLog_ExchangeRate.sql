@@ -6,7 +6,6 @@ ALTER PROCEDURE [dbo].[WriteLog_UserLog_ExchangeRate]
 	@UserID INT, 
 	@ExchangeID INT, 
 	@actualrate FLOAT = NULL,
-	@PJUnitPrice DECIMAL(19,8) = NULL,
 	@IP VARCHAR(15) = '',
 	@Doing VARCHAR(1000) = ''
 AS
@@ -19,12 +18,13 @@ AS
 
 	Revisions:
 		- 20180202@Percy: Add PJUnitPrice column [RedmineID: #89122]
+		- 20221216@Evan: Remove PJUnitPrice column [RedmineID: #181417]
 */
 
 BEGIN
 	SET NOCOUNT ON
 
-	INSERT INTO dbo.UserLog_Exchange (UserID, ExchangeID, actualrate, PJUnitPrice, Doing, IP) 
-	VALUES (@UserID, @ExchangeID, @actualrate, @PJUnitPrice, @Doing, @IP)
+	INSERT INTO dbo.UserLog_Exchange (UserID, ExchangeID, actualrate, Doing, IP) 
+	VALUES (@UserID, @ExchangeID, @actualrate, @Doing, @IP)
 END
 GO
