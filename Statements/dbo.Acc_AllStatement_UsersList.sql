@@ -22,7 +22,7 @@ AS
         - 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
         - 20220519@Evan: Revise sp, Get Opening Balance from Statement_Accum table [Redmine: #168299]
         - 20221208@Bobby: Fix bug (correct winlostdate vs RefTable) [Redmine: #181466,181480]
-
+        - 20221219@Bobby: Correct statement in case difference between winlostdate and transdate of transfer [Redmine: #181771]
 */
 BEGIN
     SET NOCOUNT ON
@@ -652,9 +652,11 @@ BEGIN
 
     IF @_FromDate <= @_BalanceUpDay
     BEGIN
-        
+        DECLARE @lateTransaction BIT
         IF @_ToDate > @_BalanceUpDay
-            SELECT @_ToDate = @_BalanceUpDay
+        BEGIN
+            SELECT @lateTransaction = 1
+        END
         
         IF @_FromDate < @_BalanceUpDay
             SELECT TOP 1 @_FromDate = ISNULL(AccDate, @FromDate_Bk)
@@ -665,13 +667,21 @@ BEGIN
         
         INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency)
         SELECT s.Accdate, TotalAmt, TransType, TransDesc, t.Roleid, t.UserName, t.Currency
-        FROM        bodb_Report.dbo.Statement s WITH (NOLOCK)
+        FROM    bodb_Report.dbo.Statement s WITH (NOLOCK)
         INNER JOIN  #TEMP_USER_LIST t 
                 ON  s.custid = t.Custid
-        WHERE 
-            s.Accdate BETWEEN @_FromDate AND @_ToDate 
-            AND s.Accdate < @_BalanceUpDay
+        WHERE s.Accdate >= @_FromDate AND s.Accdate < @_BalanceUpDay 
             AND s.TransType <> 'BAL'
+
+        UNION ALL
+        SELECT s.Accdate, TotalAmt, TransType, TransDesc, t.Roleid, t.UserName, t.Currency
+        FROM    bodb_Report.dbo.Statement s WITH (NOLOCK)
+        INNER JOIN  #TEMP_USER_LIST t 
+                ON  s.custid = t.Custid
+        WHERE @lateTransaction = 1
+            AND s.Accdate >= @_BalanceUpDay AND s.Accdate <= @_ToDate
+            AND s.TransType IN ('Dep','Wit','Trac')
+
 
         INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency)
         SELECT a.Accdate, a.TotalAmt, 'BAL' TransType, 'OPENING BALANCE' TransDesc, t.Roleid, t.UserName, t.Currency
