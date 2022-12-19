@@ -1004,15 +1004,23 @@ BEGIN
 	IF @_FromDate <= @_BalanceUpDay
 	BEGIN
 		DECLARE @lateTransaction BIT
+			, @_ToAccdate		DATETIME
+			, @_FromAccdate		DATETIME;
 
-		IF @_ToDate > @_BalanceUpDay
+		SELECT @_ToAccdate = @_ToDate
+			,@_FromAccdate = @_FromDate
+
+		-- CORRECT: full day of @ToDate
+		IF @_ToDate >= @_BalanceUpDay
 		BEGIN
-			SELECT	@_ToDate = @_BalanceUpDay,
-					@lateTransaction = 1		
-		END
+            SELECT @lateTransaction = 1
+                ,@_ToAccdate = DATEADD(SECOND, -1, CAST(@_BalanceUpDay AS DATETIME))
+        END
+        ELSE
+            SELECT @_ToAccdate = DATEADD(SECOND, 86399, @_ToAccdate)
 
 		IF @_FromDate < @_BalanceUpDay
-			SELECT TOP 1 @_FromDate = ISNULL(AccDate, @FromDate_Bk)
+			SELECT TOP 1 @_FromAccdate = ISNULL(AccDate, @FromDate_Bk)
 			FROM bodb_Report.dbo.Statement_Accum WITH (NOLOCK)
 			WHERE AccDate <= @FromDate_Bk
 			ORDER BY AccDate DESC
@@ -1036,11 +1044,12 @@ BEGIN
 		FROM bodb_Report.dbo.[Statement] WITH (NOLOCK) 
 		WHERE
 			custid = @CID
-			AND accdate BETWEEN @_FromDate AND @_ToDate
-			AND accdate < @_BalanceUpDay
+			AND accdate BETWEEN @_FromAccdate AND @_ToAccdate
 			AND transtype <> 'Bal'
 	
-		UNION ALL --- @Lukas add missing/crossing transaction
+		-- CORRECT: @lateTransaction
+        SELECT @_ToAccdate = DATEADD(SECOND, 86399, CAST(@ToDate AS DATETIME));
+		INSERT INTO @StatementTable
 		SELECT 		 
 			accdate,
 			0,
@@ -1056,7 +1065,7 @@ BEGIN
 		FROM bodb_Report.dbo.[Statement] WITH (NOLOCK) 
 		WHERE
 			custid = @CID
-			AND accdate >= @_BalanceUpDay AND accdate <= @ToDate
+			AND accdate BETWEEN @_BalanceUpDay AND @_ToAccdate
 			AND @lateTransaction = 1
 			AND transtype IN ('Dep','Wit','Trac')
 
