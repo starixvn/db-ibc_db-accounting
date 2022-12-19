@@ -73,6 +73,7 @@ AS
 		- 20220110@Malcolm: show Void/Cancelled Bet for parlay tickets [Redmine: #165850]
 		- 20211115@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 		- 20220421@Percy: Get Opening Balance from Statement_Accum table [RedmineID: #169560]
+		- 20221219@Bobby: Correct statement in case difference between winlostdate and transdate of transfer [RedmineID: #181771]
 		
 	Param explanation : 
 		- Transtypeid = 4 - GrandPrize
@@ -1035,11 +1036,10 @@ BEGIN
 		FROM bodb_Report.dbo.[Statement] WITH (NOLOCK) 
 		WHERE
 			custid = @CID
-			AND accdate BETWEEN @_FromDate AND @_ToDate
-			AND accdate < @BalanceUpDay
+			AND accdate >= @_FromDate AND accdate < @_ToDate
 			AND transtype <> 'Bal'
 	
-		UNION ALL --- @Lukas add missing transaction
+		UNION ALL --- @Lukas add missing/crossing transaction
 		SELECT 		 
 			accdate,
 			0,
@@ -1055,9 +1055,9 @@ BEGIN
 		FROM bodb_Report.dbo.[Statement] WITH (NOLOCK) 
 		WHERE
 			custid = @CID
-			AND accdate >= @_ToDate AND accdate < DATEADD(DAY, 3, @_ToDate)
+			AND accdate >= @_BalanceUpDay AND accdate <= @ToDate
 			AND @lateTransaction = 1
-			AND transtype IN ('Dep','Wit')
+			AND transtype IN ('Dep','Wit','Trac')
 
 		INSERT INTO @StatementTable
 		SELECT
