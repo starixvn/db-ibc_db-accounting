@@ -653,13 +653,22 @@ BEGIN
     IF @_FromDate <= @_BalanceUpDay
     BEGIN
         DECLARE @lateTransaction BIT
-        IF @_ToDate > @_BalanceUpDay
+			, @_ToAccdate DATETIME
+			, @_FromAccdate DATETIME;
+		
+		SELECT @_ToAccdate = @_ToDate
+			,@_FromAccdate = @_FromDate
+
+        IF @_ToDate >= @_BalanceUpDay
         BEGIN
             SELECT @lateTransaction = 1
+                ,@_ToAccdate = DATEADD(SECOND, -1, CAST(@_BalanceUpDay AS DATETIME))
         END
-        
+        ELSE
+            SELECT @_ToAccdate = DATEADD(SECOND, 86399, @_ToAccdate)
+
         IF @_FromDate < @_BalanceUpDay
-            SELECT TOP 1 @_FromDate = ISNULL(AccDate, @FromDate_Bk)
+            SELECT TOP 1 @_FromAccdate = ISNULL(AccDate, @FromDate_Bk)
             FROM bodb_Report.dbo.Statement_Accum WITH (NOLOCK)
             WHERE AccDate <= @FromDate_Bk
             ORDER BY AccDate DESC
@@ -670,16 +679,18 @@ BEGIN
         FROM    bodb_Report.dbo.Statement s WITH (NOLOCK)
         INNER JOIN  #TEMP_USER_LIST t 
                 ON  s.custid = t.Custid
-        WHERE s.Accdate >= @_FromDate AND s.Accdate < @_BalanceUpDay 
+        WHERE s.Accdate BETWEEN @_FromAccdate AND @_ToAccdate
             AND s.TransType <> 'BAL'
 
-        UNION ALL
+        -- CORRECT: @lateTransaction
+        SELECT @_ToAccdate = DATEADD(SECOND, 86399, CAST(@ToDate AS DATETIME));
+        INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency)
         SELECT s.Accdate, TotalAmt, TransType, TransDesc, t.Roleid, t.UserName, t.Currency
         FROM    bodb_Report.dbo.Statement s WITH (NOLOCK)
         INNER JOIN  #TEMP_USER_LIST t 
                 ON  s.custid = t.Custid
         WHERE @lateTransaction = 1
-            AND s.Accdate >= @_BalanceUpDay AND s.Accdate <= @_ToDate
+            AND s.Accdate BETWEEN @_BalanceUpDay AND @_ToAccdate
             AND s.TransType IN ('Dep','Wit','Trac')
 
 
