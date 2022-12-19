@@ -1036,7 +1036,8 @@ BEGIN
 		FROM bodb_Report.dbo.[Statement] WITH (NOLOCK) 
 		WHERE
 			custid = @CID
-			AND accdate >= @_FromDate AND accdate < @_ToDate
+			AND accdate BETWEEN @_FromDate AND @_ToDate
+			AND accdate < @_BalanceUpDay
 			AND transtype <> 'Bal'
 	
 		UNION ALL --- @Lukas add missing/crossing transaction
