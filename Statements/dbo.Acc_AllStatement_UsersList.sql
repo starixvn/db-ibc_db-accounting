@@ -700,7 +700,7 @@ BEGIN
         INNER JOIN  #TEMP_USER_LIST t 
                 ON  a.custid = t.Custid
         WHERE 
-            a.Accdate BETWEEN @_FromDate AND @_ToDate
+            a.Accdate BETWEEN @_FromAccdate AND @_BalanceUpDay
         
     END
 
