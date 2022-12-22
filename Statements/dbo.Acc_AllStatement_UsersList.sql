@@ -734,7 +734,7 @@ BEGIN
             FROM #StatementTable s
             WHERE   s.Accdate < @Fromdate_bk 
                     AND EXISTS (SELECT TOP 1 1 FROM #StatementTable s1 WHERE s.UserName = s1.UserName AND s1.Accdate >= @Fromdate_bk)
-            GROUP BY UserName,Roleid,Currency
+            GROUP BY UserName,Roleid,Currency, custid
         )
         INSERT INTO #StatementTable(UserName,Roleid,Accdate,TotalAmt,TransType,TransDesc,Currency, custid)
         SELECT UserName,Roleid,NULL,TotalAmt,'BAL','ACCUMULATED BALANCE',Currency, custid
