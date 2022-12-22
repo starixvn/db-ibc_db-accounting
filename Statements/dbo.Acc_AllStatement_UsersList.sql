@@ -105,7 +105,8 @@ BEGIN
 
     CREATE TABLE #StatementTable
     (
-        Accdate     SMALLDATETIME,
+		custid		INT,
+        Accdate     DATETIME,
         TotalAmt    MONEY,
         TransType   NVARCHAR(100),
         TransDesc   NVARCHAR(1000),   
@@ -228,7 +229,7 @@ BEGIN
         IF EXISTS (SELECT 1 FROM #TEMP_USER_LIST WHERE Roleid = 1)
         BEGIN
         
-            INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency)
+            INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency, custid)
             SELECT            
                 WinlostDate AS Accdate,
                 CASE WHEN b.StatusID IN (0,1,102,101) THEN 0 ELSE Winlost-Actual_stake END AS TotalAmt,
@@ -238,7 +239,8 @@ BEGIN
                     ELSE 'Betting Statement' END AS TransDesc,
                 1 AS Roleid,
                 UserName,
-                Currency
+                Currency,
+				t.Custid
             FROM        #tmpBettrans b 
             INNER JOIN  #TEMP_USER_LIST t ON  b.Custid = t.Custid AND t.Roleid = 1
             LEFT JOIN   #SportBettype s ON s.bettype = b.bettype
@@ -254,13 +256,14 @@ BEGIN
                 'Commission' AS TransDesc,
                 1 AS Roleid,
                 t.UserName, 
-                t.Currency
+                t.Currency,
+				t.Custid
             FROM        #tmpBettrans b 
             INNER JOIN  #TEMP_USER_LIST t 
                     ON  b.custid = t.Custid AND t.Roleid = 1
             WHERE   
                 playercomm <> 0
-            GROUP BY winlostdate,t.UserName,t.Currency
+            GROUP BY winlostdate,t.UserName,t.Currency,t.Custid
             UNION ALL
 
             -- translog
@@ -271,17 +274,18 @@ BEGIN
                 'Outstanding Bet' AS TransDesc,
                 1 AS Roleid,
                 t.UserName, 
-                t.Currency
+                t.Currency,
+				t.Custid
             FROM        translog b 
             INNER JOIN  #TEMP_USER_LIST t 
                     ON  b.custid = t.Custid AND t.Roleid = 1
             WHERE   
                 winlostdate BETWEEN @_FromDate AND @_ToDate
                 AND statusID IN (0, 1)
-            GROUP BY winlostdate,t.UserName,t.Currency
+            GROUP BY winlostdate,t.UserName,t.Currency, t.Custid
                 
             -- Grand Prize          
-            INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency)
+            INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency, custid)
             SELECT
                 winlostdate AS Accdate
                 ,SUM (WinAmount) AS TotalAmt
@@ -289,7 +293,8 @@ BEGIN
                 ,'Grand Prize' AS TransDesc,
                 1 AS Roleid,
                 t.UserName, 
-                t.Currency
+                t.Currency,
+				t.custid
             FROM dbo.PayoutTrans b WITH (NOLOCK) 
             INNER JOIN  #TEMP_USER_LIST t 
                     ON  b.custid = t.Custid AND t.Roleid = 1
@@ -297,7 +302,7 @@ BEGIN
                 winlostdate BETWEEN @_Fromdate AND @_ToDate
                 AND WinlostDate > @_BalanceUpDay
                 AND PayoutStatusId IN (4, 5)  ----- 'Completed', 'Expired'
-            GROUP BY winlostdate,t.UserName,t.Currency
+            GROUP BY winlostdate,t.UserName,t.Currency,t.Custid
             
             -- Transfer  
             INSERT INTO #BetPosCom(Custid,accdate,bet_totalamt,com_totalamt)  
@@ -309,7 +314,7 @@ BEGIN
                 bettype = 19999  
             GROUP BY b.Custid,winlostdate
             
-            INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency)  
+            INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency, custid)  
             SELECT  
                 Transdate AS Accdate,  
                 TotalAmt,  
@@ -317,13 +322,14 @@ BEGIN
                 TransDesc,  
                 1 AS Roleid,  
                 UserName,   
-                Currency  
+                Currency ,
+				t.Custid
             FROM        #tmpTransfer b   
             INNER JOIN  #TEMP_USER_LIST t   
                     ON  b.Custid = t.Custid AND Roleid = 1  
             WHERE bettype > 19999
 
-            INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency)
+            INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency, custid)
             SELECT
                 p.AccDate,
                 com_totalamt,
@@ -331,7 +337,8 @@ BEGIN
                 'Commission' AS TransDesc,
                 1 AS Roleid,
                 t.UserName, 
-                t.Currency
+                t.Currency,
+				t.Custid
             FROM #BetPosCom p
             INNER JOIN  #TEMP_USER_LIST t 
                     ON  p.Custid = t.Custid AND Roleid = 1
@@ -345,7 +352,8 @@ BEGIN
                 'Betting' AS TransDesc,
                 1 AS Roleid,
                 t.UserName, 
-                t.Currency
+                t.Currency,
+				t.Custid
             FROM #BetPosCom p
             INNER JOIN  #TEMP_USER_LIST t 
                     ON  p.Custid = t.Custid AND Roleid = 1 
@@ -372,7 +380,7 @@ BEGIN
                         -- (ProductID = 11 AND bettype = 1800) -- need to add AG Casino  (#SportBettype no have)
 
                 --- zzzbettrans only
-                INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency)
+                INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency, custid)
                 SELECT DISTINCT
                     b.winlostdate accdate,
                     0 totalamt,
@@ -380,7 +388,8 @@ BEGIN
                     'Void/Cancelled Bet' AS transdesc,
                     1 AS Roleid,
                     t.UserName, 
-                    t.Currency
+                    t.Currency,
+					t.Custid
                 FROM
                     zzzbettrans b WITH (NOLOCK)
                     INNER JOIN  #TEMP_USER_LIST t 
@@ -392,18 +401,19 @@ BEGIN
                 WHERE
                     winlostdate BETWEEN @_Fromdate AND @MoveBetsDay
                     AND winlostdate >= @_BalanceUpDay
-                GROUP BY winlostdate, t.UserName, t. Currency
+                GROUP BY winlostdate, t.UserName, t.Currency, t.Custid
             
                 --- zzzbettrans inner join match/match14
-                INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency)
+                INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency, custid)
                 SELECT DISTINCT
                     eventdate AS Accdate,
                     0 AS TotalAmt,
                     'BET' AS TransType,
                     'Void/Cancelled Bet' AS TransDesc,
                     1 AS Roleid,
-                    t. UserName,
-                    t. Currency
+                    t.UserName,
+                    t.Currency,
+					t.Custid
                 FROM        zzzbettrans b WITH (NOLOCK)
                 INNER JOIN  Match m WITH (NOLOCK) ON b.matchid = m.matchid
                 INNER JOIN  #TEMP_USER_LIST t ON b.custid = t.Custid AND t.Roleid = 1
@@ -414,7 +424,7 @@ BEGIN
                     AND eventdate BETWEEN @_FromDate AND @MoveBetsDay
                     AND (s.VoidRejectGroup IS NULL OR s.VoidRejectGroup = 3) -- zzzbettrans inner join match/match14
                     AND ISNULL(b.comstatus, '') <> 'CO'
-                GROUP BY eventdate, t.UserName, t. Currency
+                GROUP BY eventdate, t.UserName, t.Currency, t.Custid
                 UNION
 
                 SELECT DISTINCT
@@ -424,7 +434,8 @@ BEGIN
                     'Void/Cancelled Bet' AS TransDesc,
                     1 AS Roleid,
                     t.UserName,
-                    t.Currency
+                    t.Currency,
+					t.Custid
                 FROM        zzzbettrans b WITH (NOLOCK)
                 INNER JOIN  match14 m WITH (NOLOCK) ON b.matchid = m.matchid
                 INNER JOIN  #TEMP_USER_LIST t ON b.custid = t.Custid AND t.Roleid = 1
@@ -435,7 +446,7 @@ BEGIN
                     AND eventdate BETWEEN @_FromDate AND @MoveBetsDay
                     AND (s.VoidRejectGroup IS NULL OR s.VoidRejectGroup = 3) -- zzzbettrans inner join match/match14
                     AND ISNULL(b.comstatus, '') <> 'CO'
-                GROUP BY eventdate, t.UserName, t.Currency
+                GROUP BY eventdate, t.UserName, t.Currency, t.Custid
                 UNION
 
                 SELECT DISTINCT
@@ -445,7 +456,8 @@ BEGIN
                     'Void/Cancelled Bet' TransDesc,
                     1 AS Roleid,
                     t.UserName,
-                    t.Currency
+                    t.Currency,
+					t.Custid
                 FROM        zzzbettrans b WITH (NOLOCK)
                 INNER JOIN  #TEMP_USER_LIST t 
                         ON  b.custid = t.Custid AND t.Roleid = 1
@@ -453,7 +465,7 @@ BEGIN
                     b.bettype IN (9, 29)
                     AND b.winlostdate BETWEEN @_Fromdate AND @MoveBetsDay
                     AND ISNULL(b.comstatus, '') <> 'CO'
-                GROUP BY winlostdate, t.UserName, t.Currency
+                GROUP BY winlostdate, t.UserName, t.Currency, t.Custid
 
             END
         END
@@ -462,7 +474,7 @@ BEGIN
         IF EXISTS (SELECT 1 FROM #TEMP_USER_LIST  WHERE Roleid = 2)
         BEGIN
             
-            INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency)
+            INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency,custid)
             SELECT
                 Transdate AS Accdate,
                 TotalAmt,
@@ -470,7 +482,8 @@ BEGIN
                 TransDesc,
                 2 AS Roleid,
                 UserName, 
-                Currency
+                Currency,
+				t.Custid
             FROM        #tmpTransfer b 
             INNER JOIN  #TEMP_USER_LIST t 
                     ON  b.Custid = t.Custid AND Roleid = 2
@@ -492,7 +505,7 @@ BEGIN
                 bettype = 19999  
             GROUP BY t.Custid,winlostdate 
 
-            INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency)
+            INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency,custid)
             SELECT
                 p.AccDate,
                 com_totalamt,
@@ -500,7 +513,8 @@ BEGIN
                 'Commission' AS TransDesc,
                 2 AS Roleid,
                 t.UserName, 
-                t.Currency
+                t.Currency,
+				t.Custid
             FROM #BetPosCom p
             INNER JOIN  #TEMP_USER_LIST t 
                     ON  p.Custid = t.Custid AND Roleid = 2 
@@ -514,7 +528,8 @@ BEGIN
                 'Position' TransDesc,
                 2 AS Roleid,
                 t.UserName, 
-                t.Currency
+                t.Currency,
+				t.Custid
             FROM #BetPosCom p
             INNER JOIN  #TEMP_USER_LIST t 
                     ON  p.Custid = t.Custid AND Roleid = 2 
@@ -526,7 +541,7 @@ BEGIN
         IF EXISTS (SELECT 1 FROM #TEMP_USER_LIST WHERE Roleid = 3)
         BEGIN
            
-            INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency)
+            INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency, custid)
             SELECT
                 Transdate AS Accdate,
                 TotalAmt ,
@@ -534,7 +549,8 @@ BEGIN
                 TransDesc,
                 3 AS Roleid,
                 UserName, 
-                Currency
+                Currency,
+				t.Custid
             FROM        #tmpTransfer b 
             INNER JOIN  #TEMP_USER_LIST t 
                     ON  b.Custid = t.Custid AND Roleid = 3
@@ -556,7 +572,7 @@ BEGIN
                 bettype = 19999  
             GROUP BY t.Custid,winlostdate 
 
-            INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency)
+            INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency, custid)
             SELECT
                 p.AccDate,
                 com_totalamt,
@@ -564,7 +580,8 @@ BEGIN
                 'Commission' AS TransDesc,
                 3 AS Roleid,
                 t.UserName, 
-                t.Currency
+                t.Currency,
+				t.Custid
             FROM #BetPosCom p
             INNER JOIN  #TEMP_USER_LIST t 
                     ON  p.Custid = t.Custid  AND Roleid = 3
@@ -578,7 +595,8 @@ BEGIN
                 'Position' TransDesc,
                 3 AS Roleid,
                 t.UserName, 
-                t.Currency
+                t.Currency,
+				t.Custid
             FROM #BetPosCom p
             INNER JOIN  #TEMP_USER_LIST t 
                     ON  p.Custid = t.Custid AND Roleid = 3
@@ -590,7 +608,7 @@ BEGIN
         IF EXISTS (SELECT 1 FROM #TEMP_USER_LIST WHERE Roleid = 4)
         BEGIN       
             
-            INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency)
+            INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency, custid)
             SELECT
                 Transdate AS Accdate,
                 TotalAmt,
@@ -598,7 +616,8 @@ BEGIN
                 TransDesc,
                 4 AS Roleid,
                 UserName, 
-                Currency
+                Currency,
+				t.Custid
             FROM        #tmpTransfer b 
             INNER JOIN  #TEMP_USER_LIST t 
                     ON  b.Custid = t.Custid AND Roleid = 4
@@ -620,7 +639,7 @@ BEGIN
                 bettype = 19999  
             GROUP BY t.Custid,winlostdate 
 
-            INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency)
+            INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency, custid)
             SELECT
                 p.AccDate,
                 com_totalamt,
@@ -628,7 +647,8 @@ BEGIN
                 'Commission' AS TransDesc,
                 4 AS Roleid,
                 t.UserName, 
-                t.Currency
+                t.Currency,
+				t.Custid
             FROM #BetPosCom p
             INNER JOIN  #TEMP_USER_LIST t 
                     ON  p.Custid = t.Custid AND Roleid = 4 
@@ -642,7 +662,8 @@ BEGIN
                 'Position' AS TransDesc,
                 4 AS Roleid,
                 t.UserName, 
-                t.Currency
+                t.Currency,
+				t.Custid
             FROM #BetPosCom p
             INNER JOIN  #TEMP_USER_LIST t 
                     ON  p.Custid = t.Custid AND Roleid = 4 
@@ -674,28 +695,29 @@ BEGIN
             ORDER BY AccDate DESC
 
         
-        INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency)
-        SELECT s.Accdate, TotalAmt, TransType, TransDesc, t.Roleid, t.UserName, t.Currency
+        INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency, custid)
+        SELECT s.Accdate, TotalAmt, TransType, TransDesc, t.Roleid, t.UserName, t.Currency,t.Custid
         FROM    bodb_Report.dbo.Statement s WITH (NOLOCK)
         INNER JOIN  #TEMP_USER_LIST t 
                 ON  s.custid = t.Custid
         WHERE s.Accdate BETWEEN @_FromAccdate AND @_ToAccdate
             AND s.TransType <> 'BAL'
-
+		
         -- CORRECT: @lateTransaction
         SELECT @_ToAccdate = DATEADD(SECOND, 86399, CAST(@ToDate AS DATETIME));
-        INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency)
-        SELECT s.Accdate, TotalAmt, TransType, TransDesc, t.Roleid, t.UserName, t.Currency
+        INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency, custid)
+        SELECT s.Accdate, s.TotalAmt, s.TransType, s.TransDesc, t.Roleid, t.UserName, t.Currency, t.Custid
         FROM    bodb_Report.dbo.Statement s WITH (NOLOCK)
         INNER JOIN  #TEMP_USER_LIST t 
                 ON  s.custid = t.Custid
+        LEFT JOIN #StatementTable ck ON ck.custid = s.custid AND ck.transtype = s.transtype AND ck.accdate = s.accdate
         WHERE @lateTransaction = 1
             AND s.Accdate BETWEEN @_BalanceUpDay AND @_ToAccdate
             AND s.TransType IN ('Dep','Wit','Trac')
+            AND ck.custid IS NULL
 
-
-        INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency)
-        SELECT a.Accdate, a.TotalAmt, 'BAL' TransType, 'OPENING BALANCE' TransDesc, t.Roleid, t.UserName, t.Currency
+        INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency, custid)
+        SELECT a.Accdate, a.TotalAmt, 'BAL' TransType, 'OPENING BALANCE' TransDesc, t.Roleid, t.UserName, t.Currency, t.Custid
         FROM        bodb_Report.dbo.Statement_Accum a WITH (NOLOCK) 
         INNER JOIN  #TEMP_USER_LIST t 
                 ON  a.custid = t.Custid
@@ -708,14 +730,14 @@ BEGIN
     BEGIN
         
         ;WITH CTE_Sum AS (
-            SELECT UserName,Roleid,ISNULL(SUM(TotalAmt),0) TotalAmt,Currency 
+            SELECT UserName,Roleid,ISNULL(SUM(TotalAmt),0) TotalAmt,Currency, custid
             FROM #StatementTable s
             WHERE   s.Accdate < @Fromdate_bk 
                     AND EXISTS (SELECT TOP 1 1 FROM #StatementTable s1 WHERE s.UserName = s1.UserName AND s1.Accdate >= @Fromdate_bk)
             GROUP BY UserName,Roleid,Currency
         )
-        INSERT INTO #StatementTable(UserName,Roleid,Accdate,TotalAmt,TransType,TransDesc,Currency)
-        SELECT UserName,Roleid,NULL,TotalAmt,'BAL','ACCUMULATED BALANCE',Currency 
+        INSERT INTO #StatementTable(UserName,Roleid,Accdate,TotalAmt,TransType,TransDesc,Currency, custid)
+        SELECT UserName,Roleid,NULL,TotalAmt,'BAL','ACCUMULATED BALANCE',Currency, custid
         FROM CTE_Sum 
         WHERE TotalAmt <> 0
          
