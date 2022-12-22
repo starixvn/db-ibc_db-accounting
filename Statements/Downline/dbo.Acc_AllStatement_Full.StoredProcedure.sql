@@ -1051,23 +1051,25 @@ BEGIN
         SELECT @_ToAccdate = DATEADD(SECOND, 86399, CAST(@ToDate AS DATETIME));
 		INSERT INTO @StatementTable
 		SELECT 		 
-			accdate,
+			s.accdate,
 			0,
-			totalamt,
-			transtype,
+			s.totalamt,
+			s.transtype,
 			0 transtypeid,
-			transdesc , 
+			s.transdesc , 
 			'' creator,
 			NULL,
 			'',
 			NULL,
 			0 
-		FROM bodb_Report.dbo.[Statement] WITH (NOLOCK) 
+		FROM bodb_Report.dbo.[Statement] s WITH (NOLOCK)
+		LEFT JOIN @StatementTable t ON t.transtype = s.transtype AND t.accdate = s.accdate
 		WHERE
-			custid = @CID
-			AND accdate BETWEEN @_BalanceUpDay AND @_ToAccdate
+			s.custid = @CID
+			AND s.accdate BETWEEN @_BalanceUpDay AND @_ToAccdate
 			AND @lateTransaction = 1
-			AND transtype IN ('Dep','Wit','Trac')
+			AND s.transtype IN ('Dep','Wit','Trac')
+			AND t.accdate IS NULL --> ignore duplicate rows while running BU process
 
 		INSERT INTO @StatementTable
 		SELECT
