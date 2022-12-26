@@ -68,6 +68,7 @@ Revision:
 	- 20220721@Evan: Revise code rollback, get balance from 8 table balance [Redmine: #175297]
 	- 20220923@Evan: Revise code rollback (issue) [Redmine: #178135]
 	- 20220929@Evan: Check available balance on BettransX+Transfer [Redmine: #178135]
+	- 20221226@Evan: Wait for in-house service (2ms) to sync new value of rollback ticket to centraldb [Redmine: #182003]
 
 Param's Explanation:
 @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction
@@ -592,6 +593,8 @@ BEGIN
 	END TRY
 	BEGIN CATCH
 
+		WAITFOR DELAY '000:00:00.002' -- wait for in-house service
+
 		--Manually rollback
 		UPDATE dbo.Transfer WITH(ROWLOCK)
 		SET	custid = 0, 
@@ -660,6 +663,8 @@ BEGIN
 			EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_Balance, @type = @BalanceType, @IsForced = 1
 		END	
 
+		WAITFOR DELAY '000:00:00.002' -- wait for in-house service
+		
 		--Manually rollback
 		UPDATE dbo.Transfer WITH(ROWLOCK)
 		SET	custid = 0, 
