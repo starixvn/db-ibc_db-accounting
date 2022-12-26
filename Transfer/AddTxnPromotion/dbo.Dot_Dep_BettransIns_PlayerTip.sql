@@ -23,6 +23,7 @@ AS
 	Task: Insert bet ticket Player Tips [RedmineID: #180509]
 	Revisions:
 		- 20221116@Evan: Initialize SP [RedmineID: #180509]
+		- 20221226@Evan: Wait for in-house service (2ms) to sync new value of rollback ticket to centraldb [Redmine: #182003]
 */
 BEGIN 
 	SET NOCOUNT ON
@@ -263,6 +264,8 @@ BEGIN
 		SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 108
 			,@result = 'failed-bet'
 				
+		WAITFOR DELAY '000:00:00.002' -- wait for in-house service
+		
 		--Manually rollback bettrans
 		UPDATE dbo.bettrans WITH(ROWLOCK)
 		SET custid = 0,
