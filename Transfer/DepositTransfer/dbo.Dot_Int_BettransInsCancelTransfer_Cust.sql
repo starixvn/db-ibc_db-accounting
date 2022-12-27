@@ -468,7 +468,7 @@ BEGIN
 	END
 	
 	UPDATE dbo.Transfer 
-		SET transdesc = transdesc + ' (transfer cancelled)',
+		SET transdesc = ISNULL(transdesc,'') + ' (transfer cancelled)',
 			RepUpdateTime = SYSDATETIME()
 	WHERE transid = @transid
 

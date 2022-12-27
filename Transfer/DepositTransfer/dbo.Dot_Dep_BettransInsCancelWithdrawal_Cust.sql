@@ -298,7 +298,7 @@ END
 
 
 	UPDATE dbo.Transfer WITH(ROWLOCK, UPDLOCK)
-		SET transdesc = transdesc + ' (withdrawal cancelled)',
+		SET transdesc = ISNULL(transdesc,'') + ' (withdrawal cancelled)',
 			RepUpdateTime = SYSDATETIME()
 	WHERE transid in (SELECT transid FROM @TransID_TEMP)
 		
