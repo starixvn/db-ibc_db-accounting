@@ -23,7 +23,10 @@ AS
 	Task: Insert bet ticket Player Tips [RedmineID: #180509]
 	Revisions:
 		- 20221116@Evan: Initialize SP [RedmineID: #180509]
+		- 20221226@Evan: Wait for in-house service (2ms) to sync new value of rollback ticket to centraldb [Redmine: #182003]
+						 Revise code using ExchangeDailyOanda to get actualrate
 */
+
 BEGIN 
 	SET NOCOUNT ON
 	
@@ -78,13 +81,16 @@ BEGIN
 		, @spname			VARCHAR(100)
         , @hostname			VARCHAR(100)
         , @Creator			INT
-		
-
+        , @WinlostDate		SMALLDATETIME
+	
+	SELECT @TransDate	= CURRENT_TIMESTAMP
+	SELECT @WinlostDate	= CAST(@transdate AS DATE);
+	
 	--Check Account
 	SELECT @username	= ci.username
 		, @currency		= ci.currency
 		, @currencyName = e.currency
-		, @actualrate	= e.actualrate
+		, @actualrate	= ISNULL(edo.actualrate,e.actualrate)
 		, @mrecommend	= ci.mrecommend
 		, @recommend	= ci.recommend
 		, @srecommend	= cs.custid --> check is deposit member
@@ -92,12 +98,13 @@ BEGIN
 	FROM CustDB.dbo.custinfo AS ci WITH (NOLOCK)
 	INNER JOIN CustDB.dbo.exchange AS e WITH (NOLOCK)
 		ON ci.currency = e.exchangeid
+	LEFT JOIN CustDB.dbo.ExchangeDailyOanda AS edo WITH (NOLOCK)
+		ON ci.currency = edo.exchangeid AND edo.ExchangeDate = @WinlostDate
 	LEFT JOIN CustDB.dbo.Dep_CustSuper cs WITH(NOLOCK) 
 		ON ci.srecommend = cs.custid
-	WHERE ci.custid = @custid
+	WHERE ci.custid = @custid 
 
-	SELECT @TransDate	= CURRENT_TIMESTAMP
-		, @TransID		= 0
+	SELECT @TransID		= 0
 		, @RefNo		= 100000000000
 		, @sporttype	= 157
 		, @awinlost		= @Amount * @APositiontaking
@@ -172,7 +179,7 @@ BEGIN
 			, @Creator	AS creator
 			, @ip AS [ip]
 			, @Balance AS balance
-			, CAST(@transdate AS DATE) AS winlostdate
+			, @WinlostDate AS winlostdate
 			, @transdate AS transdate
 			, @bettype AS bettype
 			, @sporttype AS matchid
@@ -263,6 +270,8 @@ BEGIN
 		SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 108
 			,@result = 'failed-bet'
 				
+		WAITFOR DELAY '000:00:00.002' -- wait for in-house service
+		
 		--Manually rollback bettrans
 		UPDATE dbo.bettrans WITH(ROWLOCK)
 		SET custid = 0,

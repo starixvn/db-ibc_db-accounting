@@ -1,5 +1,5 @@
 /*<info serverAlias="DBTXN-bodb02" executers="" isFunction="0" isNested="0"></info>*/
-CREATE PROCEDURE dbo.Dot_Dep_BettransIns_SabaPromotion
+ALTER PROCEDURE dbo.Dot_Dep_BettransIns_SabaPromotion
 	@CustID			INT
 	, @ExtraInfo	VARCHAR(1000)	= NULL
 	, @Amount		MONEY			
@@ -32,6 +32,8 @@ AS
 		- 20220721@Evan: Integrate new transid - [Redmine: #175640]
 		- 20220724@Evan: Revise code rollback for scale-out [Redmine: #175297]
 		- 20220924@Sophia: Fix SiteDBGroupID missing in bettrans [Redmine: #178163]
+		- 20221226@Evan: Wait for in-house service (2ms) to sync new value of rollback ticket to centraldb [Redmine: #182003]
+						 Revise code using ExchangeDailyOanda to get actualrate
 
 	Example: 
 			DECLARE 
@@ -108,13 +110,13 @@ BEGIN
 		, @BetTime			DATETIME
 		, @spname			VARCHAR(100)
         , @hostname			VARCHAR(100)
-		
-
+	
+	SELECT 	@Winlostdate = ISNULL (@Winlostdate, CAST(@transdate AS DATE))
 	--Check Account - offer Credit & Deposit
 	SELECT @username	= ci.username
 		, @currency		= ci.currency
 		, @currencyName = e.currency
-		, @actualrate	= e.actualrate
+		, @actualrate	= ISNULL(edo.actualrate,e.actualrate)
 		, @mrecommend	= ci.mrecommend
 		, @recommend	= ci.recommend
 		, @srecommend	= ci.srecommend 
@@ -122,6 +124,8 @@ BEGIN
 	FROM CustDB.dbo.custinfo AS ci WITH (NOLOCK)
 	INNER JOIN CustDB.dbo.exchange AS e WITH (NOLOCK)
 		ON ci.currency = e.exchangeid
+	LEFT JOIN CustDB.dbo.ExchangeDailyOanda AS edo WITH (NOLOCK)
+		ON ci.currency = edo.exchangeid AND edo.ExchangeDate = @WinlostDate
 	WHERE ci.custid = @custid
 
 	SELECT @TransDate	= CURRENT_TIMESTAMP
@@ -132,10 +136,6 @@ BEGIN
 		, @winlost		= 0
 		, @awinlost		= @Amount
 		, @Creator		= ISNULL(@Creator, @CustID)
-	
-
-	SELECT 	@Winlostdate = ISNULL (@Winlostdate, CAST(@transdate AS DATE))
-
 
 	SELECT @startTime	= CURRENT_TIMESTAMP
 		, @result		= ''
@@ -275,6 +275,8 @@ BEGIN
 	BEGIN CATCH
 		SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 108
 			,@result = 'failed-bet'
+			
+		WAITFOR DELAY '000:00:00.002' -- wait for in-house service
 				
 		--Manually rollback bettrans
 		UPDATE dbo.bettrans WITH(ROWLOCK)

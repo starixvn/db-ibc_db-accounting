@@ -65,6 +65,7 @@ Revisions:
 	- 20220724@Evan: Revise code rollback, get balance from 8 table balance [Redmine: #175297]
 	- 20220923@Evan: Revise code rollback (issue) [Redmine: #178135]
 	- 20220929@Evan: Check available balance on BettransX+Transfer [Redmine: #178135]
+	- 20221226@Evan: Wait for in-house service (2ms) to sync new value of rollback ticket to centraldb [Redmine: #182003]
 					 
 
 Param's Explanation:
@@ -523,6 +524,8 @@ BEGIN
 							
 		SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 105	
 
+		WAITFOR DELAY '000:00:00.002' -- wait for in-house service
+
 		--Manually rollback
 		UPDATE dbo.Transfer WITH(ROWLOCK)
 		SET	custid = 0, 
@@ -588,6 +591,8 @@ BEGIN
 		BEGIN 
 			EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_balance, @type = 2, @isForced = 1
 		END 	
+		
+		WAITFOR DELAY '000:00:00.002' -- wait for in-house service
 			
 		--Manually rollback
 		UPDATE dbo.Transfer WITH(ROWLOCK)

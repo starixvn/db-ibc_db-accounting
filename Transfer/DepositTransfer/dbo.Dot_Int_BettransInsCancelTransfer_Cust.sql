@@ -41,6 +41,7 @@ Revisions:
 	- 20220721@Evan: Integrate new transid [Redmine: #175640]
 	- 20220724@Evan: Revise code rollback for scale-out [Redmine: #175297]
 	- 20220923@Evan: Revise code rollback (issue) [Redmine: #178135]
+	- 20221226@Evan: Wait for in-house service (2ms) to sync new value of rollback ticket to centraldb [Redmine: #182003]
 
 Input 
     1) CustID (For Double check) 
@@ -364,6 +365,9 @@ BEGIN
 	BEGIN
 
 		SELECT @ErrMsg = 'Insert transaction failed.'
+
+		WAITFOR DELAY '000:00:00.002' -- wait for in-house service
+
 		--Manually rollback
 		UPDATE dbo.Transfer WITH(ROWLOCK)
 		SET	custid = 0, 
@@ -417,6 +421,8 @@ BEGIN
  			EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_balance, @type = @BalanceType, @IsForced = 1
 		END 
 		
+		WAITFOR DELAY '000:00:00.002' -- wait for in-house service
+
 		UPDATE dbo.Transfer WITH(ROWLOCK)
 		SET	custid = 0, 
 			Recommend = 0, 
@@ -462,7 +468,7 @@ BEGIN
 	END
 	
 	UPDATE dbo.Transfer 
-		SET transdesc = transdesc + ' (transfer cancelled)',
+		SET transdesc = ISNULL(transdesc,'') + ' (transfer cancelled)',
 			RepUpdateTime = SYSDATETIME()
 	WHERE transid = @transid
 

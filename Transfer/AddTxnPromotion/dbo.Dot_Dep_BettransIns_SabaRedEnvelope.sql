@@ -33,6 +33,8 @@ AS
 		- 20220721@Evan: Integrate new transid - [Redmine: #175640]
 		- 20220724@Evan: Revise code rollback for scale-out [Redmine: #175297]
 		- 20220924@Sophia: Fix SiteDBGroupID missing in bettrans [Redmine: #178163]
+		- 20221226@Evan: Wait for in-house service (2ms) to sync new value of rollback ticket to centraldb [Redmine: #182003]
+						 Revise code using ExchangeDailyOanda to get actualrate
 
 	Example: 
 			DECLARE 
@@ -116,13 +118,15 @@ BEGIN
 		, @BetTime			DATETIME
 		, @spname			VARCHAR(100)
         , @hostname			VARCHAR(100)
-		
+		, @WinlostDate		SMALLDATETIME
+	
+	SELECT @WinlostDate	= CAST(ISNULL(@transdate,CURRENT_TIMESTAMP) AS DATE);
 
 	--Check Account - offer Credit & Deposit
 	SELECT @username	= ci.username
 		, @currency		= ci.currency
 		, @currencyName = e.currency
-		, @actualrate	= e.actualrate
+		, @actualrate	= ISNULL(edo.actualrate,e.actualrate)
 		, @mrecommend	= ci.mrecommend
 		, @recommend	= ci.recommend
 		, @srecommend	= ci.srecommend 
@@ -130,6 +134,8 @@ BEGIN
 	FROM CustDB.dbo.custinfo AS ci WITH (NOLOCK)
 	INNER JOIN CustDB.dbo.exchange AS e WITH (NOLOCK)
 		ON ci.currency = e.exchangeid
+	LEFT JOIN CustDB.dbo.ExchangeDailyOanda AS edo WITH (NOLOCK)
+		ON ci.currency = edo.exchangeid AND edo.ExchangeDate = @WinlostDate
 	WHERE ci.custid = @custid
 
 	SELECT @TransDate	= CURRENT_TIMESTAMP
@@ -197,7 +203,7 @@ BEGIN
 			, @Creator	AS creator
 			, @ip AS [ip]
 			, @Balance AS balance
-			, CAST(@transdate AS DATE) AS winlostdate
+			, @WinlostDate AS winlostdate
 			, @transdate AS transdate
 			, @bettype AS bettype
 			, @sporttype AS matchid
@@ -293,6 +299,8 @@ BEGIN
 		BEGIN
 			SELECT @ErrMsg = 'Insert balance credit failed.', @ErrCode = 109
 				,@result = 'failed-balance'
+			
+			WAITFOR DELAY '000:00:00.002' -- wait for in-house service
 
 			--Manually rollback bettrans
 			UPDATE dbo.bettrans WITH(ROWLOCK)
@@ -323,6 +331,8 @@ BEGIN
 	BEGIN CATCH
 		SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 108
 			,@result = 'failed-bet'
+		
+		WAITFOR DELAY '000:00:00.002' -- wait for in-house service
 				
 		--Manually rollback bettrans
 		UPDATE dbo.bettrans WITH(ROWLOCK)
