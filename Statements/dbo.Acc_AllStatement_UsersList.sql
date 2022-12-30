@@ -723,6 +723,7 @@ BEGIN
                 ON  a.custid = t.Custid
         WHERE 
             a.Accdate BETWEEN @_FromAccdate AND @_ToAccdate
+            AND a.AccDate <= @_BalanceUpDay
         
     END
 
