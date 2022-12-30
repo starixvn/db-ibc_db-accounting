@@ -1087,6 +1087,7 @@ BEGIN
 		FROM bodb_Report.dbo.Statement_Accum WITH (NOLOCK) 
 		WHERE CustId = @CID
 			AND AccDate BETWEEN @_FromAccdate AND @_ToAccdate
+			AND AccDate <= @_BalanceUpDay
 	END
 
 	IF (@_IncludeAccBal = 1) AND (@Fromdate_bk <> @_BalanceUpDay)
