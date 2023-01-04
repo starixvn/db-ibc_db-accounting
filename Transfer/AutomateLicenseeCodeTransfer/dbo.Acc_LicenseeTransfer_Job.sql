@@ -20,6 +20,7 @@ AS
 		- 20210315@Sol: NAP - Enhance Manage Licensee Code to support change base currency of licensees - [Redmine: #151607]
 		- 20220810@Danny: Add check failed data step [Redmine: #175670]
 		- 20220802@Danny: change code to support SiteDB [Redmine: #175253]
+		- 20221206@Danny: Skip transferring for crypto Licensee [Redmine: #181343]
 
 		@Environment: LOCAL, SIT, UAT, PROD
 		 
@@ -32,6 +33,17 @@ BEGIN
 	SELECT CustID
 	FROM CustDB.dbo.Customer WITH(NOLOCK)
 	WHERE username IN ('SPONSuperUUS','Athena000SuperUUS','SampleSiteSuperUUS')
+
+	DECLARE @CryptoLicensee TABLE (LicenseeName VARCHAR(50))
+
+	INSERT INTO @CryptoLicensee (LicenseeName)
+	SELECT LicenseeName from OPENQUERY (DBCUST, '
+		SELECT	l.LicenseeName
+		FROM	bodb_licensee.dbo.Licensees l WITH(NOLOCK)
+		INNER JOIN bodb_licensee.dbo.Oas_Party p  WITH(NOLOCK) ON p.OldRefId = l.LicenseeID
+		WHERE p.partyID IN (SELECT x.partyID FROM bodb_licensee.dbo.LA_f_CryptoPartyListSel() x)
+	')
+
 
 	DECLARE @isCollection 			BIT = 0
 		,@language					VARCHAR(2)= 'E'
@@ -371,7 +383,7 @@ BEGIN
 		, FromExRate
 		, ToExRate
 		, ToAmount
-		, [Status]
+		, CASE WHEN LicenseeName IN (SELECT x.LicenseeName FROM @CryptoLicensee x) THEN 'Skipped' ELSE [Status] END
 		, MonthDate
 	FROM #tempLicenseeTransfer
 	WHERE TransferEnable = 1 
