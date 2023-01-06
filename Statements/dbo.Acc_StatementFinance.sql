@@ -33,6 +33,8 @@ AS
   - 20210819@Evan: NAP - Prevent reversal near BU [Redmine: #160439]
   - 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
   - 20220830@Danny: add filter to Remove orphan ticket [Redmine: #175253]
+ - 20220421@Percy: Get Opening Balance from Statement_Accum table [RedmineID: #169560]
+
 
     Param's Explanation:  
         - @FilterBy: 1:winlostdate - 2:transdate  
