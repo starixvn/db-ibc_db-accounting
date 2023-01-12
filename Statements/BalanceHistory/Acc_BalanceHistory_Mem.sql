@@ -16,6 +16,8 @@ AS
 		- 20210126@Sol: Initialize sp - [RedmineID: #144546] 
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 		- 20220427@Sol: NAP - fixbug - missing table transfer in range 14 - [Redmine: #167296]
+		- 20230112@Bobby: Remove condition - [Redmine: #144546]
+		
 */
 BEGIN
 
@@ -369,8 +371,6 @@ BEGIN
 				b.Action,
 				b.rowid
 			FROM #BalanceRecord b
-			WHERE b.winlostdate IS NOT NULL
-				OR b.refNo IS NULL
 		) t
 		ORDER BY ActionDate, rowid
 
