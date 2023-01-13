@@ -16,7 +16,7 @@ AS
 		- 20210126@Sol: Initialize sp - [RedmineID: #144546] 
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 		- 20220427@Sol: NAP - fixbug - missing table transfer in range 14 - [Redmine: #167296]
-		- 20230112@Bobby: Remove condition - [Redmine: #144546]
+		- 20230112@Bobby: Remove condition - [Redmine: #182829]
 		
 */
 BEGIN
