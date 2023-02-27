@@ -66,7 +66,7 @@ Revisions:
 	- 20220923@Evan: Revise code rollback (issue) [Redmine: #178135]
 	- 20220929@Evan: Check available balance on BettransX+Transfer [Redmine: #178135]
 	- 20221226@Evan: Wait for in-house service (2ms) to sync new value of rollback ticket to centraldb [Redmine: #182003]
-					 
+	- 20230227@Evan: Ensure correct balance calculation when allow to transfer 247 (BU) [Redmine: #173554]
 
 Param's Explanation:
 ? @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction
@@ -183,6 +183,7 @@ BEGIN
 		@DBONRTRA SMALLINT,
 		@DBONRADJ SMALLINT,
 		@MoveBetsDay smalldatetime,
+		@BalanceUpDate smalldatetime,
 		@NewMoveBetsDay smalldatetime
 
 	DECLARE @MBBU TABLE (BalanceUpDay smalldatetime, MoveBetsDay smalldatetime)
@@ -300,7 +301,7 @@ BEGIN
 		SET @MoveBetsDay = NULL
 		INSERT INTO @MBBU (BalanceUpDay, MoveBetsDay)
 		EXEC dbo.Age_SelBalanceUpDay
-		SELECT @MoveBetsDay = MoveBetsDay FROM @MBBU
+		SELECT @MoveBetsDay = MoveBetsDay, @BalanceUpDate = BalanceUpDay FROM @MBBU
 
 		SELECT @balance = 0, @translogCredit = 0, @balance_bettransRNG = 0, @balance_bettransLC = 0, @balance_Transfer = 0
 
@@ -313,7 +314,10 @@ BEGIN
 		SELECT @balance_Transfer = SUM(winlost-actual_stake+playercomm)
 		FROM dbo.Transfer t WITH(NOLOCK)
 		WHERE custid = @custid
-			AND (bettype = 19999 AND winlostdate <= @MoveBetsDay OR t.Bettype > 19999)
+			AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @MoveBetsDay THEN 0 --> new sum
+		            WHEN bettype = 20000 AND winlostdate > @BalanceUpDate THEN 0 --> new bal
+		            WHEN winlostdate < @BalanceUpDate THEN 0 --> old data
+		            ELSE 1 END
 		---
 
 		SELECT @translogCredit = SUM(ISNULL(actual_stake, 0))
@@ -349,7 +353,7 @@ BEGIN
 		DELETE @MBBU
 		INSERT INTO @MBBU (BalanceUpDay, MoveBetsDay)
 		EXEC dbo.Age_SelBalanceUpDay
-		SELECT @NewMoveBetsDay = MoveBetsDay FROM @MBBU
+		SELECT @NewMoveBetsDay = MoveBetsDay, @BalanceUpDate = BalanceUpDay FROM @MBBU
 
 		IF @NewMoveBetsDay <> @MoveBetsDay
 		BEGIN
@@ -364,7 +368,10 @@ BEGIN
 			SELECT @balance_Transfer = SUM(winlost-actual_stake+playercomm)
 			FROM dbo.Transfer t WITH(NOLOCK)
 			WHERE custid = @custid
-				AND (bettype = 19999 AND winlostdate <= @NewMoveBetsDay OR t.Bettype > 19999)
+				1 = CASE WHEN bettype = 19999 AND winlostdate > @MoveBetsDay THEN 0 --> new sum
+		            WHEN bettype = 20000 AND winlostdate > @BalanceUpDate THEN 0 --> new bal
+		            WHEN winlostdate < @BalanceUpDate THEN 0 --> old data
+		            ELSE 1 END
 			---
 
 			SELECT @translogCredit = SUM(ISNULL(actual_stake, 0))
