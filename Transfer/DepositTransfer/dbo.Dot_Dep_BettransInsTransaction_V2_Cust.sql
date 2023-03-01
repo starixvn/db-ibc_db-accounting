@@ -308,7 +308,7 @@ BEGIN
 		SELECT @balance = SUM(winlost-actual_stake+playercomm)
 		FROM dbo.bettrans b WITH(NOLOCK)
 		WHERE custid = @custid
-			AND	bettype < 19999 AND winlostdate > @MoveBetsDay
+			AND winlostdate > @MoveBetsDay
 
 		---get data of transfer ticket from new table [transfer]
 		SELECT @balance_Transfer = SUM(winlost-actual_stake+playercomm)
@@ -362,15 +362,15 @@ BEGIN
 			SELECT @balance = SUM(winlost-actual_stake+playercomm)
 			FROM dbo.bettrans b WITH(NOLOCK)
 			WHERE custid = @custid
-				AND	bettype < 19999 AND winlostdate > @NewMoveBetsDay
+				AND winlostdate > @NewMoveBetsDay
 
 			---get data of transfer ticket from new table [transfer]
 			SELECT @balance_Transfer = SUM(winlost-actual_stake+playercomm)
 			FROM dbo.Transfer t WITH(NOLOCK)
 			WHERE custid = @custid
-				1 = CASE WHEN bettype = 19999 AND winlostdate > @MoveBetsDay THEN 0 --> new sum
-		            WHEN bettype = 20000 AND winlostdate > @BalanceUpDate THEN 0 --> new bal
-		            WHEN winlostdate < @BalanceUpDate THEN 0 --> old data
+				AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @NewMoveBetsDay THEN 0 --> new sum
+						WHEN bettype = 20000 AND winlostdate > @BalanceUpDate THEN 0 --> new bal
+						WHEN winlostdate < @BalanceUpDate THEN 0 --> old data
 		            ELSE 1 END
 			---
 
