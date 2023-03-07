@@ -19,6 +19,7 @@ AS
 		- 20160204@Elodie: Add WinLossLimit setting type for DCS [Redmine: #49606]
 		- 20191107@Eden: 3rd party products - Remove InActive Products Phase 2 [Redmine: #118699]
 		- 20220110@Eden: Saba Casino use DCS Setting [RedmineID: #164280]
+		- 20221121@Eden: Unify RNG Lottery Customer Settings [RedmineID: #180640]
 */
 BEGIN
 	SET NOCOUNT ON	
@@ -33,6 +34,14 @@ BEGIN
 		
 	IF NOT EXISTS (SELECT TOP 1 1 FROM @BetTypeIds)
 		RETURN
+
+	-->Insert bettypes which used reference winloss limit setting
+	INSERT INTO @BetTypeIds(BetType)
+	SELECT st.BetType
+	FROM DBCUST.CustDB.dbo.SportBettypeSettingMatrix st WITH(NOLOCK) 
+		INNER JOIN @BetTypeIds t
+			ON t.BetType = st.BettypeRefWinlossLimit
+	WHERE st.isLicensee = 0 AND st.Site = 'ALL'
 
 	DECLARE @resetDate SMALLDATETIME, @Credit MONEY, @Debit MONEY
 	SELECT @resetDate = CONVERT(NVARCHAR(10), CURRENT_TIMESTAMP, 120)
