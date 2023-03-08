@@ -72,6 +72,7 @@ AS
 		- 20220425@Evan: Change product name and remove Casino Jackpot Amount [Redmine: #171865]
 		- 20221005@Danny: Remove not valid user in automail for reset winning's change [Redmine: #178761]
 		- 20230522@Lewis: Call sum Sps on other servers - [RedmineID: #188463]
+		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
 		
 	Explanation's Param:
 	    @mode:  0 _ view report
@@ -164,7 +165,10 @@ BEGIN
 			SUM(ISNULL(winlost, 0) - ISNULL(actual_stake, 0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)) AS RealWinlost 
 	FROM dbo.transfer b WITH (NOLOCK)
 	WHERE b.winlostdate = @winlostdate
-	   	AND ((b.bettype = 19999 AND b.winlostdate <= @moveBetsDay)  OR (b.bettype > 19999 ))
+	   AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+                        WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+                        WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+                    ELSE 1 END
 	   AND b.bettype <> 21007 ---- exclude CN88 headline balance
     GROUP BY b.winlostdate, 
 			CASE WHEN b.bettype IN (21001, 21002) THEN custid ELSE -1 END  ,			

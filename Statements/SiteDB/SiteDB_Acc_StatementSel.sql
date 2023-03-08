@@ -14,6 +14,7 @@ AS
 	
 	Revisions:
 		- 20220802@Sophia: Get statement report - call at SiteDB for Bettrans range [Redmine: #175253]
+		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
 		 
 */
  
@@ -154,7 +155,6 @@ BEGIN
 					WHERE r.recommend = bt.custID
 						AND winlostdate <= @todate
 						AND winlostdate > @moveBetsDay
-						AND bettype < 19999
 					) b
 		GROUP BY winlostdate, bettype, StatusID, CASE WHEN bettype > 20000 THEN 1 ELSE 0 END 
 		OPTION (OPTIMIZE FOR (@i = 1))
@@ -176,7 +176,10 @@ BEGIN
 					FROM dbo.transfer bt WITH (NOLOCK)		-- use index = CUSTID					
 					WHERE r.recommend = bt.custID
 						AND winlostdate <= @todate
-						AND ((bettype = 19999 AND winlostdate <= @moveBetsDay) OR bettype > 19999)
+						AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+                                    WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+                                    WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+                                ELSE 1 END
 					) b
 		GROUP BY winlostdate, bettype, StatusID, CASE WHEN bettype > 20000 THEN 1 ELSE 0 END 
 		OPTION (OPTIMIZE FOR (@i = 1))
@@ -250,7 +253,6 @@ BEGIN
 						AND winlostdate <= @todate			
 						AND StatusID NOT IN (0,1)
 						AND winlostdate > @moveBetsDay
-						AND bettype < 19999
 					) b
 		GROUP BY winlostdate, bettype, StatusID, IsOwner 
 		OPTION (OPTIMIZE FOR (@i = 1), HASH GROUP)
@@ -271,9 +273,10 @@ BEGIN
 					WHERE r.recommend = bt.recommend
 						AND winlostdate <= @todate			
 						AND StatusID NOT IN (0,1)
-						AND (
-							(bettype = 19999 AND winlostdate <= @moveBetsDay) 
-							OR bettype > 19999)
+						AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+                                    WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+                                    WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+                                ELSE 1 END
 					) b
 		GROUP BY winlostdate, bettype, StatusID, IsOwner 
 		OPTION (OPTIMIZE FOR (@i = 1), HASH GROUP)
@@ -351,7 +354,6 @@ BEGIN
 							AND winlostdate <= @todate 
 							AND StatusID NOT IN (0,1,102,101)
 							AND winlostdate > @moveBetsDay
-							AND bettype < 19999
 				) b
 		GROUP BY winlostdate, bettype, StatusID
 		OPTION (OPTIMIZE FOR (@i = 1), HASH GROUP)
@@ -371,8 +373,10 @@ BEGIN
 					WHERE	bt.recommend = r.recommend		
 							AND winlostdate <= @todate 
 							AND StatusID NOT IN (0,1,102,101)
-							AND ((bettype = 19999 AND winlostdate <= @moveBetsDay)  OR bettype > 19999)
-							AND bettype >= 19999
+							AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+	                                    WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+	                                    WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+                                	ELSE 1 END
 				) b
 		GROUP BY winlostdate, bettype, StatusID
 		OPTION (OPTIMIZE FOR (@i = 1), HASH GROUP)
@@ -390,10 +394,11 @@ BEGIN
 			,COUNT(1) AS betcount
 		FROM dbo.transfer bt WITH (NOLOCK)	--- Use index on custID		
 		WHERE CustID = @CID
-			  AND Bettype >= 19999
 			  AND winlostdate <= @todate	
-			  AND ((bettype = 19999 AND winlostdate <= @moveBetsDay)  OR bettype > 19999)
-
+			  AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+                            WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+                            WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+                        ELSE 1 END
 		GROUP BY Winlostdate, bettype 
 		
 		-- I.3.2. BettransLC:  Exclude ticket running, waiting 	
@@ -467,7 +472,6 @@ BEGIN
 							AND winlostdate <= @todate 
 							AND StatusID NOT IN (0,1,102,101) -- 'running','waiting','VOID','REJECT'
 							AND winlostdate > @moveBetsDay
-							AND bettype < 19999
 				) b
 		GROUP BY winlostdate, bettype, StatusID
 		OPTION (OPTIMIZE FOR (@i = 1), HASH GROUP)	
@@ -487,8 +491,10 @@ BEGIN
 					WHERE	bt.recommend = r.recommend		
 							AND winlostdate <= @todate 
 							AND StatusID NOT IN (0,1,102,101) -- 'running','waiting','VOID','REJECT'
-							 AND ( (bettype = 19999 AND winlostdate <= @moveBetsDay)  OR bettype > 19999)
-							AND bettype >= 19999
+							AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+			                            WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+			                            WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+			                        ELSE 1 END
 				) b
 		GROUP BY winlostdate, bettype, StatusID
 		OPTION (OPTIMIZE FOR (@i = 1), HASH GROUP)	
@@ -509,7 +515,10 @@ BEGIN
 								stake, winlost, actual_stake, swinlost, scomm, acomm
 						FROM dbo.Transfer bt WITH (NOLOCK) --- Use index CustID						
 						WHERE bt.custID = m.mrecommend		
-							 AND ( (bettype = 19999 AND winlostdate <= @moveBetsDay)  OR bettype > 19999)
+							 AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+			                            WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+			                            WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+			                        ELSE 1 END
 							AND winlostdate <= @todate
 					) b
 		GROUP BY Winlostdate, bettype, IsOwner
@@ -584,7 +593,10 @@ BEGIN
 			,COUNT(1) AS betcount
 		FROM dbo.Transfer bt WITH (NOLOCK) --- Use index CustID						
 		WHERE bt.custid = @CID
-			 AND ((bettype = 19999 AND winlostdate <= @moveBetsDay)  OR bettype > 19999)
+			 AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+	                        WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+	                        WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+	                    ELSE 1 END
 			AND winlostdate <= @todate
 		GROUP BY Winlostdate, bettype
 	END

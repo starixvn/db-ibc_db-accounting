@@ -15,10 +15,19 @@ AS
 		- 20190723@Percy: Initialize SP [RedmineID: #117334]
 		- 20200602@Percy: Add output param: @PendingTransfer3rd [RedmineID: #135200]
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
+		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 */
 
 BEGIN
 	SET NOCOUNT ON
+
+	DECLARE @BalanceUpDay SMALLDATETIME
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	SELECT @BalanceUpDay = BalanceUpDay FROM @tblMoveBetBalanceUp
 
 	-- balance tables
 	SELECT @Balance = (cs.Balance + cc.Balance + co.Balance + ct.Balance) - (ds.Balance + dc.Balance + do.Balance + dt.Balance)
@@ -40,7 +49,7 @@ BEGIN
 	FROM dbo.transfer WITH (NOLOCK)
 	WHERE custid = @CustId
 		AND bettype IN (21008, 21009) -- BBIN Transfer
-	
+		AND WinlostDate >= @BalanceUpDay
 	-- Return data
 	SELECT @Balance = ISNULL(@Balance, 0), @NetPosition = ISNULL(@NetPosition, 0), @PendingTransfer3rd = ISNULL(@PendingTransfer3rd, 0)
 END

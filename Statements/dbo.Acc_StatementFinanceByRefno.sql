@@ -20,6 +20,7 @@ AS
 		- 20191113@Louis: Hot Fix Credit Collection BK [Redmine: #123812]
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 		- 20220830@Danny: Remove orphan ticket [Redmine: #175253]
+        - 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
 
     Param's Explanation:
     
@@ -56,6 +57,15 @@ SET @_Username = @Username
 DECLARE @CustID INT
 SELECT @CustID = custid FROM dbo.Customer (NOLOCK) WHERE username LIKE @_Username
 
+-- get BU date
+DECLARE @balanceUpDay SMALLDATETIME
+DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+SELECT @balanceUpDay = BalanceUpDay FROM @tblMoveBetBalanceUp
+
 INSERT INTO @StatementTable(TransID, TransDate, TransType, TransDesc, TotalAmt, IsOwner, TotalAmtRM)
     SELECT 
         b.transid,
@@ -71,6 +81,7 @@ INSERT INTO @StatementTable(TransID, TransDate, TransType, TransDesc, TotalAmt, 
     WHERE b.bettype > 20000 
         AND b.refno = @_RefNo
 		AND b.CustId <> 0
+        AND b.winlostdate >= @balanceUpDay
 
 IF NOT EXISTS( SELECT 1 FROM @StatementTable )
 BEGIN

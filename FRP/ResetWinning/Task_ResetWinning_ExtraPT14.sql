@@ -26,6 +26,7 @@ AS
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 		- 20220425@Evan: Remove Casino Jackpot Amount [Redmine: #171865]
 		- 20230522@Lewis: Call sum Sps on other servers - [RedmineID: #188463]
+		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
 		
 	Param's explain:
 		@mode:  0 _ view report
@@ -55,6 +56,15 @@ BEGIN
 		SELECT @wldate = DATEADD(DAY, -1, @wldate)
 	END
 	
+	--Get BU date
+	DECLARE @balanceUpDay SMALLDATETIME
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	SELECT @balanceUpDay = BalanceUpDay FROM @tblMoveBetBalanceUp
+
 	----Get Sport Bettype Matrix------
 	-- Check SP Version
 	DECLARE @isTest BIT = 0
@@ -129,6 +139,7 @@ BEGIN
 		ON b.custid = d.CustID
 	WHERE b.bettype IN (21001, 21002)
 		AND b.winlostdate BETWEEN @fromdate AND @todate
+		AND b.winlostdate >= @balanceUpDay
 	GROUP BY b.custid, b.winlostdate, d.GroupID
 
 	IF @mode = 0 -- view

@@ -33,7 +33,8 @@ AS
   - 20210819@Evan: NAP - Prevent reversal near BU [Redmine: #160439]
   - 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
   - 20220830@Danny: add filter to Remove orphan ticket [Redmine: #175253]
- - 20220421@Percy: Get Opening Balance from Statement_Accum table [RedmineID: #169560]
+  - 20220421@Percy: Get Opening Balance from Statement_Accum table [RedmineID: #169560]
+  - 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
 
 
     Param's Explanation:  
@@ -176,7 +177,10 @@ BEGIN
 						ORDER BY f.RoleId ASC
 				 ) cr			 
 			WHERE  b.refno = @_RefNo
-				AND b.bettype >= 20000 
+				AND b.Bettype >= 20000
+				AND 1 = CASE WHEN b.bettype = 20000 AND b.winlostdate > @_BalanceUpDay THEN 0 --> new bal
+		                     WHEN b.winlostdate < @_BalanceUpDay THEN 0 --> old data
+                    	ELSE 1 END 
 				AND (@GroupId = 1 OR ISNULL(cr.IsView, ~l.IsInternal) = 1 OR (@GroupId = 0 AND ISNULL(cr.IsView, 1) = 1))
 				AND b.CustId <> 0
 
@@ -294,7 +298,10 @@ BEGIN
 				LEFT JOIN dbo.TransferInfo ti WITH(NOLOCK) ON b.TransId = ti.TransId
 				LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = b.bettype 
 			WHERE b.custid = @CustID
-				AND b.bettype >= 20000 
+				AND b.Bettype >= 20000
+				AND 1 = CASE WHEN b.bettype = 20000 AND b.winlostdate > @_BalanceUpDay THEN 0 --> new bal
+                     WHEN b.winlostdate < @_BalanceUpDay THEN 0 --> old data
+                     ELSE 1 END  
 				AND 
 					( (@FilterBy = 1 AND b.winlostdate >= @_FromDate AND b.winlostdate < @_ToDate)
 					OR (@FilterBy = 2 AND b.transdate >= @_FromDate AND b.transdate < @_ToDate)
@@ -304,7 +311,7 @@ BEGIN
 			SELECT s.refno
 			FROM #StatementTable s
 				LEFT JOIN dbo.transfer b (NOLOCK) ON s.refno = b.refno
-			WHERE b.bettype>20000
+			WHERE b.bettype > 20000
 			GROUP BY s.refno
 			HAVING COUNT(*) > 1
 		)

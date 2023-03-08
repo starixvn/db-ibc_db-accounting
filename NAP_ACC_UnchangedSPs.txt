@@ -1,3 +1,4 @@
-Admin\Auto Primary Extra PT Group\Acc_ExternalGroupHeadline_Ins.sql
-Admin\Auto Primary Extra PT Group\Acc_ExternalGroupHeadline_Upd.sql
-ExternalSite\Group\ManageExtraPTGroup\dbo.Acc_GroupExtraPT_Group_Sel.sql
+Transfer\TransferSiteDB\SiteDB_Acc_BettransInsTransfer.sql
+Transfer\YesterdayTransfer\dbo.Acc_BettransInsTransfer.proc.sql
+Transfer\Transfer3rdProduct\Dot_BBIN_TransferIns.sql
+ProcessingData\dbo.Acc_ShowNotificationWhenProcessingData.sql

@@ -74,6 +74,7 @@ AS
 		- 20211115@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 		- 20220421@Percy: Get Opening Balance from Statement_Accum table [RedmineID: #169560]
 		- 20221219@Bobby: Correct statement in case difference between winlostdate and transdate of transfer [RedmineID: #181771]
+		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
 		
 	Param explanation : 
 		- Transtypeid = 4 - GrandPrize
@@ -178,12 +179,8 @@ BEGIN
 						WHEN statusID IN (102, 101) THEN 102 -- 'VOID', 'REJECT'
 						WHEN statusID IN (0, 1) THEN 0 -- 'running', 'waiting'
 						ELSE 131 END AS statusID,
-					CASE WHEN b.bettype < 19999 THEN NULL ELSE transdate END AS transdate,
-					CASE 
-						WHEN b.bettype < 19999 THEN '' 
-						WHEN b.oddsId = 0 THEN transdesc 						
-						ELSE 'Coll' 
-					END transdesc,
+					NULL AS transdate,
+					'' transdesc,
 					SUM(actual_stake) AS actual_stake,
 					SUM(winlost) AS winlost
 				FROM
@@ -200,19 +197,12 @@ BEGIN
 						statusID NOT IN (0, 1)
 						OR (statusID IN (0, 1) AND s.RefTable IS NULL) -- exclude running ticket on bettransRnG/LC, translog
 					)
-					AND b.bettype < 19999 
 					AND b.winlostdate > @_moveBetsDay
 				GROUP BY winlostdate, b.bettype,
 					CASE
 						WHEN statusID IN (102, 101) THEN 102
 						WHEN statusID IN (0, 1) THEN 0
-						ELSE 131 END,
-					CASE WHEN b.bettype < 19999 THEN NULL ELSE transdate END,
-					CASE 
-						WHEN b.bettype < 19999 THEN '' 
-						WHEN b.oddsId = 0 THEN transdesc
-						ELSE 'Coll' 
-					END		
+						ELSE 131 END
 					
 				---- 1.1  bettype = 19999
 				UNION ALL
@@ -232,7 +222,7 @@ BEGIN
 					AND winlostdate BETWEEN @_FromDate AND @_ToDate
 					AND b.bettype = 19999
 					AND b.winlostdate <= @_moveBetsDay
-
+					AND b.winlostdate >= @_BalanceUpDay
 				GROUP BY winlostdate, b.bettype
 			
 				---- 1.2 translog
@@ -365,8 +355,7 @@ BEGIN
 				FROM bettrans b WITH (NOLOCK)  
 					LEFT JOIN #SportBettype s ON s.bettype = b.bettype 
 				WHERE 
-					b.bettype < 19999 
-					AND custid = @CID 
+					custid = @CID 
 					AND winlostdate BETWEEN @_FromDate AND @_ToDate
 					AND playercomm <> 0 
 					AND (
@@ -390,8 +379,8 @@ BEGIN
 					AND custid = @CID 
 					AND winlostdate BETWEEN @_FromDate AND @_ToDate
 					AND playercomm <> 0 
-					AND b.bettype = 19999
 					AND b.winlostdate <= @_moveBetsDay
+					AND b.winlostdate >= @_BalanceUpDay
 				GROUP BY winlostdate
 			)
 			INSERT INTO @StatementTable -- comm
@@ -433,6 +422,7 @@ BEGIN
 				AND b.bettype NOT IN (23001,23002,23101,23102,23201,23202)
 				AND (winlost-actual_stake) <> 0 
 				AND winlostdate BETWEEN @_FromDate and @_ToDate 
+				AND winlostdate >= @_BalanceUpDay
 			
 			---- 3.2 bettransLC
 			INSERT INTO @StatementTable
@@ -628,6 +618,7 @@ BEGIN
 				bettype > 20000
 				AND b.custid = @CID
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate 
+				AND winlostdate >= @_BalanceUpDay
 				
 			
 			---------------2. POS, COM
@@ -641,8 +632,7 @@ BEGIN
 				dbo.bettrans b WITH (NOLOCK)
 				LEFT JOIN #SportBettype s ON b.bettype = s.Bettype
 			WHERE
-				b.bettype < 19999
-				AND custid IN (SELECT * FROM @tblCustid) -- using index on custid
+				custid IN (SELECT * FROM @tblCustid) -- using index on custid
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate
 				AND (
 					winlostdate < @Yesterday
@@ -664,6 +654,7 @@ BEGIN
 				AND custid IN (SELECT * FROM @tblCustid) -- using index on custid
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate
 				AND winlostdate <= @_moveBetsDay
+				AND b.winlostdate >= @_BalanceUpDay
 			GROUP BY winlostdate
 
 			---- 2.2 bettransLC
@@ -751,7 +742,7 @@ BEGIN
 				bettype > 20000 
 				AND b.custid = @CID 
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate 
-				
+				AND winlostdate >= @_BalanceUpDay
 			---------------2. POS, COM
 			INSERT INTO @Pos_Com
 			--- 2.1. Bettrans
@@ -763,8 +754,7 @@ BEGIN
 				dbo.bettrans b WITH (NOLOCK)
 				LEFT JOIN #SportBettype s ON b.bettype = s.Bettype
 			WHERE
-				b.bettype < 19999
-				AND custid IN (SELECT custid FROM @tblCustid) -- using index on custid
+				custid IN (SELECT custid FROM @tblCustid) -- using index on custid
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate
 				AND (
 					winlostdate < @Yesterday
@@ -786,6 +776,7 @@ BEGIN
 				AND custid IN (SELECT custid FROM @tblCustid) -- using index on custid
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate
 				AND winlostdate <= @_moveBetsDay
+				AND b.winlostdate >= @_BalanceUpDay
 			GROUP BY winlostdate
 
 			---- 2.2 bettransLC
@@ -875,6 +866,7 @@ BEGIN
 				bettype > 20000 
 				AND b.custid=@CID 
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate
+				AND winlostdate >= @_BalanceUpDay
 
 			--------2. POS, COM
 			INSERT INTO @Pos_Com
@@ -886,8 +878,7 @@ BEGIN
 			FROM
 				dbo.bettrans b WITH (NOLOCK)
 				LEFT JOIN #SportBettype s ON b.bettype = s.Bettype
-			WHERE b.bettype < 19999
-				AND EXISTS (SELECT TOP 1 1 FROM @tblCustid c WHERE c.custid = b.custid) -- using index on custid
+			WHERE EXISTS (SELECT TOP 1 1 FROM @tblCustid c WHERE c.custid = b.custid) -- using index on custid
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate
 				AND (
 					winlostdate < @Yesterday
@@ -907,6 +898,7 @@ BEGIN
 				AND EXISTS (SELECT TOP 1 1 FROM @tblCustid c WHERE c.custid = b.custid) -- using index on custid
 				AND winlostdate BETWEEN @_FromDate AND @_ToDate
 				AND winlostdate <= @_moveBetsDay
+				AND b.winlostdate >= @_BalanceUpDay
 			
 			GROUP BY winlostdate
 
@@ -996,6 +988,7 @@ BEGIN
 			WHERE bettype > 20000 
 				AND b.custid=@CID 
 				AND b.winlostdate BETWEEN @_FromDate AND @_ToDate
+				AND winlostdate >= @_BalanceUpDay
 		END
 		-- End Headline
 

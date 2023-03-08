@@ -16,6 +16,7 @@ AS
 		- 20180515@Percy: Add waiting tickets on translog table [RedmineID: #95219]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
+    	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 */
 BEGIN	
 	DECLARE @totalAmt_bettransRNG	MONEY = 0
@@ -57,8 +58,10 @@ BEGIN
 	SELECT  @totalAmt_transfer = sum(winlost-actual_stake+playercomm)
     FROM	dbo.transfer b WITH(NOLOCK)
     WHERE	custid = @CustID
-			AND ((bettype = 19999 AND winlostdate <= @moveBetsDay) OR (bettype > 19999))
-  
+			AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+						WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+						WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+					ELSE 1 END
 	
 	-- bettrans
 	SELECT  @TotalAmt = sum(winlost-actual_stake+playercomm)
@@ -68,7 +71,6 @@ BEGIN
 					(b.bettype NOT IN (801,802,803,804,805,806) AND ruben =0) 
 					OR ruben <> 0
 				)
-			AND bettype < 19999
 			AND winlostdate > @moveBetsDay
 
     
