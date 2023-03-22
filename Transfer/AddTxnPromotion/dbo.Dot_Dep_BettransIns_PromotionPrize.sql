@@ -35,7 +35,7 @@ AS
 		- 20221226@Evan: Wait for in-house service (2ms) to sync new value of rollback ticket to centraldb [Redmine: #182003]
 						 Revise code using ExchangeDailyOanda to get actualrate
 		- 20221010@Evan: Support betfrom up to nvarchar(4) [Redmine: #178059]
-
+		- 20230322@Evan: Change code write log into bodb_customerlog.UserLog_Transfer [Redmine: #185507]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -353,19 +353,32 @@ BEGIN
 	END
 
 	-----------------Write Log Promotion Prize----------------------
+	DECLARE @LogData VARCHAR(1000)
+	SELECT @LogData = 
+			'Insert promotion prize CustID = ' + CAST(@CustID AS VARCHAR(20)) 
+			+ ', Bettype = ' + CAST(@Bettype AS VARCHAR(10)) 
+			+ ', ExtraInfo = ' + @ExtraInfo
+			+ ', Amount = ' + CAST(@Amount AS VARCHAR(20))
+			
 	BEGIN TRY
-		DECLARE @LogData VARCHAR(300)
-
-		SELECT @LogData = 
-				'Insert promotion prize CustID = ' + CAST(@CustID AS VARCHAR(20)) 
-				+ ', Bettype = ' + CAST(@Bettype AS VARCHAR(10)) 
-				+ ', ExtraInfo = ' + @ExtraInfo
-				+ ', Amount = ' + CAST(@Amount AS VARCHAR(20))
 	
-		EXEC dbo.WriteLog_UserLog @UserID = @CustID, @Doing = @LogData
+		EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer 
+								@UserID		= @creator, 
+								@FromCustID = @CustID, 
+								@ToCustID	= 0, 
+								@IP			= @IP, 
+								@Doing		= @LogData 
 	END TRY
 	BEGIN CATCH
 		-- IF write log error: not RETURN error code
+		SELECT @LogData = @LogData + ' ErrMsg: ' + ERROR_MESSAGE()
+			
+		EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer 
+							@UserID		= @creator, 
+							@FromCustID = @CustID, 
+							@ToCustID	= 0, 
+							@IP			= @IP, 
+							@Doing		= @LogData
 	END CATCH
 
 	-- RETURN loginfo to write log

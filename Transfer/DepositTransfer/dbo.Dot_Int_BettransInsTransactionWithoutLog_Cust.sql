@@ -70,6 +70,7 @@ Revision:
 	- 20220929@Evan: Check available balance on BettransX+Transfer [Redmine: #178135]
 	- 20221226@Evan: Wait for in-house service (2ms) to sync new value of rollback ticket to centraldb [Redmine: #182003]
 	- 20230227@Evan: Ensure correct balance calculation when allow to transfer 247 (BU) [Redmine: #173554]
+	- 20230322@Evan: Change code write log into bodb_customerlog.UserLog_Transfer [Redmine: #185507]
 
 Param's Explanation:
 @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction
@@ -633,13 +634,32 @@ BEGIN
 	SET @transdate = CONVERT(CHAR(8),@transdate,112)
 	---------------------------------------------------------------------------------------------------
 
-	DECLARE @LogData VARCHAR(300)
+	DECLARE @LogData VARCHAR(1000)
 
 	SELECT @LogData = 
 				'Insert trans custid = ' + CONVERT(VARCHAR(20), @custid) + ', bettype = ' + CONVERT(VARCHAR(20), @bettype) + ', amount = ' + CONVERT(VARCHAR(20), @amount) 
 				+ CASE WHEN @BonusId > 0 THEN ', bonusId = ' + convert(varchar(20), @BonusId) ELSE '' END
 
-	EXEC dbo.WriteLog_UserLog @UserID = @custid, @Doing = @LogData
+	BEGIN TRY	
+	
+		EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer 
+								@UserID		= @custid, 
+								@FromCustID = @custid, 
+								@ToCustID	= @bal_custid, 
+								@IP			= @IP, 
+								@Doing		= @LogData 
+	END TRY
+	BEGIN CATCH
+		-- IF write log error: not RETURN error code
+		SELECT @LogData = @LogData + ' ErrMsg: ' + ERROR_MESSAGE()
+			
+		EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer 
+							@UserID		= @custid, 
+							@FromCustID = @custid, 
+							@ToCustID	= @bal_custid, 
+							@IP			= @IP, 
+							@Doing		= @LogData
+	END CATCH
 
 END
 GO

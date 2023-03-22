@@ -42,7 +42,7 @@ Revisions:
 	- 20220724@Evan: Revise code rollback for scale-out [Redmine: #175297]
 	- 20220923@Evan: Revise code rollback (issue) [Redmine: #178135]
 	- 20221226@Evan: Wait for in-house service (2ms) to sync new value of rollback ticket to centraldb [Redmine: #182003]
-	- 20221107@Danny: Database - Sync-up Standby Server data - [RedmineID: #167261]
+	- 20230322@Evan: Change code write log into bodb_customerlog.UserLog_Transfer [Redmine: #185507]
 
 Input 
     1) CustID (For Double check) 
@@ -505,6 +505,25 @@ BEGIN
 	SELECT @LogData = 
 				'Cancel transfer trans custid = ' + CONVERT(VARCHAR(20), @custid) + ', old transid = ' + CONVERT(VARCHAR(20), @transid) + ', amount = ' + CONVERT(VARCHAR(20), @amount)
 
-	EXEC dbo.WriteLog_UserLog @UserID = @custid, @Doing = @LogData
+	BEGIN TRY	
+	
+		EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer 
+								@UserID		= @custid, 
+								@FromCustID = @custid, 
+								@ToCustID	= @bal_custid, 
+								@IP			= @IP, 
+								@Doing		= @LogData 
+	END TRY
+	BEGIN CATCH
+		-- IF write log error: not RETURN error code
+		SELECT @LogData = @LogData + ' ErrMsg: ' + ERROR_MESSAGE()
+			
+		EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer 
+							@UserID		= @custid, 
+							@FromCustID = @custid, 
+							@ToCustID	= @bal_custid, 
+							@IP			= @IP, 
+							@Doing		= @LogData
+	END CATCH
 END
 GO

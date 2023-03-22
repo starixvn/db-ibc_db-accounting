@@ -20,7 +20,7 @@ CREATE PROCEDURE dbo.Dot_Dep_BettransIns_SabaRedEnvelope
 	, @Balance      MONEY			= NULL OUTPUT
 	, @ErrCode 		INT				= 0 OUTPUT
 	, @ErrMsg 		NVARCHAR(200)	= '' OUTPUT
-	, @LogInfo		VARCHAR(300)	= '' OUTPUT
+	, @LogInfo		VARCHAR(1000)	= '' OUTPUT
 AS
 /*
 	Created: 20210202@Sophia
@@ -36,6 +36,7 @@ AS
 		- 20221226@Evan: Wait for in-house service (2ms) to sync new value of rollback ticket to centraldb [Redmine: #182003]
 						 Revise code using ExchangeDailyOanda to get actualrate
 		- 20221010@Evan: Support betfrom up to nvarchar(4) [Redmine: #178059]
+		- 20230322@Evan: Change code write log into bodb_customerlog.UserLog_Transfer [Redmine: #185507]
 
 	Example: 
 			DECLARE 
@@ -360,7 +361,7 @@ BEGIN
 	FINISH:
 	------------------
 
-	SELECT @logInfo = ISNULL(@result, '')	
+	SELECT @LogInfo = ISNULL(@result, '')	
 				+ 'Insert Red Envelope Amount CustID = ' + CAST(@CustID AS VARCHAR(20)) 
 				+ ', bettype:' +  cast(isnull( @bettype,0) as varchar(10)) 
 				+ ', Amount:' + CONVERT(varchar(50),isnull(@Amount,0)) 
@@ -370,16 +371,29 @@ BEGIN
 	
 	IF (@ErrCode <> 0)
 	BEGIN
-		SELECT @logInfo += N' . Error: ' + CAST(@ErrCode AS VARCHAR(10)) + '. ErrMessage: ' + @ErrMsg
+		SELECT @LogInfo += N' . Error: ' + CAST(@ErrCode AS VARCHAR(10)) + '. ErrMessage: ' + @ErrMsg
 	END
 
 	-----------------Write Log Red Envelope ----------------------
 	BEGIN TRY	
 	
-		EXEC dbo.WriteLog_UserLog @UserID = @CustID, @Doing = @LogInfo
+		EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer 
+								@UserID		= @creator, 
+								@FromCustID = @CustID, 
+								@ToCustID	= 0, 
+								@IP			= @IP, 
+								@Doing		= @LogInfo 
 	END TRY
 	BEGIN CATCH
 		-- IF write log error: not RETURN error code
+		SELECT @LogInfo = @LogInfo + ' ErrMsg: ' + ERROR_MESSAGE()
+			
+		EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer 
+							@UserID		= @creator, 
+							@FromCustID = @CustID, 
+							@ToCustID	= 0, 
+							@IP			= @IP, 
+							@Doing		= @LogInfo
 	END CATCH
 
  
