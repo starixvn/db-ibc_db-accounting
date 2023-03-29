@@ -16,6 +16,7 @@ AS
 		- 20211224@Sophia: Remove Saba Promotion products [Redmine: #166556]
 		- 20220106@Evan: Add SG Jackpot - [Redmine: #166685]	
  		- 20220425@Evan: Remove Casino Amount Jackpot [Redmine: #171865]
+		- 20230323@Danny: implement for 789y sub site [Redmine: #185695]
 
 	Param Explanation:
 		 
@@ -25,6 +26,8 @@ BEGIN
 	SET NOCOUNT ON
 
 	DECLARE @MinTransID_RNG BIGINT,  @MinTransID_LC BIGINT, @MaxTransID_RNG BIGINT,  @MaxTransID_LC BIGINT
+	DECLARE @789ySubSite TABLE (Site NVARCHAR(50))
+	INSERT INTO @789ySubSite (Site) SELECT Site FROM bodb02.dbo.Site WITH(NOLOCK) WHERE SiteLabel = '789y'
 
 	SELECT  @MinTransID_RNG = MIN (TransID) , @MaxTransID_RNG = MAX(TransID) 
 	FROM	dbo.BettransRNG WITH (NOLOCK)
@@ -58,7 +61,7 @@ BEGIN
 	FROM dbo.Customer c WITH (NOLOCK) 
 		--LEFT JOIN Acc_CustGroup ac WITH(NOLOCK) ON c.custid = ac.custid
 	WHERE c.roleid = 4  	
-		AND c.site IN ('789y')
+		AND c.Site IN (SELECT z.Site FROM @789ySubSite z)
 		AND c.currency<>20
 	--------------------------------------------------------------------------------------------------------- 
 		CREATE TABLE #WL 

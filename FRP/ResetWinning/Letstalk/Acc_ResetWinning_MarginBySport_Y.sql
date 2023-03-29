@@ -17,6 +17,7 @@ AS
 		- 20210524@Sophia: Add Saba Pin Goal [RedmineId: #155697]
 		- 20210720@Sophia: Split Saba PinGoal out of Saba Virtual Sports [Redmine: #158780]
 		- 20220307@Sophia: Add Saba Basketball PinGoal [Redmind: #169580]
+		- 20230323@Danny: implement for 789y sub site [Redmine: #185695]
 		
 	Param Explanation:
 		IsSaba = 0: Normal,
@@ -26,7 +27,8 @@ AS
 */
 BEGIN	
 	SET NOCOUNT ON
- 
+	DECLARE @789ySubSite TABLE (Site NVARCHAR(50))
+	INSERT INTO @789ySubSite (Site) SELECT Site FROM bodb02.dbo.Site WITH(NOLOCK) WHERE SiteLabel = '789y'
 	 
 	------Get Sport Bettype Matrix------	
 	CREATE TABLE  #Bettype (Bettype INT PRIMARY KEY)
@@ -68,7 +70,7 @@ BEGIN
 			ELSE 1  ---SabaType = 1: Saba Virtual Sports, SabaType = 2: Saba PinGoal
 			END AS SabaType
 	FROM 	dbo.League l WITH (NOLOCK)
-	WHERE  	l.LeagueGroupID IN (41, 42, 74, 108, 113, 122)
+	WHERE  	l.LeagueGroupID IN (41, 42, 74, 108, 113, 122, 151)
 		
 	----- End get Saba League 
 		
@@ -166,7 +168,7 @@ BEGIN
 				SELECT c.custid
 				FROM dbo.Customer c WITH (NOLOCK) 
 				WHERE c.roleid = 4  	
-					AND c.site IN ('789y')
+					AND c.site IN (SELECT z.Site FROM @789ySubSite z)
 					AND c.currency<>20
 			)
 		GROUP BY CASE WHEN m.Sporttype IN (1, 2, 5, 43, 50, -29) THEN m.Sporttype ELSE 0 END, b.LiveIndicator, m.IsSaba
