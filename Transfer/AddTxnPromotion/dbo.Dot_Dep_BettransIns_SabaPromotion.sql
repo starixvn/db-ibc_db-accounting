@@ -5,7 +5,7 @@ ALTER PROCEDURE dbo.Dot_Dep_BettransIns_SabaPromotion
 	, @Amount		MONEY			
 	, @Bettype		INT				= 17005
 	, @sporttype	INT 			= 246	
-	, @Betfrom		NVARCHAR(3)		= 'd'
+	, @Betfrom		NVARCHAR(4)		= 'd'
 	, @TransDesc	NVARCHAR(1000)	= ''
 	, @IP			VARCHAR(45)		= ''
 	, @Creator		INT				= NULL 
@@ -33,8 +33,8 @@ AS
 		- 20220724@Evan: Revise code rollback for scale-out [Redmine: #175297]
 		- 20220924@Sophia: Fix SiteDBGroupID missing in bettrans [Redmine: #178163]
 		- 20221226@Evan: Wait for in-house service (2ms) to sync new value of rollback ticket to centraldb [Redmine: #182003]
-		- 20221010@Evan: Betfrom Length Extensions [Redmine: #178059]
 						 Revise code using ExchangeDailyOanda to get actualrate
+		- 20221010@Evan: Support betfrom up to nvarchar(4) [Redmine: #178059]
 
 	Example: 
 			DECLARE 
