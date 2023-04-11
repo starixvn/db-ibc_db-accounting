@@ -1,6 +1,7 @@
 /*<info serverAlias="DBCust-CustDB" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[NAP_Admin_AddNewSite]
 	@sitename	NVARCHAR(50),
+	@sitelabel	VARCHAR(50)=NULL,
 	@isDeposit	BIT = 1,
 	@ErrCode	INT = 0 OUTPUT,
 	@ErrMsg		NVARCHAR(200) = '' OUTPUT,
@@ -15,6 +16,7 @@ AS
 		- 20170704@Harper: Create new SP [RedmineID: #77817]
 		- 20220413@Elodie: Remove code to delete site in case of error [RedmineID: #170752]
 		- 20220722@Eden: LAP - Scale Out DBTrans  [redmine: #158293/#175297]
+		- 20230112@Tacy: Alpha/NAP - Split 789y Site [RedmineID: #181596]
 */
 BEGIN
 	IF LEN(@Sitename) > 10
@@ -34,8 +36,8 @@ BEGIN
 	END
 	ELSE
 	BEGIN
-		INSERT INTO dbo.Site(site, ServerID, isLicensee, isActive, isDeposit,SiteDBGroupID)
-		VALUES (@sitename, 0, @isDeposit, 1, @isDeposit, @SiteDBGroupID)
+		INSERT INTO dbo.Site(site, ServerID, isLicensee, isActive, isDeposit,SiteDBGroupID,SiteLabel)
+		VALUES (@sitename, 0, @isDeposit, 1, @isDeposit, @SiteDBGroupID, @sitelabel)
 	
 		IF @@ERROR <> 0
 		BEGIN
