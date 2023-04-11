@@ -14,34 +14,34 @@ Revisions:
 	- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 	- 20190320@Phillip: #105338 - Build Customer Setting with Singbet Style
 	- 20220802@Sophia: Scale out DBTRANS, add SiteDBGroupID [RedmineID: #175253]
-	
+	- 20230117@Eddie: get SiteLable by System [RedmineID: #181596]
 */
 BEGIN
 	SET NOCOUNT ON
 	DECLARE @SearchQuery varchar(1024)
-	DECLARE @tmp TABLE (siteid INT,site NVARCHAR(50), SpecialGroup TINYINT )
+	DECLARE @tmp TABLE (siteid INT, site NVARCHAR(50), SpecialGroup TINYINT )
 	DECLARE @tmpUserid VARCHAR(50)
 
 	IF(@System = 'ACCOUNTING')
 	BEGIN
 		IF @Userid IS NULL
 		BEGIN
-			SELECT [siteid], [site],  isLicensee, SiteDBGroupID
+			SELECT [siteid], [site],  isLicensee, SiteDBGroupID, [SiteLabel]
 			FROM [Site] with (NOLOCK)
 			WHERE isActive = 1 
 			ORDER BY isLicensee, SiteDBGroupID, [site]
 		END
 		ELSE
 		BEGIN
-			SELECT @tmpUserid=CAST(@Userid AS VARCHAR(50))
+			SELECT @tmpUserid = CAST(@Userid AS VARCHAR(50))
 			SELECT @SearchQuery = 'SELECT * 
 			FROM OPENQUERY(DBPOL, 
-			''SELECT siteid , site,SpecialGroup FROM NAP_UserControl.dbo.f_GetDeniedSiteByUser( ''''' + @tmpUserid + ''''')'')'
+			''SELECT siteid , site, SpecialGroup FROM NAP_UserControl.dbo.f_GetDeniedSiteByUser( ''''' + @tmpUserid + ''''')'')'
 
-			INSERT INTO  @tmp (siteid , site,SpecialGroup)
+			INSERT INTO  @tmp (siteid, site, SpecialGroup)
 			EXECUTE(@SearchQuery)
 
-			SELECT a.siteid, a.site,  isLicensee, SiteDBGroupID
+			SELECT a.siteid, a.site, isLicensee, SiteDBGroupID, a.SiteLabel
 			FROM [Site] a with (NOLOCK)
 			WHERE isActive = 1 
 				AND siteid NOT IN (SELECT siteid FROM @tmp )
@@ -51,7 +51,7 @@ BEGIN
 	END
 	ELSE
 	BEGIN
-		SELECT [siteid], [site], isLicensee, SiteDBGroupID
+		SELECT [siteid], [site], isLicensee, SiteDBGroupID, [SiteLabel]
 		FROM [Site] with (NOLOCK)
 		WHERE 
 			siteid in (SELECT siteid FROM dbo.f_SiteBySystem(@System))
