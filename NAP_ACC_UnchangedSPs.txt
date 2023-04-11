@@ -1,8 +1,3 @@
-FRP\ResetWinning\Acc_ResetWinning_SelByDate14.sql
-FRP\ResetWinning\Task_ResetWinning_ExtraPT.sql
-FRP\ResetWinning\Task_ResetWinning_ExtraPT14.sql
-FRP\ResetWinning\Task_ResetWinning_Non3rdParty.sql
-
-Transfer\AutomateFinanceCrossTransfer\Acc_FinanceCrossTransferMulUpd.sql
-Task\Balance\Clear Balance\dbo.Task_ClearBalanceAllDownlines.sql
-Transfer\AutomateFinanceTransfer\Acc_FinanceTransferMulUpd.sql
+Admin\Auto Primary Extra PT Group\Acc_ExternalGroupHeadline_Ins.sql
+Admin\Auto Primary Extra PT Group\Acc_ExternalGroupHeadline_Upd.sql
+ExternalSite\Group\ManageExtraPTGroup\dbo.Acc_GroupExtraPT_Group_Sel.sql
