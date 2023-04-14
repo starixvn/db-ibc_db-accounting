@@ -24,6 +24,7 @@ AS
 		- 20180808@Helen: Get code from PRO + DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 		- 20181112@Sophia: Add Transfer Collection [redmine: #98621]
 		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
+		- 20230414@Danny: Change fomular check same sign amount [Redmine: #186947]
 */
 BEGIN
 SET NOCOUNT ON
@@ -112,7 +113,11 @@ SET NOCOUNT ON
 			INNER JOIN custinfo c2 WITH(NOLOCK) ON t.ToCust = c2.Username
 	WHERE	ISNUMERIC(Amount)=1 
 			AND ISNUMERIC(ToAmount)=1
-			AND CONVERT(MONEY,Amount)/CONVERT(MONEY,ToAmount) > 0 -- check if same sign
+			AND ( 
+					(CONVERT(MONEY,Amount) > 0 AND CONVERT(MONEY,ToAmount) > 0) 
+					OR 
+					(CONVERT(MONEY,Amount) < 0 AND CONVERT(MONEY,ToAmount) < 0)
+				) -- check if same sign
 			AND CONVERT(MONEY,Amount) <> 0
 			AND CONVERT(MONEY,ToAmount) <> 0
 			AND ISNULL(FromCust,'') <> '' 
@@ -125,7 +130,7 @@ SET NOCOUNT ON
 	--Failed Transaction
 	INSERT INTO @tblFail(FromCust, ToCust ,	Amount,	ToAmount, Description, Reason, IsCollection)
 	SELECT	FromCust, ToCust, Amount, ToAmount, Description,
-			CASE WHEN ISNUMERIC(Amount)=0 OR ISNUMERIC(ToAmount)= 0 OR CONVERT(MONEY,Amount)/CONVERT(MONEY,ToAmount) < 0 THEN '<b>Invalid Amount.</b>'
+			CASE WHEN ISNUMERIC(Amount)=0 OR ISNUMERIC(ToAmount)= 0 OR (CONVERT(MONEY,Amount) > 0 AND CONVERT(MONEY,ToAmount) < 0) OR (CONVERT(MONEY,Amount) < 0 AND CONVERT(MONEY,ToAmount) > 0) THEN '<b>Invalid Amount.</b>'
 				 WHEN ISNULL(FromCust,'') = ''  OR ISNULL(ToCust,'') = '' THEN '<b>Username cannot be blanked.</b>' 
 				 WHEN FromCust = ToCust THEN '<b>From Cust must different To Cust.</b>' 
 				 WHEN LEN(Description) > 200 THEN '<b>Maximum length of Description is 200 characters</b>' 
