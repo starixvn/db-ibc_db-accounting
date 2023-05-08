@@ -44,6 +44,7 @@ Revisions:
 	- 20211115@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 	- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
 	- 20220801@Danny: change code to support SiteDB [Redmine: #175253]
+	- 20230322@Danny: Enhance invalid transaction checking[Redmine: #184731]
 					   
 Param's Explanation:
 */
@@ -58,9 +59,9 @@ BEGIN
 	END
 
 	Declare @ToMrecommend int, @ToRecommend int, @ToSrecommend int, @ToCustID int, @Amt money,
-			@ToCurr int, @ToActualrate float, @ToCurrName nvarchar(10), @RemarkFromCurr nvarchar(70), @RemarkToCurr nvarchar(70), @ToRoleID tinyint 
+			@ToCurr int, @ToActualrate float, @ToCurrName nvarchar(10), @RemarkFromCurr nvarchar(70), @RemarkToCurr nvarchar(70), @ToRoleID tinyint, @ToCurrCode VARCHAR(12)
 	Declare @FromMrecommend int, @FromRecommend int, @FromSrecommend int, 
-			@FromCurr int, @FromActualrate float , @FromCurrName nvarchar(10),@FromUsername varchar(30), @FromRoleID tinyint
+			@FromCurr int, @FromActualrate float , @FromCurrName nvarchar(10),@FromUsername varchar(30), @FromRoleID tinyint, @FromCurrCode VARCHAR(12)
 	Declare @LogData varchar(200) 
 	
 	
@@ -104,7 +105,8 @@ BEGIN
 		@FromMrecommend = c.mrecommend,
 		@FromSrecommend = c.srecommend,
 		@FromActualrate = e.actualrate,
-		@FromRoleID = c.roleid
+		@FromRoleID = c.roleid,
+		@FromCurrCode = e.Code
 	from CustDB.dbo.Custinfo c with (NOLOCK)
 		INNER JOIN CustDB.dbo.Exchange e with (NOLOCK) on c.currency = e.exchangeid 
 	where c.CustID = @FromCustID
@@ -118,7 +120,8 @@ BEGIN
 		   @ToMrecommend = c.mrecommend,
 		   @ToSrecommend = c.srecommend,
 		   @ToActualrate = actualrate,
-		   @ToRoleID = c.roleid
+		   @ToRoleID = c.roleid,
+		   @ToCurrCode = e.Code
 	from CustDB.dbo.Custinfo c with (NOLOCK)
 		INNER JOIN CustDB.dbo.Exchange e with (NOLOCK) ON c.currency = e.exchangeid 
 	where c.username = @ToUserName
@@ -140,6 +143,13 @@ BEGIN
 	BEGIN
 		SELECT @ErrMsg = 'You cannot do TRANSFER due to the destination account is the same as the source account.', @ErrCode = 101
 		RETURN
+	END
+
+	IF ( @FromCurrCode <> 'MYR' AND @ToCurrCode <> 'MYR' AND @FromCurrCode <> @ToCurrCode )
+	BEGIN
+		Select @ErrMsg = N'The two accounts have different currency code, but neither of them includes the RM currency. Please check again Users Info.'
+			, @ErrCode = 104
+		return
 	END
 
 	if not exists (select 1 from CustDB.dbo.Custinfo with (NOLOCK) where custid = @FromCustID)
