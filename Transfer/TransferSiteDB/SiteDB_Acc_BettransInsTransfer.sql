@@ -20,6 +20,7 @@ Create: 20220719@Danny
 DB: DBTXN/bodb02
 Revisions:
 	- 20220719@Danny: Init. SP [Redmine: #175253]
+	- 20230322@Danny: Enhance invalid transaction checking[Redmine: #184731]
 					   
 Param's Explanation:
 Orig SP: Acc_BettransInsTransfer
@@ -37,9 +38,9 @@ BEGIN
 	DECLARE @TransIDs AS TABLE (transID BIGINT)
 
 	DECLARE @ToMrecommend int, @ToRecommend int, @ToSrecommend int, @ToCustID int, @Amt money,
-			@ToCurr int, @ToActualrate float, @ToCurrName nvarchar(10), @RemarkFromCurr nvarchar(70), @RemarkToCurr nvarchar(70), @ToRoleID tinyint 
+			@ToCurr int, @ToActualrate float, @ToCurrName nvarchar(10), @RemarkFromCurr nvarchar(70), @RemarkToCurr nvarchar(70), @ToRoleID tinyint, @ToCurrCode VARCHAR(12) 
 	DECLARE @FromMrecommend int, @FromRecommend int, @FromSrecommend int, 
-			@FromCurr int, @FromActualrate float , @FromCurrName nvarchar(10),@FromUsername varchar(30), @FromRoleID tinyint
+			@FromCurr int, @FromActualrate float , @FromCurrName nvarchar(10),@FromUsername varchar(30), @FromRoleID tinyint, @FromCurrCode VARCHAR(12)
 	DECLARE @LogData varchar(200) 
 	
 	---- #1 CHECK UM TRANSFER FUNCTION
@@ -73,12 +74,12 @@ BEGIN
 	SELECT @transdate = CURRENT_TIMESTAMP 	
 	SELECT @winlostdate = CONVERT(nvarchar(10), CURRENT_TIMESTAMP, 120)
 
-	DECLARE @CustInfo TABLE (Username NVARCHAR(50), currency INT, CurrName NVARCHAR(10), recommend INT, mrecommend INT, srecommend INT, CustID INT, actualrate FLOAT, roleid TINYINT)
+	DECLARE @CustInfo TABLE (Username NVARCHAR(50), currency INT, CurrName NVARCHAR(10), recommend INT, mrecommend INT, srecommend INT, CustID INT, actualrate FLOAT, roleid TINYINT, CurrCode VARCHAR(12))
 			
 	DECLARE @SiteGroupInfo TABLE(SiteDBGroupID SMALLINT, LinkedServerName  VARCHAR(512), ClientAccessName VARCHAR(512), AGIP VARCHAR (50))
 	DECLARE @FromSiteDBGroupID SMALLINT, @ToSiteDBGroupID SMALLINT
 
-	INSERT INTO @CustInfo (username, currency, CurrName, recommend, mrecommend, srecommend, CustID, actualrate, roleid)
+	INSERT INTO @CustInfo (username, currency, CurrName, recommend, mrecommend, srecommend, CustID, actualrate, roleid, CurrCode)
 	SELECT	c.username, 
 				c.currency,
 				e.currency AS CurrName,
@@ -87,7 +88,8 @@ BEGIN
 				c.srecommend,
 				c.CustID,
 				e.actualrate,
-				c.roleid
+				c.roleid,
+				e.Code
 	FROM CustDB.dbo.Custinfo c with (NOLOCK)
 		INNER JOIN CustDB.dbo.Exchange e with (NOLOCK) on c.currency = e.exchangeid 
 	where c.CustID = @FromCustID OR c.username = @ToUserName
@@ -99,7 +101,8 @@ BEGIN
 		@FromMrecommend = c.mrecommend,
 		@FromSrecommend = c.srecommend,
 		@FromActualrate = c.actualrate,
-		@FromRoleID = c.roleid
+		@FromRoleID = c.roleid,
+		@FromCurrCode = c.CurrCode
 	FROM @CustInfo c
 	WHERE c.CustID = @FromCustID
 
@@ -111,7 +114,8 @@ BEGIN
 		   @ToMrecommend = c.mrecommend,
 		   @ToSrecommend = c.srecommend,
 		   @ToActualrate = actualrate,
-		   @ToRoleID = c.roleid
+		   @ToRoleID = c.roleid,
+		   @ToCurrCode = c.CurrCode
 	FROM @CustInfo c
 	WHERE c.username = @ToUserName
 
@@ -131,6 +135,13 @@ BEGIN
 	BEGIN
 		SELECT @ErrMsg = 'You cannot do TRANSFER due to the destination account is the same as the source account.', @ErrCode = 101
 		RETURN
+	END
+
+	IF ( @FromCurrCode <> 'MYR' AND @ToCurrCode <> 'MYR' AND @FromCurrCode <> @ToCurrCode )
+	BEGIN
+		Select @ErrMsg = N'The two accounts have different currency code, but neither of them includes the RM currency. Please check again Users Info.'
+			, @ErrCode = 104
+		return
 	END
 
 	IF NOT EXISTS (SELECT 1 FROM CustDB.dbo.Custinfo with (NOLOCK) where custid = @FromCustID)

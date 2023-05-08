@@ -1,5 +1,5 @@
 ﻿/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
-ALTER PROCEDURE [dbo].[Acc_FinanceTransferMulInsTmpExcel]	
+CREATE PROCEDURE [dbo].[Acc_FinanceTransferMulInsTmpExcel]	
 	@UserID INT,
 	@ListTransfer XML,	
 	@ErrCode INT = 0 OUTPUT,
@@ -22,6 +22,7 @@ AS
 		- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 		- 20181112@Sophia: Add @IsCollection [redmine: #98621]
 		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
+		- 20230322@Danny: Enhance invalid transaction checking[Redmine: #184731]
 */
 BEGIN
 SET NOCOUNT ON
@@ -41,6 +42,27 @@ SET NOCOUNT ON
 		Description	NVARCHAR(200),
 		IsCollection BIT
 	)
+
+	DECLARE @tblInfo TABLE (
+		Seq INT,
+		FromCust VARCHAR(30),
+		ToCust VARCHAR(30),
+		FromCurrency INT,
+		ToCurrency INT,
+		Amount VARCHAR(20),
+		ExRate VARCHAR(20),
+		Description	NVARCHAR(200),
+		CurrentExRate VARCHAR(20),
+		MinActualrate SMALLMONEY, 	
+		MaxActualrate SMALLMONEY,
+		MultipliedBy INT,
+		CurrencyName VARCHAR(5),
+		IsCollection BIT,
+		FromCurrCode VARCHAR(12),
+		ToCurrCode VARCHAR(12),
+		FromCurrName NVARCHAR(50),
+		ToCurrName NVARCHAR(50)
+	)
 	
 	DECLARE @tblSucc TABLE (
 		Seq INT,
@@ -56,7 +78,11 @@ SET NOCOUNT ON
 		MaxActualrate SMALLMONEY,
 		MultipliedBy INT,
 		CurrencyName VARCHAR(5),
-		IsCollection BIT
+		IsCollection BIT,
+		FromCurrName NVARCHAR(50),
+		ToCurrName NVARCHAR(50),
+		FromCurrCode VARCHAR(12),
+		ToCurrCode VARCHAR(12)
 	)
 
 	DECLARE @tblFail TABLE (
@@ -81,7 +107,7 @@ SET NOCOUNT ON
 	FROM @ListTransfer.nodes('/ListTransfer/Transfer') AS T(C)
 	
 	--Validate transaction
-	INSERT INTO @tblSucc(Seq, FromCust, ToCust, FromCurrency, ToCurrency, Amount, ExRate, Description, CurrentExRate, MinActualrate, MaxActualrate, MultipliedBy, CurrencyName, IsCollection)
+	INSERT INTO @tblInfo(Seq, FromCust, ToCust, FromCurrency, ToCurrency, Amount, ExRate, Description, CurrentExRate, MinActualrate, MaxActualrate, MultipliedBy, CurrencyName, IsCollection, FromCurrCode, ToCurrCode, FromCurrName, ToCurrName)
 	SELECT	t.Seq,			
 			t.FromCust, 
 			t.ToCust ,	
@@ -90,45 +116,61 @@ SET NOCOUNT ON
 			t.Amount,	
 			t.ExRate,	
 			t.Description,
-			CASE WHEN c1.currency = c2.currency THEN 1 
-				 WHEN c2.currency = 2 THEN e1.actualrate 
-				 WHEN c1.currency = 2 THEN 1/e2.actualrate END,
+			CASE WHEN e1.Currency = e2.Currency THEN 1 
+				 WHEN e2.Code = 'MYR' THEN e1.actualrate 
+				 WHEN e1.Code = 'MYR' THEN 1/e2.actualrate 
+				 ELSE e1.actualrate / e2.actualrate  END,
 			er.MinActualRate,
 			er.MaxActualRate,
-			CASE WHEN c2.currency = 2 THEN e1.MultipliedBy 
-				 WHEN c1.currency = 2 THEN e2.MultipliedBy
+			CASE WHEN e2.Code = 'MYR' THEN e1.MultipliedBy 
+				 WHEN e1.Code = 'MYR' THEN e2.MultipliedBy
 				 ELSE e1.MultipliedBy END,
 			CASE WHEN c2.currency = 2 THEN e1.currency 
 				 WHEN c1.currency = 2 THEN e2.currency
 				 ELSE e1.currency END,
-			t.IsCollection				 
-	FROM	@tblCust as t
-			INNER JOIN custinfo c1 WITH (NOLOCK) on t.FromCust = c1.Username
-			INNER JOIN custinfo c2 WITH (NOLOCK) ON t.ToCust = c2.Username
-			INNER JOIN Exchange e1 WITH (NOLOCK) ON c1.currency = e1.exchangeid
-			INNER JOIN Exchange e2 WITH (NOLOCK) ON c2.currency = e2.exchangeid
-			LEFT JOIN DBTXN.bodb02.dbo.Acc_ExchangeRate er WITH (NOLOCK) ON er.FromExchangeID = e1.exchangeid and er.ToExchangeID = e2.exchangeid
-	WHERE ISNUMERIC(Amount)=1 and ISNUMERIC(ExRate)=1
-			and cast(ExRate AS FLOAT) > 0
-			and cast(Amount AS FLOAT) <> 0
-			and ISNULL(FromCust,'') <> '' 
-			and ISNULL(ToCust,'') <> ''
-			and FromCust <> ToCust
-			and len(t.Description) <= 200
+			t.IsCollection,
+			e1.Code,
+			e2.Code,
+			e1.currency,
+			e2.currency
 			
+	FROM	@tblCust as t
+			LEFT JOIN custinfo c1 WITH (NOLOCK) on t.FromCust = c1.Username
+			LEFT JOIN custinfo c2 WITH (NOLOCK) ON t.ToCust = c2.Username
+			LEFT JOIN Exchange e1 WITH (NOLOCK) ON c1.currency = e1.exchangeid
+			LEFT JOIN Exchange e2 WITH (NOLOCK) ON c2.currency = e2.exchangeid
+			LEFT JOIN DBTXN.bodb02.dbo.Acc_ExchangeRate er WITH (NOLOCK) ON er.FromExchangeID = e1.exchangeid and er.ToExchangeID = e2.exchangeid
+
+	INSERT INTO @tblSucc(Seq, FromCust, ToCust, FromCurrency, ToCurrency, Amount, ExRate, Description, CurrentExRate, MinActualrate, MaxActualrate, MultipliedBy,CurrencyName, IsCollection, FromCurrName, ToCurrName, FromCurrCode, ToCurrCode)
+	SELECT	Seq, FromCust, ToCust, FromCurrency, ToCurrency, Amount, ExRate, Description, CurrentExRate, MinActualrate, MaxActualrate, MultipliedBy, CurrencyName, IsCollection, FromCurrName, ToCurrName, FromCurrCode, ToCurrCode
+	FROM	@tblInfo as t
+	WHERE ISNUMERIC(Amount)=1 and ISNUMERIC(ExRate)=1
+			AND CAST(ExRate AS FLOAT) > 0
+			AND CAST(Amount AS FLOAT) <> 0
+			AND ISNULL(FromCust,'') <> '' 
+			AND ISNULL(ToCust,'') <> ''
+			AND FromCust <> ToCust
+			AND LEN(t.Description) <= 200
+			AND (  	
+						(FromCurrName = ToCurrName AND CAST(ExRate AS FLOAT) = 1)
+					OR	(FromCurrCode = ToCurrCode AND FromCurrName <> ToCurrName)
+					OR ( FromCurrCode = 'MYR' AND ToCurrCode <> 'MYR')
+					OR ( ToCurrCode = 'MYR' AND FromCurrCode <> 'MYR')
+				)
 	
 	--Failed Transaction
 	INSERT INTO @tblFail(Seq, FromCust, ToCust, Amount,	ExRate,	Description, Reason, IsCollection)
 	SELECT	Seq, FromCust, ToCust ,	Amount,	ExRate,	Description,  
-			CASE WHEN ISNUMERIC(Amount)=0 or ISNUMERIC(ExRate)=0 or cast(ExRate AS FLOAT) <= 0 or cast(Amount AS FLOAT) = 0 THEN '<b>Invalid Amount or Actual Rate.</b>'
+			CASE WHEN ISNUMERIC(Amount)=0 or ISNUMERIC(ExRate)=0 or cast(ExRate AS FLOAT) <= 0 or CAST(Amount AS FLOAT) = 0 THEN '<b>Invalid Amount or Actual Rate.</b>'
 				 WHEN ISNULL(FromCust,'') ='' and ISNULL(ToCust,'') ='' THEN '<b>Username cannot be blanked.</b>' 
 				 WHEN FromCust = ToCust THEN '<b>From Cust must different To Cust.</b>' 
-				 WHEN len(Description) > 200 THEN '<b>Maximum length of Description is 200 characters</b>' 				 
+				 WHEN LEN(Description) > 200 THEN '<b>Maximum length of Description is 200 characters</b>' 	
+				 WHEN FromCurrName = ToCurrName AND CAST(ExRate AS FLOAT) <> 1 THEN '<b>Same currency name, but actual rate is different 1.</b>'
+				 WHEN FromCurrCode <> ToCurrCode AND FromCurrCode <> 'MYR' AND ToCurrCode <> 'MYR' THEN '<b>From Cust and To Cust must belong same currency code.</b>'
 				 ELSE '<b>Invalid From Cust or To Cust.</b>' END AS Reason
 			, IsCollection
-	FROM	(SELECT * FROM @tblCust WHERE Seq not in (SELECT Seq FROM @tblSucc)) AS temp
-			
-			
+	FROM (SELECT *  FROM @tblInfo WHERE Seq not in (SELECT Seq FROM @tblSucc)) AS temp
+				
 	--Insert data to temp table Acc_CustFinanceTransfer to transer after clicking "Update Now" button
 	INSERT INTO dbo.Acc_CustFinanceTransfer(UserId, FromCust, ToCust, Amount, ExRate, Description, Seq, IsCollection)
 	SELECT	@UserId,
@@ -140,7 +182,6 @@ SET NOCOUNT ON
 			Seq,
 			IsCollection			
 	FROM	@tblSucc as t
-	
 	
 	IF @@ERROR <> 0
 	BEGIN

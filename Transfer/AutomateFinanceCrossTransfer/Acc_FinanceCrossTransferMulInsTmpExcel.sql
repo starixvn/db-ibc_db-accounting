@@ -1,5 +1,5 @@
 ﻿/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
-ALTER PROCEDURE [dbo].[Acc_FinanceCrossTransferMulInsTmpExcel]	
+CREATE PROCEDURE [dbo].[Acc_FinanceCrossTransferMulInsTmpExcel]	
 	@UserID INT,
 	@arrFromCust VARCHAR(4000),
 	@arrToCust VARCHAR(4000),	
@@ -25,6 +25,7 @@ AS
 		- 20181112@Sophia: Add Transfer Collection [redmine: #98621]
 		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
 		- 20230414@Danny: Change fomular check same sign amount [Redmine: #186947]
+		- 20230322@Danny: Enhance invalid transaction checking[Redmine: #184731]
 */
 BEGIN
 SET NOCOUNT ON
@@ -53,7 +54,9 @@ SET NOCOUNT ON
 		ToAmount VARCHAR(20),		
 		Description	NVARCHAR(200),
 		Reason NVARCHAR(100),
-		IsCollection BIT
+		IsCollection BIT,
+		SystemExRate MONEY,
+		TransExrate	MONEY
 	)
 
 	DECLARE @tblFail TABLE (
@@ -100,19 +103,22 @@ SET NOCOUNT ON
 			
 	
 	--Validate transaction
-	INSERT INTO @tblSucc(Rank, FromCust, ToCust, Amount, ToAmount, Description, IsCollection)
+	INSERT INTO @tblSucc(Rank, FromCust, ToCust, Amount, ToAmount, Description, IsCollection, SystemExRate, TransExrate)
 	SELECT	t.Rank,			
-			FromCust, 
-			ToCust ,	
-			Amount,	
-			ToAmount,
-			Description,
-			IsCollection
+			t.FromCust, 
+			t.ToCust ,	
+			t.Amount,	
+			t.ToAmount,
+			t.Description,
+			t.IsCollection,
+			e1.actualrate / e2.actualrate AS SystemExRate,
+			CONVERT(MONEY,t.ToAmount) / CONVERT(MONEY,t.Amount) AS TransExrate	
 	FROM	@tblCust AS t
 			INNER JOIN custinfo c1 WITH(NOLOCK) ON t.FromCust = c1.Username
+			INNER JOIN exchange e1 WITH(NOLOCK) ON e1.ExchangeId = c1.currency
 			INNER JOIN custinfo c2 WITH(NOLOCK) ON t.ToCust = c2.Username
-	WHERE	ISNUMERIC(Amount)=1 
-			AND ISNUMERIC(ToAmount)=1
+			INNER JOIN exchange e2 WITH(NOLOCK) ON e2.ExchangeId = c2.currency
+	WHERE	ISNUMERIC(t.Amount)=1 
 			AND ( 
 					(CONVERT(MONEY,Amount) > 0 AND CONVERT(MONEY,ToAmount) > 0) 
 					OR 
@@ -120,11 +126,11 @@ SET NOCOUNT ON
 				) -- check if same sign
 			AND CONVERT(MONEY,Amount) <> 0
 			AND CONVERT(MONEY,ToAmount) <> 0
-			AND ISNULL(FromCust,'') <> '' 
-			AND ISNULL(ToCust,'') <> ''
-			AND FromCust <> ToCust
-			AND LEN(Description) <= 200
-			AND IsCollection IN (0,1)
+			AND ISNULL(t.FromCust,'') <> '' 
+			AND ISNULL(t.ToCust,'') <> ''
+			AND t.FromCust <> t.ToCust
+			AND LEN(t.Description) <= 200
+			AND t.IsCollection IN (0,1)
 			AND c1.currency <> c2.currency
 			
 	--Failed Transaction
@@ -152,7 +158,7 @@ SET NOCOUNT ON
 			FromCust, 
 			ToCust ,	
 			Amount,
-			ToAmount,	
+			ToAmount,	 
 			Description,
 			-1,
 			IsCollection
