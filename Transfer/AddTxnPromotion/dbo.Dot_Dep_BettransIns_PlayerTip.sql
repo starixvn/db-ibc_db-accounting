@@ -6,7 +6,7 @@ ALTER PROCEDURE dbo.Dot_Dep_BettransIns_PlayerTip
 	, @TransDesc	NVARCHAR(1000)	= ''
 	, @ExtraInfo	VARCHAR(1000)	= ''
 	, @IP			VARCHAR(45)		 
-	, @Betfrom		NVARCHAR(1)		 
+	, @Betfrom		NVARCHAR(4)		 
 	, @APositiontaking	SMALLMONEY		
 	------------------------------------------
 	, @TransID 		BIGINT			= 0 OUTPUT
@@ -25,6 +25,7 @@ AS
 		- 20221116@Evan: Initialize SP [RedmineID: #180509]
 		- 20221226@Evan: Wait for in-house service (2ms) to sync new value of rollback ticket to centraldb [Redmine: #182003]
 						 Revise code using ExchangeDailyOanda to get actualrate
+		- 20221010@Evan: Support betfrom up to nvarchar(4) [Redmine: #178059]
 */
 
 BEGIN 

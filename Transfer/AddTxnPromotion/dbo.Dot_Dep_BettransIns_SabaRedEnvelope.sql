@@ -4,7 +4,7 @@ CREATE PROCEDURE dbo.Dot_Dep_BettransIns_SabaRedEnvelope
 	, @ExtraInfo	VARCHAR(1000)	= NULL
 	, @Amount		MONEY
 	, @Bettype		INT				= 17004
-	, @Betfrom		NVARCHAR(1)		= 'd'
+	, @Betfrom		NVARCHAR(4)		= 'd'
 	, @TransDesc	NVARCHAR(1000)	= ''
 	, @Total		MONEY			= NULL
 	, @TransID2		BIGINT			= NULL
@@ -35,6 +35,7 @@ AS
 		- 20220924@Sophia: Fix SiteDBGroupID missing in bettrans [Redmine: #178163]
 		- 20221226@Evan: Wait for in-house service (2ms) to sync new value of rollback ticket to centraldb [Redmine: #182003]
 						 Revise code using ExchangeDailyOanda to get actualrate
+		- 20221010@Evan: Support betfrom up to nvarchar(4) [Redmine: #178059]
 
 	Example: 
 			DECLARE 
