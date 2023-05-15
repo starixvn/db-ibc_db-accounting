@@ -19,8 +19,6 @@ AS
 		- 20181003@Sophia: Correct linked server DBLIC to DBEXT.bodb02 [Redmine: #99855]
 		- 20191126@Patrick: Remove check MB done or not on DB054 [Redmine: #124104]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
-		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
-
 */
 
 BEGIN
@@ -39,19 +37,19 @@ BEGIN
 		, @IsArchivingBet_Local_DB052 VARCHAR(1)
 		, @IsArchivingBet_Local_DB06 VARCHAR(1)
 
-	SELECT  @IsArchivingBet = VValue FROM dbo.MBUSettings WITH(NOLOCK) WHERE VName = 'isArchivingBet' -- BU flags
+	SELECT  @IsArchivingBet = VValue FROM dbo.SystemSettings WITH(NOLOCK) WHERE VName = 'isArchivingBet' -- BU flags
 	SELECT  @IsArchivingBet = ISNULL(@IsArchivingBet, '0')
 
 		--//DB053
-	SELECT @IsArchivingBet_Local_DB053 = VValue FROM DBAGE.bodb02.dbo.MBUSettings WITH(NOLOCK) WHERE VName = 'isArchivingBet_Local'
+	SELECT @IsArchivingBet_Local_DB053 = VValue FROM DBAGE.bodb02.dbo.SystemSettings WITH(NOLOCK) WHERE VName = 'isArchivingBet_Local'
 	SELECT @IsArchivingBet_Local_DB053 = ISNULL(@IsArchivingBet_Local_DB053, '0')
 
 	--//DB06
-	SELECT @IsArchivingBet_Local_DB06 = VValue FROM DBACC.bodb02.dbo.MBUSettings WITH(NOLOCK) WHERE VName = 'isArchivingBet_Local'
+	SELECT @IsArchivingBet_Local_DB06 = VValue FROM DBACC.bodb02.dbo.SystemSettings WITH(NOLOCK) WHERE VName = 'isArchivingBet_Local'
 	SELECT @IsArchivingBet_Local_DB06 = ISNULL(@IsArchivingBet_Local_DB06, '0')
 	
 	--//DB052
-	SELECT @IsArchivingBet_Local_DB052 = VValue FROM DBEXT.bodb02.dbo.MBUSettings WITH(NOLOCK) WHERE VName = 'isArchivingBet_Local'
+	SELECT @IsArchivingBet_Local_DB052 = VValue FROM DBEXT.bodb02.dbo.SystemSettings WITH(NOLOCK) WHERE VName = 'isArchivingBet_Local'
 	SELECT @IsArchivingBet_Local_DB052 = ISNULL(@IsArchivingBet_Local_DB052, '0')
 	
 	-- checking condition
@@ -65,7 +63,7 @@ BEGIN
 	ELSE
 	BEGIN
 		-- get end time from config
-		SELECT @Config_EndTime = VValue FROM dbo.MBUSettings WITH(NOLOCK) WHERE VName = 'schDataProcessingEndTime'
+		SELECT @Config_EndTime = VValue FROM dbo.SystemSettings WITH(NOLOCK) WHERE VName = 'schDataProcessingEndTime'
 		
 		IF CONVERT(DATETIME, @Config_EndTime) > @CurrentDateTime
 		BEGIN
@@ -76,7 +74,7 @@ BEGIN
 			-- extend time of config: 15 mins
 			SELECT @EndProcessingTime = DATEADD(MINUTE, 15, CONVERT(DATETIME, @Config_EndTime))
 
-			UPDATE dbo.MBUSettings WITH (ROWLOCK, UPDLOCK)
+			UPDATE dbo.SystemSettings WITH (ROWLOCK, UPDLOCK)
 			SET VValue = CONVERT(VARCHAR(50), @EndProcessingTime, 121)
 			WHERE VName = 'schDataProcessingEndTime'
 
