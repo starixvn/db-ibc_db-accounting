@@ -108,7 +108,6 @@ BEGIN
 		@transdate				DATETIME,
 		@bettype				INT,
 		@newBettype				INT,
-		@amount					MONEY,		
 		@actualrate				FLOAT,
 		@winlost				MONEY,
 		@actual_stake			MONEY,
@@ -503,7 +502,7 @@ BEGIN
 	DECLARE @LogData VARCHAR(300)
 
 	SELECT @LogData = 
-				'Cancel transfer trans custid = ' + CONVERT(VARCHAR(20), @custid) + ', old transid = ' + CONVERT(VARCHAR(20), @transid) + ', amount = ' + CONVERT(VARCHAR(20), @amount)
+				'Cancel transfer trans custid = ' + CONVERT(VARCHAR(20), @custid) + ', old transid = ' + CONVERT(VARCHAR(20), @transid) + ', amount = ' + CONVERT(VARCHAR(20), @Cust_balance)
 
 	BEGIN TRY	
 	
@@ -526,4 +525,3 @@ BEGIN
 							@Doing		= @LogData
 	END CATCH
 END
-GO
