@@ -208,8 +208,7 @@ BEGIN
 				,SUM(acomm) acomm
 			FROM @masterlist c
 				INNER JOIN dbo.transfer b WITH(NOLOCK) ON c.custid = b.custid
-			WHERE (winlostdate < @winlostdate OR (winlostdate >= @winlostdate AND bettype > 20000))
-				AND bettype NOT IN (21008, 21009)
+			WHERE bettype NOT IN (21008, 21009)
 				AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
 							WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
 							WHEN winlostdate < @balanceUpDay THEN 0 --> old data

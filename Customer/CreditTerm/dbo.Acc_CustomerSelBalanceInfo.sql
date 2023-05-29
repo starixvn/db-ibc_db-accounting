@@ -56,7 +56,7 @@ BEGIN
 	DECLARE @BUDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
 	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
 
-	IF (@MoveBetDay IS NULL)
+	IF (@MoveBetDay IS NULL OR @BalanceUpDay IS NULL)
 	BEGIN
 		INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
 		EXEC bodb02.dbo.Age_SelBalanceUpDay
