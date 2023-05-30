@@ -71,6 +71,7 @@ AS
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 		- 20220425@Evan: Change product name and remove Casino Jackpot Amount [Redmine: #171865]
 		- 20221005@Danny: Remove not valid user in automail for reset winning's change [Redmine: #178761]
+		- 20230522@Lewis: Call sum Sps on other servers - [RedmineID: #188463]
 		
 	Explanation's Param:
 	    @mode:  0 _ view report
@@ -542,9 +543,29 @@ BEGIN
 						,@Amount = @variance
 						,@winlostdate = @winlostdate
 						,@ErrCode = @ErrCode OUTPUT
-						,@ErrMsg = @ErrMsg OUTPUT							
+						,@ErrMsg = @ErrMsg OUTPUT
+
+					IF @@SERVERNAME ='DB062'
+					BEGIN
+					EXEC DB061.bodb_report.dbo.[Acc_StatementUpdateTransfer]
+						@custid = @custid
+						,@Amount = @variance
+						,@winlostdate = @winlostdate
+						,@ErrCode = @ErrCode OUTPUT
+						,@ErrMsg = @ErrMsg OUTPUT
+					END
+					ELSE IF @@SERVERNAME = 'DB061'
+					BEGIN
+					EXEC DB062.bodb_report.dbo.[Acc_StatementUpdateTransfer]
+						@custid = @custid
+						,@Amount = @variance
+						,@winlostdate = @winlostdate
+						,@ErrCode = @ErrCode OUTPUT
+						,@ErrMsg = @ErrMsg OUTPUT
+					END							
 
 					IF (@ErrCode <> 0) BREAK
+					
 					
                     --- write log 
 					BEGIN TRY
