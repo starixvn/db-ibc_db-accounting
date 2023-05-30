@@ -25,6 +25,7 @@ AS
 		- 20220106@Evan: Add SG Jackpot - [Redmine: #166685]	
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 		- 20220425@Evan: Remove Casino Jackpot Amount [Redmine: #171865]
+		- 20230522@Lewis: Call sum Sps on other servers - [RedmineID: #188463]
 		
 	Param's explain:
 		@mode:  0 _ view report
@@ -209,7 +210,7 @@ BEGIN
                 SELECT @transDesc = 'DWL-' + CAST(@fromdate as varchar(30))
                                            + CAST(@custid as varchar(50)) + ':'
                                            + CAST(@variance as varchar(100))
-
+			   --- Add ticket reset winning
                EXEC DBTXN.bodb02.dbo.Task_ResetWinning_Non3rdParty_Add
                     @winlostdate = @winlostdate,
 	                @custid = @custid,
@@ -229,7 +230,26 @@ BEGIN
 					,@Amount = @variance
 					,@winlostdate = @winlostdate
 					,@ErrCode = @ErrCode OUTPUT
-					,@ErrMsg = @ErrMsg OUTPUT							
+					,@ErrMsg = @ErrMsg OUTPUT
+
+				IF @@SERVERNAME ='DB062'
+				BEGIN
+				EXEC DB061.bodb_report.dbo.[Acc_StatementUpdateTransfer]
+					@custid = @custid
+					,@Amount = @variance
+					,@winlostdate = @winlostdate
+					,@ErrCode = @ErrCode OUTPUT
+					,@ErrMsg = @ErrMsg OUTPUT
+				END
+				ELSE IF @@SERVERNAME = 'DB061'
+				BEGIN
+				EXEC DB062.bodb_report.dbo.[Acc_StatementUpdateTransfer]
+					@custid = @custid
+					,@Amount = @variance
+					,@winlostdate = @winlostdate
+					,@ErrCode = @ErrCode OUTPUT
+					,@ErrMsg = @ErrMsg OUTPUT
+				END									
 
 				IF (@ErrCode <> 0) BREAK					                             
 
