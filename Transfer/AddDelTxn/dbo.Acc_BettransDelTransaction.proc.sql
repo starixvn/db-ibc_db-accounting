@@ -43,6 +43,8 @@ AS
 		- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
 		- 20220801@Danny: change code to support SiteDB [Redmine: #175253]
 		- 20221107@Danny: Database - Sync-up Standby Server data - [RedmineID: #167261]
+		- 20230530@Evan: Enhancement for Customer Statement - update ErrMsg [Redmine: #186750]
+
 */
 BEGIN
 
@@ -166,7 +168,7 @@ BEGIN
 		------ Check transaction had been deleted or not
 		IF @IsDel = 1
 		BEGIN 
-			SELECT	@ErrMsg ='Unable to delete this transaction due to it is marked as "Deleted"!',
+			SELECT	@ErrMsg ='Unable to reverse this transaction due to it is marked as "Reversed"!',
 					@ErrCode = 102
 			RETURN 		
 		END

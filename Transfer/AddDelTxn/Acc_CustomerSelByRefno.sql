@@ -10,6 +10,7 @@ AS
 			
 	Revisions:
 		- 20220809@Danny: Init. SP [Redmine: #175253]
+		- 20230530@Evan: Enhancement for Customer Statement - update ErrMsg [Redmine: #186750]
 	
 */
 BEGIN
@@ -31,7 +32,7 @@ BEGIN
 
 	IF EXISTS (SELECT 1 FROM @transferDetail WHERE IsDel = 1)
 	BEGIN
-		SELECT @ErrMsg =  'Unable to delete this transaction due to it is marked as "Deleted"!' ,  @ErrCode = 102
+		SELECT @ErrMsg =  'Unable to reverse this transaction due to it is marked as "Reversed"!' ,  @ErrCode = 102
 		RETURN
 	END
 

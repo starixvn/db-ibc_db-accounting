@@ -35,6 +35,7 @@ AS
   - 20220830@Danny: add filter to Remove orphan ticket [Redmine: #175253]
   - 20220421@Percy: Get Opening Balance from Statement_Accum table [RedmineID: #169560]
   - 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
+  - 20230530@Evan: Enhancement for Customer Statement - add output column IsAllowReversal [Redmine: #186750]
 
 
     Param's Explanation:  
@@ -44,9 +45,8 @@ AS
     Sample:  
     EXEC [dbo].[Acc_StatementFinance_xtest] @RefNo = -1,@Username = 'DWLSPNL',@FilterBy = 1,@FromDate = '2012-07-21',@ToDate = '2012-08-04',@BalanceUpDay = '',@IncludeAccBal = 1  
   
- Note:   
-  - IF (winlostdate > BU && not in 7 days Moving && IsReverse = 0 && IsMoving = 0) => show reversal button   
  */  
+ 
 BEGIN
 	SET NOCOUNT ON
 	
@@ -62,10 +62,10 @@ BEGIN
 		CheckerID INT NULL,
 		CheckerName VARCHAR(50) NULL,
 		CheckTime DATETIME NULL,
-		IsAllowVerify BIT DEFAULT 0,
+		IsAllowVerify BIT DEFAULT 1,
+		IsAllowReversal BIT DEFAULT 1,
 		IsReversal BIT DEFAULT 0,
-		IsExpand BIT DEFAULT 0,
-		IsMoving BIT DEFAULT 0
+		IsExpand BIT DEFAULT 0
 	)
 
 	DECLARE @CustomerId INT, @srecommend INT
@@ -183,7 +183,6 @@ BEGIN
                     	ELSE 1 END 
 				AND (@GroupId = 1 OR ISNULL(cr.IsView, ~l.IsInternal) = 1 OR (@GroupId = 0 AND ISNULL(cr.IsView, 1) = 1))
 				AND b.CustId <> 0
-
             
             
 			IF NOT EXISTS( SELECT 1 FROM #StatementTable )
@@ -446,7 +445,7 @@ BEGIN
 				)
 		END
 	END
-	--Check to not allow to transfer before balance up date
+	--Check to not allow to reversal before balance up date
 	DECLARE @ArchivedDay		SMALLDATETIME
 		, @ConstraintDay	SMALLDATETIME
 
@@ -457,8 +456,9 @@ BEGIN
 									WHEN @ArchivedDay > @_BalanceUpDay THEN DATEADD(DAY,7,@_BalanceUpDay) -- new BU
 									ELSE @_BalanceUpDay -- old BU
 								END
+	
 	UPDATE #StatementTable
-	SET IsMoving = 1 
+	SET IsAllowReversal = 0 , IsAllowVerify = 0
 	WHERE WinlostDate < @ConstraintDay
 
 	-- Result
@@ -502,8 +502,9 @@ BEGIN
 			tmp.CheckTime [CheckTime],
 			tmp.IsAllowVerify [IsAllowVerify],
 			tmp.IsReversal [IsReversal],
-			tmp.IsExpand [IsExpand],
-			tmp.IsMoving [IsMoving]
+			CASE WHEN tmp.IsReversal = 1 THEN 0 ELSE tmp.IsAllowReversal
+			END AS [IsAllowReversal],
+			tmp.IsExpand [IsExpand]
 		FROM #StatementTable tmp
 			LEFT JOIN dbo.Customer c (NOLOCK) ON tmp.creator = c.custid
 		WHERE 
@@ -531,8 +532,9 @@ BEGIN
 			tmp.CheckTime [CheckTime],
 			tmp.IsAllowVerify [IsAllowVerify],
 			tmp.IsReversal [IsReversal],
-			tmp.IsExpand [IsExpand],
-			tmp.IsMoving [IsMoving]
+			CASE WHEN tmp.IsReversal = 1 THEN 0 ELSE tmp.IsAllowReversal
+			END AS [IsAllowReversal],
+			tmp.IsExpand [IsExpand]
 		FROM #StatementTable tmp
 			LEFT JOIN dbo.Customer c (NOLOCK) ON tmp.creator = c.custid
 		ORDER BY 
