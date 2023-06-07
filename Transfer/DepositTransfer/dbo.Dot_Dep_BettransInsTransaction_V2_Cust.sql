@@ -66,7 +66,7 @@ Revisions:
 	- 20220923@Evan: Revise code rollback (issue) [Redmine: #178135]
 	- 20220929@Evan: Check available balance on BettransX+Transfer [Redmine: #178135]
 	- 20221226@Evan: Wait for in-house service (2ms) to sync new value of rollback ticket to centraldb [Redmine: #182003]
-					 
+	- 20230227@Evan: Ensure correct balance calculation when allow to transfer 247 (BU) [Redmine: #173554]
 
 Param's Explanation:
 ? @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction
@@ -183,7 +183,10 @@ BEGIN
 		@DBONRTRA SMALLINT,
 		@DBONRADJ SMALLINT,
 		@MoveBetsDay smalldatetime,
-		@NewMoveBetsDay smalldatetime
+		@BalanceUpDate smalldatetime,
+		@IsDiff SMALLINT = 1,
+		@NewMoveBetsDay smalldatetime,
+		@NewBalanceUpDate smalldatetime
 
 	DECLARE @MBBU TABLE (BalanceUpDay smalldatetime, MoveBetsDay smalldatetime)
 
@@ -275,96 +278,36 @@ BEGIN
 		SELECT @ErrMsg = 'Invalid Role ID.', @ErrCode = 102		
 		RETURN
 	END
-
 		
 	----------------------------------
 	--Check enough balance for withdrawing
 	IF @bettype=@DWIT
 		AND @IsCharge = 0 --only check when not Charge transaction, and is Withdrawal
 	BEGIN
-		--//1st check: MB/BU is running?
-		EXEC dbo.Acc_Core_IsMainProcessRunning
-				@CustId = @custid
-			, @UplineId = @recommend
-			, @IsDepositMember = 1
-			, @ErrCode = @ErrCode OUTPUT
-			, @ErrMsg = @ErrMsg OUTPUT
-
-		IF @ErrCode <> 0
-		BEGIN
-			SELECT @ErrMsg = @ErrMsg, @ErrCode = 333
-			RETURN
-		END
 
 		-- get MB day
 		SET @MoveBetsDay = NULL
 		INSERT INTO @MBBU (BalanceUpDay, MoveBetsDay)
 		EXEC dbo.Age_SelBalanceUpDay
-		SELECT @MoveBetsDay = MoveBetsDay FROM @MBBU
-
-		SELECT @balance = 0, @translogCredit = 0, @balance_bettransRNG = 0, @balance_bettransLC = 0, @balance_Transfer = 0
-
-		SELECT @balance = SUM(winlost-actual_stake+playercomm)
-		FROM dbo.bettrans b WITH(NOLOCK)
-		WHERE custid = @custid
-			AND	bettype < 19999 AND winlostdate > @MoveBetsDay
-
-		---get data of transfer ticket from new table [transfer]
-		SELECT @balance_Transfer = SUM(winlost-actual_stake+playercomm)
-		FROM dbo.Transfer t WITH(NOLOCK)
-		WHERE custid = @custid
-			AND (bettype = 19999 AND winlostdate <= @MoveBetsDay OR t.Bettype > 19999)
-		---
-
-		SELECT @translogCredit = SUM(ISNULL(actual_stake, 0))
-		FROM dbo.translog t WITH(NOLOCK)
-		WHERE custid = @custid AND statusId = 0
+		SELECT @MoveBetsDay = MoveBetsDay, @BalanceUpDate = BalanceUpDay FROM @MBBU
 		
-		SELECT	@balance_bettransRNG = SUM(winlost - actual_stake + playercomm)
-		FROM	dbo.bettransRnG b WITH(NOLOCK)
-		WHERE	custid = @custID
-				AND IsSum=0
-				
-		SELECT	@balance_bettransLC = SUM(winlost - actual_stake + playercomm)
-		FROM	dbo.bettransLC b WITH(NOLOCK)
-		WHERE	custid = @custID
-				AND IsSum=0
-
-		--//2nd check: MB/BU is running?
-		EXEC dbo.Acc_Core_IsMainProcessRunning
-				@CustId = @custid
-			, @UplineId = @recommend
-			, @IsDepositMember = 1
-			, @ErrCode = @ErrCode OUTPUT
-			, @ErrMsg = @ErrMsg OUTPUT
-
-		IF @ErrCode <> 0
-		BEGIN
-			SELECT @ErrMsg = @ErrMsg, @ErrCode = 333
-			RETURN
-		END
-
-		-- get MB day again
-		SET @NewMoveBetsDay = NULL
-		DELETE @MBBU
-		INSERT INTO @MBBU (BalanceUpDay, MoveBetsDay)
-		EXEC dbo.Age_SelBalanceUpDay
-		SELECT @NewMoveBetsDay = MoveBetsDay FROM @MBBU
-
-		IF @NewMoveBetsDay <> @MoveBetsDay
+		WHILE (@IsDiff = 1)
 		BEGIN
 			SELECT @balance = 0, @translogCredit = 0, @balance_bettransRNG = 0, @balance_bettransLC = 0, @balance_Transfer = 0
 
 			SELECT @balance = SUM(winlost-actual_stake+playercomm)
 			FROM dbo.bettrans b WITH(NOLOCK)
 			WHERE custid = @custid
-				AND	bettype < 19999 AND winlostdate > @NewMoveBetsDay
+				AND winlostdate > @MoveBetsDay
 
 			---get data of transfer ticket from new table [transfer]
 			SELECT @balance_Transfer = SUM(winlost-actual_stake+playercomm)
 			FROM dbo.Transfer t WITH(NOLOCK)
 			WHERE custid = @custid
-				AND (bettype = 19999 AND winlostdate <= @NewMoveBetsDay OR t.Bettype > 19999)
+				AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @MoveBetsDay THEN 0 --> new sum
+						WHEN bettype = 20000 AND winlostdate > @BalanceUpDate THEN 0 --> new bal
+						WHEN winlostdate < @BalanceUpDate THEN 0 --> old data
+						ELSE 1 END
 			---
 
 			SELECT @translogCredit = SUM(ISNULL(actual_stake, 0))
@@ -381,18 +324,24 @@ BEGIN
 			WHERE	custid = @custID
 					AND IsSum=0
 
-			--//3rd check: MB/BU is running?
-			EXEC dbo.Acc_Core_IsMainProcessRunning
-					@CustId = @custid
-				, @UplineId = @recommend
-				, @IsDepositMember = 1
-				, @ErrCode = @ErrCode OUTPUT
-				, @ErrMsg = @ErrMsg OUTPUT
+			----check MB date, BU date again to make sure it is not changed
+			SELECT @NewMoveBetsDay = NULL, @NewBalanceUpDate = NULL
+			EXEC dbo.Acc_ReCheck_MBUDate 
+				@MBDate = @moveBetsDay,
+				@BUDate = @BalanceUpDate,
+				@IsDiff = @IsDiff OUTPUT,
+				@NewMBDate = @NewMoveBetsDay OUTPUT,
+				@NewBUDate = @NewBalanceUpDate OUTPUT
 
-			IF @ErrCode <> 0
+			IF @IsDiff = -1 
 			BEGIN
-				SELECT @ErrMsg = @ErrMsg, @ErrCode = 333
-				RETURN
+				SELECT @ErrMsg = 'BalanceUpDate value is null. Please contact DBA for support.', @ErrCode = 109				
+				RETURN	
+			END
+
+			IF @IsDiff = 1 
+			BEGIN
+				SELECT @MoveBetsDay = @NewMoveBetsDay, @BalanceUpDate = @NewBalanceUpDate
 			END
 		END
 
