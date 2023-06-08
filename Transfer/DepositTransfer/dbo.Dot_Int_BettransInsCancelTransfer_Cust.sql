@@ -334,7 +334,7 @@ BEGIN
 		BEGIN		
 			SET @TransferAmount = -(@Winlost - @actual_stake)
 
-			SELECT @SqlCommand = CONCAT('EXEC bodb_report.dbo.[Acc_StatementUpdateTransfer] ', ' @custid = ',@CustID,' ,@Amount = ',@TransferAmount,' ,@winlostdate = ''',@winlostdate, '''')
+			SELECT @SqlCommand = CONCAT('EXEC bodb_report.dbo.[Acc_StatementUpdateTransfer] ', ' @custid = ',@CustID,' ,@Amount = ',@TransferAmount,' ,@winlostdate = ''',CONVERT(VARCHAR(50), @winlostdate, 121), '''')
 
 			EXEC bodb02.dbo.Task_ExecRep_Wrapper 
 				@ServerName = '', 
@@ -347,7 +347,7 @@ BEGIN
 			BEGIN
 				SET @TransferAmount = @Winlost - @actual_stake
 
-				SELECT @SqlCommand = CONCAT('EXEC bodb_report.dbo.[Acc_StatementUpdateTransfer] ', ' @custid = ',@bal_custid,' ,@Amount = ',@TransferAmount,' ,@winlostdate = ''',@winlostdate, '''')
+				SELECT @SqlCommand = CONCAT('EXEC bodb_report.dbo.[Acc_StatementUpdateTransfer] ', ' @custid = ',@bal_custid,' ,@Amount = ',@TransferAmount,' ,@winlostdate = ''',CONVERT(VARCHAR(50), @winlostdate, 121), '''')
 
 				EXEC bodb02.dbo.Task_ExecRep_Wrapper 
 					@ServerName = '', 
@@ -362,7 +362,7 @@ BEGIN
 			BEGIN
 				SET @TransferAmount = @Winlost - @actual_stake
 
-				SELECT @SqlCommand = CONCAT('EXEC bodb_report.dbo.[Acc_StatementUpdateTransfer] ', ' @custid = ',@CustID,' ,@Amount = ',@TransferAmount,' ,@winlostdate = ''',@winlostdate, '''')
+				SELECT @SqlCommand = CONCAT('EXEC bodb_report.dbo.[Acc_StatementUpdateTransfer] ', ' @custid = ',@CustID,' ,@Amount = ',@TransferAmount,' ,@winlostdate = ''',CONVERT(VARCHAR(50), @winlostdate, 121), '''')
 
 				EXEC bodb02.dbo.Task_ExecRep_Wrapper 
 					@ServerName = '', 
@@ -463,7 +463,7 @@ BEGIN
 		BEGIN
 			SET @TransferAmount = (@Winlost - @actual_stake)
 
-			SELECT @SqlCommand = CONCAT('EXEC bodb_report.dbo.[Acc_StatementUpdateTransfer] ', ' @custid = ',@CustID,' ,@Amount = ',@TransferAmount,' ,@winlostdate = ''',@winlostdate, '''')
+			SELECT @SqlCommand = CONCAT('EXEC bodb_report.dbo.[Acc_StatementUpdateTransfer] ', ' @custid = ',@CustID,' ,@Amount = ',@TransferAmount,' ,@winlostdate = ''',CONVERT(VARCHAR(50), @winlostdate, 121), '''')
 
 			EXEC bodb02.dbo.Task_ExecRep_Wrapper 
 				@ServerName = '', 
@@ -474,7 +474,7 @@ BEGIN
 
 			SET @TransferAmount = -(@Winlost - @actual_stake)
 
-			SELECT @SqlCommand = CONCAT('EXEC bodb_report.dbo.[Acc_StatementUpdateTransfer] ', ' @custid = ',@bal_custid,' ,@Amount = ',@TransferAmount,' ,@winlostdate = ''',@winlostdate, '''')
+			SELECT @SqlCommand = CONCAT('EXEC bodb_report.dbo.[Acc_StatementUpdateTransfer] ', ' @custid = ',@bal_custid,' ,@Amount = ',@TransferAmount,' ,@winlostdate = ''',CONVERT(VARCHAR(50), @winlostdate, 121), '''')
 
 			EXEC bodb02.dbo.Task_ExecRep_Wrapper 
 				@ServerName = '', 
