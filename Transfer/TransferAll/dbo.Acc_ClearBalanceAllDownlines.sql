@@ -48,6 +48,7 @@ AS
 		- 20210817@Sophia: Fix overflow Refno [Redmine: #160262]
 		- 20211115@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 		- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
+    	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 		 				       
 	Param's Explanation:
 		@AgentName: username of agent/master/super to clear his all downlines' balance
@@ -185,65 +186,11 @@ BEGIN
 		FROM custdb.dbo.custinfo WITH (NOLOCK)
 		WHERE srecommend = @agentID
 			AND roleid = 3
-			
-		-- master data		
-		INSERT INTO #tempdata (custid, recommend, mrecommend, winlost, actual_stake, playercomm, awinlost, comm, mwinlost, acomm)
-		SELECT b.custid, b.recommend, b.mrecommend
-			,SUM(winlost) winlost
-			,SUM(actual_stake) actual_stake
-			,SUM(playercomm) playercomm
-			,SUM(awinlost) awinlost
-			,SUM(comm) comm
-			,SUM(mwinlost) mwinlost
-			,SUM(acomm) acomm
-		FROM @masterlist c
-			INNER JOIN dbo.transfer b WITH(NOLOCK) ON c.custid = b.custid
-		WHERE (winlostdate < @winlostdate OR (winlostdate >= @winlostdate AND bettype > 20000))
-			AND bettype NOT IN (21008, 21009)
-		GROUP BY b.custid, b.recommend, b.mrecommend
-
 	END
 		
-	-- member & agent data	
-	INSERT INTO #tempdata (custid, recommend, mrecommend, winlost, actual_stake, playercomm, awinlost, comm, mwinlost, acomm)
-	SELECT b.custid, b.recommend, b.mrecommend	
-		,SUM(winlost) winlost
-		,SUM(actual_stake) actual_stake
-		,SUM(playercomm) playercomm
-		,SUM(awinlost) awinlost
-		,SUM(comm) comm
-		,SUM(mwinlost) mwinlost
-		,SUM(acomm) acomm
-	FROM @agList ag
-		INNER JOIN dbo.bettrans b WITH(NOLOCK, INDEX=IX_Recommend) ON ag.custid = b.recommend
-	WHERE winlostdate < @winlostdate 
-		AND ruben = 1
-		AND b.winlostdate > @moveBetsDay
-		AND b.bettype < 19999
-	GROUP BY b.custid, b.recommend, b.mrecommend
+	DECLARE @IsDiff SMALLINT = 1, @NewMoveBetDate SMALLDATETIME = NULL,@NewBalanceUpDate SMALLDATETIME = NULL
 
-	INSERT INTO #tempdata (custid, recommend, mrecommend, winlost, actual_stake, playercomm, awinlost, comm, mwinlost, acomm)
-	SELECT b.custid, b.recommend, b.mrecommend	
-		,SUM(winlost) winlost
-		,SUM(actual_stake) actual_stake
-		,SUM(playercomm) playercomm
-		,SUM(awinlost) awinlost
-		,SUM(comm) comm
-		,SUM(mwinlost) mwinlost
-		,SUM(acomm) acomm
-	FROM @agList ag
-		INNER JOIN dbo.Transfer b WITH(NOLOCK, INDEX=IX_Recommend) ON ag.custid = b.recommend
-	WHERE (
-			(bettype = 19999 AND winlostdate <= @moveBetsDay) 
-			OR (bettype > 19999 AND bettype NOT IN (21008, 21009))
-		  )
-	GROUP BY b.custid, b.recommend, b.mrecommend
-
-	----check move bet date again to make sure it is not changed
-	DECLARE @IsDiff BIT = 0, @NewMoveBetDate SMALLDATETIME = NULL
-	EXEC bodb02.dbo.Acc_Transfer_CheckMoveBetDate @moveBetsDay, @IsDiff = @IsDiff OUTPUT, @NewMoveBetDate = @NewMoveBetDate OUTPUT
-
-	IF (@IsDiff = 1)
+	WHILE (@IsDiff = 1)
 	BEGIN
 		DELETE FROM #tempdata
 
@@ -261,8 +208,11 @@ BEGIN
 				,SUM(acomm) acomm
 			FROM @masterlist c
 				INNER JOIN dbo.transfer b WITH(NOLOCK) ON c.custid = b.custid
-			WHERE (winlostdate < @winlostdate OR (winlostdate >= @winlostdate AND bettype > 20000))
-				AND bettype NOT IN (21008, 21009)
+			WHERE bettype NOT IN (21008, 21009)
+				AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+							WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+							WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+						ELSE 1 END
 			GROUP BY b.custid, b.recommend, b.mrecommend
 		END
 
@@ -280,8 +230,7 @@ BEGIN
 			INNER JOIN dbo.bettrans b WITH(NOLOCK, INDEX=IX_Recommend) ON ag.custid = b.recommend
 		WHERE winlostdate < @winlostdate 
 			AND ruben = 1
-			AND b.winlostdate > @NewMoveBetDate
-			AND b.bettype < 19999
+			AND b.winlostdate > @moveBetsDay
 		GROUP BY b.custid, b.recommend, b.mrecommend
 
 		INSERT INTO #tempdata (custid, recommend, mrecommend, winlost, actual_stake, playercomm, awinlost, comm, mwinlost, acomm)
@@ -295,11 +244,34 @@ BEGIN
 			,SUM(acomm) acomm
 		FROM @agList ag
 			INNER JOIN dbo.Transfer b WITH(NOLOCK, INDEX=IX_Recommend) ON ag.custid = b.recommend
-		WHERE (
-				(bettype = 19999 AND winlostdate <= @NewMoveBetDate) 
-				OR (bettype > 19999 AND bettype NOT IN (21008, 21009))
-			)
+		WHERE 
+			1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+					WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+					WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+				ELSE 1 END
+			AND bettype NOT IN (21008, 21009)
 		GROUP BY b.custid, b.recommend, b.mrecommend
+
+		----check MB date, BU date again to make sure it is not changed
+		SELECT @NewMoveBetDate = NULL, @NewBalanceUpDate = NULL
+		EXEC dbo.Acc_ReCheck_MBUDate 
+			@MBDate = @moveBetsDay,
+			@BUDate = @balanceUpDay,
+			@IsDiff = @IsDiff OUTPUT,
+			@NewMBDate = @NewMoveBetDate OUTPUT,
+			@NewBUDate = @NewBalanceUpDate OUTPUT
+
+		IF @IsDiff = -1 
+		BEGIN
+			SELECT @ErrMsg = 'BalanceUpDate value is null. Please contact DBA for support.', @ErrCode = 114
+			RETURN
+		END
+
+		IF @IsDiff = 1 
+		BEGIN
+			SELECT @moveBetsDay = @NewMoveBetDate, @balanceUpDay = @NewBalanceUpDate
+		END 
+		
 	END
 
 	INSERT INTO #tempdata (custid, recommend, mrecommend, winlost, actual_stake, playercomm, awinlost, comm, mwinlost, acomm)

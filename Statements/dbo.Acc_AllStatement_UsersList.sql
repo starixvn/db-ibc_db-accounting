@@ -23,6 +23,7 @@ AS
         - 20220519@Evan: Revise sp, Get Opening Balance from Statement_Accum table [Redmine: #168299]
         - 20221208@Bobby: Fix bug (correct winlostdate vs RefTable) [Redmine: #181466,181480]
         - 20221219@Bobby: Correct statement in case difference between winlostdate and transdate of transfer [Redmine: #181771]
+        - 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 */
 BEGIN
     SET NOCOUNT ON
@@ -174,8 +175,7 @@ BEGIN
         LEFT JOIN   #SportBettype s 
                     ON s.bettype = b.bettype 
         WHERE
-            b.bettype < 19999
-            AND winlostdate BETWEEN @_FromDate AND @_ToDate
+            winlostdate BETWEEN @_FromDate AND @_ToDate
             AND (
                 winlostdate < @Yesterday
                 OR (winlostdate >= @Yesterday AND (s.RefTable IS NULL OR s.RefTable = 3)) -- exclude settle ticket on bettransRnG/LC today, yesterday
@@ -220,8 +220,8 @@ BEGIN
         INNER JOIN  bettype bt WITH (NOLOCK) ON b.bettype = bt.typeid   
         LEFT JOIN   TransferInfo ti WITH (NOLOCK) ON b.TransId = ti.TransId   
         WHERE  
-            (bettype > 20000  
-            OR (bettype = 19999  AND winlostdate <= @MoveBetsDay))
+            (bettype > 20000 OR (bettype = 19999 AND winlostdate <= @MoveBetsDay))
+            AND winlostdate >= @_BalanceUpDay
             AND winlostdate BETWEEN @_FromDate AND @_ToDate
         GROUP BY Bettype,TransDate,WinlostDate,b.Custid,Recommend,Mrecommend,Srecommend,TransDesc,ti.IsCollection,bt.typenamee
         

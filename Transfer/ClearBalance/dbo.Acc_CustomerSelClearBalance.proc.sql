@@ -35,6 +35,7 @@ AS
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 		- 20220216@Evan: Remove unused columns - [Redmine: #164280]
+		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
 
 	Param's Explanation:
 	
@@ -94,7 +95,6 @@ BEGIN
 		WHERE srecommend = @custid
 			AND ((b.ruben = 0 AND ISNULL(s.RefTable, 0) = 0) OR b.ruben <> 0)
 			AND ((b.winlostdate >= @yesterday AND ISNULL(s.RefTable, 0) NOT IN (1,2)) OR b.winlostdate < @yesterday)
-			AND b.bettype < 19999
 			AND b.winlostdate > @moveBetsDay
 		GROUP BY b.mrecommend
 
@@ -115,7 +115,10 @@ BEGIN
 		FROM dbo.transfer b WITH(NOLOCK)
 			LEFT JOIN dbo.TransferInfo ti WITH(NOLOCK) ON b.TransId = ti.TransId
 		WHERE srecommend = @custid
-			AND ((b.bettype = 19999 AND winlostdate <= @moveBetsDay)  OR b.bettype > 19999 )
+			AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+                        WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+                        WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+                    ELSE 1 END
 		GROUP BY b.mrecommend
 
 		-- bettransRnG
@@ -181,7 +184,6 @@ BEGIN
 		WHERE b.mrecommend = @custid AND
 			((b.ruben = 0 AND ISNULL(s.RefTable, 0) = 0) OR b.ruben <> 0)
 			AND ((winlostdate >= @yesterday AND ISNULL(s.RefTable, 0) NOT IN (1,2)) OR winlostdate < @yesterday)
-			AND b.bettype < 19999
 			and b.winlostdate > @moveBetsDay
 		GROUP BY b.recommend
 
@@ -200,7 +202,10 @@ BEGIN
 		FROM dbo.transfer b WITH(NOLOCK)
 			LEFT JOIN dbo.transferInfo ti WITH(NOLOCK) ON b.TransId = ti.TransId
 		WHERE b.mrecommend = @custid
-			AND ((b.bettype = 19999 AND winlostdate <= @moveBetsDay)  OR b.bettype > 19999 )
+			AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+                        WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+                        WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+                    ELSE 1 END
 		GROUP BY b.recommend
 
 		-- bettransRnG
@@ -265,7 +270,6 @@ BEGIN
 		WHERE b.recommend = @custid
 			AND ((b.ruben = 0 AND ISNULL(s.RefTable, 0) = 0) OR b.ruben <> 0)
 			AND ((winlostdate >= @yesterday AND ISNULL(s.RefTable, 0) NOT IN (1,2)) OR winlostdate < @yesterday)
-			AND b.bettype < 19999
 			AND b.winlostdate > @moveBetsDay
 		GROUP BY b.custid
 
@@ -282,7 +286,10 @@ BEGIN
 		FROM dbo.transfer b WITH(NOLOCK)
 			LEFT JOIN dbo.TransferInfo ti WITH(NOLOCK) ON b.TransId = ti.TransId
 		WHERE b.recommend = @custid
-			AND ((b.bettype = 19999 AND winlostdate <= @moveBetsDay)  OR b.bettype > 19999 )
+			AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+                        WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+                        WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+                    ELSE 1 END
 		GROUP BY b.custid
 
 		-- bettransRnG

@@ -41,6 +41,7 @@ AS
 		- 20210817@Sophia: Fix overflow Refno [Redmine: #160262]
 		- 20211115@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 		- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
+		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
 		
 	Param's Explanation:
 */ 
@@ -184,55 +185,9 @@ BEGIN
 	  DECLARE @WinlostDate datetime  
 	  SELECT @WinlostDate = convert(nvarchar(10),current_timestamp,120) 
 
-	  ;WITH cteBalanceMember
-	  AS(
-		SELECT	b.custid, b.bettype, b.winlostdate, b.winlost, b.actual_stake, b.playercomm
-		FROM	dbo.bettrans b WITH(NOLOCK)
-		WHERE	 b.custid IN (SELECT custid FROM #Member)
-				AND b.winlostdate > @moveBetsDay
-				AND b.bettype < 19999
-				AND b.ruben = 1
-				
+	  DECLARE @IsDiff SMALLINT = 1, @NewMoveBetDate SMALLDATETIME = NULL,@NewBalanceUpDate SMALLDATETIME = NULL
 
-		UNION ALL
-		SELECT	r.custid, r.gameID, r.winlostdate, r.winlost, r.actual_stake, r.playercomm
-		FROM	dbo.bettransRnG r WITH(NOLOCK)
-		WHERE	r.custid IN (SELECT custid FROM #Member)
-				AND r.IsSum = 0
-				AND r.statusID NOT IN (0,1)
-		UNION ALL
-		SELECT	l.custid, l.gameID, l.winlostdate, l.winlost, l.actual_stake, l.playercomm
-		FROM	dbo.bettransLC l WITH(NOLOCK)
-		WHERE	custid IN (SELECT custid FROM #Member)
-				AND l.IsSum = 0
-				AND l.statusID NOT IN (0,1)
-
-		UNION ALL
-		SELECT	b.custid, b.bettype, b.winlostdate, b.winlost, b.actual_stake, b.playercomm
-		FROM	dbo.Transfer b WITH(NOLOCK)
-		WHERE	
-				b.custid IN (SELECT custid FROM #Member)
-				AND (
-					(bettype = 19999 AND winlostdate <= @moveBetsDay) 
-					OR (bettype > 19999 AND bettype NOT IN (21008, 21009))
-				 )
-
-	
-	  )
-	  INSERT INTO #MemberBalance(CustId, MemBalance)
-	  SELECT custid,
-			 isnull(SUM(isnull(case when bettype < 19999 and winlostdate < @WinlostDate then winlost-actual_stake+playercomm 
-									when bettype >= 19999 then winlost-actual_stake +playercomm 
-									else 0 
-									end , 0)), 0) memBal	
-	  FROM cteBalanceMember 
-	  GROUP BY custid
-
-	  ----check move bet date again to make sure it is not changed
-	  DECLARE @IsDiff BIT = 0, @NewMoveBetDate SMALLDATETIME = NULL
-	  EXEC bodb02.dbo.Acc_Transfer_CheckMoveBetDate @moveBetsDay, @IsDiff = @IsDiff OUTPUT, @NewMoveBetDate = @NewMoveBetDate OUTPUT
-
-	  IF (@IsDiff = 1)
+	  WHILE (@IsDiff = 1)
 	  BEGIN 
 			
 			DELETE FROM #MemberBalance
@@ -242,8 +197,7 @@ BEGIN
 				SELECT	b.custid, b.bettype, b.winlostdate, b.winlost, b.actual_stake, b.playercomm
 				FROM	dbo.bettrans b WITH(NOLOCK)
 				WHERE	b.custid IN (SELECT custid FROM #Member)
-						AND b.winlostdate > @NewMoveBetDate
-						AND b.bettype < 19999
+						AND b.winlostdate > @moveBetsDay
 						AND b.ruben = 1
 
 				UNION ALL
@@ -263,11 +217,12 @@ BEGIN
 				SELECT	b.custid, b.bettype, b.winlostdate, b.winlost, b.actual_stake, b.playercomm
 				FROM	dbo.Transfer b WITH(NOLOCK)
 				WHERE	b.custid IN (SELECT custid FROM #Member)
-						AND (
-							(bettype = 19999 AND winlostdate <= @NewMoveBetDate) 
-							OR (bettype > 19999 AND bettype NOT IN (21008, 21009))
-						 )
-			  )
+						AND bettype NOT IN (21008, 21009)
+						AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+			                        WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+			                        WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+			                    ELSE 1 END
+			  			)
 			  INSERT INTO #MemberBalance(CustId, MemBalance)
 			  SELECT custid,
 					 isnull(SUM(isnull(case when bettype < 19999 and winlostdate < @WinlostDate then winlost-actual_stake+playercomm 
@@ -276,6 +231,26 @@ BEGIN
 											end , 0)), 0) memBal	
 			  FROM cteBalanceMember 
 			  GROUP BY custid
+
+			----check MB date, BU date again to make sure it is not changed
+			SELECT @NewMoveBetDate = NULL, @NewBalanceUpDate = NULL
+			EXEC dbo.Acc_ReCheck_MBUDate 
+				@MBDate = @moveBetsDay,
+				@BUDate = @balanceUpDay,
+				@IsDiff = @IsDiff OUTPUT,
+				@NewMBDate = @NewMoveBetDate OUTPUT,
+				@NewBUDate = @NewBalanceUpDate OUTPUT
+
+			IF @IsDiff = -1 
+			BEGIN
+				SELECT @ErrMsg = 'BalanceUpDate value is null. Please contact DBA for support.', @ErrCode = 108
+				RETURN
+			END
+		
+			IF @IsDiff = 1 
+			BEGIN
+				SELECT @moveBetsDay = @NewMoveBetDate, @balanceUpDay = @NewBalanceUpDate
+			END  
 		
 	  END
 

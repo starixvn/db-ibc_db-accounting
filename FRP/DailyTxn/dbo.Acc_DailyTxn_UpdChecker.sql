@@ -24,12 +24,22 @@ Revisions:
 	- 20220315@Evan: SQL Server Upgrade STRING_SPLIT [Redmine: #168783]
 	- 20220825@Danny: change code to support SiteDB [Redmine: #175253]
 	- 20220830@Danny: add filter to Remove orphan ticket [Redmine: #175253]
+	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
 	
 Param's Explanation:
 	@TransIDs   : '1111,2341,...'
 */
 BEGIN
 	SET NOCOUNT ON
+		
+	-- get BU date
+	DECLARE @balanceUpDay SMALLDATETIME
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	SELECT @balanceUpDay = BalanceUpDay FROM @tblMoveBetBalanceUp
 
 	--Check permission for account site
 	EXEC DBPOL.NAP_UserControl.dbo.Acc_Con_CheckPermission @custid = @CheckerID, @funcname = '[DailyFinanceTxn]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
@@ -45,11 +55,13 @@ BEGIN
 	DECLARE @CustList TABLE (CustID INT, ID INT IDENTITY(1,1) )
 
 	INSERT INTO @tmpTransID(transID, checktime, RepUpdateTime, custID)
-	SELECT	transID, checktime, RepUpdateTime, CustId	FROM dbo.transfer WITH (NOLOCK) 
+	SELECT	transID, checktime, RepUpdateTime, CustId	
+	FROM dbo.transfer WITH (NOLOCK) 
 	WHERE	refno IN (	SELECT	CONVERT(bigint, value)
 						FROM	STRING_SPLIT (@Refnos, ',' ))
 			AND bettype > 20000 
 			AND CustID <> 0
+			AND WinlostDate >= @balanceUpDay
 	
 	-- get CustList by SiteDbGroupID
 	INSERT INTO @CustList(CustID) SELECT DISTINCT CustID FROM  @tmpTransID

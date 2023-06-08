@@ -2,7 +2,9 @@
 ALTER PROCEDURE [dbo].[Acc_CustomerSelBalanceInfo]
 	@CustId		INT = NULL,
 	@CustIdList	VARCHAR(MAX) = NULL,
-	@MoveBetDay SMALLDATETIME = NULL
+	@MoveBetDay SMALLDATETIME = NULL,
+	@BalanceUpDay SMALLDATETIME = NULL
+
 AS
 
 /*
@@ -18,6 +20,7 @@ AS
 		- 20190910@Bobby: Implement headline - balance info [Redmine:119961]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
+		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
 
 	Param's Explaination:
 		- @CustId: single cust
@@ -50,21 +53,20 @@ BEGIN
 	WHERE RefTable IN (1,2) ---- Bettype of BettransRNG, BettransLC
 
 	-- get move bet date
-	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
+	DECLARE @BUDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
 	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
 
-	IF (@MoveBetDay IS NULL)
+	IF (@MoveBetDay IS NULL OR @BalanceUpDay IS NULL)
 	BEGIN
 		INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
 		EXEC bodb02.dbo.Age_SelBalanceUpDay
-
-		SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
+		SELECT @BUDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 	END
 	ELSE
 	BEGIN
 		SELECT @moveBetsDay = @MoveBetDay
+		SELECT @BUDay = @BalanceUpDay
 	END
-  
 	
 	CREATE TABLE #CustInfo (CustId INT PRIMARY KEY, RoleId TINYINT)
 
@@ -108,7 +110,6 @@ BEGIN
 				b.winlostdate < @yesterday
 				OR NOT EXISTS (SELECT 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)  -- exclude  bettype of bettransRNG and bettransLC
 				)
-			AND b.bettype < 19999
 			AND b.statusID IN (111, 112, 113)
 			AND b.winlostdate > @moveBetsDay
 		GROUP BY CustId
@@ -123,7 +124,10 @@ BEGIN
 			SUM((winlost-actual_stake+playercomm) * ActualRate) AS YesterdayTotalBalance_RM
 		FROM dbo.transfer b WITH(NOLOCK) 
 		WHERE EXISTS (SELECT TOP 1 1 FROM #CustInfo c WHERE b.custid = c.CustId AND c.RoleId = 1)		
-			  AND ((bettype = 19999 AND winlostdate <= @moveBetsDay) OR (bettype > 19999))
+			  AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+                        WHEN bettype = 20000 AND winlostdate > @BUDay THEN 0 --> new bal
+                        WHEN winlostdate < @BUDay THEN 0 --> old data
+                    ELSE 1 END
 		GROUP BY CustId
 
 		-- bettransRnG
@@ -175,7 +179,10 @@ BEGIN
 			
 		FROM dbo.transfer b WITH(NOLOCK)			
 		WHERE EXISTS (SELECT TOP 1 1 FROM #CustInfo c WHERE b.recommend = c.CustId AND c.RoleId = 2)
-			AND ((bettype = 19999 AND winlostdate <= @moveBetsDay) OR (bettype > 19999))
+			AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+                        WHEN bettype = 20000 AND winlostdate > @BUDay THEN 0 --> new bal
+                        WHEN winlostdate < @BUDay THEN 0 --> old data
+                    ELSE 1 END
 		GROUP BY recommend
 			
 		--bettrans	
@@ -189,7 +196,6 @@ BEGIN
 					
 			FROM dbo.bettrans b WITH (NOLOCK)    
 			WHERE EXISTS (SELECT TOP 1 1 FROM #CustInfo c WHERE b.recommend = c.CustId AND c.RoleId = 2)
-				AND b.bettype < 19999
 				AND b.statusID IN (111, 112, 113)
 				AND b.winlostdate > @moveBetsDay
 			GROUP BY recommend, Winlostdate, Bettype
@@ -247,7 +253,6 @@ BEGIN
 			FROM dbo.bettrans b WITH (NOLOCK)    
 			WHERE EXISTS (SELECT TOP 1 1 FROM #CustInfo c WHERE b.mrecommend = c.CustId AND c.RoleId = 3)		
 				AND b.statusID IN (111, 112, 113)  
-				AND b.bettype < 19999
 				AND b.winlostdate > @moveBetsDay
 			GROUP BY mrecommend, Winlostdate, Bettype
 			)
@@ -287,7 +292,10 @@ BEGIN
 				)* ActualRate ) YesterdayTotalBalance_RM			
 		FROM dbo.transfer b WITH(NOLOCK) 
 		WHERE EXISTS (SELECT TOP 1 1 FROM #CustInfo c WHERE b.mrecommend = c.CustId AND c.RoleId = 3)		
-			AND ((bettype = 19999 AND winlostdate <= @moveBetsDay) OR (bettype > 19999))
+			AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+                        WHEN bettype = 20000 AND winlostdate > @BUDay THEN 0 --> new bal
+                        WHEN winlostdate < @BUDay THEN 0 --> old data
+                    ELSE 1 END
 		GROUP BY mrecommend
 		
 		-- bettransRnG
@@ -333,7 +341,6 @@ BEGIN
 			FROM dbo.bettrans b WITH (NOLOCK)    
 			WHERE EXISTS (SELECT TOP 1 1 FROM #CustInfo c WHERE b.srecommend = c.CustId AND c.RoleId = 4)	
 				AND b.statusID IN (111, 112, 113)
-				AND b.bettype < 19999
 				AND b.winlostdate > @moveBetsDay
 			GROUP BY srecommend, Winlostdate, Bettype
 			)
@@ -377,7 +384,10 @@ BEGIN
 				)* ActualRate ) YesterdayTotalBalance_RM			
 		FROM dbo.transfer b WITH(NOLOCK) 
 		WHERE EXISTS (SELECT TOP 1 1 FROM #CustInfo c WHERE b.srecommend = c.CustId AND c.RoleId = 4)	
-			AND ((bettype = 19999 AND winlostdate <= @moveBetsDay) OR (bettype > 19999))
+			AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+                        WHEN bettype = 20000 AND winlostdate > @BUDay THEN 0 --> new bal
+                        WHEN winlostdate < @BUDay THEN 0 --> old data
+                    ELSE 1 END
 		GROUP BY srecommend
 		
 		-- bettransRnG
@@ -435,7 +445,6 @@ BEGIN
 			INNER JOIN #tempSuper cs ON cs.SuperID = b.srecommend
 			WHERE  winlostdate <= @today
 				AND b.statusID IN (111, 112, 113) 
-				AND b.bettype < 19999
 				AND b.winlostdate > @moveBetsDay
 			GROUP BY cs.HeadlineID, Bettype, winlostdate
 		)
@@ -465,7 +474,10 @@ BEGIN
 					+ (CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END)
 					+ (CASE WHEN b.custid <> b.recommend AND b.custid <> b.mrecommend AND b.custid <> b.srecommend THEN winlost-actual_stake+playercomm ELSE 0 END) AS totalBalance
 			) AS bal
-		WHERE ((bettype = 19999 AND winlostdate <= @moveBetsDay) OR (bettype > 19999))
+		WHERE 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+                        WHEN bettype = 20000 AND winlostdate > @BUDay THEN 0 --> new bal
+                        WHEN winlostdate < @BUDay THEN 0 --> old data
+                    ELSE 1 END
 		GROUP BY cs.HeadlineID
 
 		-- bettransRnG
@@ -506,6 +518,9 @@ BEGIN
 		FROM dbo.transfer b WITH(NOLOCK)
 		WHERE EXISTS (SELECT TOP 1 1 FROM #CustInfo t WHERE b.custid = t.custid AND RoleId = 0)
 			AND b.bettype >= 20000
+			AND 1 = CASE WHEN bettype = 20000 AND winlostdate > @BUDay THEN 0 --> new bal
+						WHEN winlostdate < @BUDay THEN 0 --> old data
+					ELSE 1 END
 			AND b.winlostdate <= @today
 		GROUP BY b.custid
 

@@ -15,6 +15,7 @@ AS
 		- 20181122@Percy: Initialize SP [RedmineID: #105106]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
+    	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 */
 
 BEGIN
@@ -75,7 +76,6 @@ BEGIN
 		FROM dbo.bettrans WITH (NOLOCK)
 		WHERE 
 			custid = @CustId
-			AND bettype < 19999
 			AND winlostdate > @moveBetsDay
 		GROUP BY winlostdate, bettype, statusId
 
@@ -85,10 +85,10 @@ BEGIN
 		FROM dbo.transfer WITH (NOLOCK)
 		WHERE 
 			custid = @CustId AND
-			(
-				(bettype = 19999 AND winlostdate <= @moveBetsDay) 
-				OR (bettype > 19999)
-			)
+			1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+					WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+					WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+				ELSE 1 END
 		GROUP BY winlostdate, bettype, statusId
 
 		DELETE b
