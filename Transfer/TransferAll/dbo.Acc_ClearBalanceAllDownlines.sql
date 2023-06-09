@@ -49,6 +49,7 @@ AS
 		- 20211115@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 		- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
     	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
+		- 20230609@Danny: support scale out credit [Redmine: #181595]
 		 				       
 	Param's Explanation:
 		@AgentName: username of agent/master/super to clear his all downlines' balance
@@ -441,7 +442,8 @@ BEGIN
 			BEGIN
 				SELECT @ErrMsg = 'Insert Failed', @ErrCode = 101
 
-				DELETE dbo.Transfer
+				UPDATE dbo.Transfer WITH(ROWLOCK)
+				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 				WHERE custid IN (@recommend, @custid)
 					AND bettype IN (21003, 21004)
 					AND refno = @refno
@@ -456,7 +458,8 @@ BEGIN
 			BEGIN
 				SELECT @ErrMsg = 'Insert Failed', @ErrCode = 102
 
-				DELETE dbo.Transfer
+				UPDATE dbo.Transfer WITH(ROWLOCK)
+				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 				WHERE custid IN (@recommend, @custid)
 					AND bettype IN (21003, 21004)
 					AND refno = @refno
@@ -475,7 +478,8 @@ BEGIN
 			BEGIN
 				SELECT @ErrMsg = 'Insert Failed', @ErrCode = 102
 
-				DELETE dbo.Transfer
+				UPDATE dbo.Transfer WITH(ROWLOCK)
+				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 				WHERE custid IN (@recommend, @custid)
 					AND bettype IN (21003, 21004)
 					AND refno = @refno
@@ -533,7 +537,8 @@ BEGIN
 			BEGIN
 				SELECT @ErrMsg = 'Insert Failed', @ErrCode = 103
 
-				DELETE dbo.Transfer
+				UPDATE dbo.Transfer WITH(ROWLOCK)
+				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 				WHERE custid IN (@recommend, @custid)
 					AND bettype IN (21003, 21004)
 					AND refno = @refno
@@ -552,7 +557,8 @@ BEGIN
 			BEGIN
 				SELECT @ErrMsg = 'Insert Failed', @ErrCode = 104
 
-				DELETE dbo.Transfer
+				UPDATE dbo.Transfer WITH(ROWLOCK)
+				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 				WHERE custid IN (@recommend, @custid)
 					AND bettype IN (21003, 21004)
 					AND refno = @refno
@@ -668,7 +674,8 @@ BEGIN
 				BEGIN
 					SELECT @ErrMsg = 'Insert Failed', @ErrCode = 105
 
-					DELETE dbo.Transfer
+					UPDATE dbo.Transfer WITH(ROWLOCK)
+					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 					WHERE custid IN (@mrecommend, @recommend)
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
@@ -687,7 +694,8 @@ BEGIN
 				BEGIN
 					SELECT @ErrMsg = 'Insert Failed', @ErrCode = 106
 
-					DELETE dbo.Transfer
+					UPDATE dbo.Transfer WITH(ROWLOCK)
+					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 					WHERE custid IN (@mrecommend, @recommend)
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
@@ -725,7 +733,8 @@ BEGIN
 				BEGIN
 					SELECT @ErrMsg = 'Insert Failed', @ErrCode = 107
 
-					DELETE dbo.Transfer
+					UPDATE dbo.Transfer WITH(ROWLOCK)
+					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 					WHERE custid IN (@mrecommend, @recommend)
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
@@ -744,7 +753,8 @@ BEGIN
 				BEGIN
 					SELECT @ErrMsg = 'Insert Failed', @ErrCode = 108
 
-					DELETE dbo.Transfer
+					UPDATE dbo.Transfer WITH(ROWLOCK)
+					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 					WHERE custid IN (@mrecommend, @recommend)
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
@@ -828,7 +838,8 @@ BEGIN
 				BEGIN
 					SELECT @ErrMsg = 'Insert Failed', @ErrCode = 109
 
-					DELETE dbo.Transfer
+					UPDATE dbo.Transfer WITH(ROWLOCK)
+					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 					WHERE custid IN (@srecommend, @mrecommend)
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
@@ -847,7 +858,8 @@ BEGIN
 				BEGIN
 					SELECT @ErrMsg = 'Insert Failed', @ErrCode = 110
 
-					DELETE dbo.Transfer
+					UPDATE dbo.Transfer WITH(ROWLOCK)
+					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 					WHERE custid IN (@srecommend, @mrecommend)
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
@@ -885,7 +897,8 @@ BEGIN
 				BEGIN
 					SELECT @ErrMsg = 'Insert Failed', @ErrCode = 111
 
-					DELETE dbo.Transfer
+					UPDATE dbo.Transfer WITH(ROWLOCK)
+					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 					WHERE custid IN (@srecommend, @mrecommend)
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
@@ -904,7 +917,8 @@ BEGIN
 				BEGIN
 					SELECT @ErrMsg = 'Insert Failed', @ErrCode = 112
 
-					DELETE dbo.Transfer
+					UPDATE dbo.Transfer WITH(ROWLOCK)
+					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 					WHERE custid IN (@srecommend, @mrecommend)
 						AND bettype IN (21003, 21004)
 						AND refno = @refno

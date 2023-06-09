@@ -54,6 +54,7 @@ Revisions:
 	- 20220315@Evan: SQL Server Upgrade STRING_SPLIT [Redmine: #168783]
 	- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
 	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
+	- 20230609@Danny: support scale out credit [Redmine: #181595]
 	
 Param's Explanation:
 */ 
@@ -346,7 +347,8 @@ BEGIN
 							else N'Clear balance failed. Please try again.'
 						end, @ErrCode = 102
 				
-				DELETE dbo.Transfer
+				UPDATE dbo.Transfer WITH(ROWLOCK)
+				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 				WHERE custid in (@agentid, @custid)
 					and bettype = 21004
 					and refno = @refno
@@ -366,7 +368,8 @@ BEGIN
 							else N'Clear balance failed. Please try again.'
 						end, @ErrCode = 102
 				
-				DELETE dbo.Transfer
+				UPDATE dbo.Transfer WITH(ROWLOCK)
+				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 				WHERE custid in (@agentid, @custid)
 					and bettype = 21004
 					and refno = @refno
@@ -394,7 +397,8 @@ BEGIN
 							else N'Clear balance failed. Please try again.'
 						end, @ErrCode = 103
 				
-				DELETE dbo.Transfer
+				UPDATE dbo.Transfer WITH(ROWLOCK)
+				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 				WHERE custid in (@agentid, @custid)
 					and bettype = 21004
 					and refno = @refno
@@ -432,7 +436,8 @@ BEGIN
 							else N'Clear balance failed. Please try again.'
 						end, @ErrCode = 104
 				
-				DELETE dbo.Transfer
+				UPDATE dbo.Transfer WITH(ROWLOCK)
+				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 				WHERE custid in (@agentid, @custid)
 					and bettype = 21004
 					and refno = @refno
@@ -460,7 +465,8 @@ BEGIN
 							else N'Clear balance failed. Please try again.'
 						end, @ErrCode = 105
 				
-				DELETE dbo.Transfer
+				UPDATE dbo.Transfer WITH(ROWLOCK)
+				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0
 				WHERE custid in (@agentid, @custid)
 					and bettype = 21004
 					and refno = @refno

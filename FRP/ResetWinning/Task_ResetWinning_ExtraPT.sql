@@ -37,6 +37,7 @@ AS
 		- 20220106@Evan: Add SG Jackpot - [Redmine: #166685]	
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 		- 20220425@Evan: Remove Casino Jackpot Amount [Redmine: #171865]
+		- 20230609@Danny: support scale out credit [Redmine: #181595]
 
 	Param's explain:
 		@mode:  0 _ view report
@@ -292,57 +293,16 @@ BEGIN
             RETURN
         END
 
-        WHILE (@seq <= @maxseq)
-        BEGIN
-            SET @variance = 0
-
-            SELECT @variance = Variance,
-                   @custid = CustID
-            FROM @reset
-            WHERE GroupID = @seq
-				AND WinlostDate = @WinlostDate
-				 
-
-            IF (@variance <> 0)
-            BEGIN
-                SELECT @transDesc = 'DWL-' + CAST(@fromdate as varchar(30))
-                                           + CAST(@custid as varchar(50)) + ':'
-                                           + CAST(@variance as varchar(100))
-
-               EXEC DBTXN.bodb02.dbo.Task_ResetWinning_Non3rdParty_Add
-                    @winlostdate = @winlostdate,
-	                @custid = @custid,
-	                @amount = @variance,
-	                @transdesc = @transDesc,
-	                @creator = @creator,
-	                @ip = @ip,
-	                @ErrCode = @ErrCode OUTPUT,
-                    @ErrMsg = @ErrMsg OUTPUT
-
-                IF (@ErrCode <> 0) BREAK
-                                    
-				EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Transfer
-					@UserID = @creator,
-					@FromCustID = 0,
-					@ToCustID = @custid,
-					@IP = @ip,
-					@Doing = @transDesc
-            END
-
-            SET @seq = @seq + 1
-
-            SELECT @ErrMsg = 'The process has been successful!'
-        END
-      
-        SELECT GroupID,
-			   GroupName,
-			   winlostdate,
-               ISNULL(SUM(winlost), 0) AS winlost,
-               ISNULL(SUM([reset]), 0) + ISNULL(SUM(Variance), 0) AS totalreset,
-               ISNULL(SUM(Variance), 0) AS latestreset
-        FROM @reset
-		GROUP BY GroupID, GroupName, winlostdate
-		ORDER BY winlostdate DESC, GroupID ASC
+		SELECT @winlostdate AS winlostdate,
+			   CustID,
+			   Variance amount,
+               'DWL-' + CAST(@fromdate as varchar(30))
+                                           + CAST(custid as varchar(50)) + ':'
+                                           + CAST(Variance as varchar(100)) AS transDesc,
+				@creator AS creator,
+				@ip AS ip
+        FROM  @reset
+        WHERE WinlostDate = @WinlostDate AND Variance <> 0
 	END
 
 	DROP TABLE #winning

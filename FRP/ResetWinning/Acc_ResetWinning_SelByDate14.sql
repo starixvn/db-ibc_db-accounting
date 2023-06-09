@@ -5,7 +5,8 @@ ALTER PROCEDURE [dbo].[Acc_ResetWinning_SelByDate14]
 	@Mode			BIT = 0,
 	@Creator		INT = 10278938,   --- starixIT
 	@ErrCode		INT = 0 OUTPUT,
-    @ErrMsg			VARCHAR(100) = '' OUTPUT
+    @ErrMsg			VARCHAR(100) = '' OUTPUT,
+	@SiteDBGroupID	SMALLINT = 0
 AS
 /*	
 	Created: 20120612@Lukas
@@ -74,6 +75,7 @@ AS
 		- 20230522@Lewis: Call sum Sps on other servers - [RedmineID: #188463]
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
 		- 20221024@Sol: Database - Sync-up Standby Server data - [RedmineID: #167261]
+		- 20220614@Danny: Database - scale out credit [RedmineID: #181595]
 		
 	Explanation's Param:
 	    @mode:  0 _ view report
@@ -489,146 +491,32 @@ BEGIN
 					@Product	  varchar(250),
 					@resetCount   tinyint = 0,
 					@transDesc    nvarchar(1000)= '',
-					@seq		  smallint = 0,
-					@maxseq		  smallint = 0,
 					@ip			  VARCHAR(45) = '',
 					@LogData	  NVARCHAR(200) = ''
                 
-			SELECT @seq = 1 
-
-			SELECT @maxseq = MAX(r.seq),              
-				   @resetCount =  ISNULL(SUM( CASE WHEN LatestReset <> 0 THEN 1 ELSE 0 END),0)
-			FROM   #reset r	
-
-
-			IF (@resetCount = 0)
-			BEGIN
-				SELECT @ErrMsg = 'No products need to reset winning!',
-					   @ErrCode = 2
-
-				RETURN
-			END
-
-			WHILE (@seq <= @maxseq)
-			BEGIN
-				SET @variance = 0
-
-				SELECT @variance = ROUND(r.LatestReset, 2) ,
-					   @custid = d.custid,
-					   @Product = d.Product
-				FROM #reset r
-					INNER JOIN @dummyBalance d on r.product = d.product 
-				WHERE r.seq = @seq
-
-
-				IF (@variance <> 0) 
-				BEGIN
-					SELECT @transDesc = 'DWL-' + CAST(@Product as varchar(250))
-										 + '# ' + CAST(@Winlostdate as varchar(30))
-											   + CAST(@custid as varchar(50)) + ':'
-											   + CAST(@variance as varchar(100))
-					
-					--- Add ticket reset winning
-					EXEC DBTXN.bodb02.dbo.Task_ResetWinning_Non3rdParty_Add
-						@Winlostdate = @Winlostdate,
-						@custid = @custid,
-						@amount = @variance,
-						@transdesc = @transDesc,
-						@creator = @creator,
-						@ip = @ip,
-						@ErrCode = @ErrCode OUTPUT,
-						@ErrMsg = @ErrMsg OUTPUT
-						
-					IF (@ErrCode <> 0) BREAK
-					
-					----Adjust statement
-					--EXEC bodb_report.dbo.[Acc_StatementUpdateTransfer]
-					--	@custid = @custid
-					--	,@Amount = @variance
-					--	,@winlostdate = @winlostdate
-					--	,@ErrCode = @ErrCode OUTPUT
-					--	,@ErrMsg = @ErrMsg OUTPUT							
-
-					--IF (@ErrCode <> 0) BREAK
-
-                    --- write log 
-					BEGIN TRY
-						EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Transfer
-							@UserID = @creator,
-							@FromCustID = 0,
-							@ToCustID = @custid,
-							@ip = @ip,
-							@Doing = @transDesc
-					END TRY	
-					BEGIN CATCH						
-						SELECT @LogData = @LogData + ' ErrMsg=' + error_message()
-						EXEC DBTXN.bodb_customerlog.dbo.WriteLog_UserLog_Transfer 
-							@UserID = @creator, 
-							@FromCustID = 0, 
-							@ToCustID = @CustID, 
-							@IP = @IP, 
-							@Doing = @LogData						
-					END CATCH
-					
-				END
-
-				SET @seq = @seq + 1
-
-				SELECT @ErrMsg = 'The process has been successful!'
-			END
-			
-			--------Email 
-			IF @resetCount > 0
-			BEGIN
-				DECLARE @Subject VARCHAR(1000) = '', @body VARCHAR(MAX) = '', 
-						@ProductList VARCHAR(1000)  , @ProductVariance VARCHAR(1000),
-						@recipients VARCHAR(MAX), @copy_recipients VARCHAR(MAX), @blind_copy_recipients VARCHAR(MAX)
-						
-				SELECT @ProductList = COALESCE(@ProductList + ', ', '') + Product,
-					   @ProductVariance = COALESCE(@ProductVariance + ', ', '') + Product +' : '
-										+  CONVERT(VARCHAR(100),	ISNULL( (-(ISNULL(r.WinlostAfterExtraPT, 0)) - ISNULL(r.reset, 0)),0) )
-										+ ' RM'
-				FROM  #Reset r
-				WHERE ISNULL( (-(ISNULL(r.WinlostAfterExtraPT, 0)) - ISNULL(r.reset, 0)),0) <> 0
-				 
-											 
-				
-				SELECT @Subject = 'Reset Winning report changed on ' + CONVERT(VARCHAR(20),@Winlostdate, 107)
-					
-				SELECT @body = 'Dear Ah Wan, </br> 
-								Kindly be informed that the Reset Winning report has been changed on '+ CONVERT(VARCHAR(20),@Winlostdate, 107) + '</br>
-								Time of Reset Winning: '+ CONVERT(VARCHAR(20),Getdate(),109) +' (GMT-4) </br></br> 
-
-								Product: '+ @ProductList + ' </br> </br> 
-
-								Reason: void/recovered tickets </br> 
-								Variance: '+ @ProductVariance + '</br> 
-								Performed by IT. </br></br>  
-
-								Best regards, </br> 
-								This is an auto-mail from ONEworks Report System. Please do not reply.'									 
-										
-				IF @Istest = 0 AND @@SERVERNAME = 'DB061'
-					SELECT	@recipients = 'kudanaga@enpine.com'
-							,@copy_recipients = 'jetyee88@enpine.com;kwongyong@enpine.com;seanlau@enpine.com;foo.mv@enpine.com;tp@enpine.com;it@starixvn.com;jackyting@enpine.com;vh@enpine.com'
-							,@blind_copy_recipients = 'automail@enpine.com'
-				ELSE
-					SELECT  @recipients = 'dba_local@starixvn.com'
-							,@copy_recipients = ''
-							,@blind_copy_recipients = ''
-					
-				EXEC msdb.dbo.sp_send_dbmail
-					@recipients = @recipients
-					, @copy_recipients = @copy_recipients
-					, @blind_copy_recipients = @blind_copy_recipients
-					, @subject = @subject
-					, @body = @body
-					, @body_format = 'HTML' 
-			END
+			SELECT 		
+				@Winlostdate Winlostdate ,
+				d.custid		,
+				ROUND(r.LatestReset, 2) amount		,
+				'DWL-' + CAST(d.product as varchar(250))
+					   + '# ' + CAST(@Winlostdate as varchar(30))
+					   + CAST(d.custid as varchar(50)) + ':'
+					   + CAST(ROUND(r.LatestReset, 2) as varchar(100)) transdesc,
+				@creator creator		,
+				@ip ip			,
+				r.WinlostAfterExtraPT ,
+				r.reset       		,
+				d.product     		
+			FROM #reset r
+			INNER JOIN @dummyBalance d on r.product = d.product 
+			INNER JOIN dbo.Customer c WITH(NOLOCK) ON c.CustID = d.CustId
+			INNER JOIN dbo.Site s WITH(NOLOCK) ON s.site = c.site
+			WHERE ROUND(r.LatestReset, 2) <> 0 AND s.SiteDBGroupID = @SiteDBGroupID
 			
 			DROP TABLE #reset	
 
 		END 
+
 		DROP TABLE #SportBettype
 		DROP TABLE #Transfer
 		DROP TABLE #WLByProduct   

@@ -15,7 +15,7 @@ AS
 	Revisions:
 		- 20220802@Sophia: Get statement report - call at SiteDB for Bettrans range [Redmine: #175253]
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
-		 
+		- 20230720@Danny: support scale out credit [Redmine: #181595] 
 */
  
 BEGIN
@@ -705,18 +705,6 @@ BEGIN
 				AND winlostdate BETWEEN @fromdate AND @todate		
 			GROUP BY winlostdate								
 
-		-- 5: Grand Prize
-			INSERT INTO #rptStatementTable (winlostdate, GrandPrize, PayoutCount)
-			SELECT
-				winlostdate
-				,SUM(WinAmount) AS GrandPrize
-				,COUNT (1) AS PayoutCount
-			FROM dbo.PayoutTrans WITH(NOLOCK) 
-			WHERE
-				winlostdate BETWEEN @fromdate AND @todate
-				AND custid = @CID						
-				AND PayoutStatusId IN (4, 5)  ----- 'Completed', 'Expired'
-			GROUP BY winlostdate
 		END
 	  
 	
