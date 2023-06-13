@@ -182,9 +182,10 @@ BEGIN
 
 				IF  @winlostdate <= @MoveBetsDay
 				BEGIN
-					SELECT @SqlCommand = CONCAT('EXEC bodb_report.dbo.[Acc_StatementUpdateTransfer] ', ' @custid = ',@MemID,' ,@Amount = ',@Balance,' ,@winlostdate = ''',CONVERT(VARCHAR(50), @winlostdate, 121), '''')
+					SELECT @SqlCommand = CONCAT('EXEC DBRPT.bodb_report.dbo.Acc_StatementUpdateTransfer ', ' @custid = ',@MemID,' ,@Amount = ',@Balance,' ,@winlostdate = ''',CONVERT(VARCHAR(50), @winlostdate, 121), '''')
+					SELECT @SqlCommand = REPLACE(@SqlCommand,'DBRPT.','')
 
-					EXEC bodb02.dbo.Task_ExecRep_Wrapper 
+					EXEC DBCTG.bodb02.dbo.Task_ExecRep_Wrapper 
 						@ServerName = '', 
 						@AliasName = @alias, 
 						@SqlCommand = @SqlCommand, 

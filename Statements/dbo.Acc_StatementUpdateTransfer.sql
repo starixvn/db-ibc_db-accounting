@@ -20,6 +20,7 @@ AS
 		- 20190819@Sophia: Fix bug when add TXN on BU day [Redmine: #118530]
 		- 20190917@Bobby: Implement headline - Statement [Redmine: #119289]
 		- 20220809@Danny: Handle NULL Transfer Amt [Redmine: #175253]
+		- 20220809@Danny: Fix issue RptStatement not update for RoleID M-A-Member In some cases [Redmine: #167261]
     
 	Param's Explanation:
 */
@@ -76,7 +77,7 @@ BEGIN
 			FROM (
 				SELECT custid, roleid, recommend, mrecommend, srecommend
 				FROM bodb02.dbo.Customer c WITH (NOLOCK)
-				WHERE srecommend = @srecommend AND roleid <= 4
+				WHERE custid = @custid AND roleid <= 4
 
 				UNION ALL-- healine level
 				SELECT custid, @roleId AS roleid, recommend, mrecommend, srecommend
@@ -200,7 +201,7 @@ BEGIN
 				GROUP BY custid
 			) AS tmp
 		WHERE NOT EXISTS (SELECT 1 FROM dbo.rptStatement r WITH (NOLOCK) WHERE tmp.custid = r.custid AND r.winlostdate = @winlostdate)
-		AND tmp.custid > 0
+		AND tmp.custid > 0 AND tmp.custid = @custid
 	END
 	/* ===== End Initialize data in rptStatement ===== */
 
@@ -227,7 +228,7 @@ BEGIN
 		BEGIN TRY
 			UPDATE r WITH (ROWLOCK)
 			SET	r.openingbalance = r.openingbalance + CASE WHEN r.custid = @custid AND r.winlostdate > @winlostdate THEN @Amount ELSE 0 END
-				,r.transferamt = ISNULL(r.transferamt, 0) + CASE WHEN r.custid = @custid AND r.winlostdate = @winlostdate THEN @Amount ELSE 0 END
+				,r.transferamt =  CASE WHEN r.custid = @custid AND r.winlostdate = @winlostdate THEN ISNULL(r.transferamt, 0) + @Amount ELSE r.transferamt END
 				,r.closingbalance = r.closingbalance + CASE WHEN r.custid = @custid THEN @Amount ELSE 0 END
 				,r.OpeningTotalBalance = r.OpeningTotalBalance + CASE WHEN r.winlostdate > @winlostdate THEN @Amount ELSE 0 END
 			FROM @tblCustId c

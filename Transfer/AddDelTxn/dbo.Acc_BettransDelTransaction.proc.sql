@@ -316,9 +316,10 @@ BEGIN
 			EXEC bodb02.dbo.Get_ServerName_By_Alias @Alias  = 'DBTXN', @ServerName = @doNotRunInServer OUTPUT
 			SELECT @alias = 'DBRPT', @remark = 'Acc_BettransDelTransaction -> Acc_StatementUpdateTransfer'
 
-			SELECT @SqlCommand = CONCAT('EXEC bodb_report.dbo.[Acc_StatementUpdateTransfer] ', ' @custid = ',@custid,' ,@Amount = ',@amount,' ,@winlostdate = ''',CONVERT(VARCHAR(50), @winlostdate, 121), '''')
+			SELECT @SqlCommand = CONCAT('EXEC DBRPT.bodb_report.dbo.Acc_StatementUpdateTransfer ', ' @custid = ',@custid,' ,@Amount = ',@amount,' ,@winlostdate = ''',CONVERT(VARCHAR(50), @winlostdate, 121), '''')
+			SELECT @SqlCommand = REPLACE(@SqlCommand,'DBRPT.','')
 
-			EXEC bodb02.dbo.Task_ExecRep_Wrapper 
+			EXEC DBCTG.bodb02.dbo.Task_ExecRep_Wrapper 
 				@ServerName = '', 
 				@AliasName = @alias, 
 				@SqlCommand = @SqlCommand, 
@@ -330,9 +331,11 @@ BEGIN
 
 			IF @@ROWCOUNT = 1
 			BEGIN
-				SELECT @SqlCommand = CONCAT('EXEC bodb_report.dbo.[Acc_StatementUpdateTransfer] ', ' @custid = ',@custid,' ,@Amount = ',@amount,' ,@winlostdate = ''',CONVERT(VARCHAR(50), @winlostdate, 121), '''')
 
-				EXEC bodb02.dbo.Task_ExecRep_Wrapper 
+			SELECT @SqlCommand = CONCAT('EXEC DBRPT.bodb_report.dbo.Acc_StatementUpdateTransfer ', ' @custid = ',@custid,' ,@Amount = ',@amount,' ,@winlostdate = ''',CONVERT(VARCHAR(50), @winlostdate, 121), '''')
+			SELECT @SqlCommand = REPLACE(@SqlCommand,'DBRPT.','')
+
+				EXEC DBCTG.bodb02.dbo.Task_ExecRep_Wrapper 
 					@ServerName = '', 
 					@AliasName = @alias, 
 					@SqlCommand = @SqlCommand, 
