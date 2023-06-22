@@ -82,17 +82,8 @@ BEGIN
 			AND bettype > 20000 
 			AND CustID <> 0
 
-	INSERT INTO @tmpTransID(transID, checktime, RepUpdateTime, custID)
-	SELECT	transID,
-			checktime,
-			RepUpdateTime,
-			CustId 
-	FROM	@tmpRefNo 
-	WHERE	IsMoving = 0 
-		AND IsVerified = CASE WHEN @IsVerified = 1 THEN 0 ELSE IsVerified END
-	
 	-- get CustList by SiteDbGroupID
-	INSERT INTO @CustList(CustID) SELECT DISTINCT CustID FROM  @tmpTransID 
+	INSERT INTO @CustList(CustID) SELECT DISTINCT CustID FROM  @tmpRefNo 
 
 	DECLARE @cs_CustID INT
 	DECLARE @i INT = 1
@@ -108,12 +99,21 @@ BEGIN
 
 		SELECT @i = @i + 1
 	END
-
+	
 	DELETE t
-	FROM @tmpTransID t
+	FROM @tmpRefNo t
 	WHERE t.CustID IN (SELECT z.CustID FROM  @SiteGroupInfo z WHERE z.SiteDBGroupID <> @SiteDBGroupID )
 	-- END get CustList by SiteDbGroupID
-
+	
+	INSERT INTO @tmpTransID(transID, checktime, RepUpdateTime, custID)
+	SELECT	transID,
+			checktime,
+			RepUpdateTime,
+			CustId 
+	FROM	@tmpRefNo 
+	WHERE	IsMoving = 0 
+		AND IsVerified = CASE WHEN @IsVerified = 1 THEN 0 ELSE IsVerified END
+	
 	IF @IsVerified = 0 
 	BEGIN
 		SELECT	@ActionID = 1601, @CheckerID = NULL, @CheckerName ='0'
@@ -155,11 +155,11 @@ BEGIN
 		RETURN
 	END
 
-	--List number of Refno executed
+	-- Output for display message
 	SELECT DISTINCT 
 		a.RefNo, 
-		CASE WHEN b.transID IS NULL THEN 0 ELSE 1 END AS Success, 
-		CASE WHEN a.IsMoving = 1 THEN 'Not allow to add transaction before balance up date - ' + convert(NVARCHAR(10), @constraintDay, 120) + '.'
+		CASE WHEN b.transID IS NULL THEN 0 ELSE 1 END AS Success 
+		,CASE WHEN a.IsMoving = 1 THEN 'Not allow to add transaction before balance up date - ' + convert(NVARCHAR(10), @constraintDay, 120) + '.'
 			WHEN a.IsVerified = 1 AND @IsVerified = 1 THEN 'Unable to verify this transaction due to it is marked as "Verified"!' END AS ErrMsg
 	FROM @tmpRefNo a 
 		LEFT JOIN @tmpTransID b ON a.TransID = b.transID

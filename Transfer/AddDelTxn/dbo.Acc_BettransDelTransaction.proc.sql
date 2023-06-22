@@ -206,7 +206,7 @@ BEGIN
 
 		IF @@ERROR <> 0
 		BEGIN
-			SELECT	@ErrMsg ='Delete the transaction unsuccessfully!',
+			SELECT	@ErrMsg ='Reverse the transaction unsuccessfully!',
 					@ErrCode = 103
 			RETURN 
 		END
@@ -234,7 +234,7 @@ BEGIN
 			SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
 			WHERE  transid IN (SELECT transid FROM @TransIDs)
 
-			SELECT	@ErrMsg ='Delete the transaction unsuccessfully!',
+			SELECT	@ErrMsg ='Reverse the transaction unsuccessfully!',
 					@ErrCode = 104
 			RETURN 
 		END
@@ -267,7 +267,7 @@ BEGIN
 			SET		isDel = 0, RepUpdateTime = SYSDATETIME()
 			WHERE	transid IN (Select transid from @Reversal)
 					
-			SELECT	@ErrMsg ='Delete the transaction unsuccessfully!',
+			SELECT	@ErrMsg ='Reverse the transaction unsuccessfully!',
 					@ErrCode = 104
 			RETURN 
 		END
@@ -296,7 +296,7 @@ BEGIN
 			SET		isDel = 0, RepUpdateTime = SYSDATETIME()
 			WHERE	transid IN (Select transid from @Reversal)
 					
-			SELECT	@ErrMsg ='Delete the transaction unsuccessfully!',
+			SELECT	@ErrMsg ='Reverse the transaction unsuccessfully!',
 					@ErrCode = 104
 			RETURN 
 		END
@@ -394,7 +394,7 @@ BEGIN
 		EXEC DBCTG.bodb02.dbo.Acc_ExchangeRateUpdisDeleted @refNo = @refno
 
 		declare @LogData varchar(200)
-		Select @LogData = 'Delete transaction for custid :' + convert(varchar(20), @CustID) + ' Ref.NO ' + convert(varchar(20), @RefNo)
+		Select @LogData = 'Reverse transaction for custid :' + convert(varchar(20), @CustID) + ' Ref.NO ' + convert(varchar(20), @RefNo)
 		
 		BEGIN TRY
 
