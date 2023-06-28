@@ -158,10 +158,10 @@ BEGIN
 	SELECT @ArchivedDay	= MAX(winlostdate)
 	FROM DBTXN.bodb02.dbo.Task_ArchiveDate WITH (NOLOCK)
 
-	SELECT @ConstraintDay =  CASE 
-									WHEN @ArchivedDay > @_BalanceUpDay THEN DATEADD(DAY,7,@_BalanceUpDay) -- new BU
-									ELSE @_BalanceUpDay -- old BU
-								END
+	SELECT @ConstraintDay =	CASE 
+								WHEN @ArchivedDay > @_BalanceUpDay THEN DATEADD(DAY,7,@_BalanceUpDay) -- new BU
+								ELSE @_BalanceUpDay -- old BU
+							END
 
 	CREATE TABLE #SportBettype (ProductID INT, Bettype INT, RefTable TINYINT, VoidRejectGroup TINYINT) -- VoidRejectGroup for get data from zzzbettrans
 	INSERT INTO  #SportBettype (ProductID, Bettype, RefTable)

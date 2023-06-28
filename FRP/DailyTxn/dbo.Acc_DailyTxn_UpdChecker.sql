@@ -62,10 +62,10 @@ BEGIN
 	SELECT @ArchivedDay	= MAX(winlostdate)
 	FROM DBTXN.bodb02.dbo.Task_ArchiveDate WITH (NOLOCK)
 
-	SELECT @ConstraintDay =  CASE 
-									WHEN @ArchivedDay > @balanceUpDay THEN DATEADD(DAY,7,@balanceUpDay) -- new BU
-									ELSE @balanceUpDay -- old BU
-								END
+	SELECT @ConstraintDay = CASE 
+								WHEN @ArchivedDay > @balanceUpDay THEN DATEADD(DAY,7,@balanceUpDay) -- new BU
+								ELSE @balanceUpDay -- old BU
+							END
 	
 	INSERT INTO @tmpRefNo (RefNo, TransID, Checktime, RepUpdateTime, CustID, IsMoving, IsVerified)
 	SELECT	t.refno,
@@ -159,10 +159,10 @@ BEGIN
 	SELECT DISTINCT 
 		a.RefNo, 
 		CASE WHEN b.transID IS NULL THEN 0 ELSE 1 END AS Success 
-		,CASE WHEN a.IsMoving = 1 THEN 'Not allow to add transaction before balance up date - ' + convert(NVARCHAR(10), @constraintDay, 120) + '.'
-			WHEN a.IsVerified = 1 AND @IsVerified = 1 THEN 'Unable to verify this transaction due to it is marked as "Verified"!' END AS ErrMsg
+		,CASE WHEN a.IsMoving = 1 THEN 'Not allow to add transaction before balance up date - ' + convert(NVARCHAR(10), @constraintDay, 120) + '.' END AS ErrMsg
 	FROM @tmpRefNo a 
 		LEFT JOIN @tmpTransID b ON a.TransID = b.transID
+	WHERE  a.IsVerified = 0 AND @IsVerified = 1
 
 	DECLARE	@LogData VARCHAR(1000)
 	SELECT	@LogData = '<Acc_DailyTxn_UpdChecker CheckerName="'+ @Username +'" />'
