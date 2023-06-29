@@ -42,6 +42,7 @@ Revisions:
 	- 20220724@Evan: Revise code rollback for scale-out [Redmine: #175297]
 	- 20220923@Evan: Revise code rollback (issue) [Redmine: #178135]
 	- 20221226@Evan: Wait for in-house service (2ms) to sync new value of rollback ticket to centraldb [Redmine: #182003]
+	- 20221107@Danny: Database - Sync-up Standby Server data - [RedmineID: #167261]
 
 Input 
     1) CustID (For Double check) 
@@ -70,6 +71,15 @@ BEGIN
 	END
 
 	DECLARE @Cust_SiteDBGroupID SMALLINT, @Server_SiteDBGroupID SMALLINT;
+
+	DECLARE	@alias VARCHAR(100), 
+			@sqlCommand VARCHAR(MAX),
+			@doNotRunInServer VARCHAR(1000),
+			@remark VARCHAR(4000)
+
+			---get server name that dont need to run
+			EXEC bodb02.dbo.Get_ServerName_By_Alias @Alias  = 'DBTXN', @ServerName = @doNotRunInServer OUTPUT
+			SELECT @alias = 'DBRPT', @remark = 'Dot_Int_BettransInsCancelTransfer_Cust -> Acc_StatementUpdateTransfer'
 	DECLARE @SiteGroupInfo TABLE
 	(	
 		CustID INT,
@@ -324,23 +334,29 @@ BEGIN
 		BEGIN		
 			SET @TransferAmount = -(@Winlost - @actual_stake)
 
-			EXEC [DBRPT].bodb_report.dbo.[Acc_StatementUpdateTransfer]
-				@custid = @CustID
-				,@Amount = @TransferAmount
-				,@winlostdate = @winlostdate
-				,@ErrCode = @ErrCode OUTPUT
-				,@ErrMsg = @ErrMsg OUTPUT
+			SELECT @SqlCommand = CONCAT('EXEC DBRPT.bodb_report.dbo.Acc_StatementUpdateTransfer ', ' @custid = ',@CustID,' ,@Amount = ',@TransferAmount,' ,@winlostdate = ''',CONVERT(VARCHAR(50), @winlostdate, 121), '''')
+			SELECT @SqlCommand = REPLACE(@SqlCommand,'DBRPT.','')
+
+			EXEC DBCTG.bodb02.dbo.Task_ExecRep_Wrapper 
+				@ServerName = '', 
+				@AliasName = @alias, 
+				@SqlCommand = @SqlCommand, 
+				@doNotRunInServer = @doNotRunInServer,
+				@Remark = @remark
 
 			IF @ErrCode = 0
 			BEGIN
 				SET @TransferAmount = @Winlost - @actual_stake
 
-				EXEC [DBRPT].bodb_report.dbo.[Acc_StatementUpdateTransfer]
-					@custid = @bal_custid
-					,@Amount = @TransferAmount
-					,@winlostdate = @winlostdate
-					,@ErrCode = @ErrCode OUTPUT
-					,@ErrMsg = @ErrMsg OUTPUT
+				SELECT @SqlCommand = CONCAT('EXEC DBRPT.bodb_report.dbo.Acc_StatementUpdateTransfer ', ' @custid = ',@bal_custid,' ,@Amount = ',@TransferAmount,' ,@winlostdate = ''',CONVERT(VARCHAR(50), @winlostdate, 121), '''')
+				SELECT @SqlCommand = REPLACE(@SqlCommand,'DBRPT.','')
+
+				EXEC DBCTG.bodb02.dbo.Task_ExecRep_Wrapper 
+					@ServerName = '', 
+					@AliasName = @alias, 
+					@SqlCommand = @SqlCommand, 
+					@doNotRunInServer = @doNotRunInServer,
+					@Remark = @remark
 			END
 
 			--Rollback Amount in bodb_report.dbo.rptStatement table before move bet day
@@ -348,12 +364,15 @@ BEGIN
 			BEGIN
 				SET @TransferAmount = @Winlost - @actual_stake
 
-				EXEC [DBRPT].bodb_report.dbo.[Acc_StatementUpdateTransfer]
-					@custid = @CustID
-					,@Amount = @TransferAmount
-					,@winlostdate = @winlostdate
-					,@ErrCode = @ErrCode OUTPUT
-					,@ErrMsg = @ErrMsg OUTPUT
+				SELECT @SqlCommand = CONCAT('EXEC DBRPT.bodb_report.dbo.Acc_StatementUpdateTransfer ', ' @custid = ',@CustID,' ,@Amount = ',@TransferAmount,' ,@winlostdate = ''',CONVERT(VARCHAR(50), @winlostdate, 121), '''')
+				SELECT @SqlCommand = REPLACE(@SqlCommand,'DBRPT.','')
+
+				EXEC DBCTG.bodb02.dbo.Task_ExecRep_Wrapper 
+					@ServerName = '', 
+					@AliasName = @alias, 
+					@SqlCommand = @SqlCommand, 
+					@doNotRunInServer = @doNotRunInServer,
+					@Remark = @remark
 
 				SELECT @ErrCode = 107
 			END
@@ -447,21 +466,28 @@ BEGIN
 		BEGIN
 			SET @TransferAmount = (@Winlost - @actual_stake)
 
-			EXEC [DBRPT].bodb_report.dbo.[Acc_StatementUpdateTransfer]
-				@custid = @CustID
-				,@Amount = @TransferAmount
-				,@winlostdate = @winlostdate
-				,@ErrCode = @ErrCode OUTPUT
-				,@ErrMsg = @ErrMsg OUTPUT
+			SELECT @SqlCommand = CONCAT('EXEC DBRPT.bodb_report.dbo.Acc_StatementUpdateTransfer ', ' @custid = ',@CustID,' ,@Amount = ',@TransferAmount,' ,@winlostdate = ''',CONVERT(VARCHAR(50), @winlostdate, 121), '''')
+			SELECT @SqlCommand = REPLACE(@SqlCommand,'DBRPT.','')
+
+			EXEC DBCTG.bodb02.dbo.Task_ExecRep_Wrapper 
+				@ServerName = '', 
+				@AliasName = @alias, 
+				@SqlCommand = @SqlCommand, 
+				@doNotRunInServer = @doNotRunInServer,
+				@Remark = @remark
 
 			SET @TransferAmount = -(@Winlost - @actual_stake)
 
-			EXEC [DBRPT].bodb_report.dbo.[Acc_StatementUpdateTransfer]
-				@custid = @bal_custid
-				,@Amount = @TransferAmount
-				,@winlostdate = @winlostdate
-				,@ErrCode = @ErrCode OUTPUT
-				,@ErrMsg = @ErrMsg OUTPUT
+			SELECT @SqlCommand = CONCAT('EXEC DBRPT.bodb_report.dbo.Acc_StatementUpdateTransfer ', ' @custid = ',@bal_custid,' ,@Amount = ',@TransferAmount,' ,@winlostdate = ''',CONVERT(VARCHAR(50), @winlostdate, 121), '''')
+			SELECT @SqlCommand = REPLACE(@SqlCommand,'DBRPT.','')
+
+			EXEC DBCTG.bodb02.dbo.Task_ExecRep_Wrapper 
+				@ServerName = '', 
+				@AliasName = @alias, 
+				@SqlCommand = @SqlCommand, 
+				@doNotRunInServer = @doNotRunInServer,
+				@Remark = @remark
+
 		END
 
 		RETURN

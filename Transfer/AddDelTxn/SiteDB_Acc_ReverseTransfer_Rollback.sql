@@ -14,6 +14,7 @@ Created:
 DB: DBTXN/bodb02
 Revisions:
 	- 20220829@Danny: Init. SP rollback Reverse Transfer by refno [Redmine: #175253]
+	- 20221107@Danny: Database - Sync-up Standby Server data - [RedmineID: #167261]
 						   
 Param's Explanation:
 */
@@ -33,6 +34,14 @@ BEGIN
 	DECLARE @remove TABLE ( transid BIGINT, winlost MONEY, IsDel BIT, CustID INT, actual_stake MONEY, winlostdate SMALLDATETIME)	-- List transid update to orphan ticket 
 	DECLARE @reversal TABLE ( transid BIGINT, winlost MONEY, IsDel BIT, CustID INT, actual_stake MONEY, winlostdate SMALLDATETIME) -- List transid update IsDel = 1 =>  IsDel = 0
 	DECLARE @balanceCheck TABLE ( CustID INT, balance MONEY, cnt_IsDel SMALLINT, max_isDel BIT)
+	DECLARE @alias VARCHAR(100), 
+			@sqlCommand VARCHAR(MAX),
+			@doNotRunInServer VARCHAR(1000),
+			@remark VARCHAR(4000)
+
+	---get server name that dont need to run
+	EXEC bodb02.dbo.Get_ServerName_By_Alias @Alias  = 'DBTXN', @ServerName = @doNotRunInServer OUTPUT
+	SELECT @alias = 'DBRPT', @remark = 'SiteDB_Acc_ReverseTransfer_Rollback -> Acc_StatementUpdateTransfer'
 
 	INSERT INTO @tranDetails (transid, CustID, winlost, actual_stake, IsDel, winlostdate, transDesc)
 	SELECT	t.transid, t.custid, t.Winlost, t.Actual_Stake, ISNULL(ti.IsDel,0) IsDel, winlostdate, TransDesc
@@ -173,12 +182,16 @@ BEGIN
 
 				IF  @winlostdate <= @MoveBetsDay
 				BEGIN
-					EXEC [DBRPT].bodb_report.dbo.[Acc_StatementUpdateTransfer]
-						@custid = @MemID
-						,@Amount = @Balance
-						,@winlostdate = @winlostdate
-						,@ErrCode = @ErrCode OUTPUT
-						,@ErrMsg = @ErrMsg OUTPUT
+					SELECT @SqlCommand = CONCAT('EXEC DBRPT.bodb_report.dbo.Acc_StatementUpdateTransfer ', ' @custid = ',@MemID,' ,@Amount = ',@Balance,' ,@winlostdate = ''',CONVERT(VARCHAR(50), @winlostdate, 121), '''')
+					SELECT @SqlCommand = REPLACE(@SqlCommand,'DBRPT.','')
+
+					EXEC DBCTG.bodb02.dbo.Task_ExecRep_Wrapper 
+						@ServerName = '', 
+						@AliasName = @alias, 
+						@SqlCommand = @SqlCommand, 
+						@doNotRunInServer = @doNotRunInServer,
+						@Remark = @remark
+
 				END
 
 				FETCH NEXT FROM CS_MemBal INTO @MemID, @Balance 

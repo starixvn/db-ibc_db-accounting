@@ -73,6 +73,7 @@ AS
 		- 20221005@Danny: Remove not valid user in automail for reset winning's change [Redmine: #178761]
 		- 20230522@Lewis: Call sum Sps on other servers - [RedmineID: #188463]
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
+		- 20221024@Sol: Database - Sync-up Standby Server data - [RedmineID: #167261]
 		
 	Explanation's Param:
 	    @mode:  0 _ view report
@@ -508,7 +509,6 @@ BEGIN
 				RETURN
 			END
 
-
 			WHILE (@seq <= @maxseq)
 			BEGIN
 				SET @variance = 0
@@ -542,35 +542,15 @@ BEGIN
 					IF (@ErrCode <> 0) BREAK
 					
 					----Adjust statement
-					EXEC bodb_report.dbo.[Acc_StatementUpdateTransfer]
-						@custid = @custid
-						,@Amount = @variance
-						,@winlostdate = @winlostdate
-						,@ErrCode = @ErrCode OUTPUT
-						,@ErrMsg = @ErrMsg OUTPUT
+					--EXEC bodb_report.dbo.[Acc_StatementUpdateTransfer]
+					--	@custid = @custid
+					--	,@Amount = @variance
+					--	,@winlostdate = @winlostdate
+					--	,@ErrCode = @ErrCode OUTPUT
+					--	,@ErrMsg = @ErrMsg OUTPUT							
 
-					IF @@SERVERNAME ='DB062'
-					BEGIN
-					EXEC DB061.bodb_report.dbo.[Acc_StatementUpdateTransfer]
-						@custid = @custid
-						,@Amount = @variance
-						,@winlostdate = @winlostdate
-						,@ErrCode = @ErrCode OUTPUT
-						,@ErrMsg = @ErrMsg OUTPUT
-					END
-					ELSE IF @@SERVERNAME = 'DB061'
-					BEGIN
-					EXEC DB062.bodb_report.dbo.[Acc_StatementUpdateTransfer]
-						@custid = @custid
-						,@Amount = @variance
-						,@winlostdate = @winlostdate
-						,@ErrCode = @ErrCode OUTPUT
-						,@ErrMsg = @ErrMsg OUTPUT
-					END							
+					--IF (@ErrCode <> 0) BREAK
 
-					IF (@ErrCode <> 0) BREAK
-					
-					
                     --- write log 
 					BEGIN TRY
 						EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Transfer

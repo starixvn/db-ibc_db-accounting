@@ -28,6 +28,7 @@ AS
 		- 20190826@Sophia: remove Rollback code (in CATCH block) [Redmine: #117863]
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 		- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
+		- 20221024@Sol: Database - Sync-up Standby Server data - [RedmineID: #167261]
 
 */
 BEGIN
@@ -100,6 +101,43 @@ BEGIN
         
         
     END CATCH
+
+	----statement update transfer in range 14
+	BEGIN
+		-- get move bet date
+		DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+		DECLARE @MoveBetsDay SMALLDATETIME
+
+		INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+		EXEC bodb02.dbo.Age_SelBalanceUpDay
+	
+		-- GET the current MB date
+		SELECT @MoveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
+
+		---run only in range 14
+		IF (@winlostdate <= @MoveBetsDay)
+		BEGIN
+			DECLARE
+				@alias VARCHAR(100), 
+				@sqlCommand VARCHAR(MAX),
+				@doNotRunInServer VARCHAR(1000),
+				@remark VARCHAR(4000)
+
+			---get server name that dont need to run
+			EXEC bodb02.dbo.Get_ServerName_By_Alias @Alias  = 'DBTXN', @ServerName = @doNotRunInServer OUTPUT
+			SELECT @alias = 'DBACC', @remark = 'step 5.1/5.2 -> Task_ResetWinning_Non3rdParty_Add -> Acc_StatementUpdateTransfer'
+
+			SELECT @SqlCommand = CONCAT('EXEC DBRPT.bodb_report.dbo.Acc_StatementUpdateTransfer ', ' @custid = ',@custid,' ,@Amount = ',@amount,' ,@winlostdate = ''',CONVERT(VARCHAR(50), @winlostdate, 121), '''')
+			SELECT @SqlCommand = REPLACE(@SqlCommand,'DBRPT.','')
+
+			EXEC DBCTG.bodb02.dbo.Task_ExecRep_Wrapper 
+				@ServerName = '', 
+				@AliasName = @alias, 
+				@SqlCommand = @SqlCommand, 
+				@doNotRunInServer = @doNotRunInServer,
+				@Remark = @remark
+		END
+	END
 
 END
 
