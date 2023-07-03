@@ -14,6 +14,7 @@ AS
 		- 20190723@Percy: Initialize SP [RedmineID: #117334]
 		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 		- 20220802@Sophia: Scale out DBTrans, add metadata call at SiteDB [RedmineID: #175253]
+		- 20230706@Danny: deploy SP to SiteDB03 [Redmine: #181595]
 		
 */
 

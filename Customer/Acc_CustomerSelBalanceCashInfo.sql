@@ -21,6 +21,7 @@ AS
 		- 20220801@Sophia: Scale out DBTRANS, add metadata at SiteDB, remove DisableAutoMPT [RedmineID: #175253]
 		- 20221104@Evan: Enhance performance get max transid [RedmineID: #180141]
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
+		- 20230706@Danny: deploy SP to SiteDB03 [Redmine: #181595]
 
 	Param's Explaination:
 		- @CustId: custid
