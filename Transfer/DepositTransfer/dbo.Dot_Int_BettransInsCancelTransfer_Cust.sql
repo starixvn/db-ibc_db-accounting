@@ -42,6 +42,7 @@ Revisions:
 	- 20220724@Evan: Revise code rollback for scale-out [Redmine: #175297]
 	- 20220923@Evan: Revise code rollback (issue) [Redmine: #178135]
 	- 20221226@Evan: Wait for in-house service (2ms) to sync new value of rollback ticket to centraldb [Redmine: #182003]
+	- 20221107@Danny: Database - Sync-up Standby Server data - [RedmineID: #167261]
 	- 20230322@Evan: Change code write log into bodb_customerlog.UserLog_Transfer [Redmine: #185507]
 
 Input 
