@@ -21,6 +21,7 @@ AS
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
+		- 20230606@Lewis: Add 3rd Party Pending transfer column [Redmine: #188648]
 
 	Param's Explaination:
 		- @CustId: single cust
@@ -31,15 +32,15 @@ BEGIN
 	SET NOCOUNT ON
 
 	-- Get Balance Information --
-	CREATE TABLE #balanceInfo (CustId INT, totalBalance MONEY, TotalBalance_RM MONEY, YesterdayTotalBalance MONEY, YesterdayTotalBalance_RM MONEY)
+	CREATE TABLE #balanceInfo (CustId INT, totalBalance MONEY, TotalBalance_RM MONEY, YesterdayTotalBalance MONEY, YesterdayTotalBalance_RM MONEY, PendingTransfer3rd MONEY, PendingTransfer3rd_RM MONEY)
 
 	IF @CustId IS NULL AND ISNULL(@CustIdList, '') = ''
 	BEGIN
-		SELECT CustId, totalBalance, TotalBalance_RM, YesterdayTotalBalance, YesterdayTotalBalance_RM FROM #balanceInfo
+		SELECT CustId, totalBalance, TotalBalance_RM, YesterdayTotalBalance, YesterdayTotalBalance_RM, PendingTransfer3rd, PendingTransfer3rd_RM FROM #balanceInfo
 		RETURN
 	END
 	
-	DECLARE @today DATETIME, @yesterday DATETIME, @SQLCust NVARCHAR(MAX)
+	DECLARE @today SMALLDATETIME, @yesterday SMALLDATETIME
 	SELECT  @today = CONVERT(DATE, GETDATE())
 	SELECT  @yesterday = DATEADD(DAY, -1, @today)
 
@@ -89,7 +90,7 @@ BEGIN
 
 	IF NOT EXISTS (SELECT TOP 1 1 FROM #CustInfo)
 	BEGIN
-		SELECT CustId, totalBalance, TotalBalance_RM, YesterdayTotalBalance, YesterdayTotalBalance_RM FROM #balanceInfo
+		SELECT CustId, totalBalance, TotalBalance_RM, YesterdayTotalBalance, YesterdayTotalBalance_RM,PendingTransfer3rd, PendingTransfer3rd_RM FROM #balanceInfo
 		RETURN
 	END
 
@@ -115,13 +116,27 @@ BEGIN
 		GROUP BY CustId
 
 		-- transfer
-		INSERT INTO #balanceInfo (CustId, totalBalance, TotalBalance_RM, YesterdayTotalBalance, YesterdayTotalBalance_RM)
+		INSERT INTO #balanceInfo (CustId, totalBalance, TotalBalance_RM, YesterdayTotalBalance, YesterdayTotalBalance_RM,PendingTransfer3rd, PendingTransfer3rd_RM)
 		SELECT
 			CustId,
-			SUM(winlost-actual_stake+playercomm) AS totalBalance,
-			SUM((winlost-actual_stake+playercomm) * ActualRate) AS TotalBalance_RM, 
-			SUM( winlost-actual_stake+playercomm) AS YesterdayTotalBalance, 
-			SUM((winlost-actual_stake+playercomm) * ActualRate) AS YesterdayTotalBalance_RM
+			SUM(CASE WHEN b.Bettype IN (21008,21009) THEN 0 
+						ELSE winlost-actual_stake+playercomm 
+					 END ) AS totalBalance,
+			SUM(CASE WHEN b.Bettype IN (21008,21009) THEN 0 
+						ELSE (winlost-actual_stake+playercomm) * ActualRate 
+					 END) AS TotalBalance_RM, 
+			SUM(CASE WHEN b.Bettype IN (21008,21009) THEN 0 
+						ELSE winlost-actual_stake+playercomm 
+					 END) AS YesterdayTotalBalance, 
+			SUM(CASE WHEN b.Bettype IN (21008,21009) THEN 0 
+						ELSE (winlost-actual_stake+playercomm) * ActualRate 
+					 END) AS YesterdayTotalBalance_RM,
+			SUM(CASE WHEN b.Bettype IN (21008,21009) THEN -(winlost-actual_stake) 
+						ELSE 0 
+					 END) AS PendingTransfer3rd,
+			SUM(CASE WHEN b.Bettype IN (21008,21009) THEN -(winlost-actual_stake) * b.ActualRate
+						ELSE 0 
+					 END) AS PendingTransfer3rd_RM
 		FROM dbo.transfer b WITH(NOLOCK) 
 		WHERE EXISTS (SELECT TOP 1 1 FROM #CustInfo c WHERE b.custid = c.CustId AND c.RoleId = 1)		
 			  AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
@@ -162,21 +177,31 @@ BEGIN
 	IF EXISTS (SELECT TOP 1 1 FROM #CustInfo WHERE RoleId = 2)
 	BEGIN
 		-- transfer
-		INSERT INTO #balanceInfo (CustId, TotalBalance, TotalBalance_RM, YesterdayTotalBalance, YesterdayTotalBalance_RM)
+		INSERT INTO #balanceInfo (CustId, TotalBalance, TotalBalance_RM, YesterdayTotalBalance, YesterdayTotalBalance_RM,PendingTransfer3rd, PendingTransfer3rd_RM)
 		SELECT
 			recommend,			
-			SUM((CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END)
-			+ (CASE WHEN b.custid <> b.recommend THEN winlost-actual_stake+playercomm ELSE 0 END)) TotalBalance,
+			SUM(CASE WHEN b.Bettype IN (21008,21009) THEN 0
+						ELSE (CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END) + (CASE WHEN b.custid <> b.recommend THEN winlost-actual_stake+playercomm ELSE 0 END)
+					 END) TotalBalance,
 			
-			SUM (((CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END)
-			+ (CASE WHEN b.custid <> b.recommend THEN winlost-actual_stake+playercomm ELSE 0 END)) * ActualRate) TotalBalance_RM,
+			SUM (CASE WHEN b.Bettype IN (21008,21009) THEN 0
+						ELSE ((CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END) + (CASE WHEN b.custid <> b.recommend THEN winlost-actual_stake+playercomm ELSE 0 END)) * ActualRate
+					  END) TotalBalance_RM,
 			
-			SUM((CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END)			
-			+ (CASE WHEN b.custid <> b.recommend THEN winlost-actual_stake+playercomm ELSE 0 END)) YesterdayTotalBalance,
+			SUM(CASE WHEN b.Bettype IN (21008, 21009) THEN 0 
+						ELSE ((CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END) + (CASE WHEN b.custid <> b.recommend THEN winlost-actual_stake+playercomm ELSE 0 END)) 
+					 END) YesterdayTotalBalance,
 			
-			SUM(((CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END)
-			+ (CASE WHEN b.custid <> b.recommend THEN winlost-actual_stake+playercomm ELSE 0 END)) * ActualRate) YesterdayTotalBalance_RM	
-			
+			SUM(CASE WHEN b.Bettype IN (21008, 21009) THEN 0 
+						ELSE (((CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END) + (CASE WHEN b.custid <> b.recommend THEN winlost-actual_stake+playercomm ELSE 0 END)) * ActualRate) 
+					 END) YesterdayTotalBalance_RM,
+					 
+			SUM(CASE WHEN b.Bettype IN (21008, 21009) THEN -(b.Winlost - b.Actual_Stake) 
+						ELSE 0 END) AS PendingTransfer3rd,
+								 
+			SUM(CASE WHEN b.Bettype IN (21008, 21009) THEN -(b.Winlost - b.Actual_Stake) * b.ActualRate
+						ELSE 0 END) AS PendingTransfer3rd_RM
+
 		FROM dbo.transfer b WITH(NOLOCK)			
 		WHERE EXISTS (SELECT TOP 1 1 FROM #CustInfo c WHERE b.recommend = c.CustId AND c.RoleId = 2)
 			AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
@@ -192,8 +217,7 @@ BEGIN
 				SUM(awinlost+comm + winlost-actual_stake) AS TotalBalance,
 				SUM((awinlost+comm + winlost-actual_stake) * ActualRate) AS TotalBalance_RM,
 				SUM(CASE WHEN (winlostdate <= @yesterday) THEN awinlost+comm + winlost-actual_stake ELSE 0 END) AS YesterdayTotalBalance,
-				SUM(CASE WHEN (winlostdate <= @yesterday) THEN awinlost+comm + winlost-actual_stake ELSE 0 END * ActualRate) AS YesterdayTotalBalance_RM
-					
+				SUM(CASE WHEN (winlostdate <= @yesterday) THEN awinlost+comm + winlost-actual_stake ELSE 0 END * ActualRate) AS YesterdayTotalBalance_RM					
 			FROM dbo.bettrans b WITH (NOLOCK)    
 			WHERE EXISTS (SELECT TOP 1 1 FROM #CustInfo c WHERE b.recommend = c.CustId AND c.RoleId = 2)
 				AND b.statusID IN (111, 112, 113)
@@ -205,7 +229,7 @@ BEGIN
 				SUM (TotalBalance) AS TotalBalance,
 				SUM (TotalBalance_RM) AS TotalBalance_RM,
 				SUM (YesterdayTotalBalance) AS YesterdayTotalBalance,
-				SUM (YesterdayTotalBalance_RM) AS YesterdayTotalBalance_RM			   
+				SUM (YesterdayTotalBalance_RM) AS YesterdayTotalBalance_RM
 		FROM Bettrans_CTE b
 		WHERE b.Winlostdate < @yesterday OR NOT EXISTS (SELECT 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)  -- exclude  bettype of bettransRNG and bettransLC
 		GROUP BY recommend
@@ -217,7 +241,7 @@ BEGIN
 			SUM((awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm)) as totalBalance,			
 			SUM(((awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm))* ActualRate) as TotalBalance_RM, 
 			SUM(CASE WHEN winlostdate = @yesterday THEN ((awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm)) ELSE 0 END) AS YesterdayTotalBalance,
-			SUM(CASE WHEN winlostdate = @yesterday THEN ((awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm))* ActualRate ELSE 0 END) AS YesterdayTotalBalance_RM 			
+			SUM(CASE WHEN winlostdate = @yesterday THEN ((awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm))* ActualRate ELSE 0 END) AS YesterdayTotalBalance_RM	
 		FROM dbo.bettransRnG b WITH(NOLOCK)
 		WHERE EXISTS (SELECT TOP 1 1 FROM #CustInfo c WHERE b.recommend = c.CustId AND c.RoleId = 2)
 			AND statusID IN (111,112,113) 
@@ -231,7 +255,7 @@ BEGIN
 			SUM((awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm)) as totalBalance,			
 			SUM(((awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm))* ActualRate) as TotalBalance_RM, 
 			SUM(CASE WHEN winlostdate = @yesterday THEN ((awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm)) ELSE 0 END) AS YesterdayTotalBalance,
-			SUM(CASE WHEN winlostdate = @yesterday THEN ((awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm))* ActualRate ELSE 0 END) AS YesterdayTotalBalance_RM 		
+			SUM(CASE WHEN winlostdate = @yesterday THEN ((awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm))* ActualRate ELSE 0 END) AS YesterdayTotalBalance_RM	
 		FROM dbo.bettransLC b WITH(NOLOCK)
 		WHERE EXISTS (SELECT TOP 1 1 FROM #CustInfo c WHERE b.recommend = c.CustId AND c.RoleId = 2)
 			AND statusID IN (111,112,113)  
@@ -249,7 +273,6 @@ BEGIN
 				SUM((mwinlost+acomm + awinlost + winlost-actual_stake) * ActualRate) AS TotalBalance_RM,
 				SUM(CASE WHEN (winlostdate <= @yesterday) THEN mwinlost + acomm + awinlost + winlost - actual_stake ELSE 0 END) AS YesterdayTotalBalance,
 				SUM((CASE WHEN (winlostdate <= @yesterday) THEN mwinlost + acomm + awinlost + winlost - actual_stake ELSE 0 END) * ActualRate) AS YesterdayTotalBalance_RM
-		
 			FROM dbo.bettrans b WITH (NOLOCK)    
 			WHERE EXISTS (SELECT TOP 1 1 FROM #CustInfo c WHERE b.mrecommend = c.CustId AND c.RoleId = 3)		
 				AND b.statusID IN (111, 112, 113)  
@@ -261,35 +284,54 @@ BEGIN
 				SUM (TotalBalance) AS TotalBalance,
 				SUM (TotalBalance_RM) AS TotalBalance_RM,
 				SUM (YesterdayTotalBalance) AS YesterdayTotalBalance,
-				SUM (YesterdayTotalBalance_RM) AS YesterdayTotalBalance_RM			   
+				SUM (YesterdayTotalBalance_RM) AS YesterdayTotalBalance_RM
 		FROM Bettrans_CTE b
 		WHERE b.Winlostdate < @yesterday OR NOT EXISTS (SELECT 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)  -- exclude  bettype of bettransRNG and bettransLC
 		GROUP BY mrecommend
 
 		-- transfer
-		INSERT INTO #balanceInfo (CustId, totalBalance, TotalBalance_RM, YesterdayTotalBalance, YesterdayTotalBalance_RM)
+		INSERT INTO #balanceInfo (CustId, totalBalance, TotalBalance_RM, YesterdayTotalBalance, YesterdayTotalBalance_RM,PendingTransfer3rd, PendingTransfer3rd_RM)
 		SELECT
 			mrecommend,			
-			SUM(
-				  (CASE WHEN b.custid = b.mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END)
-				+ (CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END)
-				+ (CASE WHEN b.custid <> b.recommend AND b.custid <> b.mrecommend THEN winlost-actual_stake+playercomm ELSE 0 END)
-				) totalBalance, 			
-			SUM((
-				  (CASE WHEN b.custid = b.mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END)
-				+ (CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END)
-				+ (CASE WHEN b.custid <> b.recommend AND b.custid <> b.mrecommend THEN winlost-actual_stake+playercomm ELSE 0 END)
-				)* ActualRate ) TotalBalance_RM, 			
-			SUM(
-				  (CASE WHEN b.custid = b.mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END)
-				+ (CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END)
-				+ (CASE WHEN b.custid <> b.recommend AND b.custid <> b.mrecommend THEN winlost-actual_stake+playercomm ELSE 0 END)
-				) YesterdayTotalBalance, 			
-			SUM((
-				  (CASE WHEN b.custid = b.mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END)
-				+ (CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END)
-				+ (CASE WHEN b.custid <> b.recommend AND b.custid <> b.mrecommend THEN winlost-actual_stake+playercomm ELSE 0 END)
-				)* ActualRate ) YesterdayTotalBalance_RM			
+			SUM(CASE WHEN b.Bettype IN (21008,21009) THEN 0
+						ELSE ( 
+								  (CASE WHEN b.custid = b.mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END)
+								+ (CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END)
+								+ (CASE WHEN b.custid <> b.recommend AND b.custid <> b.mrecommend THEN winlost-actual_stake+playercomm ELSE 0 END)
+							 )
+					 END) totalBalance, 			
+			SUM(CASE WHEN b.Bettype IN (21008,21009) THEN 0
+						ELSE (
+								  (CASE WHEN b.custid = b.mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END)
+								+ (CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END)
+								+ (CASE WHEN b.custid <> b.recommend AND b.custid <> b.mrecommend THEN winlost-actual_stake+playercomm ELSE 0 END)
+							 ) * ActualRate 
+					 END) TotalBalance_RM, 			
+			
+			SUM(CASE WHEN b.Bettype IN (21008, 21009) THEN 0 
+						ELSE (
+								  (CASE WHEN b.custid = b.mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END)
+								+ (CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END)
+								+ (CASE WHEN b.custid <> b.recommend AND b.custid <> b.mrecommend THEN winlost-actual_stake+playercomm ELSE 0 END)
+							 ) 
+					 END) YesterdayTotalBalance, 			
+			
+			SUM(CASE WHEN b.Bettype IN (21008, 21009) THEN 0 
+						ELSE (
+								  (CASE WHEN b.custid = b.mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END)
+								+ (CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END)
+								+ (CASE WHEN b.custid <> b.recommend AND b.custid <> b.mrecommend THEN winlost-actual_stake+playercomm ELSE 0 END)
+							 ) * ActualRate 
+					 END ) YesterdayTotalBalance_RM,
+
+			SUM(CASE WHEN b.Bettype IN (21008, 21009) THEN -(b.Winlost - b.Actual_Stake) 
+						ELSE 0 
+					 END) AS PendingTransfer3rd,
+
+			SUM(CASE WHEN b.Bettype IN (21008, 21009) THEN -(b.Winlost - b.Actual_Stake) * b.ActualRate
+						ELSE 0 
+					 END) AS PendingTransfer3rd_RM
+
 		FROM dbo.transfer b WITH(NOLOCK) 
 		WHERE EXISTS (SELECT TOP 1 1 FROM #CustInfo c WHERE b.mrecommend = c.CustId AND c.RoleId = 3)		
 			AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
@@ -305,7 +347,7 @@ BEGIN
 			SUM((mwinlost+acomm-comm)+ (awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm)) as totalBalance,			
 			SUM(((mwinlost+acomm-comm)+(awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm))* ActualRate) as TotalBalance_RM, 
 			SUM(CASE WHEN winlostdate = @yesterday THEN ((mwinlost+acomm-comm)+(awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm)) ELSE 0 END) AS YesterdayTotalBalance,
-			SUM(CASE WHEN winlostdate = @yesterday THEN ((mwinlost+acomm-comm)+(awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm))* ActualRate ELSE 0 END) AS YesterdayTotalBalance_RM				
+			SUM(CASE WHEN winlostdate = @yesterday THEN ((mwinlost+acomm-comm)+(awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm))* ActualRate ELSE 0 END) AS YesterdayTotalBalance_RM
 		FROM dbo.bettransRnG b WITH(NOLOCK)
 		WHERE EXISTS (SELECT TOP 1 1 FROM #CustInfo c WHERE b.mrecommend = c.CustId AND c.RoleId = 3)
 			AND b.statusID IN (111, 112, 113)
@@ -319,7 +361,7 @@ BEGIN
 			SUM((mwinlost+acomm-comm)+ (awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm)) as totalBalance,			
 			SUM(((mwinlost+acomm-comm)+(awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm))* ActualRate) as TotalBalance_RM, 
 			SUM(CASE WHEN winlostdate = @yesterday THEN ((mwinlost+acomm-comm)+(awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm)) ELSE 0 END) AS YesterdayTotalBalance,
-			SUM(CASE WHEN winlostdate = @yesterday THEN ((mwinlost+acomm-comm)+(awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm))* ActualRate ELSE 0 END) AS YesterdayTotalBalance_RM	
+			SUM(CASE WHEN winlostdate = @yesterday THEN ((mwinlost+acomm-comm)+(awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm))* ActualRate ELSE 0 END) AS YesterdayTotalBalance_RM
 		FROM dbo.bettransLC b WITH(NOLOCK)
 		WHERE EXISTS (SELECT TOP 1 1 FROM #CustInfo c WHERE b.mrecommend = c.CustId AND c.RoleId = 3)
 			AND b.statusID IN (111, 112, 113)
@@ -349,39 +391,49 @@ BEGIN
 				SUM (TotalBalance) AS TotalBalance,
 				SUM (TotalBalance_RM) AS TotalBalance_RM,
 				SUM (YesterdayTotalBalance) AS YesterdayTotalBalance,
-				SUM (YesterdayTotalBalance_RM) AS YesterdayTotalBalance_RM			   
+				SUM (YesterdayTotalBalance_RM) AS YesterdayTotalBalance_RM
 		FROM Bettrans_CTE b
 		WHERE b.winlostdate < @yesterday  OR NOT EXISTS (SELECT 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)  -- exclude  bettype of bettransRNG and bettransLC
 		GROUP BY srecommend
 
 		-- transfer
-		INSERT INTO #balanceInfo (CustId, totalBalance, TotalBalance_RM, YesterdayTotalBalance, YesterdayTotalBalance_RM)
+		INSERT INTO #balanceInfo (CustId, totalBalance, TotalBalance_RM, YesterdayTotalBalance, YesterdayTotalBalance_RM,PendingTransfer3rd, PendingTransfer3rd_RM)
 		SELECT
 			srecommend,			
-			SUM(
-				  (CASE WHEN b.custid = b.srecommend THEN winlost-actual_stake ELSE swinlost+scomm-acomm END)
-				+ (CASE WHEN b.custid = b.mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END)
-				+ (CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END)
-				+ (CASE WHEN b.custid <> b.recommend AND b.custid <> b.mrecommend AND b.custid <> b.srecommend THEN winlost-actual_stake+playercomm ELSE 0 END)
-				) totalBalance, 			
-			SUM((
-				  (CASE WHEN b.custid = b.srecommend THEN winlost-actual_stake ELSE swinlost+scomm-acomm END)
-				+ (CASE WHEN b.custid = b.mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END)
-				+ (CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END)
-				+ (CASE WHEN b.custid <> b.recommend AND b.custid <> b.mrecommend AND b.custid <> b.srecommend THEN winlost-actual_stake+playercomm ELSE 0 END)
-				)* ActualRate ) TotalBalance_RM, 			
-			SUM(
-				  (CASE WHEN b.custid = b.srecommend THEN winlost-actual_stake ELSE swinlost+scomm-acomm END)
-				+ (CASE WHEN b.custid = b.mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END)
-				+ (CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END)
-				+ (CASE WHEN b.custid <> b.recommend AND b.custid <> b.mrecommend AND b.custid <> b.srecommend THEN winlost-actual_stake+playercomm ELSE 0 END)
-				) YesterdayTotalBalance, 			
-			SUM((
-				  (CASE WHEN b.custid = b.srecommend THEN winlost-actual_stake ELSE swinlost+scomm-acomm END)
-				+ (CASE WHEN b.custid = b.mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END)
-				+ (CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END)
-				+ (CASE WHEN b.custid <> b.recommend AND b.custid <> b.mrecommend AND b.custid <> b.srecommend THEN winlost-actual_stake+playercomm ELSE 0 END)
-				)* ActualRate ) YesterdayTotalBalance_RM			
+			SUM(CASE WHEN b.Bettype IN (21008,21009) THEN 0
+						ELSE (
+								  (CASE WHEN b.custid = b.srecommend THEN winlost-actual_stake ELSE swinlost+scomm-acomm END)
+								+ (CASE WHEN b.custid = b.mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END)
+								+ (CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END)
+								+ (CASE WHEN b.custid <> b.recommend AND b.custid <> b.mrecommend AND b.custid <> b.srecommend THEN winlost-actual_stake+playercomm ELSE 0 END)
+							 )
+					 END) totalBalance, 			
+			SUM(CASE WHEN b.Bettype IN (21008,21009) THEN 0
+						ELSE (
+								  (CASE WHEN b.custid = b.srecommend THEN winlost-actual_stake ELSE swinlost+scomm-acomm END)
+								+ (CASE WHEN b.custid = b.mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END)
+								+ (CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END)
+								+ (CASE WHEN b.custid <> b.recommend AND b.custid <> b.mrecommend AND b.custid <> b.srecommend THEN winlost-actual_stake+playercomm ELSE 0 END)
+							 ) * ActualRate 
+					 END) TotalBalance_RM,	
+			SUM(CASE WHEN b.Bettype IN (21008, 21009) THEN 0 
+						ELSE (
+								  (CASE WHEN b.custid = b.srecommend THEN winlost-actual_stake ELSE swinlost+scomm-acomm END)
+								+ (CASE WHEN b.custid = b.mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END)
+								+ (CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END)
+								+ (CASE WHEN b.custid <> b.recommend AND b.custid <> b.mrecommend AND b.custid <> b.srecommend THEN winlost-actual_stake+playercomm ELSE 0 END)
+							 )
+					 END) YesterdayTotalBalance,
+			SUM(CASE WHEN b.Bettype IN (21008, 21009) THEN 0 
+						ELSE (
+							  (CASE WHEN b.custid = b.srecommend THEN winlost-actual_stake ELSE swinlost+scomm-acomm END)
+							+ (CASE WHEN b.custid = b.mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END)
+							+ (CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END)
+							+ (CASE WHEN b.custid <> b.recommend AND b.custid <> b.mrecommend AND b.custid <> b.srecommend THEN winlost-actual_stake+playercomm ELSE 0 END)
+							 ) * ActualRate  
+					 END) YesterdayTotalBalance_RM,
+			SUM(CASE WHEN b.Bettype IN (21008, 21009) THEN -(b.Winlost - b.Actual_Stake) ELSE 0 END) PendingTransfer3rd,
+			SUM(CASE WHEN b.Bettype IN (21008, 21009) THEN -(b.Winlost - b.Actual_Stake) * b.ActualRate ELSE 0 END) PendingTransfer3rd_RM
 		FROM dbo.transfer b WITH(NOLOCK) 
 		WHERE EXISTS (SELECT TOP 1 1 FROM #CustInfo c WHERE b.srecommend = c.CustId AND c.RoleId = 4)	
 			AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
@@ -397,7 +449,7 @@ BEGIN
 			SUM((swinlost+scomm-acomm)+(mwinlost+acomm-comm)+ (awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm)) as totalBalance,			
 			SUM(((swinlost+scomm-acomm)+(mwinlost+acomm-comm)+(awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm))* ActualRate) as TotalBalance_RM, 
 			SUM(CASE WHEN winlostdate = @yesterday THEN ((swinlost+scomm-acomm)+(mwinlost+acomm-comm)+(awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm)) ELSE 0 END) AS YesterdayTotalBalance,
-			SUM(CASE WHEN winlostdate = @yesterday THEN ((swinlost+scomm-acomm)+(mwinlost+acomm-comm)+(awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm))* ActualRate ELSE 0 END) AS YesterdayTotalBalance_RM				
+			SUM(CASE WHEN winlostdate = @yesterday THEN ((swinlost+scomm-acomm)+(mwinlost+acomm-comm)+(awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm))* ActualRate ELSE 0 END) AS YesterdayTotalBalance_RM
 		FROM dbo.bettransRnG b WITH(NOLOCK)
 		WHERE EXISTS (SELECT TOP 1 1 FROM #CustInfo c WHERE b.srecommend = c.CustId AND c.RoleId = 4)
 			AND statusID NOT IN (0,1) 
@@ -411,14 +463,13 @@ BEGIN
 			SUM((swinlost+scomm-acomm)+(mwinlost+acomm-comm)+ (awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm)) as totalBalance,			
 			SUM(((swinlost+scomm-acomm)+(mwinlost+acomm-comm)+(awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm))* ActualRate) as TotalBalance_RM, 
 			SUM(CASE WHEN winlostdate = @yesterday THEN ((swinlost+scomm-acomm)+(mwinlost+acomm-comm)+(awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm)) ELSE 0 END) AS YesterdayTotalBalance,
-			SUM(CASE WHEN winlostdate = @yesterday THEN ((swinlost+scomm-acomm)+(mwinlost+acomm-comm)+(awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm))* ActualRate ELSE 0 END) AS YesterdayTotalBalance_RM	
+			SUM(CASE WHEN winlostdate = @yesterday THEN ((swinlost+scomm-acomm)+(mwinlost+acomm-comm)+(awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm))* ActualRate ELSE 0 END) AS YesterdayTotalBalance_RM
 		FROM dbo.bettransLC b WITH(NOLOCK)
 		WHERE EXISTS (SELECT TOP 1 1 FROM #CustInfo c WHERE b.srecommend = c.CustId AND c.RoleId = 4)
 			AND statusID NOT IN (0,1) 
 			AND winlostdate >= @yesterday
 		GROUP BY srecommend
 	END
-
 	--headline
 	IF EXISTS (SELECT TOP 1 1 FROM #CustInfo WHERE RoleId = 0)
 	BEGIN
@@ -453,26 +504,34 @@ BEGIN
 				SUM (TotalBalance) AS TotalBalance,
 				SUM (TotalBalance_RM) AS TotalBalance_RM,
 				SUM (YesterdayTotalBalance) AS YesterdayTotalBalance,
-				SUM (YesterdayTotalBalance_RM) AS YesterdayTotalBalance_RM			   
+				SUM (YesterdayTotalBalance_RM) AS YesterdayTotalBalance_RM
 		FROM Bettrans_CTE b
 		WHERE winlostdate < @yesterday OR NOT EXISTS (SELECT 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)  -- exclude  bettype of bettransRNG and bettransLC
 		GROUP BY HeadlineID
 
-		INSERT INTO #balanceInfo (CustId, totalBalance, TotalBalance_RM, YesterdayTotalBalance, YesterdayTotalBalance_RM)
+		INSERT INTO #balanceInfo (CustId, totalBalance, TotalBalance_RM, YesterdayTotalBalance, YesterdayTotalBalance_RM,PendingTransfer3rd, PendingTransfer3rd_RM)
 		SELECT
 			cs.HeadlineID
 			,0 AS totalBalance
 			,0 AS totalBalance_RM
 			,SUM(bal.totalBalance)	AS YesterdayTotalBalance
 			,SUM(bal.totalBalance * actualrate) AS YesterdayTotalBalance_RM
+			,SUM(bal.PendingTransfer3rd) AS PendingTransfer3rd
+			,SUM(bal.PendingTransfer3rd * b.ActualRate) AS PendingTransfer3rd_RM
 		FROM dbo.transfer b WITH(NOLOCK)
 			INNER JOIN #tempSuper cs ON cs.SuperID = b.srecommend
 			CROSS APPLY (
 				 SELECT 
-				 (CASE WHEN b.custid = b.srecommend THEN winlost-actual_stake ELSE swinlost+scomm-acomm END)
-					+ (CASE WHEN b.custid = b.mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END)
-					+ (CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END)
-					+ (CASE WHEN b.custid <> b.recommend AND b.custid <> b.mrecommend AND b.custid <> b.srecommend THEN winlost-actual_stake+playercomm ELSE 0 END) AS totalBalance
+					CASE WHEN b.Bettype IN (21008, 21009) THEN 0 
+							ELSE
+								  (CASE WHEN b.custid = b.srecommend THEN winlost-actual_stake ELSE swinlost+scomm-acomm END)
+								+ (CASE WHEN b.custid = b.mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END)
+								+ (CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END)
+								+ (CASE WHEN b.custid <> b.recommend AND b.custid <> b.mrecommend AND b.custid <> b.srecommend THEN winlost-actual_stake+playercomm ELSE 0 END) 
+						 END AS totalBalance,
+					CASE WHEN b.Bettype IN (21008, 21009) THEN - (b.Winlost - b.Actual_Stake) 
+							ELSE 0 
+						 END AS PendingTransfer3rd
 			) AS bal
 		WHERE 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
                         WHEN bettype = 20000 AND winlostdate > @BUDay THEN 0 --> new bal
@@ -487,7 +546,7 @@ BEGIN
 			,0 AS totalBalance		
 			,0 AS TotalBalance_RM
 			,SUM(CASE WHEN winlostdate = @yesterday THEN ((swinlost+scomm-acomm)+(mwinlost+acomm-comm)+(awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm)) ELSE 0 END) AS YesterdayTotalBalance
-			,SUM(CASE WHEN winlostdate = @yesterday THEN ((swinlost+scomm-acomm)+(mwinlost+acomm-comm)+(awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm))* ActualRate ELSE 0 END) AS YesterdayTotalBalance_RM				
+			,SUM(CASE WHEN winlostdate = @yesterday THEN ((swinlost+scomm-acomm)+(mwinlost+acomm-comm)+(awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm))* ActualRate ELSE 0 END) AS YesterdayTotalBalance_RM
 		FROM dbo.bettransRnG b WITH(NOLOCK)
 		INNER JOIN #tempSuper cs ON cs.SuperID = b.srecommend
 		WHERE  b.statusID IN (111, 112, 113) 
@@ -501,7 +560,7 @@ BEGIN
 			,0 AS totalBalance
 			,0 AS TotalBalance_RM
 			,SUM(CASE WHEN winlostdate = @yesterday THEN ((swinlost+scomm-acomm)+(mwinlost+acomm-comm)+(awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm)) ELSE 0 END) AS YesterdayTotalBalance
-			,SUM(CASE WHEN winlostdate = @yesterday THEN ((swinlost+scomm-acomm)+(mwinlost+acomm-comm)+(awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm))* ActualRate ELSE 0 END) AS YesterdayTotalBalance_RM	
+			,SUM(CASE WHEN winlostdate = @yesterday THEN ((swinlost+scomm-acomm)+(mwinlost+acomm-comm)+(awinlost+comm-playercomm)+ (winlost-actual_stake+playercomm))* ActualRate ELSE 0 END) AS YesterdayTotalBalance_RM
 		FROM dbo.bettransLC b WITH(NOLOCK)
 		INNER JOIN #tempSuper cs ON cs.SuperID = b.srecommend
 		WHERE b.statusID IN (111, 112, 113) 
@@ -509,12 +568,22 @@ BEGIN
 		GROUP BY cs.HeadlineID
 
 		-- headline cash
-		INSERT INTO #balanceInfo (CustId, totalBalance, TotalBalance_RM, YesterdayTotalBalance, YesterdayTotalBalance_RM)
+		INSERT INTO #balanceInfo (CustId, totalBalance, TotalBalance_RM, YesterdayTotalBalance, YesterdayTotalBalance_RM,PendingTransfer3rd, PendingTransfer3rd_RM)
 		SELECT b.custid
 			,0
 			,0
-			, SUM(b.winlost-b.actual_stake) AS YesterdayTotalCash
-			, SUM((b.winlost-b.actual_stake) * actualRate) AS YesterdayTotalCash_RM
+			,SUM(CASE WHEN b.Bettype IN (21008, 21009) THEN 0 
+						ELSE b.winlost-b.actual_stake 
+					  END) AS YesterdayTotalCash
+			,SUM(CASE WHEN b.Bettype IN (21008, 21009) THEN 0 
+						ELSE (b.winlost-b.actual_stake) * actualRate
+					  END) AS YesterdayTotalCash_RM
+			,SUM(CASE WHEN b.Bettype IN (21008, 21009) THEN -(b.Winlost - b.Actual_Stake) 
+						ELSE 0 
+					  END) AS PendingTransfer3rd
+			,SUM(CASE WHEN b.Bettype IN (21008, 21009) THEN -(b.Winlost - b.Actual_Stake) * b.ActualRate
+						ELSE 0 
+					  END) AS PendingTransfer3rd_RM
 		FROM dbo.transfer b WITH(NOLOCK)
 		WHERE EXISTS (SELECT TOP 1 1 FROM #CustInfo t WHERE b.custid = t.custid AND RoleId = 0)
 			AND b.bettype >= 20000
@@ -527,12 +596,15 @@ BEGIN
 		DROP TABLE #tempSuper
 	END
 
+
 	SELECT
 		ci.CustId,
 		SUM(ISNULL(bal.TotalBalance, 0)) TotalBalance,
 		SUM(ISNULL(bal.TotalBalance_RM, 0)) TotalBalance_RM,
 		SUM(ISNULL(bal.YesterdayTotalBalance, 0)) YesterdayTotalBalance,
-		SUM(ISNULL(bal.YesterdayTotalBalance_RM, 0)) YesterdayTotalBalance_RM		
+		SUM(ISNULL(bal.YesterdayTotalBalance_RM, 0)) YesterdayTotalBalance_RM,
+		SUM(ISNULL(bal.PendingTransfer3rd,0)) PendingTransfer3rd,
+		SUM(ISNULL(bal.PendingTransfer3rd_RM,0)) PendingTransfer3rd_RM
 	FROM #CustInfo ci
 	LEFT JOIN #balanceInfo bal ON ci.CustId = bal.custid
 	GROUP BY ci.CustId
@@ -541,4 +613,3 @@ BEGIN
 	DROP TABLE #balanceInfo
 	DROP TABLE #CustInfo
 END
-GO
