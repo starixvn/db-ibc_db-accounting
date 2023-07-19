@@ -1,10 +1,10 @@
 ﻿/*<info serverAlias="DBACC-BODB02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_DailyTxn_Sel]
-	@fromdate	datetime,	
-	@Type		nvarchar(30) = '',
-	@Creator	varchar(30) = '',
+	@fromdate	DATETIME,	
+	@Type		NVARCHAR(30) = '',
+	@Creator	VARCHAR(30) = '',
 	@checkerID	TINYINT = 1 ,
-	@checkerName varchar(50) = ''
+	@checkerName VARCHAR(50) = ''
 as
 
 /*
@@ -22,6 +22,7 @@ Revisions:
 	- 20181105@Louis: Credit Collection Summary  [RedmineID: #98621]
 	- 20211115@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
+  	- 20230530@Evan: Enhancement for Customer Statement - add output column IsAllowVerify [Redmine: #186750]
 
 Param's Explanation: Daily transaction
 	@Type   : Dep, Trac, ..
@@ -33,6 +34,8 @@ BEGIN
 
 	-- get BU date
 	DECLARE @balanceUpDay SMALLDATETIME
+		,	@ArchivedDay	SMALLDATETIME
+		,	@ConstraintDay	SMALLDATETIME
 	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
 
 	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
@@ -40,19 +43,29 @@ BEGIN
 
 	SELECT @balanceUpDay = BalanceUpDay FROM @tblMoveBetBalanceUp
 
+	--Check to not allow to veify before balance up date
+	SELECT @ArchivedDay	= MAX(winlostdate)
+	FROM DBTXN.bodb02.dbo.Task_ArchiveDate WITH (NOLOCK)
+
+	SELECT @ConstraintDay =  CASE 
+									WHEN @ArchivedDay > @balanceUpDay THEN DATEADD(DAY,7,@balanceUpDay) -- new BU
+									ELSE @balanceUpDay -- old BU
+								END
+
 	CREATE TABLE #StatementDaily
 	(	
-		transid bigint,
-		refno bigint,
-		username varchar(50), 
+		transid BIGINT,
+		refno BIGINT,
+		username VARCHAR(50), 
 		checkerID int,
-		checkerName varchar(50),
-		checkTime datetime,
-		transdate smalldatetime, 
-		amount money, 
-		transdesc nvarchar(300), 
-		typenamee nvarchar(30), 
-		creator varchar(30)
+		checkerName VARCHAR(50),
+		checkTime DATETIME,
+		transdate SMALLDATETIME, 
+		amount MONEY, 
+		transdesc NVARCHAR(300), 
+		typenamee NVARCHAR(30), 
+		creator VARCHAR(30),
+		IsAllowVerify BIT DEFAULT 1
 	)
 
 	IF @checkerID in (0,1)
@@ -68,7 +81,8 @@ BEGIN
 				b.winlost-b.actual_stake amount,
 				b.transdesc, 
 				CASE WHEN bt.typeId = 21003 AND ISNULL(t.IsCollection,0) = 1 THEN 'Coll' ELSE bt.typenamee END typenamee,
-				creator.username creator
+				creator.username creator,
+				CASE WHEN b.WinlostDate < @ConstraintDay THEN 0 ELSE 1 END AS IsAllowVerify
 		FROM dbo.Transfer b with (nolock)
 			INNER JOIN CustSuper s with (nolock) on b.srecommEND = s.custid 
 			INNER JOIN customer creator WITH (NOLOCK) on creator.custid=b.creator
@@ -107,7 +121,8 @@ BEGIN
 				b.winlost-b.actual_stake amount,
 				b.transdesc, 
 				CASE WHEN bt.typeId = 21003 AND ISNULL(t.IsCollection,0) = 1 THEN 'Coll' ELSE bt.typenamee END typenamee,
-				creator.username creator
+				creator.username creator,
+				CASE WHEN b.WinlostDate < @ConstraintDay THEN 0 ELSE 1 END AS IsAllowVerify
 		FROM dbo.Transfer b WITH(NOLOCK)
 			INNER JOIN CustSuper s WITH(NOLOCK) ON b.srecommEND = s.custid 
 			INNER JOIN customer creator WITH(NOLOCK) ON creator.custid=b.creator
@@ -129,8 +144,6 @@ BEGIN
 			AND CASE WHEN @checkerName <> '' THEN t.CheckerName ELSE @checkerName END = @checkerName 
 			AND ISNULL(t.CheckerId,0) <> 0 
 	END 
-
-
 
 	SELECT * 
 	FROM #StatementDaily

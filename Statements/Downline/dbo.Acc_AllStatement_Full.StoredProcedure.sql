@@ -75,7 +75,8 @@ AS
 		- 20220421@Percy: Get Opening Balance from Statement_Accum table [RedmineID: #169560]
 		- 20221219@Bobby: Correct statement in case difference between winlostdate and transdate of transfer [RedmineID: #181771]
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
-		
+		- 20230530@Evan: Not allow veify before balance up date [Redmine: #186750]
+
 	Param explanation : 
 		- Transtypeid = 4 - GrandPrize
 
@@ -149,6 +150,18 @@ BEGIN
 	----Get Sport Bettype Matrix------
 	DECLARE @isTest BIT = 0
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
+
+	--Check to not allow to veify before balance up date
+	DECLARE @ArchivedDay		SMALLDATETIME
+		, @ConstraintDay	SMALLDATETIME
+
+	SELECT @ArchivedDay	= MAX(winlostdate)
+	FROM DBTXN.bodb02.dbo.Task_ArchiveDate WITH (NOLOCK)
+
+	SELECT @ConstraintDay =	CASE 
+								WHEN @ArchivedDay > @_BalanceUpDay THEN DATEADD(DAY,7,@_BalanceUpDay) -- new BU
+								ELSE @_BalanceUpDay -- old BU
+							END
 
 	CREATE TABLE #SportBettype (ProductID INT, Bettype INT, RefTable TINYINT, VoidRejectGroup TINYINT) -- VoidRejectGroup for get data from zzzbettrans
 	INSERT INTO  #SportBettype (ProductID, Bettype, RefTable)
@@ -411,7 +424,7 @@ BEGIN
 				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE ti.CheckerId END, -- Transfer to Casino/Bingo/P2P
 				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN '0' ELSE ti.CheckerName END,
 				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE b.checkTime END,
-				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN 0 ELSE 1 END   
+				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) OR b.WinlostDate < @ConstraintDay THEN 0 ELSE 1 END   
 			FROM
 				dbo.Transfer b WITH (NOLOCK)
 				INNER JOIN bettype bt WITH (NOLOCK) ON b.bettype = bt.typeid 
@@ -609,7 +622,7 @@ BEGIN
 				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE ti.CheckerId END,
 				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN '0' ELSE ti.CheckerName END,
 				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE b.checkTime END,
-				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN 0 ELSE 1 END   
+				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) OR b.WinlostDate < @ConstraintDay THEN 0 ELSE 1 END   
 			FROM
 				dbo.Transfer b WITH (NOLOCK) 
 				INNER JOIN bettype bt WITH (NOLOCK) ON b.bettype = bt.typeid 
@@ -733,7 +746,7 @@ BEGIN
 				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE ti.CheckerId END,
 				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN '0' ELSE ti.CheckerName END,
 				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE b.checkTime END,
-				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN 0 ELSE 1 END    
+				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) OR b.WinlostDate < @ConstraintDay THEN 0 ELSE 1 END    
 			FROM
 				dbo.transfer b WITH (NOLOCK) 
 				INNER JOIN bettype bt WITH (NOLOCK) ON b.bettype = bt.typeid 
@@ -857,7 +870,7 @@ BEGIN
 				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE ti.CheckerId END,
 				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN '0' ELSE ti.CheckerName END,
 				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL ELSE b.checkTime END,
-				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) THEN 0 ELSE 1 END  
+				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21008,21009) OR b.WinlostDate < @ConstraintDay THEN 0 ELSE 1 END  
 			FROM
 				dbo.Transfer b WITH (NOLOCK) 
 				INNER JOIN bettype bt WITH (NOLOCK) ON b.bettype=bt.typeid  
@@ -980,7 +993,7 @@ BEGIN
 				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21007,21008,21009) THEN NULL ELSE ti.CheckerId END,
 				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21007,21008,21009) THEN '0' ELSE ti.CheckerName END,
 				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21007,21008,21009) THEN NULL ELSE b.checkTime END,
-				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21007,21008,21009) THEN 0 ELSE 1 END  
+				CASE WHEN b.bettype IN (23001,23002,23101,23102,23201,23202,21007,21008,21009) OR b.WinlostDate < @ConstraintDay THEN 0 ELSE 1 END  
 			FROM
 				dbo.transfer b WITH (NOLOCK) 
 				INNER JOIN bettype bt WITH (NOLOCK) ON b.bettype=bt.typeid  
