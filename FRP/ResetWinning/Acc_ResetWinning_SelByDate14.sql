@@ -6,7 +6,12 @@ ALTER PROCEDURE [dbo].[Acc_ResetWinning_SelByDate14]
 	@Creator		INT = 10278938,   --- starixIT
 	@ErrCode		INT = 0 OUTPUT,
     @ErrMsg			VARCHAR(100) = '' OUTPUT,
-	@SiteDBGroupID	SMALLINT = 0
+	@SiteDBGroupID	SMALLINT = 0,
+	@resetData1		VARCHAR(8000) = '' OUTPUT,
+	@resetData2		VARCHAR(8000) = '' OUTPUT,
+	@resetData3		VARCHAR(8000) = '' OUTPUT,
+	@resetData4		VARCHAR(8000) = '' OUTPUT,
+	@resetData5		VARCHAR(8000) = '' OUTPUT
 AS
 /*	
 	Created: 20120612@Lukas
@@ -493,26 +498,38 @@ BEGIN
 					@transDesc    nvarchar(1000)= '',
 					@ip			  VARCHAR(45) = '',
 					@LogData	  NVARCHAR(200) = ''
-                
-			SELECT 		
-				@Winlostdate Winlostdate ,
-				d.custid		,
-				ROUND(r.LatestReset, 2) amount		,
-				'DWL-' + CAST(d.product as varchar(250))
-					   + '# ' + CAST(@Winlostdate as varchar(30))
-					   + CAST(d.custid as varchar(50)) + ':'
-					   + CAST(ROUND(r.LatestReset, 2) as varchar(100)) transdesc,
-				@creator creator		,
-				@ip ip			,
-				r.WinlostAfterExtraPT ,
-				r.reset       		,
-				d.product     		
-			FROM #reset r
-			INNER JOIN @dummyBalance d on r.product = d.product 
-			INNER JOIN dbo.Customer c WITH(NOLOCK) ON c.CustID = d.CustId
-			INNER JOIN dbo.Site s WITH(NOLOCK) ON s.site = c.site
-			WHERE ROUND(r.LatestReset, 2) <> 0 AND s.SiteDBGroupID = @SiteDBGroupID
-			
+            
+			DECLARE @resetData VARCHAR(MAX) = ''
+			SELECT @resetData =  CAST (
+			(
+				SELECT 		
+					@Winlostdate AS '@Winlostdate' ,
+					d.custid AS '@custid'	,
+					ROUND(r.LatestReset, 2)  AS '@amount' 		,
+					'DWL-' + CAST(d.product as varchar(250))
+						   + '# ' + CAST(@Winlostdate as varchar(30))
+						   + CAST(d.custid as varchar(50)) + ':'
+						   + CAST(ROUND(r.LatestReset, 2) as varchar(100)) AS '@transdesc' 	,
+					@creator AS '@creator',
+					@ip AS '@ip'		,
+					r.WinlostAfterExtraPT AS '@WinlostAfterExtraPT',
+					r.reset        AS '@reset'		,
+					d.product     	AS '@product'	
+				FROM #reset r
+				INNER JOIN @dummyBalance d on r.product = d.product 
+				INNER JOIN dbo.Customer c WITH(NOLOCK) ON c.CustID = d.CustId
+				INNER JOIN dbo.Site s WITH(NOLOCK) ON s.site = c.site
+				WHERE ROUND(r.LatestReset, 2) <> 0 AND s.SiteDBGroupID = @SiteDBGroupID
+
+				FOR XML PATH('z'), ROOT('ROOT')
+			) AS VARCHAR(MAX))
+
+			SELECT @resetData1 = SUBSTRING(@resetData, 1, 8000) ;
+			SELECT @resetData2 = SUBSTRING(@resetData, 8001, 8000) ;
+			SELECT @resetData3 = SUBSTRING(@resetData, 16001, 8000) ;
+			SELECT @resetData4 = SUBSTRING(@resetData, 24001, 8000) ;
+			SELECT @resetData5 = SUBSTRING(@resetData, 32001, 8000) ;
+
 			DROP TABLE #reset	
 
 		END 

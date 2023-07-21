@@ -7,7 +7,12 @@ ALTER PROCEDURE [dbo].[Task_ResetWinning_ExtraPT14]
 	@ip       VARCHAR(45) = '',
 	@ErrCode  INT = 0 OUTPUT,
     @ErrMsg   VARCHAR(100) = '' OUTPUT,
-	@SiteDBGroupID SMALLINT = 0
+	@SiteDBGroupID SMALLINT = 0,
+	@resetData1		VARCHAR(8000) = '' OUTPUT,
+	@resetData2		VARCHAR(8000) = '' OUTPUT,
+	@resetData3		VARCHAR(8000) = '' OUTPUT,
+	@resetData4		VARCHAR(8000) = '' OUTPUT,
+	@resetData5		VARCHAR(8000) = '' OUTPUT
 AS
 /*
 	Creator: Sophia
@@ -193,19 +198,34 @@ BEGIN
                 
         SELECT @winlostdate = @fromdate
 
+
+		DECLARE @resetData VARCHAR(MAX) = ''
 		--WLDate, amount, transdesc, creator, ip
-		SELECT @winlostdate WLDate,
-				r.CustID  ,
-				r.Variance amount,
-				'DWL-' + CAST(@fromdate as varchar(30))
-                        + CAST(r.CustID as varchar(50)) + ':'
-                        + CAST(r.Variance as varchar(100)) transdesc,
-				@creator creator,
-				@ip ip
-        FROM @reset r
-		INNER JOIN dbo.Customer c WITH(NOLOCK) ON r.CustID = c.custid
-		INNER JOIN dbo.Site s WITH(NOLOCK) ON s.site = c.site
-        WHERE r.WinlostDate = @WinlostDate AND s.SiteDBGroupID = @SiteDBGroupID AND r.Variance <> 0
+		SELECT @resetData = CAST
+		(
+		(
+			SELECT @winlostdate AS '@WLDate' ,
+					r.CustID  AS '@CustID' ,
+					r.Variance AS '@amount' ,
+					'DWL-' + CAST(@fromdate as varchar(30))
+							+ CAST(r.CustID as varchar(50)) + ':'
+							+ CAST(r.Variance as varchar(100)) AS '@transdesc',
+					@creator  AS '@creator' ,
+					@ip		 AS '@ip'
+			FROM @reset r
+			INNER JOIN dbo.Customer c WITH(NOLOCK) ON r.CustID = c.custid
+			INNER JOIN dbo.Site s WITH(NOLOCK) ON s.site = c.site
+			WHERE r.WinlostDate = @WinlostDate AND s.SiteDBGroupID = @SiteDBGroupID AND r.Variance <> 0
+
+			FOR XML PATH('z'), ROOT('ROOT')
+		)  AS VARCHAR(MAX))
+
+		SELECT @resetData1 = SUBSTRING(@resetData, 1, 8000) ;
+		SELECT @resetData2 = SUBSTRING(@resetData, 8001, 8000) ;
+		SELECT @resetData3 = SUBSTRING(@resetData, 16001, 8000) ;
+		SELECT @resetData4 = SUBSTRING(@resetData, 24001, 8000) ;
+		SELECT @resetData5 = SUBSTRING(@resetData, 32001, 8000) ;
+
 	END
 
 	DROP TABLE #winning
