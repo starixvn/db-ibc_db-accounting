@@ -45,6 +45,7 @@ Revisions:
 	- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
 	- 20220801@Danny: change code to support SiteDB [Redmine: #175253]
 	- 20230322@Danny: Enhance invalid transaction checking[Redmine: #184731]
+	- 20230724@Danny: Write log amount with money data type [Redmine: #183447]
 					   
 Param's Explanation:
 */
@@ -584,7 +585,7 @@ BEGIN
 				RETURN
 			END		
 		
-			Select @LogData = 'Transfer from Customer ' + @FromUserName + ' to Customer ' + @ToUserName + ' with amount ' + convert(varchar(20), @Amt) + ' Ref.No ' + convert(varchar(20), @refno)
+			Select @LogData = 'Transfer from Customer ' + @FromUserName + ' to Customer ' + @ToUserName + ' with amount ' + convert(varchar(20), @Amt, 2) + ' Ref.No ' + convert(varchar(20), @refno)
 			
 		END
 		ELSE
@@ -922,7 +923,7 @@ BEGIN
 				END		
 			END
 					
-			Select @LogData = 'Transfer from Customer ' + @ToUserName + ' to Customer ' + @FromUserName + ' with amount ' + convert(varchar(20), @Amt) + ' Ref.No ' + convert(varchar(20), @refno)
+			Select @LogData = 'Transfer from Customer ' + @ToUserName + ' to Customer ' + @FromUserName + ' with amount ' + convert(varchar(20), @Amt, 2) + ' Ref.No ' + convert(varchar(20), @refno)
 			
 		END
 		
