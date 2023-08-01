@@ -1,4 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCTG-bodb02" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_LicenseeTransfer_Job]
 	@MoveBetsDay		SMALLDATETIME,
 	@TransferMonthDate	SMALLDATETIME = NULL OUTPUT,
@@ -21,7 +21,7 @@ AS
 		- 20220810@Danny: Add check failed data step [Redmine: #175670]
 		- 20220802@Danny: change code to support SiteDB [Redmine: #175253]
 		- 20221206@Danny: Skip transferring for crypto Licensee [Redmine: #181343]
-
+		- 20230627@Danny: Change Meta data  [Redmine: #189515]
 		@Environment: LOCAL, SIT, UAT, PROD
 		 
 */

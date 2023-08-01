@@ -44,6 +44,7 @@ AS
 		- 20220801@Danny: change code to support SiteDB [Redmine: #175253]
 		- 20221107@Danny: Database - Sync-up Standby Server data - [RedmineID: #167261]
 		- 20230530@Evan: Enhancement for Customer Statement - update ErrMsg [Redmine: #186750]
+		- 20230609@Danny: support scale out credit [Redmine: #181595]
 
 */
 BEGIN
@@ -215,10 +216,11 @@ BEGIN
 		MERGE dbo.TransferInfo t
 		USING @Reversal s ON t.transid=s.transid
 		WHEN MATCHED THEN
-			UPDATE SET IsDel = 1
+			UPDATE SET IsDel = 1,
+					RepUpdateTime = SYSDATETIME()
 		WHEN NOT MATCHED THEN
-			INSERT (Transid,IsDel)
-			VALUES (s.Transid,1);
+			INSERT (Transid,IsDel,RepUpdateTime)
+			VALUES (s.Transid,1,SYSDATETIME());
 			
 		IF @@ERROR <> 0
 		BEGIN

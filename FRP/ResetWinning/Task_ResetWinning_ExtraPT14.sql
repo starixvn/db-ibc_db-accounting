@@ -6,7 +6,13 @@ ALTER PROCEDURE [dbo].[Task_ResetWinning_ExtraPT14]
 	@creator  INT = 5838421,
 	@ip       VARCHAR(45) = '',
 	@ErrCode  INT = 0 OUTPUT,
-    @ErrMsg   VARCHAR(100) = '' OUTPUT
+    @ErrMsg   VARCHAR(100) = '' OUTPUT,
+	@SiteDBGroupID SMALLINT = 0,
+	@resetData1		VARCHAR(8000) = '' OUTPUT,
+	@resetData2		VARCHAR(8000) = '' OUTPUT,
+	@resetData3		VARCHAR(8000) = '' OUTPUT,
+	@resetData4		VARCHAR(8000) = '' OUTPUT,
+	@resetData5		VARCHAR(8000) = '' OUTPUT
 AS
 /*
 	Creator: Sophia
@@ -28,6 +34,7 @@ AS
 		- 20230522@Lewis: Call sum Sps on other servers - [RedmineID: #188463]
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
 		- 20221024@Sol: Database - Sync-up Standby Server data - [RedmineID: #167261]
+		- 20220614@Danny: Database - scale out credit [RedmineID: #181595]
 		
 	Param's explain:
 		@mode:  0 _ view report
@@ -187,99 +194,38 @@ BEGIN
                 @custid			INT,
                 @resetCount		TINYINT = 0,
                 @transDesc		NVARCHAR(1000)= '',
-				@seq			TINYINT = 1,
-				@maxseq			TINYINT,
 				@LogData  		NVARCHAR(200) = ''
                 
         SELECT @winlostdate = @fromdate
 
-		SELECT
-			@maxseq = MAX(GroupID),
-			@resetCount = ISNULL(SUM(CASE WHEN Variance <> 0 THEN 1 ELSE 0 END), 0)
-        FROM   @reset
-        WHERE  WinlostDate = @WinlostDate
 
-        IF (@resetCount = 0)
-        BEGIN
-            SELECT @ErrMsg = 'No codes need to reset winning!',
-                   @ErrCode = 2
-            RETURN
-        END
+		DECLARE @resetData VARCHAR(MAX) = ''
+		--WLDate, amount, transdesc, creator, ip
+		SELECT @resetData = CAST
+		(
+		(
+			SELECT @winlostdate AS '@WLDate' ,
+					r.CustID  AS '@CustID' ,
+					r.Variance AS '@amount' ,
+					'DWL-' + CAST(@fromdate as varchar(30))
+							+ CAST(r.CustID as varchar(50)) + ':'
+							+ CAST(r.Variance as varchar(100)) AS '@transdesc',
+					@creator  AS '@creator' ,
+					@ip		 AS '@ip'
+			FROM @reset r
+			INNER JOIN dbo.Customer c WITH(NOLOCK) ON r.CustID = c.custid
+			INNER JOIN dbo.Site s WITH(NOLOCK) ON s.site = c.site
+			WHERE r.WinlostDate = @WinlostDate AND s.SiteDBGroupID = @SiteDBGroupID AND r.Variance <> 0
 
-        WHILE (@seq <= @maxseq)
-        BEGIN
-            SET @variance = 0
+			FOR XML PATH('z'), ROOT('ROOT')
+		)  AS VARCHAR(MAX))
 
-            SELECT @variance = Variance,
-                   @custid = CustID
-            FROM @reset
-            WHERE GroupID = @seq
-				AND WinlostDate = @WinlostDate
-				 
+		SELECT @resetData1 = SUBSTRING(@resetData, 1, 8000) ;
+		SELECT @resetData2 = SUBSTRING(@resetData, 8001, 8000) ;
+		SELECT @resetData3 = SUBSTRING(@resetData, 16001, 8000) ;
+		SELECT @resetData4 = SUBSTRING(@resetData, 24001, 8000) ;
+		SELECT @resetData5 = SUBSTRING(@resetData, 32001, 8000) ;
 
-            IF (@variance <> 0)
-            BEGIN
-                SELECT @transDesc = 'DWL-' + CAST(@fromdate as varchar(30))
-                                           + CAST(@custid as varchar(50)) + ':'
-                                           + CAST(@variance as varchar(100))
-
-               EXEC DBTXN.bodb02.dbo.Task_ResetWinning_Non3rdParty_Add
-                    @winlostdate = @winlostdate,
-	                @custid = @custid,
-	                @amount = @variance,
-	                @transdesc = @transDesc,
-	                @creator = @creator,
-	                @ip = @ip,
-					@isExtraPT = 1,
-	                @ErrCode = @ErrCode OUTPUT,
-                    @ErrMsg = @ErrMsg OUTPUT
-
-                IF (@ErrCode <> 0) BREAK
-				
-				----Adjust statement
-				--EXEC bodb_report.dbo.[Acc_StatementUpdateTransfer]
-				--	@custid = @custid
-				--	,@Amount = @variance
-				--	,@winlostdate = @winlostdate
-				--	,@ErrCode = @ErrCode OUTPUT
-				--	,@ErrMsg = @ErrMsg OUTPUT							
-
-				--IF (@ErrCode <> 0) BREAK					                             
-
-				--- write log 
-				BEGIN TRY
-					EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Transfer
-						@UserID = @creator,
-						@FromCustID = 0,
-						@ToCustID = @custid,
-						@ip = @ip,
-						@Doing = @transDesc
-				END TRY	
-				BEGIN CATCH						
-					SELECT @LogData = @LogData + ' ErrMsg=' + error_message()
-					EXEC DBTXN.bodb_customerlog.dbo.WriteLog_UserLog_Transfer 
-						@UserID = @creator, 
-						@FromCustID = 0, 
-						@ToCustID = @CustID, 
-						@IP = @IP, 
-						@Doing = @LogData						
-				END CATCH
-            END
-
-            SET @seq = @seq + 1
-
-            SELECT @ErrMsg = 'The process has been successful!'
-        END
-      
-        SELECT GroupID,
-			   GroupName,
-			   winlostdate,
-               ISNULL(SUM(winlost), 0) AS winlost,
-               ISNULL(SUM([reset]), 0) + ISNULL(SUM(Variance), 0) AS totalreset,
-               ISNULL(SUM(Variance), 0) AS latestreset
-        FROM @reset
-		GROUP BY GroupID, GroupName, winlostdate
-		ORDER BY winlostdate DESC, GroupID ASC
 	END
 
 	DROP TABLE #winning

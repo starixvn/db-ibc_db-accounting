@@ -77,6 +77,7 @@ AS
 		- 20220112@Evan: Add SG Jackpot & revise SP [Redmine: #166685]
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 		- 20220425@Evan: Change product name and remove Casino Jackpot Amount [Redmine: #171865]
+		- 20230609@Danny: support scale out credit [Redmine: #181595]
 
 	Param Explanation:
 	    @mode:  0 _ view report
@@ -564,70 +565,27 @@ BEGIN
             RETURN
         END
 
-        WHILE (@seq <= @maxseq)
-        BEGIN
-            SET @variance = 0
-
-            ; WITH CTE_Date AS (
-			SELECT @fromdate AS WinlostDate
-			UNION ALL SELECT DATEADD(DAY, 1, WinlostDate) FROM CTE_Date WHERE WinlostDate < @todate
-				)
-            SELECT @variance = ROUND(r.LatestReset, 2),
-                   @custid = dm.custid,
-				   @Product = dm.Product
-            FROM #reset r
-				CROSS JOIN CTE_Date d
-				INNER JOIN @dummyBalance dm on r.product = dm.product AND r.WinlostDate = d.WinlostDate
-            WHERE r.seq = @seq
-			OPTION (MAXRECURSION 0);
-
-            IF (@variance <> 0) 
-            BEGIN
-                SELECT @transDesc = 'DWL-' + CAST(@Product as varchar(250))
+		; WITH CTE_Date AS (
+		SELECT @fromdate AS WinlostDate
+		UNION ALL SELECT DATEADD(DAY, 1, WinlostDate) FROM CTE_Date WHERE WinlostDate < @todate
+			)
+        SELECT 
+				@Winlostdate AS  Winlostdate,
+                dm.custid,
+				ROUND(r.LatestReset, 2) amount,
+				'DWL-' + CAST(dm.Product as varchar(250))
 									 + '# ' + CAST(@fromdate as varchar(30))
-                                           + CAST(@custid as varchar(50)) + ':'
-                                           + CAST(@variance as varchar(100))
+                                           + CAST(dm.custid as varchar(50)) + ':'
+                                           + CAST(ROUND(r.LatestReset, 2) as varchar(100)) transDesc,
+				 @creator AS creator,
+				 @ip AS ip
 
-                EXEC DBTXN.bodb02.dbo.Task_ResetWinning_Non3rdParty_Add
-                    @Winlostdate = @Winlostdate,
-	                @custid = @custid,
-	                @amount = @variance,
-	                @transdesc = @transDesc,
-	                @creator = @creator,
-	                @ip = @ip,
-	                @ErrCode = @ErrCode OUTPUT,
-                    @ErrMsg = @ErrMsg OUTPUT
-
-                IF (@ErrCode <> 0) BREAK
-                    
-				EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Transfer
-					@UserID = @creator,
-					@FromCustID = 0,
-					@ToCustID = @custid,
-					@IP = @ip,
-					@Doing = @transDesc
-                
-            END
-
-            SET @seq = @seq + 1
-
-            SELECT @ErrMsg = 'The process has been successful!'
-        END
-      
-         SELECT r.Winlostdate,  
-               r.product,
-			   SUM (r.Winlost) AS Winlost ,
-               SUM (r.WinlostAfterExtraPT) AS WinlostAfterExtraPT, 
-              -- SUM (CASE WHEN d.Currency <> 0  THEN r.Realreset + r.RealLatestReset ELSE r.reset + r.latestreset END) AS totalreset,
-               --SUM (CASE WHEN d.Currency <> 0  THEN r.RealLatestReset ELSE r.LatestReset END ) latestreset 
-			   SUM ( r.reset + r.latestreset ) AS totalreset,
-               SUM ( r.LatestReset  ) latestreset 
         FROM #reset r
-		INNER JOIN @dummyBalance d 
-			ON d.CustID = d.custID and r.product = d.Product
-		GROUP BY r.Winlostdate, r.product, d.seq
-		ORDER BY d.seq
-		
+			CROSS JOIN CTE_Date d
+			INNER JOIN @dummyBalance dm on r.product = dm.product AND r.WinlostDate = d.WinlostDate
+        WHERE  ROUND(r.LatestReset, 2) <> 0
+		OPTION (MAXRECURSION 0);
+
 		DROP TABLE #reset		
 	END
 

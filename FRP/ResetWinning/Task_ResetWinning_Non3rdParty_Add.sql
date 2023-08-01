@@ -29,6 +29,7 @@ AS
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 		- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
 		- 20221024@Sol: Database - Sync-up Standby Server data - [RedmineID: #167261]
+		- 20230609@Danny: write log [Redmine: #181595]
 
 */
 BEGIN
@@ -102,17 +103,22 @@ BEGIN
         
     END CATCH
 
-	----statement update transfer in range 14
-	BEGIN
-		-- get move bet date
-		DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
-		DECLARE @MoveBetsDay SMALLDATETIME
+	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Transfer
+				@UserID = @creator,
+				@FromCustID = 0,
+				@ToCustID = @custid,
+				@IP = @ip,
+				@Doing = @transDesc
+		BEGIN
+			-- get move bet date
+			DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+			DECLARE @MoveBetsDay SMALLDATETIME
 
-		INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
-		EXEC bodb02.dbo.Age_SelBalanceUpDay
+			INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+			EXEC bodb02.dbo.Age_SelBalanceUpDay
 	
-		-- GET the current MB date
-		SELECT @MoveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
+			-- GET the current MB date
+			SELECT @MoveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 
 		---run only in range 14
 		IF (@winlostdate <= @MoveBetsDay)
