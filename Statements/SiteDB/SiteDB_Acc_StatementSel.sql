@@ -15,6 +15,7 @@ AS
 	Revisions:
 		- 20220802@Sophia: Get statement report - call at SiteDB for Bettrans range [Redmine: #175253]
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
+		- 20230706@Danny: deploy SP to SiteDB03 [Redmine: #181595]
 		- 20230720@Danny: support scale out credit [Redmine: #181595] 
 */
  

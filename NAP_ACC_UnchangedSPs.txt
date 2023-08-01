@@ -1,3 +1,0 @@
-Transfer\TransferSiteDB\SiteDB_Acc_BettransInsTransfer.sql
-Transfer\YesterdayTransfer\dbo.Acc_BettransInsTransfer.proc.sql
-Transfer\Transfer3rdProduct\Dot_BBIN_TransferIns.sql
