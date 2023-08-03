@@ -78,6 +78,7 @@ AS
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 		- 20220425@Evan: Change product name and remove Casino Jackpot Amount [Redmine: #171865]
 		- 20230609@Danny: support scale out credit [Redmine: #181595]
+		- 20230801@Danny: fix email issue [Redmine: #192134]
 
 	Param Explanation:
 	    @mode:  0 _ view report
@@ -585,6 +586,18 @@ BEGIN
 			INNER JOIN @dummyBalance dm on r.product = dm.product AND r.WinlostDate = d.WinlostDate
         WHERE  ROUND(r.LatestReset, 2) <> 0
 		OPTION (MAXRECURSION 0);
+
+		 SELECT r.Winlostdate,  
+               r.product,
+			   SUM (r.Winlost) AS Winlost ,
+               SUM (r.WinlostAfterExtraPT) AS WinlostAfterExtraPT, 
+			   SUM ( r.reset + r.latestreset ) AS totalreset,
+               SUM ( r.LatestReset  ) latestreset 
+        FROM #reset r
+		INNER JOIN @dummyBalance d 
+			ON d.CustID = d.custID and r.product = d.Product
+		GROUP BY r.Winlostdate, r.product, d.seq
+		ORDER BY d.seq
 
 		DROP TABLE #reset		
 	END

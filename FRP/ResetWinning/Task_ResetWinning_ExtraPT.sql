@@ -38,6 +38,7 @@ AS
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 		- 20220425@Evan: Remove Casino Jackpot Amount [Redmine: #171865]
 		- 20230609@Danny: support scale out credit [Redmine: #181595]
+		- 20230801@Danny: fix email issue [Redmine: #192134]
 
 	Param's explain:
 		@mode:  0 _ view report
@@ -303,6 +304,17 @@ BEGIN
 				@ip AS ip
         FROM  @reset
         WHERE WinlostDate = @WinlostDate AND Variance <> 0
+
+		-- Email
+        SELECT GroupID,
+			   GroupName,
+			   winlostdate,
+               ISNULL(SUM(winlost), 0) AS winlost,
+               ISNULL(SUM([reset]), 0) + ISNULL(SUM(Variance), 0) AS totalreset,
+               ISNULL(SUM(Variance), 0) AS latestreset
+        FROM @reset
+		GROUP BY GroupID, GroupName, winlostdate
+		ORDER BY winlostdate DESC, GroupID ASC
 	END
 
 	DROP TABLE #winning
