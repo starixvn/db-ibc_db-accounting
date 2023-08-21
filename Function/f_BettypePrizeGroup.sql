@@ -12,7 +12,8 @@ AS
 	Revision:
 		- 20210603@Sophia: initial [Redmine: #155697]
 		- 20210617@Sol: deploy function to DBTXN-bobd02 - [RedmineId : #156653]
-		- 20220106@Evan: Add SG Jackpot - [Redmine: #166685]	
+		- 20220106@Evan: Add SG Jackpot - [Redmine: #166685]
+		- 20230818@Lewis: Hotfix Dup Data - bettype = 8695 [RedmineID: #192923]	
 		 
 */
 
@@ -21,7 +22,7 @@ RETURN
 		CONVERT(INT, Bettype) AS Bettype
 		,CONVERT(VARCHAR(50), 'Prize') AS BettypeGroup
 	FROM (
-		VALUES (1699), (1906), (2199), (2399), (2999), (3899), (4298), (4299), (4300), (4600)
+		VALUES (1699), (1906), (2199), (2399), (2999), (3899), (4298), (4299), (4300), (4600), (8695), (2499)
 	) AS t (Bettype)
 
 	UNION ALL
