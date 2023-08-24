@@ -3,7 +3,8 @@ ALTER PROCEDURE [dbo].[Acc_Transfer_CheckUM]
 	@CustID INT,
 	@Language VARCHAR(2) = 'E',
 	@ErrCode INT = 0 OUTPUT,
-	@ErrMsg NVARCHAR(MAX) = '' OUTPUT
+	@ErrMsg NVARCHAR(MAX) = '' OUTPUT,
+	@ToTimeConfig DATETIME = NULL OUTPUT
 AS
 /*
 Created: 20200729@Sophia
@@ -12,6 +13,7 @@ DB: DBCUST.CUSTDB
 Revisions:	
 	- 20200729@Sophia: Get UM Transfer Function [Redmine: #136992]
 	- 20201005@Danny: Remove UMConfig_UAT table  [Redmine: #142511]
+	- 20230530@Bobby: Auto Clear Balance/ Multiple Transfer	 [RedmineID: #182071]
 
 Param's Explanation:
 	@CustID: all roleID
@@ -24,11 +26,12 @@ BEGIN
 	
 	DECLARE @ErrorTemplate NVARCHAR(4000)
 	DECLARE @FromTime VARCHAR(30), @ToTime VARCHAR(30) 
-	SELECT @ErrMsg = '', @ErrCode = 0 
+	SELECT @ErrMsg = '', @ErrCode = 0, @ToTimeConfig = NULL
 
 
 	SELECT  @FromTime = CONVERT(VARCHAR,DATEADD(HOUR, 12, MIN(c.BeginTime)),103) + ' ' + LTRIM(RIGHT(CONVERT(VARCHAR,DATEADD(HOUR, 12, MIN(c.BeginTime)),22),12)),
-			@ToTime = CONVERT(VARCHAR,DATEADD(HOUR, 12, MAX(c.EndTime)),103) + ' ' + LTRIM(RIGHT(CONVERT(VARCHAR,DATEADD(HOUR, 12, MAX(c.EndTime)),22),12))
+			@ToTime = CONVERT(VARCHAR,DATEADD(HOUR, 12, MAX(c.EndTime)),103) + ' ' + LTRIM(RIGHT(CONVERT(VARCHAR,DATEADD(HOUR, 12, MAX(c.EndTime)),22),12)),
+			@ToTimeConfig = MAX(c.EndTime)
 	FROM CUSTDB.dbo.customer cu WITH(NOLOCK)
 		INNER JOIN CUSTDB.dbo.customer su WITH(NOLOCK) ON cu.srecommend = su.custid
 		LEFT JOIN CUSTDB.dbo.customer ag WITH(NOLOCK) ON cu.recommend = ag.custid
