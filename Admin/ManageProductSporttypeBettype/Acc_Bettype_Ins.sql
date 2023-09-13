@@ -17,6 +17,7 @@ Original:
 		- 20200917@Danny: NAP Manage Bettype add column LicSpreadBetTypeGroupId [Redmine: #131241]
 		- 20200930@Danny: NAP Manage Bettype add column Is3rdParty [Redmine: #131241]
 		- 20221031@Eddie: Enhance Bettype Function [Redmine: #178092]
+		- 20230828@Lewis: Add new fields - tbl Bettype  [Redmine: #193092]
 	Param's Explanation:
 	- @Fie:		
 		<ROOT>
@@ -88,7 +89,16 @@ BEGIN
 		typenameHI		NVARCHAR(128),
 		DisplayedTypeID INT,
 		LicSpreadBetTypeGroupId TINYINT,
-		Is3rdParty		BIT
+		Is3rdParty		BIT,
+		typenamePTBR	NVARCHAR(128),
+		typenameDE		NVARCHAR(128),
+		typenameBENG	NVARCHAR(128),
+		typenameURD		NVARCHAR(128),
+		typenameMSA		NVARCHAR(128),
+		typenameKH		NVARCHAR(128),
+		typenameLAO		NVARCHAR(128),
+		typenameAR		NVARCHAR(128),
+		typenameTAM		NVARCHAR(128)
 	)
 
 	CREATE TABLE #inputTmp
@@ -118,7 +128,16 @@ BEGIN
 		typenameHI		NVARCHAR(MAX),
 		DisplayedTypeID NVARCHAR(MAX),
 		LicSpreadBetTypeGroupId NVARCHAR(MAX),
-		Is3rdParty		NVARCHAR(MAX)
+		Is3rdParty		NVARCHAR(MAX),
+		typenamePTBR	NVARCHAR(MAX),
+		typenameDE		NVARCHAR(MAX),
+		typenameBENG	NVARCHAR(MAX),
+		typenameURD		NVARCHAR(MAX),
+		typenameMSA		NVARCHAR(MAX),
+		typenameKH		NVARCHAR(MAX),
+		typenameLAO		NVARCHAR(MAX),
+		typenameAR		NVARCHAR(MAX),
+		typenameTAM		NVARCHAR(MAX)
 	)
 
 	BEGIN TRY
@@ -148,7 +167,17 @@ BEGIN
 							typenameHI,
 							DisplayedTypeID,
 							LicSpreadBetTypeGroupId,
-							Is3rdParty)
+							Is3rdParty,
+							typenamePTBR,
+							typenameDE,
+							typenameBENG,
+							typenameURD,
+							typenameMSA,
+							typenameKH,
+							typenameLAO,
+							typenameAR,
+							typenameTAM
+							)
 
 			SELECT          typeid ,
 							typenamee,
@@ -174,7 +203,16 @@ BEGIN
 							typenameHI,
 							DisplayedTypeID,
 							LicSpreadBetTypeGroupId,
-							Is3rdParty
+							Is3rdParty,
+							typenamePTBR,
+							typenameDE,
+							typenameBENG,
+							typenameURD,
+							typenameMSA,
+							typenameKH,
+							typenameLAO,
+							typenameAR,
+							typenameTAM
 
 			FROM OPENXML(@iDoc, '/ROOT/File', 1) WITH  (typeid			NVARCHAR(MAX),
 														typenamee		NVARCHAR(MAX),
@@ -200,7 +238,16 @@ BEGIN
 														typenameHI		NVARCHAR(MAX),
 														DisplayedTypeID NVARCHAR(MAX),
 														LicSpreadBetTypeGroupId NVARCHAR(MAX),
-														Is3rdParty		NVARCHAR(MAX))
+														Is3rdParty		NVARCHAR(MAX),
+														typenamePTBR	NVARCHAR(MAX),
+														typenameDE		NVARCHAR(MAX),
+														typenameBENG	NVARCHAR(MAX),
+														typenameURD		NVARCHAR(MAX),
+														typenameMSA		NVARCHAR(MAX),
+														typenameKH		NVARCHAR(MAX),
+														typenameLAO		NVARCHAR(MAX),
+														typenameAR		NVARCHAR(MAX),
+														typenameTAM		NVARCHAR(MAX))
 		    
 			EXEC sp_xml_removedocument @iDoc
 	END TRY
@@ -236,6 +283,15 @@ BEGIN
 		  AND LEN(typenameHI)		= 0
 		  AND LEN(LicSpreadBetTypeGroupId)		= 0
 		  AND LEN(Is3rdParty)		= 0
+		  AND LEN(typenamePTBR)		= 0
+		  AND LEN(typenameDE)		= 0
+		  AND LEN(typenameBENG)		= 0
+		  AND LEN(typenameURD)		= 0
+		  AND LEN(typenameMSA)		= 0
+		  AND LEN(typenameKH)		= 0
+		  AND LEN(typenameLAO)		= 0
+		  AND LEN(typenameAR)		= 0
+		  AND LEN(typenameTAM)		= 0
    
     UPDATE #inputTmp
 	SET typeid					= CASE WHEN LEN(typeid)			= 0 THEN  NULL ELSE typeid			END,
@@ -282,6 +338,15 @@ BEGIN
 							           WHEN LEN(typenameFR)		> 128 THEN typenameFR
 							           WHEN LEN(typenameMMR)	> 128 THEN typenameMMR
 							           WHEN LEN(typenameHI)		> 128 THEN typenameHI
+							           WHEN LEN(typenamePTBR)	> 128 THEN typenamePTBR
+							           WHEN LEN(typenameDE)		> 128 THEN typenameDE
+							           WHEN LEN(typenameBENG)	> 128 THEN typenameBENG
+							           WHEN LEN(typenameURD)	> 128 THEN typenameURD
+							           WHEN LEN(typenameMSA)	> 128 THEN typenameMSA
+							           WHEN LEN(typenameKH)		> 128 THEN typenameKH
+							           WHEN LEN(typenameLAO)	> 128 THEN typenameLAO
+							           WHEN LEN(typenameAR)		> 128 THEN typenameAR
+							           WHEN LEN(typenameTAM)	> 128 THEN typenameTAM
 							           ELSE '' END,
 					@LimitValue = 128,
 					@ErrCode	= CASE WHEN LicSpreadBetTypeGroupId IS NULL
@@ -311,6 +376,15 @@ BEGIN
 		  OR LEN(typenameFR)	  > 128
 		  OR LEN(typenameMMR)	  > 128
 		  OR LEN(typenameHI)	  > 128
+		  OR LEN(typenamePTBR)	  > 128
+		  OR LEN(typenameDE)	  > 128
+		  OR LEN(typenameBENG)	  > 128
+		  OR LEN(typenameURD)	  > 128
+		  OR LEN(typenameMSA)	  > 128
+		  OR LEN(typenameKH)	  > 128
+		  OR LEN(typenameLAO)	  > 128
+		  OR LEN(typenameAR)	  > 128
+		  OR LEN(typenameTAM)	  > 128
 		  OR LicSpreadBetTypeGroupId IS NULL
 		  OR LicSpreadBetTypeGroupId NOT BETWEEN 0 AND 255
 		  OR Is3rdParty IS NULL
@@ -354,7 +428,16 @@ BEGIN
 				typenameHI,
 				DisplayedTypeID,
 				LicSpreadBetTypeGroupId,
-				Is3rdParty
+				Is3rdParty,
+				typenamePTBR,
+				typenameDE,
+				typenameBENG,
+				typenameURD,
+				typenameMSA,
+				typenameKH,
+				typenameLAO,
+				typenameAR,
+				typenameTAM
 		)
 		SELECT	typeid,
 				typenamee,
@@ -380,7 +463,16 @@ BEGIN
 				typenameHI,
 				DisplayedTypeID,
 				LicSpreadBetTypeGroupId,
-				Is3rdParty
+				Is3rdParty,
+				typenamePTBR,
+				typenameDE,
+				typenameBENG,
+				typenameURD,
+				typenameMSA,
+				typenameKH,
+				typenameLAO,
+				typenameAR,
+				typenameTAM
 		FROM #inputTmp
 	END TRY
 
@@ -421,7 +513,17 @@ BEGIN
 									typenameHI,
 									DisplayedTypeID,
 									LicSpreadBetTypeGroupId,
-									Is3rdParty)
+									Is3rdParty,
+									typenamePTBR,
+									typenameDE,
+									typenameBENG,
+									typenameURD,
+									typenameMSA,
+									typenameKH,
+									typenameLAO,
+									typenameAR,
+									typenameTAM
+									)
 
 			SELECT					typeid,
 									@UserID,
@@ -448,7 +550,16 @@ BEGIN
 									typenameHI,
 									DisplayedTypeID,
 									LicSpreadBetTypeGroupId,
-									Is3rdParty
+									Is3rdParty,
+									typenamePTBR,
+									typenameDE,
+									typenameBENG,
+									typenameURD,
+									typenameMSA,
+									typenameKH,
+									typenameLAO,
+									typenameAR,
+									typenameTAM
 			FROM #input
 			WHERE ID = @CurrentRow
 		END TRY
@@ -483,7 +594,16 @@ BEGIN
 								'typenameMMR="' + COALESCE(CAST(typenameMMR  AS NVARCHAR(128)), SPACE(1)) + '" ' +
 								'typenameHI="' + COALESCE(CAST(typenameHI  AS NVARCHAR(128)), SPACE(1)) + '" ' +
 								'LicSpreadBetTypeGroupId="' + COALESCE(CAST(LicSpreadBetTypeGroupId  AS VARCHAR(15)), SPACE(1)) + '" ' +
-								'Is3rdParty="' + COALESCE(CAST(Is3rdParty  AS VARCHAR(15)), SPACE(1)) + '" ' +
+								'Is3rdParty="' + COALESCE(CAST(Is3rdParty  AS VARCHAR(15)), SPACE(1)) + '" ' +							
+								'typenamePTBR="' + COALESCE(CAST(typenamePTBR  AS NVARCHAR(128)), SPACE(1)) + '" ' +
+								'typenameDE="' + COALESCE(CAST(typenameDE  AS NVARCHAR(128)), SPACE(1)) + '" ' +
+								'typenameBENG="' + COALESCE(CAST(typenameBENG  AS NVARCHAR(128)), SPACE(1)) + '" ' +
+								'typenameURD="' + COALESCE(CAST(typenameURD  AS NVARCHAR(128)), SPACE(1)) + '" ' +
+								'typenameMSA="' + COALESCE(CAST(typenameMSA  AS NVARCHAR(128)), SPACE(1)) + '" ' +
+								'typenameKH="' + COALESCE(CAST(typenameKH  AS NVARCHAR(128)), SPACE(1)) + '" ' +
+								'typenameLAO="' + COALESCE(CAST(typenameLAO  AS NVARCHAR(128)), SPACE(1)) + '" ' +
+								'typenameAR="' + COALESCE(CAST(typenameAR  AS NVARCHAR(128)), SPACE(1)) + '" ' +
+								'typenameTAM="' + COALESCE(CAST(typenameTAM  AS NVARCHAR(128)), SPACE(1)) + '" ' +
 								'LoginIP="'+ COALESCE(CAST(@LoginIP as VARCHAR(20)),SPACE(1)) + '" />'
 			FROM #input
 			WHERE ID = @CurrentRow

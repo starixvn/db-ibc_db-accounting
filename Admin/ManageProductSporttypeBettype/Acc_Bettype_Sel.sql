@@ -17,7 +17,8 @@ Original:
 		- 20200328@Malcolm: NAP Manage Products/Sporttype/Bettype [Redmine: #131241]
 		- 20200917@Danny: NAP Manage Bettype add column LicSpreadBetTypeGroupId [Redmine: #131241]
 		- 20200930@Danny: NAP Manage Bettype add column Is3rdParty [Redmine: #131241]
-		- 20210526@EVan: NAP Manage VendorGlobal Setting  [Redmine: #153521]  
+		- 20210526@EVan: NAP Manage VendorGlobal Setting  [Redmine: #153521]
+		- 20230828@Lewis: Add new fields - tbl Bettype  [Redmine: #193092]
 		
 */
 BEGIN
@@ -54,7 +55,16 @@ BEGIN
 		DisplayedTypeID INT,
 		LicSpreadBetTypeGroupId TINYINT,
 		Is3rdParty		BIT,
-		RowNum INT)
+		typenamePTBR	NVARCHAR(128) NULL,
+		typenameDE		NVARCHAR(128) NULL,
+		typenameBENG	NVARCHAR(128) NULL,
+		typenameURD		NVARCHAR(128) NULL,
+		typenameMSA		NVARCHAR(128) NULL,
+		typenameKH		NVARCHAR(128) NULL,
+		typenameLAO		NVARCHAR(128) NULL,
+		typenameAR		NVARCHAR(128) NULL,
+		typenameTAM		NVARCHAR(128) NULL,
+		RowNum			INT)
 
 	INSERT INTO #Tmp(
 	        typeid,
@@ -83,6 +93,15 @@ BEGIN
 			DisplayedTypeID,
 			LicSpreadBetTypeGroupId,
 			Is3rdParty,
+			typenamePTBR,
+			typenameDE,
+			typenameBENG,
+			typenameURD,
+			typenameMSA,
+			typenameKH,
+			typenameLAO,
+			typenameAR,
+			typenameTAM,
 			RowNum
 	)
     SELECT	typeid,
@@ -111,6 +130,15 @@ BEGIN
 			DisplayedTypeID, 
 			LicSpreadBetTypeGroupId,
 			Is3rdParty,
+			typenamePTBR,
+			typenameDE,
+			typenameBENG,
+			typenameURD,
+			typenameMSA,
+			typenameKH,
+			typenameLAO,
+			typenameAR,
+			typenameTAM,
 			ROW_NUMBER() OVER(ORDER BY TypeID) AS RowNum   
 	FROM bettype WITH(NOLOCK)
 	WHERE (typeid = @TypeId OR @TypeId IS NULL) 
@@ -146,6 +174,15 @@ BEGIN
 			typenameHI,
 			LicSpreadBetTypeGroupId,
 			Is3rdParty,
+			typenamePTBR,
+			typenameDE,
+			typenameBENG,
+			typenameURD,
+			typenameMSA,
+			typenameKH,
+			typenameLAO,
+			typenameAR,
+			typenameTAM,
 			RowNum
 	FROM #Tmp
 	WHERE @PageIndex < 0 OR @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd) 
