@@ -346,6 +346,7 @@ SET ProductCode = CASE WHEN ProductName = 'All Non Sports' THEN 'ALL'
 			WHEN ProductName = 'Virtual Sports 3' THEN 'VirtSpo3'
 			WHEN ProductName = 'Funky Games' THEN 'FunkyG'
 			WHEN ProductName = 'Saba Casino' THEN 'SabaCas'
+			WHEN ProductName = 'SEAL Entertainment' THEN 'Seal'
 		ELSE ProductName END
 	,ProductGroup = CASE WHEN ProductName = 'All Non Sports' THEN '-'
 			WHEN ProductName = 'Allbet' THEN 'LC'			
@@ -380,6 +381,7 @@ SET ProductCode = CASE WHEN ProductName = 'All Non Sports' THEN 'ALL'
 			WHEN ProductName = 'AdvantPlay Mini' THEN 'RNG'
 			WHEN ProductName = 'CG' THEN 'RNG'
 			WHEN ProductName = 'Saba Casino' THEN 'RNG'
+			WHEN ProductName = 'SEAL Entertainment' THEN 'RND'
 			
 			WHEN ProductName = 'Lottery' THEN 'LOTTERY'
 			WHEN ProductName = 'Togel 4D' THEN 'LOTTERY'
@@ -706,6 +708,7 @@ SELECT @msg_y_dailyperf2 = @msg_y_dailyperf2 + '<br>' +
 			WHEN ProductName = 'Virtual Sports 3' THEN 'VirtSpo3'
 			WHEN ProductName = 'Funky Games' THEN 'FunkyG'
 			WHEN ProductName = 'Saba Casino' THEN 'SabaCas'
+			WHEN ProductName = 'SEAL Entertainment' THEN 'Seal'
 	ELSE ProductName END + ': '
 		--+ CASE WHEN ABS(TurnOver) > 1000000 THEN CAST(CONVERT(DECIMAL(10,1),TurnOver/1000000) as VARCHAR(10)) + 'm' ELSE CAST(CONVERT(DECIMAL(10,0),TurnOver/1000) as VARCHAR(10)) + 'k' END 		
 		+ CASE 
@@ -884,6 +887,7 @@ SELECT @msg_LIC_dailyperf = @msg_LIC_dailyperf + '<br>' +
 			WHEN ProductName = 'Virtual Sports 3' THEN 'VirtSpo3'
 			WHEN ProductName = 'Funky Games' THEN 'FunkyG'
 			WHEN ProductName = 'Saba Casino' THEN 'SabaCas'
+			WHEN ProductName = 'SEAL Entertainment' THEN 'Seal'
 	ELSE ProductName END + ': '
 		--+ CASE WHEN ABS(TurnOver) > 1000000 THEN CAST(CONVERT(DECIMAL(10,1),TurnOver/1000000) as VARCHAR(10)) + 'm' ELSE CAST(CONVERT(DECIMAL(10,0),TurnOver/1000) as VARCHAR(10)) + 'k' END 		
 		+ CASE 
@@ -1019,15 +1023,16 @@ SET @msg_LIC_dailyperf = replace(@msg_LIC_dailyperf, '<br>', @letstalkNewLine)
 --PRINT @msg_LIC_dailyperf
 
 -- send letstalk's message
-EXECUTE	DBSPARE.NotificationDB.dbo.Letstalk_SendMessage @To = 'vietgroup', @Msg = @msg, @Title = @title -- main group
-EXECUTE	DBSPARE.NotificationDB.dbo.Letstalk_SendMessage @To = 'vietgroup.UAT', @Msg = @msg, @Title = @title -- UAT group --(Σ PERF)
-EXECUTE	DBSPARE.NotificationDB.dbo.Letstalk_SendMessage @To = 'vietgroup', @Msg = @msg2, @Title = @title -- main group
-EXECUTE	DBSPARE.NotificationDB.dbo.Letstalk_SendMessage @To = 'vietgroup.UAT', @Msg = @msg2, @Title = @title -- UAT group (Σ PERF)
+/*EXECUTE	DBSPARE.NotificationDB.dbo.Letstalk_SendMessage @To = 'vietgroup', @Msg = @msg, @Title = @title -- main group
+EXECUTE	DBSPARE.NotificationDB.dbo.Letstalk_SendMessage @To = 'vietgroup.UAT', @Msg = @msg, @Title = @title -- UAT group --(? PERF)
+*/
+--EXECUTE	DBSPARE.NotificationDB.dbo.Letstalk_SendMessage @To = 'vietgroup', @Msg = @msg2, @Title = @title -- main group
+--EXECUTE	DBSPARE.NotificationDB.dbo.Letstalk_SendMessage @To = 'vietgroup.UAT', @Msg = @msg2, @Title = @title -- UAT group (? PERF)
 EXECUTE	DBSPARE.NotificationDB.dbo.Letstalk_SendMessage @To = 'NotiGroup2', @Msg = @msg_y_dailyperf, @Title = @title -- Y-DailyPerformance --(Y PERF)
 EXECUTE	DBSPARE.NotificationDB.dbo.Letstalk_SendMessage @To = 'NotiGroup2', @Msg = @msg_y_dailyperf2, @Title = @title -- Y-DailyPerformance --(Y PERF)
-EXECUTE	DBSPARE.NotificationDB.dbo.Letstalk_SendMessage @To = 'vietgroup', @Msg = @msgLicMargin, @Title = @title -- main group
-EXECUTE	DBSPARE.NotificationDB.dbo.Letstalk_SendMessage @To = 'daily-house-wl', @Msg = @msgLicMargin, @Title = @Title -- Licensee Performance
-EXECUTE	DBSPARE.NotificationDB.dbo.Letstalk_SendMessage @To = 'daily-house-wl', @Msg = @msg_LIC_dailyperf, @Title = @Title -- Licensee Performance
-EXECUTE	DBSPARE.NotificationDB.dbo.Letstalk_SendMessage @To = 'NotiGroup4', @Msg = @msgLicMargin, @Title = @Title -- L-DailyPerformance group --(L PERF)
-EXECUTE	DBSPARE.NotificationDB.dbo.Letstalk_SendMessage @To = 'NotiGroup4', @Msg = @msg_LIC_dailyperf, @Title = @Title -- L-DailyPerformance group --(L PERF)
-EXECUTE	DBSPARE.NotificationDB.dbo.Letstalk_SendMessage @To = 'vietgroup.UAT', @Msg = @msgLicMargin, @Title = @title -- UAT group --(Σ PERF)
+--EXECUTE	DBSPARE.NotificationDB.dbo.Letstalk_SendMessage @To = 'vietgroup', @Msg = @msgLicMargin, @Title = @title -- main group
+--EXECUTE	DBSPARE.NotificationDB.dbo.Letstalk_SendMessage @To = 'daily-house-wl', @Msg = @msgLicMargin, @Title = @Title -- Licensee Performance
+--EXECUTE	DBSPARE.NotificationDB.dbo.Letstalk_SendMessage @To = 'daily-house-wl', @Msg = @msg_LIC_dailyperf, @Title = @Title -- Licensee Performance
+--EXECUTE	DBSPARE.NotificationDB.dbo.Letstalk_SendMessage @To = 'NotiGroup4', @Msg = @msgLicMargin, @Title = @Title -- L-DailyPerformance group --(L PERF)
+--EXECUTE	DBSPARE.NotificationDB.dbo.Letstalk_SendMessage @To = 'NotiGroup4', @Msg = @msg_LIC_dailyperf, @Title = @Title -- L-DailyPerformance group --(L PERF)
+--EXECUTE	DBSPARE.NotificationDB.dbo.Letstalk_SendMessage @To = 'vietgroup.UAT', @Msg = @msgLicMargin, @Title = @title -- UAT group --(? PERF)
