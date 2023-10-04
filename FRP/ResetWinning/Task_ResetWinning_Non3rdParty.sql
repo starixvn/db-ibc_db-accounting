@@ -79,6 +79,7 @@ AS
 		- 20220425@Evan: Change product name and remove Casino Jackpot Amount [Redmine: #171865]
 		- 20230609@Danny: support scale out credit [Redmine: #181595]
 		- 20230801@Danny: fix email issue [Redmine: #192134]
+		- 20231004@Lewis: Include bettype 998 into Parlay [RedmineID: #194992]
 
 	Param Explanation:
 	    @mode:  0 _ view report
@@ -345,7 +346,7 @@ BEGIN
 				WHEN s.SubProduct = 'Bet Builder' THEN 'Bet Builder'
 				WHEN ISNULL(m.Sporttype, 0) = 44 THEN 'Muay Thai'
 				WHEN b.bettype = 10 THEN 'Outright'
-				WHEN b.bettype IN (9,29) THEN'Parlay' 
+				WHEN b.bettype IN (9,29,998) THEN'Parlay' 
 				WHEN b.liveindicator = 1 AND s.ProductID = 1 THEN 'SPL' 
 				WHEN b.liveindicator = 0 AND s.ProductID = 1 THEN 'SPNL'  	
 				ELSE '' END	AS ProductName
@@ -372,7 +373,7 @@ BEGIN
 				WHEN s.SubProduct = 'Bet Builder' THEN 'Bet Builder'
 				WHEN ISNULL(m.Sporttype, 0) = 44 THEN 'Muay Thai'
 				WHEN b.bettype = 10 THEN 'Outright'
-				WHEN b.bettype IN (9,29) THEN'Parlay' 
+				WHEN b.bettype IN (9,29,998) THEN'Parlay' 
 				WHEN b.liveindicator = 1 AND s.ProductID = 1 THEN 'SPL' 
 				WHEN b.liveindicator = 0 AND s.ProductID = 1 THEN 'SPNL'  	
 				ELSE '' END,
