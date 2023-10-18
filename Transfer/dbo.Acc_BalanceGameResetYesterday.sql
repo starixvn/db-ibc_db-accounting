@@ -20,6 +20,7 @@ AS
 		- 20191107@Eden: 3rd party products - Remove InActive Products Phase 2 [Redmine: #118699]
 		- 20220110@Eden: Saba Casino use DCS Setting [RedmineID: #164280]
 		- 20221121@Eden: Unify RNG Lottery Customer Settings [RedmineID: #180640]
+		- 20230928@Luke: Modify SPs to adapt in-house replication setup [Redmine: #194414]
 */
 BEGIN
 	SET NOCOUNT ON	
@@ -41,7 +42,7 @@ BEGIN
 	FROM DBCUST.CustDB.dbo.SportBettypeSettingMatrix st WITH(NOLOCK) 
 		INNER JOIN @BetTypeIds t
 			ON t.BetType = st.BettypeRefWinlossLimit
-	WHERE st.isLicensee = 0 AND st.Site = 'ALL'
+	WHERE st.isLicensee = 0 AND st.Site = 'ALL' AND st.isDeleted = 0
 
 	DECLARE @resetDate SMALLDATETIME, @Credit MONEY, @Debit MONEY
 	SELECT @resetDate = CONVERT(NVARCHAR(10), CURRENT_TIMESTAMP, 120)
