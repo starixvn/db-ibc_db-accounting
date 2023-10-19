@@ -81,6 +81,7 @@ AS
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
 		- 20221024@Sol: Database - Sync-up Standby Server data - [RedmineID: #167261]
 		- 20220614@Danny: Database - scale out credit [RedmineID: #181595]
+		- 20231004@Lewis: Include bettype 998 into Parlay [RedmineID: #194992]
 		
 	Explanation's Param:
 	    @mode:  0 _ view report
@@ -351,7 +352,7 @@ BEGIN
 				WHEN s.SubProduct = 'Bet Builder' THEN 'Bet Builder'  
 				WHEN ISNULL(m.Sporttype, 0) = 44 THEN 'Muay Thai'  
 				WHEN b.bettype = 10 THEN 'Outright'  
-				WHEN b.bettype IN (9,29) THEN'Parlay'   
+				WHEN b.bettype IN (9,29,998) THEN'Parlay'   
 				WHEN b.liveindicator = 1 AND s.ProductID = 1 THEN 'SPL'   
 				WHEN b.liveindicator = 0 AND s.ProductID = 1 THEN 'SPNL'     
 				ELSE '' END AS ProductName  
@@ -378,7 +379,7 @@ BEGIN
 				WHEN s.SubProduct = 'Bet Builder' THEN 'Bet Builder'  
 				WHEN ISNULL(m.Sporttype, 0) = 44 THEN 'Muay Thai'  
 				WHEN b.bettype = 10 THEN 'Outright'  
-				WHEN b.bettype IN (9,29) THEN'Parlay'   
+				WHEN b.bettype IN (9,29,998) THEN'Parlay'   
 				WHEN b.liveindicator = 1 AND s.ProductID = 1 THEN 'SPL'   
 				WHEN b.liveindicator = 0 AND s.ProductID = 1 THEN 'SPNL'     
 			ELSE '' END,  
