@@ -22,6 +22,8 @@ AS
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
 		- 20230606@Lewis: Add 3rd Party Pending transfer column [Redmine: #188648]
+		- 20231110@Bobby: Tuning perf - put index hint option [Redmine: #196544]
+		
 
 	Param's Explaination:
 		- @CustId: single cust
@@ -434,7 +436,7 @@ BEGIN
 					 END) YesterdayTotalBalance_RM,
 			SUM(CASE WHEN b.Bettype IN (21008, 21009) THEN -(b.Winlost - b.Actual_Stake) ELSE 0 END) PendingTransfer3rd,
 			SUM(CASE WHEN b.Bettype IN (21008, 21009) THEN -(b.Winlost - b.Actual_Stake) * b.ActualRate ELSE 0 END) PendingTransfer3rd_RM
-		FROM dbo.transfer b WITH(NOLOCK) 
+		FROM dbo.transfer b WITH(NOLOCK, INDEX=IX_srecommend) 
 		WHERE EXISTS (SELECT TOP 1 1 FROM #CustInfo c WHERE b.srecommend = c.CustId AND c.RoleId = 4)	
 			AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
                         WHEN bettype = 20000 AND winlostdate > @BUDay THEN 0 --> new bal
@@ -518,7 +520,7 @@ BEGIN
 			,SUM(bal.totalBalance * actualrate) AS YesterdayTotalBalance_RM
 			,SUM(bal.PendingTransfer3rd) AS PendingTransfer3rd
 			,SUM(bal.PendingTransfer3rd * b.ActualRate) AS PendingTransfer3rd_RM
-		FROM dbo.transfer b WITH(NOLOCK)
+		FROM dbo.transfer b WITH(NOLOCK, INDEX=IX_srecommend)
 			INNER JOIN #tempSuper cs ON cs.SuperID = b.srecommend
 			CROSS APPLY (
 				 SELECT 
