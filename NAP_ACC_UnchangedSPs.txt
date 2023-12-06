@@ -1,1 +1,1 @@
-FRP/ResetWinning/Letstalk/Acc_ResetWinning_MarginByNonSport_Lic.sql
+Site\dbo.Acc_SiteSel.proc.sql
