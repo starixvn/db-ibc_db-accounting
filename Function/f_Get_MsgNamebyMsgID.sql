@@ -17,6 +17,7 @@ AS
 		- 20200729#Sophia: Add deploy at DBTXN-CustDB [Redmine: #136992]
 		- 20230227@Bobby: AutoJob clear balance downlines [RedmineID: #182071]
 		- 20230810@Luke: LAP - SEA Localization [Redmine: #187132]
+		- 20231124@Luke: LAP - Support Indonesian & Thai language [Redmine: #196246]
 */
 BEGIN
 	-- Declare the return variable here
@@ -31,6 +32,7 @@ BEGIN
 										WHEN 'ES'	THEN ISNULL(MsgNameES, MsgNameEN)
 										WHEN 'VI'	THEN ISNULL(MsgNameVI, MsgNameEN)
 										WHEN 'CN'	THEN ISNULL(MsgNameCN, MsgNameEN)
+										WHEN 'ID'	THEN ISNULL(MsgNameIN, MsgNameEN)
 										ELSE MsgNameEN END 
 										
 	FROM	MsgError WITH (NOLOCK)
