@@ -1,4 +1,5 @@
-﻿ALTER  PROCEDURE [dbo].[Acc_UserLog_UserControlSel]
+﻿/*<info serverAlias="DBLOG-bodb_CustomerLog" executers="bodbAdminNet" viewers="vnteam" isFunction="0"></info>*/
+ALTER  PROCEDURE [dbo].[Acc_UserLog_UserControlSel]
 	@FromDate DATETIME,
 	@ToDate DATETIME,
 	@Name nvarchar(50),
@@ -12,6 +13,7 @@ AS
 	DB: DBLOG.bodb_CustomerLog
  
 	Revisions:
+		- 20230825@Tacy: Implement archiving data for UserLog_UserControl [redmineID: #192258]
 	
 	Param's Explanation:
 	- @TypeID:
@@ -22,38 +24,96 @@ AS
 	- @PageSize: total record per request
 				
 */
-SET NOCOUNT ON 
+BEGIN
+	SET NOCOUNT ON;
 
-SET @PageIndex = ABS(@PageIndex)
-SET @PageSize = ABS(@PageSize)  
+	SET @PageIndex = ABS(@PageIndex)
+	SET @PageSize = ABS(@PageSize)  
 
-DECLARE @lbound INT 
-DECLARE @ubound INT
-
-SET @lbound = @PageIndex * @PageSize       
+	DECLARE @lbound INT 
+	DECLARE @ubound INT
+	DECLARE @__archiveDate DATETIME
 	
-SET @ubound = @lbound + @PageSize 
-IF ( @PageIndex > 0 ) 
-    SET @lbound = @lbound + 1
+	DECLARE @tempLog AS TABLE (
+			RowNum			INT IDENTITY(1,1),
+			LogID			BIGINT,
+			LogDate			DATETIME,
+			TypeID			TINYINT,
+			CustID			INT,
+			CustName		NVARCHAR(50),
+			UserID			INT,
+			Username		NVARCHAR(50),
+			ActionID		INT,
+			ActionName		NVARCHAR(256),
+			Doing			NVARCHAR(MAX)
+	)
 
-SELECT	LogID, LogDate, TypeID, CustID, CustName,  
-		UserID, Username , ActionID, ActionName, Doing 
-FROM	(SELECT     ROW_NUMBER() OVER ( ORDER BY LogDate DESC) AS RowNum,
-					U.LogID, U.LogDate, U.TypeID, U.CustID, @Name as CustName,  
-					U.UserID, D.Username as UserName, U.ActionID, A.ActionNameEN as ActionName, U.Doing 
-			FROM	UserLog_UserControl U WITH (NOLOCK)
-			INNER JOIN LogAction A WITH (NOLOCK) ON A.ActionID = U.ActionID 
-			LEFT JOIN BODB02.dbo.Custinfo D WITH (NOLOCK) ON U.UserID = D.CustID
-			WHERE	U.LogDate BETWEEN @FromDate AND @ToDate
-					AND U.ActionID BETWEEN 1700 AND 1799
- 					AND U.CustID = @CustID 
-		) AS MyTable
-WHERE   RowNum BETWEEN @lbound AND @ubound
- 
+	SELECT @__archiveDate = DATEADD(DAY, 1, dbo.f_CustomerLog_GetArchiveDate())
+	
+	SET @lbound = @PageIndex * @PageSize       
+	SET @ubound = @lbound + @PageSize 
 
+	IF (@PageIndex > 0) 
+		SET @lbound = @lbound + 1
 
-GO 
-GRANT VIEW DEFINITION ON [dbo].[Acc_UserLog_UserControlSel] TO [vnteam]
+	IF (@FromDate >= @__archiveDate)
+	BEGIN
+		INSERT INTO @tempLog (LogID, LogDate, TypeID, CustID, CustName,  
+							  UserID, Username , ActionID, ActionName, Doing)
+		SELECT  U.LogID, U.LogDate, U.TypeID, U.CustID, @Name,  
+				U.UserID, D.Username, U.ActionID, A.ActionNameEN, U.Doing 
+		FROM	UserLog_UserControl U WITH (NOLOCK)
+		INNER JOIN LogAction A WITH (NOLOCK) ON A.ActionID = U.ActionID 
+		LEFT JOIN BODB02.dbo.Custinfo D WITH (NOLOCK) ON U.UserID = D.CustID
+		WHERE U.LogDate BETWEEN @FromDate AND @ToDate
+			AND U.ActionID BETWEEN 1700 AND 1799
+ 			AND U.CustID = @CustID 
+		ORDER BY U.LogDate DESC
+	END
+	ELSE IF (@Todate < @__archiveDate)
+	BEGIN
+		INSERT INTO @tempLog (LogID, LogDate, TypeID, CustID, CustName,  
+							  UserID, Username , ActionID, ActionName, Doing)
+		SELECT  U.LogID, U.LogDate, U.TypeID, U.CustID, @Name,  
+				U.UserID, D.Username, U.ActionID, A.ActionNameEN, U.Doing 
+		FROM bodb_CustomerLog_Archive.dbo.UserLog_UserControl U WITH (NOLOCK)
+		INNER JOIN LogAction A WITH (NOLOCK) ON A.ActionID = U.ActionID 
+		LEFT JOIN BODB02.dbo.Custinfo D WITH (NOLOCK) ON U.UserID = D.CustID
+		WHERE U.LogDate BETWEEN @FromDate AND @ToDate
+			AND U.ActionID BETWEEN 1700 AND 1799
+ 			AND U.CustID = @CustID
+		ORDER BY U.LogDate DESC
+	END
+	ELSE
+	BEGIN
+		INSERT INTO @tempLog (LogID, LogDate, TypeID, CustID, CustName,  
+							  UserID, Username , ActionID, ActionName, Doing)
+		SELECT U.LogID, U.LogDate, U.TypeID, U.CustID, @Name,  
+			   U.UserID, D.Username, U.ActionID, A.ActionNameEN, U.Doing 
+		FROM UserLog_UserControl U WITH (NOLOCK)
+		INNER JOIN LogAction A WITH (NOLOCK) ON A.ActionID = U.ActionID 
+		LEFT JOIN BODB02.dbo.Custinfo D WITH (NOLOCK) ON U.UserID = D.CustID
+		WHERE U.LogDate BETWEEN @__archiveDate AND @ToDate
+			AND U.ActionID BETWEEN 1700 AND 1799
+ 			AND U.CustID = @CustID 
+		ORDER BY U.LogDate DESC
 
+		INSERT INTO @tempLog (LogID, LogDate, TypeID, CustID, CustName,  
+							  UserID, Username , ActionID, ActionName, Doing)
+		SELECT  U.LogID, U.LogDate, U.TypeID, U.CustID, @Name,  
+				U.UserID, D.Username, U.ActionID, A.ActionNameEN, U.Doing 
+		FROM bodb_CustomerLog_Archive.dbo.UserLog_UserControl U WITH (NOLOCK)
+		INNER JOIN LogAction A WITH (NOLOCK) ON A.ActionID = U.ActionID 
+		LEFT JOIN BODB02.dbo.Custinfo D WITH (NOLOCK) ON U.UserID = D.CustID
+		WHERE U.logdate >= @FromDate AND U.logdate < @__archiveDate
+			AND U.ActionID BETWEEN 1700 AND 1799
+ 			AND U.CustID = @CustID
+		ORDER BY U.LogDate DESC
+	END
+
+	SELECT	LogID, LogDate, TypeID, CustID, CustName,  
+			UserID, Username , ActionID, ActionName, Doing
+	FROM @tempLog
+	WHERE RowNum BETWEEN @lbound AND @ubound
+END
 GO
-GRANT EXECUTE ON [dbo].[Acc_UserLog_UserControlSel] TO [bodbAdminNet] 
