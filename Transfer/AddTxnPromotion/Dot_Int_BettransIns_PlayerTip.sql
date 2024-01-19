@@ -278,11 +278,6 @@ BEGIN
 	FINISH:
 	------------------
 
-	-- GET final total balance
-	EXEC [dbo].[Dot_BalanceMemberSel]
-		@custID		= @CustID
-		, @balance	= @Balance OUTPUT
-		
 	IF (@ErrCode <> 0)
 	BEGIN
 		SELECT @logInfo += N' . Error: ' + CAST(@ErrCode AS VARCHAR(10)) + '. ErrMessage: ' + @ErrMsg
