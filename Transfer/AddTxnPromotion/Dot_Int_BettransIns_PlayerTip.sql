@@ -44,6 +44,7 @@ BEGIN
 
 	SELECT @Cust_SiteDBGroupID = SiteDBGroupID FROM @SiteGroupInfo
 	SELECT @Server_SiteDBGroupID = dbo.f_Get_SiteDBGroupID()
+	SELECT @ErrCode = 0, @ErrMsg = '' 
 	
 	--Check the SiteDBGroupID of CustID and Server is match
 	IF ISNULL(@APositiontaking,0) <> @APositiontakingFixed
