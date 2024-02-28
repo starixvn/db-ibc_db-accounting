@@ -15,6 +15,7 @@ Revisions:
 	- 20190320@Phillip: #105338 - Build Customer Setting with Singbet Style
 	- 20220802@Sophia: Scale out DBTRANS, add SiteDBGroupID [RedmineID: #175253]
 	- 20230117@Eddie: get SiteLable by System [RedmineID: #181596]
+	- 20231206@Johnson: check permission by UserID [RedmineID: #197160]
 */
 BEGIN
 	SET NOCOUNT ON
