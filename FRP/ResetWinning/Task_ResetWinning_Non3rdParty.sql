@@ -80,6 +80,7 @@ AS
 		- 20230609@Danny: support scale out credit [Redmine: #181595]
 		- 20230801@Danny: fix email issue [Redmine: #192134]
 		- 20231004@Lewis: Include bettype 998 into Parlay [RedmineID: #194992]
+		- 20240228@Lewis: Incorporate AG Jackpot [RedmineID: #201339]
 
 	Param Explanation:
 	    @mode:  0 _ view report
@@ -202,12 +203,14 @@ BEGIN
 		,WinlostDueToSaba		money default (0)
 		,WinlostDueToVgaming	money default (0)
 		,WinlostDueToSG		    money default (0)
+		,WinlostDueToAG		    money default (0)
 		,RealWinlost				money
 		,eRealWinlost				money
 		,RealWinlostDueToPP			money default (0)
 		,RealWinlostDueToSaba		money default (0)
 		,RealWinlostDueToVgaming	money default (0)
 		,RealWinlostDueToSG			money default (0)
+		,RealWinlostDueToAG			money default (0)
 		PRIMARY KEY (winlostdate, bettype, MatchId, liveindicator)
 	)
 	
@@ -221,24 +224,24 @@ BEGIN
 			AND statusID IN (111, 112, 113)
 	) 
 	INSERT INTO #tmpData (winlostdate, bettype, MatchId, liveindicator
-		,winlost, eWinlost, WinlostDueToPP, WinlostDueToSaba, WinlostDueToVgaming, WinlostDueToSG
-		,RealWinlost, eRealWinlost, RealWinlostDueToPP, RealWinlostDueToSaba, RealWinlostDueToVgaming, RealWinlostDueToSG)
+		,winlost, eWinlost, WinlostDueToPP, WinlostDueToSaba, WinlostDueToVgaming, WinlostDueToSG,WinlostDueToAG
+		,RealWinlost, eRealWinlost, RealWinlostDueToPP, RealWinlostDueToSaba, RealWinlostDueToVgaming, RealWinlostDueToSG,RealWinlostDueToAG)
 	---------Jackpot contribution tickets --------------
 	SELECT winlostdate, bettype, 0 AS MatchId, 0 AS liveindicator,
 		-- Base Currency
 		SUM(CASE
 				-- Jackpot Prize
-				WHEN bettype IN (1699, 3899, 4298, 4600) THEN 0
+				WHEN bettype IN (1699, 3899, 4298, 4600, 1801) THEN 0
 				-- Jackpot full Contribution
-				WHEN bettype IN (1698, 3898, 4297, 4599) 
+				WHEN bettype IN (1698, 3898, 4297, 4599, 1802) 
 					THEN winlost - actual_stake + awinlost + mwinlost + swinlost + scomm + ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
 				ELSE 0 END 
 				* CASE WHEN @Istest = 1 THEN 1 ELSE actualrate END) AS winlost,
 		SUM(CASE
 				-- Jackpot Prize
-				WHEN bettype IN (1699, 3899, 4298, 4600) THEN 0
+				WHEN bettype IN (1699, 3899, 4298, 4600, 1801) THEN 0
 				-- Jackpot full Contribution
-				WHEN bettype IN (1698, 3898, 4297, 4599) 
+				WHEN bettype IN (1698, 3898, 4297, 4599, 1802) 
 					THEN ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
 				ELSE 0 END 
 				* CASE WHEN @Istest = 1 THEN 1 ELSE actualrate END 
@@ -263,19 +266,24 @@ BEGIN
 				WHEN bettype IN (4600) THEN winlost - actual_stake
 				ELSE 0 END 
 				* CASE WHEN @Istest = 1 THEN 1 ELSE actualrate END) AS WinlostDueToSG,
+		SUM(CASE
+				WHEN bettype IN (1802) THEN -ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
+				WHEN bettype IN (1801) THEN winlost - actual_stake
+				ELSE 0 END 
+				* CASE WHEN @Istest = 1 THEN 1 ELSE actualrate END) AS WinlostDueToAG,
 		-- Real Currency
 		SUM(CASE
 				-- Jackpot Prize
-				WHEN bettype IN (1699, 3899, 4298, 4600) THEN 0
+				WHEN bettype IN (1699, 3899, 4298, 4600, 1801) THEN 0
 				-- Jackpot full Contribution
-				WHEN bettype IN (1698, 3898, 4297, 4599) 
+				WHEN bettype IN (1698, 3898, 4297, 4599, 1802) 
 					THEN winlost - actual_stake + awinlost + mwinlost + swinlost + scomm + ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
 				ELSE 0 END) AS winlost,
 		SUM(CASE
 				-- Jackpot Prize
-				WHEN bettype IN (1699, 3899, 4298, 4600) THEN 0
+				WHEN bettype IN (1699, 3899, 4298, 4600, 1801) THEN 0
 				-- Jackpot full Contribution
-				WHEN bettype IN (1698, 3898, 4297, 4599) THEN ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
+				WHEN bettype IN (1698, 3898, 4297, 4599, 1802) THEN ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
 				ELSE 0 END 
 				* ISNULL(epositiontaking, 0)) AS eWinlost,
 		SUM(CASE
@@ -293,9 +301,13 @@ BEGIN
 		SUM(CASE
 				WHEN bettype IN (4599) THEN -ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
 				WHEN bettype IN (4600) THEN winlost - actual_stake
-				ELSE 0 END) AS WinlostDueToSG
+				ELSE 0 END) AS WinlostDueToSG,
+		SUM(CASE
+				WHEN bettype IN (1802) THEN -ISNULL(betid/CONVERT(DECIMAL(19,8), 100000000), 0)
+				WHEN bettype IN (1801) THEN winlost - actual_stake
+				ELSE 0 END) AS WinlostDueToAG
 	FROM CTE_tmpData
-	WHERE bettype IN (1698, 1699, 3898, 3899, 4297, 4298, 4599, 4600)
+	WHERE bettype IN (1698, 1699, 3898, 3899, 4297, 4298, 4599, 4600, 1801, 1802)
 	GROUP BY winlostdate, bettype
 	
 	--------Normal bet tickets ---------------
@@ -306,13 +318,13 @@ BEGIN
 				* CASE WHEN @Istest = 1 THEN 1 ELSE actualrate END) AS winlost,
 		SUM(CASE WHEN tpositiontaking = 1 THEN 0 ELSE (winlost - actual_stake + scomm / (1 - tpositiontaking)) END
 				* CASE WHEN @Istest = 1 THEN 1 ELSE actualrate END 
-				* ISNULL(epositiontaking, 0)) AS eWinlost, 0, 0, 0, 0,
+				* ISNULL(epositiontaking, 0)) AS eWinlost, 0, 0, 0, 0, 0,
 		-- Real Currency
 		SUM(winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) AS RealWinlost,
 		SUM(CASE WHEN tpositiontaking = 1 THEN 0 ELSE (winlost - actual_stake + scomm / (1 - tpositiontaking)) END
-				* ISNULL(epositiontaking, 0)) AS eRealWinlost, 0, 0, 0, 0
+				* ISNULL(epositiontaking, 0)) AS eRealWinlost, 0, 0, 0, 0, 0
 	FROM CTE_tmpData 
-	WHERE bettype NOT IN (1698, 1699, 3898, 3899, 4297, 4298, 4599, 4600)
+	WHERE bettype NOT IN (1698, 1699, 3898, 3899, 4297, 4298, 4599, 4600, 1801, 1802)
 	GROUP BY winlostdate, bettype, matchId, liveindicator
 
 	/* Get MatchID for MuayThai */
@@ -357,12 +369,14 @@ BEGIN
 			,SUM(b.WinlostDueToSaba)	AS WinlostDueToSaba
 			,SUM(b.WinlostDueToVgaming) AS WinlostDueToVgaming
 			,SUM(b.WinlostDueToSG) AS WinlostDueToSG
+			,SUM(b.WinlostDueToAG) AS WinlostDueToAG
 			,SUM(b.RealWinlost)		AS RealWinlost
 			,SUM(b.eRealWinlost)	AS eRealWinlost
 			,SUM(b.RealWinlostDueToPP)		AS RealWinlostDueToPP
 			,SUM(b.RealWinlostDueToSaba)	AS RealWinlostDueToSaba
 			,SUM(b.RealWinlostDueToVgaming) AS RealWinlostDueToVgaming
 			,SUM(b.RealWinlostDueToSG) AS RealWinlostDueToSG
+			,SUM(b.RealWinlostDueToAG) AS RealWinlostDueToAG
 		FROM #tmpData b
 			INNER JOIN #SportBettype s ON s.BetType = b.bettype
 			LEFT JOIN #tmpMatch m ON m.MatchId = b.MatchId
@@ -388,6 +402,7 @@ BEGIN
 			UNION ALL SELECT 0, 'Saba.club (Amount due to Jackpot Pool)', c.WinlostDueToSaba, 0, c.RealWinlostDueToSaba, 0 WHERE c.WinlostDueToSaba <> 0
 			UNION ALL SELECT 0, 'VGaming (Amount due to Jackpot Pool)', c.WinlostDueToVgaming, 0, c.RealWinlostDueToVgaming, 0 WHERE c.WinlostDueToVgaming <> 0
 			UNION ALL SELECT 0, 'SG (Amount due to Jackpot Pool)', c.WinlostDueToSG, 0, c.RealWinlostDueToSG, 0 WHERE c.WinlostDueToSG <> 0
+			UNION ALL SELECT 0, 'AG Casino (Amount due to Jackpot Pool)', c.WinlostDueToAG, 0, c.RealWinlostDueToAG, 0 WHERE c.WinlostDueToAG <> 0  
 		) d
 	GROUP BY c.winlostdate, d.ProductId, d.ProductName
 
