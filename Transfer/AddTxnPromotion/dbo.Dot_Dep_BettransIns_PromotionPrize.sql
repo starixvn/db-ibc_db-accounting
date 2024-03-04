@@ -1,4 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="Dot_Member" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBTXN-bodb02" executers="Svc_Tig" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE dbo.Dot_Dep_BettransIns_PromotionPrize
 	@CustID			INT
 	, @ExtraInfo	VARCHAR(1000)
@@ -36,6 +36,7 @@ AS
 						 Revise code using ExchangeDailyOanda to get actualrate
 		- 20221010@Evan: Support betfrom up to nvarchar(4) [Redmine: #178059]
 		- 20230322@Evan: Change code write log into bodb_customerlog.UserLog_Transfer [Redmine: #185507]
+		- 20240304@Eddie: Change "Dot_Member" to "Svc_Tig" account [Redmine: #201841]
 */
 BEGIN
 	SET NOCOUNT ON

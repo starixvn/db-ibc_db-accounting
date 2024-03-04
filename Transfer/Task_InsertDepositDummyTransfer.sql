@@ -1,4 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="Dot_Member,Dot_Bonus" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBTXN-bodb02" executers="Svc_Tig,Dot_Bonus" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE [dbo].[Task_InsertDepositDummyTransfer]
 	(
 		@CustID		INT,
@@ -10,6 +10,7 @@ CREATE PROCEDURE [dbo].[Task_InsertDepositDummyTransfer]
 	Original: DBA_InsertDepositDummyTransfer
 	Revision:
 		- 20220927@Evan: Create new [Redmine: #178188]
+		- 20240304@Eddie: Change "Dot_Member" to "Svc_Tig" account [Redmine: #201841]
 	Param explaination:
 		- @CustID		: CustID of transaction to correct
 		- @Bal_CustID	: CustID of pairing dummy account

@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB" executers="Dot_Member,Dot_Intg" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="Svc_Tig,Dot_Intg" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Dot_Member_GetExtraPT]
 	@Srecommend			INT
 	,@ProductId			TINYINT
@@ -12,6 +12,7 @@ AS
 	
 	Revisions:
 		- 20191014@Sophia: initial SP [Redmine: #122071]
+		- 20240304@Eddie: Change "Dot_Member" to "Svc_Tig" account [Redmine: #201841]
 
 */
 
