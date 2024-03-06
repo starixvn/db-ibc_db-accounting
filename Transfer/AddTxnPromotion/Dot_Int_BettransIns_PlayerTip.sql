@@ -1,4 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="Dot_Member" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBTXN-bodb02" executers="Svc_Tig" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE dbo.Dot_Int_BettransIns_PlayerTip 
 	@CustID			INT
 	, @Amount		MONEY
@@ -24,6 +24,7 @@ AS
 	User: API Licensee (No need to check balance for API Licensee Single Wallet)
 	Revisions:
 		- 20240118@Evan: Initialize SP [RedmineID: #198951]
+		- 20240304@Eddie: Change "Dot_Member" to "Svc_Tig" account [Redmine: #201841]
 */
 
 BEGIN 

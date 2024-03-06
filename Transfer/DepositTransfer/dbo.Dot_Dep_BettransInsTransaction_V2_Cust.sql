@@ -1,4 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="Dot_Member,Dot_Bonus" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBTXN-bodb02" executers="Svc_Tig,Dot_Bonus" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Dot_Dep_BettransInsTransaction_V2_Cust] 
 	@amount MONEY,	
 	@custid INT,
@@ -68,6 +68,7 @@ Revisions:
 	- 20221226@Evan: Wait for in-house service (2ms) to sync new value of rollback ticket to centraldb [Redmine: #182003]
 	- 20230227@Evan: Ensure correct balance calculation when allow to transfer 247 (BU) [Redmine: #173554]
 	- 20230322@Evan: Change code write log into bodb_customerlog.UserLog_Transfer [Redmine: #185507]
+	- 20240304@Eddie: Change "Dot_Member" to "Svc_Tig" account [Redmine: #201841]
 
 Param's Explanation:
 ? @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction

@@ -1,4 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="Dot_Member,Dot_Bonus" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBTXN-bodb02" executers="Svc_Tig,Dot_Bonus" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Dot_Dep_BettransInsCancelWithdrawal_Cust]		
 	@custid		INT,
 	@transid	BIGINT,	
@@ -39,6 +39,7 @@ Revisions:
 	- 20220923@Evan: Revise code rollback (issue) [Redmine: #178135]
 	- 20221226@Evan: Wait for in-house service (2ms) to sync new value of rollback ticket to centraldb [Redmine: #182003]
 	- 20230322@Evan: Change code write log into bodb_customerlog.UserLog_Transfer [Redmine: #185507]
+	- 20240304@Eddie: Change "Dot_Member" to "Svc_Tig" account [Redmine: #201841]
 
 Input 
     1) CustID (For Double check) 
