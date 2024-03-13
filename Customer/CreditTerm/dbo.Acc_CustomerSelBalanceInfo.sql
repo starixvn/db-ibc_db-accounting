@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet"  isFunction="0" isNested="1"></info>*/
+/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,wsv_nap"  isFunction="0" isNested="1"></info>*/
 ALTER PROCEDURE [dbo].[Acc_CustomerSelBalanceInfo]
 	@CustId		INT = NULL,
 	@CustIdList	VARCHAR(MAX) = NULL,
@@ -23,7 +23,7 @@ AS
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
 		- 20230606@Lewis: Add 3rd Party Pending transfer column [Redmine: #188648]
 		- 20231110@Bobby: Tuning perf - put index hint option [Redmine: #196544]
-		
+		- 20240314@Bobby: EC enhancement [Redmine: #202276]
 
 	Param's Explaination:
 		- @CustId: single cust
@@ -57,13 +57,11 @@ BEGIN
 
 	-- get move bet date
 	DECLARE @BUDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
-	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
 
 	IF (@MoveBetDay IS NULL OR @BalanceUpDay IS NULL)
 	BEGIN
-		INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
-		EXEC bodb02.dbo.Age_SelBalanceUpDay
-		SELECT @BUDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
+		EXEC dbo.NAP_Admin_GetMovebetDate @MovebetDate = @moveBetsDay OUTPUT
+		EXEC dbo.NAP_Admin_GetBalanceUpDate @BalanceUpDate = @BUDay OUTPUT
 	END
 	ELSE
 	BEGIN
@@ -475,10 +473,13 @@ BEGIN
 	--headline
 	IF EXISTS (SELECT TOP 1 1 FROM #CustInfo WHERE RoleId = 0)
 	BEGIN
+		DROP TABLE IF EXISTS #tempSuper;
+		CREATE TABLE #tempSuper(SuperID INT PRIMARY KEY, HeadlineID INT);
+
 		-- headline - SMA(s) Cash 
+		INSERT INTO #tempSuper (SuperID, HeadlineID)
 		SELECT DISTINCT c.CustID AS SuperID
 			, c.UplineID AS HeadlineID
-		INTO #tempSuper
 		FROM dbo.CustSuper c WITH (NOLOCK) 
 		--INNER JOIN dbo.CS_CustSuper cs ON c.custid = cs.CustId
 		INNER JOIN #CustInfo ci ON c.UplineID = ci.custid
