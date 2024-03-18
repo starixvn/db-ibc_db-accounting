@@ -69,6 +69,7 @@ Revisions:
 	- 20230227@Evan: Ensure correct balance calculation when allow to transfer 247 (BU) [Redmine: #173554]
 	- 20230322@Evan: Change code write log into bodb_customerlog.UserLog_Transfer [Redmine: #185507]
 	- 20240304@Eddie: Change "Dot_Member" to "Svc_Tig" account [Redmine: #201841]
+	- 20240318@Bobby: EC enhancement - [RedmineID: #191592]
 
 Param's Explanation:
 ? @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction
@@ -190,8 +191,6 @@ BEGIN
 		@NewMoveBetsDay smalldatetime,
 		@NewBalanceUpDate smalldatetime
 
-	DECLARE @MBBU TABLE (BalanceUpDay smalldatetime, MoveBetsDay smalldatetime)
-
 	SELECT @ErrCode = 0,
 			@ErrMsg = '',
 			@RefNo = isnull(@RefNo,0),
@@ -287,11 +286,10 @@ BEGIN
 		AND @IsCharge = 0 --only check when not Charge transaction, and is Withdrawal
 	BEGIN
 
-		-- get MB day
+		--TODO: get MBU days
 		SET @MoveBetsDay = NULL
-		INSERT INTO @MBBU (BalanceUpDay, MoveBetsDay)
-		EXEC dbo.Age_SelBalanceUpDay
-		SELECT @MoveBetsDay = MoveBetsDay, @BalanceUpDate = BalanceUpDay FROM @MBBU
+		EXEC dbo.NAP_Admin_GetMovebetDate @MovebetDate = @MoveBetsDay OUTPUT
+		EXEC dbo.NAP_Admin_GetBalanceUpDate @BalanceUpDate = @BalanceUpDate OUTPUT
 		
 		WHILE (@IsDiff = 1)
 		BEGIN
