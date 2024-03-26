@@ -17,7 +17,9 @@ ALTER PROCEDURE [dbo].[Dot_Int_BettransInsTransactionWithoutLog_Cust]
 	@betcheck			VARCHAR(50)			=	'',
 	@TheirPartyType		INT					=	1,
 	@transdate			DATETIME			=	NULL		OUTPUT,
-    @BonusID            INT                 = 	NULL
+    @BonusID            INT                 = 	NULL,
+	@InitialTime		DATETIME			= NULL,
+	@DurationLimit		INT					= NULL -- in seconds
 AS
 /*
 Creator : Thien
@@ -72,7 +74,7 @@ Revision:
 	- 20230227@Evan: Ensure correct balance calculation when allow to transfer 247 (BU) [Redmine: #173554]
 	- 20230322@Evan: Change code write log into bodb_customerlog.UserLog_Transfer [Redmine: #185507]
 	- 20240304@Eddie: Change "Dot_Member" to "Svc_Tig" account [Redmine: #201841]
-	- 20240318@Bobby: EC enhancement - [RedmineID: #191592]
+	- 20240318@Bobby: LAP - EC enhancement - [RedmineID: #191592]
 
 Param's Explanation:
 @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction
@@ -112,7 +114,13 @@ Param's Explanation:
 
 */
 BEGIN
-	SET NOCOUNT ON
+	SET NOCOUNT ON;
+
+	DECLARE @InitialTimeCheck		DATETIME,
+			@DurationLimitCheck		INT;
+
+	SELECT @InitialTimeCheck		=  ISNULL(@InitialTime, GETDATE())
+		, @DurationLimitCheck		=  IIF(ISNULL(@DurationLimit, 0) <= 0, 300, @DurationLimit) -- 300 seconds by default
 	
 	---- #1 CHECK UM TRANSFER FUNCTION
 	EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckUM  
@@ -490,10 +498,21 @@ BEGIN
 		---- Checking the balance of customer before updating the amount on Credit or Debit table 
 
 		DECLARE @Cust_Balance MONEY,
-				@Cust_Balance_ABS MONEY
-
+				@Cust_Balance_ABS MONEY,
+				@diffDurationLimit INT;
+		
 		SELECT	@Cust_Balance = @winlost - @actual_stake
 		SELECT	@Cust_Balance_ABS = abs(@Cust_Balance)		
+
+		--TODO: implement CheckFundTransfer
+		SELECT @diffDurationLimit = DATEDIFF(SECOND, @InitialTimeCheck, CURRENT_TIMESTAMP);
+		IF @diffDurationLimit > @DurationLimitCheck AND @bettype IN (22001, 22002)
+		BEGIN
+			SELECT 
+				@ErrCode = 107
+				,@ErrMsg = 'Insert transaction failed. ERROR_MESSAGE: Violate CheckFundTransfer rule.'
+			RETURN
+		END
 
 		SELECT @Count = 1
 		--Update BalanceDebit 
@@ -528,7 +547,6 @@ BEGIN
 			INSERT INTO dbo.TransferInfo(TransId, WalletType, BonusID, RepUpdateTime)
 			VALUES (@TransId, @WalletType,@BonusID, SYSDATETIME())
 		END
-
 	END TRY
 	BEGIN CATCH
 
@@ -638,6 +656,12 @@ BEGIN
 	SELECT @LogData = 
 				'Insert trans custid = ' + CONVERT(VARCHAR(20), @custid) + ', bettype = ' + CONVERT(VARCHAR(20), @bettype) + ', amount = ' + CONVERT(VARCHAR(20), @amount) 
 				+ CASE WHEN @BonusId > 0 THEN ', bonusId = ' + convert(varchar(20), @BonusId) ELSE '' END
+
+	SELECT @LogData = @LogData
+		+ CASE WHEN @InitialTime IS NOT NULL THEN CONCAT(', @InitialTime=', FORMAT(@InitialTimeCheck, 'yyyy-MM-dd HH:mm:ss')) ELSE CONCAT(', @InitialTimeCheck=', FORMAT(@InitialTimeCheck, 'yyyy-MM-dd HH:mm:ss')) END
+		+ CASE WHEN ISNULL(@DurationLimit, 0) > 0 THEN CONCAT(', @DurationLimit=', @DurationLimitCheck) ELSE CONCAT(', @DurationLimitCheck=', @DurationLimitCheck) END
+		+ CONCAT(', @diffDurationLimit=', @diffDurationLimit)
+	WHERE @bettype IN (22001, 22002)
 
 	BEGIN TRY	
 	
