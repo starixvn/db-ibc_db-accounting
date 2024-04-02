@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBTXN-bodb02,DBAGE-bodb02,DBEXT-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbExtAccNet,bodbDownlineNetView" isFunction="0"></info>*/
+﻿/*<info serverAlias="DBTXN-bodb02,DBAGE-bodb02,DBEXT-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbExtAccNet,bodbDownlineNetView,wsv_nap,wsv_alp,wsv_xnap,wsv_alpv" isFunction="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_ReCheck_MBUDate] 
 	@MBDate SMALLDATETIME,
 	@BUDate SMALLDATETIME,
@@ -12,21 +12,19 @@ AS
 	DB: DBTXN.bodb02/DBAGE.bodb02
 	Revisions:	
 		- 20230406@Evan: initial SPs [Redmine: #173554]
-
+		- 20240312@Bobby: EC enhancement [Redmine: #202276]
+		
 	Param explaination:
 		@IsDiff: 0 - the same value
 				 1 - different value
 
 */
 BEGIN 
-	
-	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+	SET NOCOUNT ON;
 
-	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
-	EXEC bodb02.dbo.Age_SelBalanceUpDay
+	EXEC dbo.NAP_Admin_GetMovebetDate @MovebetDate = @NewMBDate OUTPUT
+	EXEC dbo.NAP_Admin_GetBalanceUpDate @BalanceUpDate = @NewBUDate OUTPUT
 
-	SELECT @NewMBDate = MoveBetsDay,@NewBUDate = BalanceUpDay FROM @tblMoveBetBalanceUp
-	
 	IF @NewBUDate IS NULL
 	BEGIN
 		SET @IsDiff = -1
