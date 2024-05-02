@@ -76,6 +76,7 @@ Revision:
 	- 20240304@Eddie: Change "Dot_Member" to "Svc_Tig" account [Redmine: #201841]
 	- 20240318@Bobby: LAP - EC enhancement - [RedmineID: #191592]
 	- 20240710@Kelvin: Deposit - Enhance rollback process in SP transfer (HOT FIX) - [RedmineID: #206265]
+	- 20240502@Bobby: Deposit - Fix Transfer issue - [RedmineID: #204165]
 
 Param's Explanation:
 @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction
@@ -166,7 +167,7 @@ BEGIN
 	DECLARE @username			VARCHAR(50),
 		@currency				TINYINT,
 		@currencyName			VARCHAR(5),
-		--@transdate				DATETIME,
+		@winlostdate			SMALLDATETIME,
 		@beforebalance			MONEY,
 		@postbalance			MONEY,
 		@actualrate				FLOAT,
@@ -409,43 +410,43 @@ BEGIN
 	SELECT @postbalance = @beforebalance + @winlost - @actual_stake
 	
 	IF (@bettype=@DWIT AND @IsCharge = 0) OR (@bettype=@DTRATP AND @amount < 0) --only check when not Charge transaction, and is Withdrawal
+	BEGIN
+		----------------------------------------------------------
+		--- Check Member's Balance for WITHDRAWAL or TRANSFER OUT 
+		----------------------------------------------------------	
+		IF @postbalance < 0
 		BEGIN
-			----------------------------------------------------------
-			--- Check Member's Balance for WITHDRAWAL or TRANSFER OUT 
-			----------------------------------------------------------	
-			IF @postbalance < 0
+			SELECT @ErrMsg = 
+				CASE @bettype 
+					WHEN @DWIT THEN 'Sorry, you do not have enough money to withdraw.'
+					ELSE 'Sorry, you do not have enough money to trasfer out.' 
+				END, @ErrCode = 103
+			RETURN
+		END
+		----------------------------------
+		-- Check Bonus Wallet 
+		----------------------------------
+		DECLARE @FinalBalance	MONEY
+		DECLARE @BonusAmount	MONEY
+		SELECT	@FinalBalance	= 0,
+				@BonusAmount	= 0  
+		IF @BonusWalletFlag = 1
+		BEGIN
+			EXEC dbo.Dot_BalanceMemberSel @CustID = @CustID, @Balance = @FinalBalance OUT, @BonusWalletFlag = @BonusWalletFlag, @Amount = @BonusAmount OUT 
+
+			IF (@postbalance-@BonusAmount) <0 
 			BEGIN
 				SELECT @ErrMsg = 
 					CASE @bettype 
 						WHEN @DWIT THEN 'Sorry, you do not have enough money to withdraw.'
 						ELSE 'Sorry, you do not have enough money to trasfer out.' 
-					END, @ErrCode = 103
+					END, @ErrCode = 201
 				RETURN
 			END
-			----------------------------------
-			-- Check Bonus Wallet 
-			----------------------------------
-			DECLARE @FinalBalance	MONEY
-			DECLARE @BonusAmount	MONEY
-			SELECT	@FinalBalance	= 0,
-					@BonusAmount	= 0  
-			IF @BonusWalletFlag = 1
-			BEGIN
-				EXEC dbo.Dot_BalanceMemberSel @CustID = @CustID, @Balance = @FinalBalance OUT, @BonusWalletFlag = @BonusWalletFlag, @Amount = @BonusAmount OUT 
-
-				IF (@postbalance-@BonusAmount) <0 
-				BEGIN
-					SELECT @ErrMsg = 
-						CASE @bettype 
-							WHEN @DWIT THEN 'Sorry, you do not have enough money to withdraw.'
-							ELSE 'Sorry, you do not have enough money to trasfer out.' 
-						END, @ErrCode = 201
-					RETURN
-				END
-			END
-			------------------------------
-
 		END
+		------------------------------
+
+	END
 	----------------------------------
 
 	----------------------------------
@@ -488,7 +489,10 @@ BEGIN
 		SELECT @IsForced = 0
 
 	BEGIN TRY
-		SELECT @Count = 0
+		SELECT @Count	= 0
+			,@ErrMSg	= ''
+			,@ErrCode	= 0;
+
 		------------------Insert trans into DB---------------------------------------------------------------
 		IF @RefNo = 0
 		BEGIN
@@ -498,12 +502,14 @@ BEGIN
 		----------------------------------
 		---- Checking the balance of customer before updating the amount on Credit or Debit table 
 
-		DECLARE @Cust_Balance MONEY,
-				@Cust_Balance_ABS MONEY,
-				@diffDurationLimit INT;
+		DECLARE @Cust_Balance		MONEY,
+				@Cust_Balance_ABS	MONEY,
+				@diffDurationLimit	INT,
+				@stepDone			INT;
 		
-		SELECT	@Cust_Balance = @winlost - @actual_stake
-		SELECT	@Cust_Balance_ABS = abs(@Cust_Balance)		
+		SELECT	@Cust_Balance		= @winlost - @actual_stake
+			, @Cust_Balance_ABS		= ABS(@Cust_Balance)		
+			, @stepDone				= 0;
 
 		--TODO: implement CheckFundTransfer
 		SELECT @diffDurationLimit = DATEDIFF(SECOND, @InitialTimeCheck, CURRENT_TIMESTAMP);
@@ -511,158 +517,146 @@ BEGIN
 		BEGIN
 			SELECT 
 				@ErrCode = 107
-				,@ErrMsg = 'Insert transaction failed. ERROR_MESSAGE: Violate CheckFundTransfer rule.'
-			RETURN
+				,@ErrMsg = 'Insert transaction failed. ERROR_MESSAGE: Violate the CheckFundTransfer rule.'
+			
+			RAISERROR(@ErrMsg, 11, 1); --- will be handled in the Begin...Catch block code
 		END
 
-		SELECT @Count = 1
 		--Update BalanceDebit 
 		IF @Cust_Balance < 0 
 		BEGIN
+			SELECT @Count = 1;
  			EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_balance_ABS, @type = @BalanceType, @IsForced = @IsForced, @errCode = @ErrCode OUTPUT
 			IF @ErrCode <> 0
 			BEGIN
 				SELECT	@ErrCode = 105	
-						,@ErrMsg = 'Insert transaction failed.' + ' STEP: ' + CONVERT(NVARCHAR(1), @Count) + '. ERROR_MESSAGE: Update balance failed'  + ' - ERROR_NUMBER: ' + CONVERT(VARCHAR(20), @ErrCode)
-				RETURN
+						,@ErrMsg = 'Insert transaction failed.' + ' STEP: ' + CONVERT(NVARCHAR(1), @Count) + '. ERROR_MESSAGE: Update balance debit failed'  + ' - ERROR_NUMBER: ' + CONVERT(VARCHAR(20), @ErrCode)
+				
+				RAISERROR(@ErrMsg, 11, 1); --- will be handled in the Begin...Catch block code
 			END
+			SET @stepDone += POWER(2*1, 1); --Done BalanceDebit-2^1
 		END 
 
 		SELECT @transdate = CURRENT_TIMESTAMP
+			,@winlostdate = CAST(@transdate AS DATE);
 		
-		---get new transid 
+		---get new @TransId 
 		EXEC Get_Bettrans_TransID @TransID = @TransId OUTPUT
+		---get new @bal_transid 
+		EXEC Get_Bettrans_TransID @TransID = @bal_transid OUTPUT
 
-		SELECT @Count = 2
-		INSERT INTO dbo.Transfer 
-			(TransId, custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, balance,
-			 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID,ip, SerialNo, RepUpdateTime)
-		VALUES 
-			(@TransId, @CustID, @username, @RefNo, @transdate, @bettype, @transdesc,@winlost, @actual_stake, CONVERT(NVARCHAR(10), @transdate, 120), ISNULL(@beforebalance, 0),
-			 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency,@actualrate, @currencyName, 131,@ip, @betcheck, SYSDATETIME())
+		BEGIN TRY
+			SELECT @Count = 2
+			INSERT INTO dbo.Transfer 
+				(TransId, custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, balance,
+				 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID,ip, SerialNo, RepUpdateTime)
+			VALUES 
+				(@TransId, @CustID, @username, @RefNo, @transdate, @bettype, @transdesc,@winlost, @actual_stake, @winlostdate, ISNULL(@beforebalance, 0),
+				 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency,@actualrate, @currencyName, 131,@ip, @betcheck, SYSDATETIME()),
+				 --dummy trans
+				 (@bal_transid, @bal_custID, @bal_Username, @RefNo, @transdate, @bettype, @transdesc, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, @winlostdate, NULL, 
+				 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 131, @ip, '0', SYSDATETIME())
+			
+			SET @stepDone += POWER(2*1, 2); --Done transfer-2^2
+		END TRY
+		BEGIN CATCH
+			SELECT	@ErrCode = 108
+					,@ErrMsg = 'Insert transaction failed.' + ' STEP: ' + CONVERT(NVARCHAR(1), @Count) + '. ERROR_MESSAGE: Insert transfer failed'  + ' - ERROR_NUMBER: ' + CONVERT(VARCHAR(20), @ErrCode) + '. Exception: ' + ERROR_MESSAGE();
+				
+			RAISERROR(@ErrMsg, 11, 1); --- will be handled in the Begin...Catch block code
+		END CATCH
+
+		--Update BalanceCredit 
+		IF @Cust_Balance > 0  
+		BEGIN
+			SELECT @Count = 3
+ 			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_Balance, @type = @BalanceType, @errCode = @ErrCode OUTPUT
+			IF @ErrCode <> 0
+			BEGIN
+				SELECT	@ErrCode = 106	
+						,@ErrMsg = 'Insert transaction failed.' + ' STEP: ' + CONVERT(NVARCHAR(1), @Count) + '. ERROR_MESSAGE: Update balance credit failed'  + ' - ERROR_NUMBER: ' + CONVERT(VARCHAR(20), @ErrCode);
+
+				RAISERROR(@ErrMsg, 11, 1); --- will be handled in the Begin...Catch block code
+			END
+			SET @stepDone += POWER(2*1, 3); --Done BalanceCredit-2^3
+		END 
 
 		---insert into new table transferinfo
-
 		IF NOT (@WalletType IS NULL AND @BonusID IS NULL)
 		BEGIN
+			SELECT @Count = 4
 			INSERT INTO dbo.TransferInfo(TransId, WalletType, BonusID, RepUpdateTime)
-			VALUES (@TransId, @WalletType,@BonusID, SYSDATETIME())
+			VALUES (@TransId, @WalletType, @BonusID, SYSDATETIME())
+				,(@bal_transid, @WalletType, @BonusID, SYSDATETIME());
+
+			SET @stepDone += POWER(2*1, 4); --Done transferinfo-2^4
 		END
 	END TRY
 	BEGIN CATCH
 
 		WAITFOR DELAY '000:00:00.002' -- wait for in-house service
 
-		--Manually rollback
-		UPDATE dbo.Transfer WITH(ROWLOCK)
-		SET	custid = 0, 
-			Recommend = 0, 
-			MRecommend = 0, 
-			SRecommend = 0, 
-			Winlost = 0, 
-			Actual_Stake = 0, 
-			RepUpdateTime = SYSDATETIME()
-		WHERE refno = @RefNo and bettype = @bettype and custid = @custid AND TransId = @transid
-		 		
-		UPDATE TransferInfo WITH(ROWLOCK)
-		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-		WHERE TransId = @TransId
+		--TODO: Unhandle exception
+		SELECT @ErrCode = 110
+			, @ErrMsg	= CONCAT('Insert transaction failed. Exception:' + ERROR_MESSAGE(), ', ERROR_LINE: ', ERROR_LINE(), ', ERROR_NUMBER: ', ERROR_NUMBER())
+		WHERE @ErrMsg <> ERROR_MESSAGE()
 
-		--Rollback BalanceDebit 
-		IF @Cust_balance < 0 
-		BEGIN 
- 			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_Balance_ABS, @type = @BalanceType
-		END 
-
-		SELECT 
-			@ErrCode = 105	
-			,@ErrMsg = 'Insert transaction failed.' + ' STEP: ' + CONVERT(NVARCHAR(1), @Count) + '. ERROR_MESSAGE: ' + CONVERT(NVARCHAR(100), LEFT(ERROR_MESSAGE(),100)) + ' - ERROR_NUMBER: ' + CONVERT(VARCHAR(20), ERROR_NUMBER())
-
-		RETURN
-	END CATCH
-
-	IF @Cust_Balance > 0  --Update BalanceCredit 
-	BEGIN
- 		EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_Balance, @type = @BalanceType
-	END 
-
-	-------------------------------------------------------------------------------------------------
-	-------------------------------------------------------------------------------------------------
-	-------------------------------------------------------------------------------------------------
-
-	---get new transid 
-	EXEC Get_Bettrans_TransID @TransID = @bal_transid OUTPUT
-
-	BEGIN TRY
-		----ADD DUMMY TRANSACTION
-		INSERT INTO dbo.Transfer 
-			(TransId, custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, 
-			 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID,ip, RepUpdateTime)
-		VALUES 
-			(@bal_transid, @bal_custID, @bal_Username, @RefNo, @transdate, @bettype, @transdesc, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, CONVERT(NVARCHAR(10), @transdate, 120), 
-			 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 131,@ip, SYSDATETIME())
-		 
-		---insert into new table transferinfo
-		IF NOT (@WalletType IS NULL AND @BonusID IS NULL)
-		BEGIN
-			INSERT INTO dbo.TransferInfo(TransId, WalletType, BonusID, RepUpdateTime)
-			VALUES (@bal_transid, @WalletType, @BonusID, SYSDATETIME())
-		END
-
-	END TRY
-	BEGIN CATCH
-	
-		SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 106
-		
-		--Rollback Balance Table  
-		
-		IF @Cust_balance > 0  --Rollback BalanceCredit 
+		--TODO: Rollback BalanceCredit 
+		IF @Cust_balance > 0  AND @stepDone & 8 = 8
 		BEGIN
 			EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_Balance, @type = @BalanceType, @IsForced = 1
-		END	
+		END
 
-		WAITFOR DELAY '000:00:00.002' -- wait for in-house service
-		
-		--Manually rollback
-		UPDATE dbo.Transfer WITH(ROWLOCK)
-		SET	custid = 0, 
-			Recommend = 0, 
-			MRecommend = 0, 
-			SRecommend = 0, 
-			Winlost = 0, 
-			Actual_Stake = 0, 
-			RepUpdateTime = SYSDATETIME()
-		WHERE refno = @RefNo and bettype = @bettype and custid in (@custid, @bal_custID) AND TransId IN (@transid, @bal_transid)		
-		
-		UPDATE TransferInfo WITH(ROWLOCK)
-		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-		WHERE TransId IN (@transid, @bal_transid)
+		--TODO: Manually rollback transfer
+		IF @stepDone & 4 = 4
+		BEGIN
+			UPDATE dbo.Transfer WITH(ROWLOCK)
+			SET	custid = 0, 
+				Recommend = 0, 
+				MRecommend = 0, 
+				SRecommend = 0, 
+				Winlost = 0, 
+				Actual_Stake = 0, 
+				RepUpdateTime = SYSDATETIME()
+			WHERE transid IN (@transid, @bal_transid) AND refno = @RefNo
+				AND @stepDone & 4 = 4
+		END
 
-		IF @Cust_balance < 0  --Rollback BalanceDebit 
+		--TODO: Rollback BalanceDebit 
+		IF @Cust_balance < 0 AND @stepDone & 2 = 2
 		BEGIN 
  			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_Balance_ABS, @type = @BalanceType
-		END 
+		END
 
-		RETURN
+		--TODO: Manually rollback transferInfo
+		IF @stepDone & 16 = 16
+		BEGIN
+			UPDATE TransferInfo WITH(ROWLOCK)
+			SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+			WHERE TransId IN (@transid, @bal_transid)
+				AND @stepDone & 16 = 16
+		END
 	END CATCH
 	
-	SELECT @balance = @postbalance
-	
-	
-	SET @transdate = CONVERT(CHAR(8),@transdate,112)
 	---------------------------------------------------------------------------------------------------
-
+	--TODO: write userlog 
 	DECLARE @LogData VARCHAR(1000)
+	IF @ErrCode = 0 --success
+	BEGIN
+		SELECT @LogData = 
+					'Insert trans custid = ' + CONVERT(VARCHAR(20), @custid) + ', bettype = ' + CONVERT(VARCHAR(20), @bettype) + ', amount = ' + CONVERT(VARCHAR(20), @amount) 
+					+ CASE WHEN @BonusId > 0 THEN ', bonusId = ' + convert(varchar(20), @BonusId) ELSE '' END
 
-	SELECT @LogData = 
-				'Insert trans custid = ' + CONVERT(VARCHAR(20), @custid) + ', bettype = ' + CONVERT(VARCHAR(20), @bettype) + ', amount = ' + CONVERT(VARCHAR(20), @amount) 
-				+ CASE WHEN @BonusId > 0 THEN ', bonusId = ' + convert(varchar(20), @BonusId) ELSE '' END
-
-	SELECT @LogData = @LogData
-		+ CASE WHEN @InitialTime IS NOT NULL THEN CONCAT(', @InitialTime=', FORMAT(@InitialTimeCheck, 'yyyy-MM-dd HH:mm:ss')) ELSE CONCAT(', @InitialTimeCheck=', FORMAT(@InitialTimeCheck, 'yyyy-MM-dd HH:mm:ss')) END
-		+ CASE WHEN ISNULL(@DurationLimit, 0) > 0 THEN CONCAT(', @DurationLimit=', @DurationLimitCheck) ELSE CONCAT(', @DurationLimitCheck=', @DurationLimitCheck) END
-		+ CONCAT(', @diffDurationLimit=', @diffDurationLimit)
-	WHERE @bettype IN (22001, 22002)
+		SELECT @LogData = @LogData
+			+ CASE WHEN @InitialTime IS NOT NULL THEN CONCAT(', @InitialTime=', FORMAT(@InitialTimeCheck, 'yyyy-MM-dd HH:mm:ss')) ELSE CONCAT(', @InitialTimeCheck=', FORMAT(@InitialTimeCheck, 'yyyy-MM-dd HH:mm:ss')) END
+			+ CASE WHEN ISNULL(@DurationLimit, 0) > 0 THEN CONCAT(', @DurationLimit=', @DurationLimitCheck) ELSE CONCAT(', @DurationLimitCheck=', @DurationLimitCheck) END
+			+ CONCAT(', @diffDurationLimit=', @diffDurationLimit)
+		WHERE @bettype IN (22001, 22002)
+	END
+	ELSE -- error logs
+	BEGIN
+		SELECT @LogData = CONCAT(@ErrMsg, '. Transfer @transid=',@transid,', @bal_transid=', @bal_transid)
+	END
 
 	BEGIN TRY	
 	
@@ -684,6 +678,5 @@ BEGIN
 							@IP			= @IP, 
 							@Doing		= @LogData
 	END CATCH
-
 END
 GO
