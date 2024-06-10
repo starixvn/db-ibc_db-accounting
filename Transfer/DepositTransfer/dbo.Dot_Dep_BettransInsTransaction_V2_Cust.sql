@@ -71,7 +71,7 @@ Revisions:
 	- 20240304@Eddie: Change "Dot_Member" to "Svc_Tig" account [Redmine: #201841]
 	- 20240318@Bobby: LAP - EC enhancement - [RedmineID: #191592]
 	- 20240710@Kelvin: Deposit - Enhance rollback process in SP transfer (HOT FIX) - [RedmineID: #206265]
-	- 20240502@Bobby: Deposit - Fix Transfer issue - [RedmineID: #204165]
+	- 20240502@Bobby: Deposit - Rollback Transfer Enhancement - [RedmineID: #206265]
 
 Param's Explanation:
 ? @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction
@@ -433,8 +433,7 @@ BEGIN
 	IF @RefNo <> 0 Set @IsForced = 1   -- IF @Refno <> 0 = Approved action
 
 	BEGIN TRY
-		SELECT @Count	= 0
-			,@ErrMSg	= ''
+		SELECT @ErrMSg	= ''
 			,@ErrCode	= 0
 			,@stepDone	= 0;
 
