@@ -1,9 +1,10 @@
-/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBTXN-bodb02" executers="wsv_nap" isFunction="0" isNested="0"></info>*/
 USE [bodb02]
 GO
 
 ALTER PROCEDURE [dbo].[Acc_BalanceMemberSelectAll]
-	@Username NVARCHAR(50)
+	@Username	VARCHAR(30)
+	,@UserID	INT
 AS
 
 /*
@@ -16,6 +17,8 @@ AS
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
     	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
+		- 20240523@Tacy: NAP - Permission controls on real currency [redmineID: #202523]
+
 */
 
 BEGIN
@@ -41,7 +44,35 @@ BEGIN
 	
 	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 
-	SELECT @CustId = custid FROM CustDB.dbo.custInfo WITH (NOLOCK) WHERE username = @Username AND roleId = 1
+		DECLARE @tmp TABLE (siteid INT,site NVARCHAR(50), SpecialGroup TINYINT )
+	DECLARE @tmpExchange TABLE (exchangeID INT, Currency NVARCHAR(50), OfferSite TINYINT)
+
+	DECLARE @tmpUserid VARCHAR(50)
+	
+	SELECT @tmpUserid=CAST(@UserID AS VARCHAR(50))
+	
+	DECLARE @SearchQuery VARCHAR(1024), @SearchCurrency VARCHAR(1024)
+
+	--get deny site
+	SELECT @SearchQuery = 'SELECT * 
+		FROM OPENQUERY(DBPOL, 
+		''SELECT siteid, site, SpecialGroup FROM NAP_UserControl.dbo.f_GetDeniedSiteByUser ( ''''' + @tmpUserid + ''''')'')'
+
+	INSERT INTO @tmp (siteid, site, SpecialGroup)
+	EXECUTE(@SearchQuery)
+	
+	--get deny currency
+    SELECT @SearchCurrency = 'SELECT * 
+	FROM OPENQUERY(DBPOL, 
+	''SELECT exchangeID, Currency, OfferSite FROM NAP_UserControl.dbo.f_GetDeniedCurrencyByUser ( ''''' + @tmpUserid + ''''')'')'
+
+	INSERT INTO  @tmpExchange (exchangeID, Currency, OfferSite)
+	EXECUTE(@SearchCurrency)
+
+	SELECT @CustId = custid FROM CustDB.dbo.Customer c WITH (NOLOCK) 
+	WHERE username = @Username AND roleId = 1
+		AND c.Site NOT IN (SELECT Site FROM @tmp)
+		AND c.currency NOT IN (SELECT exchangeID FROM @tmpExchange)
 
 	IF @CustId IS NOT NULL
 	BEGIN

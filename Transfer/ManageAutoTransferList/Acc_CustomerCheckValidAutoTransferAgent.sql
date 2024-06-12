@@ -1,6 +1,7 @@
-﻿/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBCUST-CustDB" executers="wsv_nap" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_CustomerCheckValidAutoTransferAgent]
 	@username VARCHAR(MAX) = ''
+	,@UserID INT
 AS
 
 /*
@@ -12,6 +13,7 @@ AS
 	Revisions:
 		- 20190409@Percy: Check existing super for case insert master/agent [RedmineID: #111365]
 		- 20220613@Elodie: DBCUST - modify sp syntax to adapt with the SQL Server upgrade to 2019 [Redmine: #171831] 
+		- 20240523@Tacy: NAP - Permission controls on real currency [redmineID: #202523]
 
 	Parameter's Explanation:
 */
@@ -34,6 +36,20 @@ BEGIN
 	
 	/* ===== Invalid case ===== */
 	BEGIN
+		-- User have not permission on real accounts
+		INSERT INTO @tmpResult (username, remark, isValid)
+		SELECT DISTINCT t.username, 'You don''t have permission to access.', 0
+		FROM @tmpUser t
+			INNER JOIN customer c WITH (NOLOCK) ON c.custid = t.custid
+		WHERE c.currency IN (SELECT exchangeID FROM NAP_UserControl.dbo.f_GetDeniedCurrencyByUser(@UserID))
+
+		IF EXISTS (SELECT 1 FROM @tmpResult)
+		BEGIN
+			SELECT username, remark, isValid FROM @tmpResult
+
+			RETURN
+		END
+
 		-- Duplicate Username
 		INSERT INTO @tmpResult (username, remark, isValid)
 		SELECT username, 'Duplicate Username.', 0
