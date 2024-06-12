@@ -1,8 +1,9 @@
-/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="wsv_nap" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_CustomerSelAutoTransferAgent]
 	@username		VARCHAR(50) = '',
 	@status			VARCHAR(30) = '',
 	@FailureReason VARCHAR(30) = 'All',
+	@UserID INT,
 	@TotalRows		INT = 0 OUTPUT,
 	@PageSize		INT = 50,
 	@PageIndex		INT = 1
@@ -16,6 +17,7 @@ AS
 	Revisions:
 		- 20201029@Malcolm : add filter failure reason [RedmineId : #143217]
 		- 20220615@Tacy: Hot modify Select Into statement to avoid dump [Redmine: #174035]
+		- 20240523@Tacy: NAP - Permission controls on real currency [redmineID: #202523]
 		
 	Parameter's Explanation:
 		-@username = '': get all agents
@@ -53,6 +55,7 @@ BEGIN
 	WHERE ci.username = ISNULL(NULLIF(@username,''),ci.username)
 		AND c.status = ISNULL(NULLIF(@status,''),c.status) 
 		AND (@FailureReason = 'All' OR (@FailureReason = 'By UM' AND c.msg LIKE 'Transfer is under maintenance  from%'))
+		AND ci.currency NOT IN (SELECT ExchangeId FROM NAP_UserControl.dbo.f_GetDeniedCurrencyByUser(@UserID))
 	
 	SELECT @TotalRows = @@ROWCOUNT
 	

@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBCUST-CustDB" executers="wsv_nap" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_CustomerInsAutoTransferAgent]
 	@username		VARCHAR(MAX),
 	@TransferType	TINYINT = 1,
@@ -19,6 +19,7 @@ AS
 		- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 		- 20190409@Percy: Set transfer option to daily if super is in automate transfer list [RedmineID: #111365]
 		- 20220613@Elodie: DBCUST - modify sp syntax to adapt with the SQL Server upgrade to 2019 [Redmine: #171831]  
+		- 20240523@Tacy: NAP - Permission controls on real currency [redmineID: #202523]
 
 	Parameter's Explanation:
 		- @TransferType = 1: Transfer all members
@@ -65,6 +66,23 @@ BEGIN
 		WHERE custid IS NULL
 		
 		SELECT @ErrMsg = 'Invalid Username: ' + @ErrType, @ErrCode = 100
+		RETURN
+	END
+
+	IF EXISTS (
+		SELECT 1
+		FROM @tmpUser t
+			INNER JOIN customer c WITH (NOLOCK) ON c.custid = t.custid
+		WHERE c.currency IN (SELECT exchangeID FROM NAP_UserControl.dbo.f_GetDeniedCurrencyByUser(@UserID))
+	)
+	BEGIN
+		SELECT @ErrType = NULL
+		SELECT @ErrType = COALESCE(@ErrType + ',', '') + t.username
+		FROM @tmpUser t
+			INNER JOIN customer c WITH (NOLOCK) ON c.custid = t.custid
+		WHERE c.currency IN (SELECT exchangeID FROM NAP_UserControl.dbo.f_GetDeniedCurrencyByUser(@UserID))
+				
+		SELECT @ErrMsg = 'You don''t have permission to access: ' + @ErrType, @ErrCode = 101
 		RETURN
 	END
 	
