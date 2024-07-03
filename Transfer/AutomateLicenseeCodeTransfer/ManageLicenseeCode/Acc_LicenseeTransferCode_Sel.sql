@@ -1,4 +1,4 @@
-/*<info serverAlias="DBLIC-bodb_Licensee" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBLIC-bodb_Licensee" executers="wsv_nap" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE Acc_LicenseeTransferCode_Sel
 (
 	@MoveBetsDay SMALLDATETIME,
@@ -23,6 +23,7 @@ AS
 		- 20210506@Sol: NAP - Remove Saba789 from auto mail informing the code needed - [Redmine: #154676]
 		- 20210802@Sol: NAP - Remove Athena000 and Sabademo from auto mail informing the code needed - [Redmine: #159565]
 		- 20220901@Danny: NAP - Change code to support test Licensee [Redmine: #175253]
+		- 20240703Lewis: NAP- Manage licensee code - Licensee not display correctly when choosing option All [Redmine: #207540]
 
 	Param Info:
 		- @MoveBetsDay: movebet get from sp [age_SelBalanceUpDay]
@@ -71,7 +72,7 @@ BEGIN
 	FROM DBCUST.bodb_licensee.dbo.LicenseeTransferCode WITH(NOLOCK)
 
 	---- run only when the filter include "code needed", "n/a"
-	IF EXISTS (SELECT TOP 1 1 FROM dbo.strSplit(@StatusIds,',') t WHERE t.val IN (3, 4))
+	IF EXISTS (SELECT TOP 1 1 FROM string_split(@StatusIds,',') t WHERE t.value IN (3, 4))
 	BEGIN
 
 		DECLARE @TestLicenseeIDs TABLE (LicenseeId INT)
@@ -93,7 +94,7 @@ BEGIN
 				)
 			AND (cs.currency <> 20 OR l.LicenseeName IN ('Athena000','SampleSite','spondemo') )
 			AND (
-					l.LicenseeID IN (SELECT val FROM dbo.strSplit(@LicenseeIds,',') t) 
+					l.LicenseeID IN (SELECT value FROM string_split(@LicenseeIds,',') t) 
 					OR @LicenseeIds = 'ALL'
 				)
 			AND l.LicenseeName NOT IN 
@@ -112,7 +113,7 @@ BEGIN
 		WHERE
 			(la.Currency <> 20  OR la.LicenseeId IN (SELECT z.LicenseeID FROM @TestLicenseeIDs z) )
 			AND (
-					la.LicenseeID IN (SELECT val FROM dbo.strSplit(@LicenseeIds,',') t) 
+					la.LicenseeID IN (SELECT value FROM string_split(@LicenseeIds,',') t) 
 					OR @LicenseeIds = 'ALL'
 				)
 
@@ -185,10 +186,10 @@ BEGIN
 		lc.FromDate, lc.ToDate
 	FROM #LicenseeCode lc
 	WHERE 
-		lc.LicenseeStatusId IN (SELECT val FROM dbo.strSplit(@StatusIds,',') t)
+		lc.LicenseeStatusId IN (SELECT value FROM string_split(@StatusIds,',') t)
 		AND 
 		(
-			lc.LicenseeID IN (SELECT val FROM dbo.strSplit(@LicenseeIds,',') t)
+			lc.LicenseeID IN (SELECT value FROM string_split(@LicenseeIds,',') t)
 			OR @LicenseeIds = 'ALL'
 		)
 		AND (
