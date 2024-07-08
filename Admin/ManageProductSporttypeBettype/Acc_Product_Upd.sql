@@ -1,4 +1,4 @@
-/*<info serverAlias="DBPRO-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBPRO-bodb02" executers="wsv_nap" viewers="" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE  dbo.Acc_Product_Upd
 	@File		NVARCHAR(MAX),
 	@LoginIP	VARCHAR(20)='',
@@ -15,6 +15,7 @@ Original:
 
 	Revisions:
 		- 20200413@Malcolm: NAP Manage Products/Sporttype/Bettype [Redmine: #131241]
+		- 20240708@Lewis: RepUpdateTime [Redmine: #207579]
 		
 */
 
@@ -221,8 +222,8 @@ BEGIN
 				t.CasinoType	  			= i.CasinoType,
 				t.IsOfferPlayForFun	  		= i.IsOfferPlayForFun,				
 				t.VendorID 					= i.VendorID,
-				t.OrderNo 					= i.OrderNo
-				
+				t.OrderNo 					= i.OrderNo,
+				t.RepUpdateTime				= dbo.f_GetDateTime2()
 			FROM dbo.Products t
 				INNER JOIN  #input i ON  t.ProductID = i.ProductID
 			WHERE ID = @CurrentRow
