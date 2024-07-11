@@ -1,4 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="Svc_Tig,Dot_Bonus" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBSID-bodb02" executers="Svc_Tig,Dot_Bonus" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Dot_Dep_BettransInsTransaction_V2_Cust] 
 	@amount MONEY,	
 	@custid INT,
@@ -70,6 +70,7 @@ Revisions:
 	- 20230322@Evan: Change code write log into bodb_customerlog.UserLog_Transfer [Redmine: #185507]
 	- 20240304@Eddie: Change "Dot_Member" to "Svc_Tig" account [Redmine: #201841]
 	- 20240318@Bobby: EC enhancement - [RedmineID: #191592]
+	- 20240710@Kelvin: Deposit - Enhance rollback process in SP transfer (HOT FIX) - [RedmineID: #206265]
 
 Param's Explanation:
 ? @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction
@@ -484,7 +485,7 @@ BEGIN
 			Winlost = 0, 
 			Actual_Stake = 0, 
 			RepUpdateTime = SYSDATETIME()
-		WHERE refno = @RefNo and bettype = @bettype and custid = @custid
+		WHERE refno = @RefNo and bettype = @bettype and custid = @custid AND TransId = @transid
 			
 		UPDATE TransferInfo WITH(ROWLOCK)
 		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
@@ -552,7 +553,7 @@ BEGIN
 			Winlost = 0, 
 			Actual_Stake = 0, 
 			RepUpdateTime = SYSDATETIME()
-		WHERE refno = @RefNo and bettype = @bettype and custid in (@custid, @bal_custID)
+		WHERE refno = @RefNo and bettype = @bettype and custid in (@custid, @bal_custID) AND TransId IN (@transid, @bal_transid)
 			
 		UPDATE TransferInfo WITH(ROWLOCK)
 		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
