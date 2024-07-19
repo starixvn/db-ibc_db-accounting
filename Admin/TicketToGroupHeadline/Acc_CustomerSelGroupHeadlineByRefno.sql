@@ -1,4 +1,8 @@
 /*<info serverAlias="DBACC-bodb02" executers="wsv_nap" viewers="" isFunction="0" isNested="0"></info>*/
+
+USE bodb02
+GO
+
 ALTER PROCEDURE [dbo].[Acc_CustomerSelGroupHeadlineByRefno]
 	@File			VARCHAR(MAX),
 	@ProductID		INT,
@@ -32,6 +36,7 @@ AS
 		- 20210922@Malcolm : remove the Actual and Wrong result requirements if messageid <> 0 [RedmineId : #161524]
 		- 20240110@Johnson: check permission for 777 [redmineID: #197160]
 		- 20240419@Tacy: NAP - Permission controls on real currency [redmineID: #202523]
+        - 20240719@Ned.Le: CRM - Incorporate new product - Virtual Sports 5 (#207712)
 
 	Param's Explanation:
 	- @Fie:		
@@ -49,6 +54,7 @@ AS
 */
 
 BEGIN
+
 	SET NOCOUNT ON
 
 	IF ISNULL(@File, '') = ''
@@ -1953,7 +1959,7 @@ BEGIN
 		WHERE RowNum BETWEEN @RowStart AND @RowEnd
 	END
 
-	IF @ProductID IN (1, 3, 5, 27)
+	IF @ProductID IN (1, 3, 5, 27, 88)
 	BEGIN
 		DECLARE @IsOutright BIT = 0
 
@@ -1983,9 +1989,9 @@ BEGIN
 		*/
 		UPDATE r
 			SET r.ProductId = s.ProductID, 
-				r.EventType = CASE WHEN s.bettype IN (9, 29, 2799) THEN 1 
+				r.EventType = CASE WHEN s.bettype IN (9, 29, 2799, 11099) THEN 1 
 							  ELSE s.EventType END, 
-				r.MatchId   = CASE WHEN s.bettype IN (9, 29, 2799) THEN @MatchId 
+				r.MatchId   = CASE WHEN s.bettype IN (9, 29, 2799, 11099) THEN @MatchId 
 						      ELSE r.MatchId END
 		FROM #result r
 			INNER JOIN dbo.SportBettypeMatrix s WITH(NOLOCK) ON s.BetType = r.Bettype
@@ -2054,7 +2060,19 @@ BEGIN
 				BEGIN
 					SELECT @IsValidMatchId = 1
 				END
-			END		
+			END
+			IF @EventType LIKE '%,5,%' -- Match3rd
+			BEGIN
+				IF EXISTS(SELECT 1 FROM Match3rd WITH(NOLOCK) WHERE Match3rdId = @MatchId)
+				BEGIN
+					SELECT @IsValidMatchId = 1
+				END
+
+				IF EXISTS(SELECT 1 FROM Match3rd14 WITH(NOLOCK) WHERE Match3rdId = @MatchId AND @IsValidMatchId = 0)
+				BEGIN
+					SELECT @IsValidMatchId = 1
+				END
+			END
 						
 			IF @IsValidMatchId = 0 
 			BEGIN
@@ -2067,13 +2085,13 @@ BEGIN
 			INSERT INTO @ErrorRefNo (RefNo, Bettype)
 			SELECT r.Refno, r.Bettype
 			FROM #result r
-			WHERE r.MatchId <> @MatchId OR r.Bettype IN (9, 29, 2799) OR r.Bettype = 10
+			WHERE r.MatchId <> @MatchId OR r.Bettype IN (9, 29, 2799, 11099) OR r.Bettype = 10
 
-			IF EXISTS(SELECT 1 FROM #result WHERE Bettype IN (9, 29, 2799))
+			IF EXISTS(SELECT 1 FROM #result WHERE Bettype IN (9, 29, 2799, 11099))
 			BEGIN
 				DELETE r 
 				FROM @ErrorRefNo r
-				WHERE r.Bettype IN (9, 29 , 2799)
+				WHERE r.Bettype IN (9, 29 , 2799, 11099)
 				AND EXISTS(
 					SELECT 1
 					FROM dbo.bettrans b WITH(NOLOCK)
@@ -2083,7 +2101,7 @@ BEGIN
 
 				DELETE r 
 				FROM @ErrorRefNo r
-				WHERE r.Bettype IN (9, 29 , 2799)
+				WHERE r.Bettype IN (9, 29 , 2799, 11099)
 				AND EXISTS(
 					SELECT 1
 					FROM dbo.bettrans b WITH(NOLOCK)
@@ -2093,7 +2111,7 @@ BEGIN
 
 				DELETE r 
 				FROM @ErrorRefNo r
-				WHERE r.Bettype IN (9, 29 , 2799)
+				WHERE r.Bettype IN (9, 29 , 2799, 11099)
 				AND EXISTS(
 					SELECT 1
 					FROM dbo.bettrans14 b WITH(NOLOCK)
@@ -2103,7 +2121,7 @@ BEGIN
 
 				DELETE r 
 				FROM @ErrorRefNo r
-				WHERE r.Bettype IN (9, 29 , 2799)
+				WHERE r.Bettype IN (9, 29 , 2799, 11099)
 				AND EXISTS(
 					SELECT 1
 					FROM dbo.bettrans14 b WITH(NOLOCK)
@@ -2159,6 +2177,13 @@ BEGIN
 					INSERT INTO @TeamName (EventName, EventType, ErrorRow)
 					VALUES ('', 3, '')
 				END
+
+				IF EXISTS(SELECT 1 FROM #result WHERE EventType = 5)
+				BEGIN
+					INSERT INTO @TeamName (EventName, EventType, ErrorRow)
+					VALUES ('', 5, '')
+				END
+
 				UPDATE @TeamName
 				SET ErrorRow = 	
 				(
@@ -2190,6 +2215,23 @@ BEGIN
 								)
 				)
 				WHERE EventType = 3
+
+				UPDATE @TeamName
+				SET ErrorRow = 	
+				(
+						SELECT STUFF
+								(
+									(
+										SELECT ',' + CONVERT(VARCHAR(20), i.RowAt)
+										FROM #result r 
+											INNER JOIN #inputRaw i ON r.Refno = i.RefNo
+										WHERE EventType = 5
+										FOR XML PATH('')
+									), 1, 1,''
+								)
+				)
+				WHERE EventType = 5
+
 				/*
 				Message : All Ticket Ref No have to belong to an event/game! Please check:
 							Group 1 (<Event 1>): row <row1>, <row3>
