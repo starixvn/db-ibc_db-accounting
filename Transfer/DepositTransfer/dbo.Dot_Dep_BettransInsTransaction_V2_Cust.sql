@@ -455,7 +455,7 @@ BEGIN
 				SELECT @ErrMsg = 'Insert transaction failed. ERROR_MESSAGE: Update balance debit failed', @ErrCode = 105	
 				RAISERROR(@ErrMsg, 11, 1); --- will be handled in the Begin...Catch block code
 			END
-			SET @stepDone = POWER(2*1, 1); --Done BalanceDebit-2^1
+			SET @stepDone += POWER(2*1, 1); --Done BalanceDebit-2^1
 		END 
 
 		SELECT @transdate	= CURRENT_TIMESTAMP
@@ -477,7 +477,7 @@ BEGIN
 				(@bal_transid, @bal_custID, @bal_Username, @RefNo, @transdate, @bettype, @transdesc, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, @winlostdate, 
 					@CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 131, @ip, @BetCheck, SYSDATETIME())
 
-			SET @stepDone = POWER(2*1, 2); --Done BalanceDebit-2^2
+			SET @stepDone += POWER(2*1, 2); --Done BalanceDebit-2^2
 		END TRY
 		BEGIN CATCH
 			SELECT	@ErrCode = 108
@@ -495,7 +495,7 @@ BEGIN
 				SELECT @ErrMsg = 'Insert transaction failed. ERROR_MESSAGE: Update balance credit failed', @ErrCode = 106	
 				RAISERROR(@ErrMsg, 11, 1); --- will be handled in the Begin...Catch block code
 			END
-			SET @stepDone = POWER(2*1, 3); --Done BalanceCredit-2^3
+			SET @stepDone += POWER(2*1, 3); --Done BalanceCredit-2^3
 		END 
 
 		---insert into new table transferinfo
@@ -505,7 +505,7 @@ BEGIN
 			VALUES (@TransId, @WalletType, @BonusID, SYSDATETIME())
 				,(@bal_transid, @WalletType, @BonusID, SYSDATETIME())
 
-			SET @stepDone = POWER(2*1, 4); --Done TransferInfo-2^4
+			SET @stepDone += POWER(2*1, 4); --Done TransferInfo-2^4
 		END
 
 	END TRY
@@ -554,6 +554,9 @@ BEGIN
 				AND @stepDone & 16 = 16
 		END
 	END CATCH
+
+	--TODO: OUTPT params
+	SET @transdate = IIF(@ErrCode = 0, CONVERT(CHAR(30), @transdate, 121), NULL)
 
 	----------------------------------------------------------------------
 	--TODO: write userlog successfully

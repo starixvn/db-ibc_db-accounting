@@ -488,6 +488,7 @@ BEGIN
 	ELSE 
 		SELECT @IsForced = 0
 
+	-- PROCESS: insert transfer
 	BEGIN TRY
 		SELECT @Count	= 0
 			,@ErrMSg	= ''
@@ -504,22 +505,22 @@ BEGIN
 
 		DECLARE @Cust_Balance		MONEY,
 				@Cust_Balance_ABS	MONEY,
-				@diffDurationLimit	INT,
 				@stepDone			INT;
 		
 		SELECT	@Cust_Balance		= @winlost - @actual_stake
 			, @Cust_Balance_ABS		= ABS(@Cust_Balance)		
 			, @stepDone				= 0;
-
+			
 		--TODO: implement CheckFundTransfer
+		DECLARE @diffDurationLimit	INT;
 		SELECT @diffDurationLimit = DATEDIFF(SECOND, @InitialTimeCheck, CURRENT_TIMESTAMP);
 		IF @diffDurationLimit > @DurationLimitCheck AND @bettype IN (22001, 22002)
 		BEGIN
 			SELECT 
 				@ErrCode = 107
 				,@ErrMsg = 'Insert transaction failed. ERROR_MESSAGE: Violate the CheckFundTransfer rule.'
-			
-			RAISERROR(@ErrMsg, 11, 1); --- will be handled in the Begin...Catch block code
+				
+			GOTO WRITE_LOG;
 		END
 
 		--Update BalanceDebit 
@@ -637,9 +638,14 @@ BEGIN
 				AND @stepDone & 16 = 16
 		END
 	END CATCH
+
+	--TODO: OUTPT params
+	SELECT @balance = IIF(@ErrCode = 0, @postbalance, @balance)
+		,@transdate = IIF(@ErrCode = 0, CONVERT(CHAR(8), @transdate,112), NULL)
 	
 	---------------------------------------------------------------------------------------------------
-	--TODO: write userlog 
+	--TODO: write userlog
+	WRITE_LOG:
 	DECLARE @LogData VARCHAR(1000)
 	IF @ErrCode = 0 --success
 	BEGIN
@@ -647,19 +653,21 @@ BEGIN
 					'Insert trans custid = ' + CONVERT(VARCHAR(20), @custid) + ', bettype = ' + CONVERT(VARCHAR(20), @bettype) + ', amount = ' + CONVERT(VARCHAR(20), @amount) 
 					+ CASE WHEN @BonusId > 0 THEN ', bonusId = ' + convert(varchar(20), @BonusId) ELSE '' END
 
-		SELECT @LogData = @LogData
+	END
+	ELSE -- error logs
+	BEGIN
+		SELECT @LogData = CONCAT(@ErrMsg, '. Transfer @transid=',@transid,', @bal_transid=', @bal_transid, ', custid = ' + CONVERT(VARCHAR(20), @custid), ', bettype = ' + CONVERT(VARCHAR(20), @bettype) + ', amount = ' + CONVERT(VARCHAR(20), @amount))
+		
+	END
+
+	-- LOG more @InitialTime info IF any
+	SELECT @LogData = @LogData
 			+ CASE WHEN @InitialTime IS NOT NULL THEN CONCAT(', @InitialTime=', FORMAT(@InitialTimeCheck, 'yyyy-MM-dd HH:mm:ss')) ELSE CONCAT(', @InitialTimeCheck=', FORMAT(@InitialTimeCheck, 'yyyy-MM-dd HH:mm:ss')) END
 			+ CASE WHEN ISNULL(@DurationLimit, 0) > 0 THEN CONCAT(', @DurationLimit=', @DurationLimitCheck) ELSE CONCAT(', @DurationLimitCheck=', @DurationLimitCheck) END
 			+ CONCAT(', @diffDurationLimit=', @diffDurationLimit)
 		WHERE @bettype IN (22001, 22002)
-	END
-	ELSE -- error logs
-	BEGIN
-		SELECT @LogData = CONCAT(@ErrMsg, '. Transfer @transid=',@transid,', @bal_transid=', @bal_transid)
-	END
 
 	BEGIN TRY	
-	
 		EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer 
 								@UserID		= @custid, 
 								@FromCustID = @custid, 
