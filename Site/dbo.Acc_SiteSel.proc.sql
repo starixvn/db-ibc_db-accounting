@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBAGE-BODB02" executers="bodbAdminNet,bodbExtAccNet" viewers="" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBCUST-CustDB" executers="wsv_nap,wsv_xnap" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_SiteSel] 
  @System varchar(50) = 'ACCOUNTING',
  @Userid INT=NULL,
@@ -16,39 +16,26 @@ Revisions:
 	- 20220802@Sophia: Scale out DBTRANS, add SiteDBGroupID [RedmineID: #175253]
 	- 20230117@Eddie: get SiteLable by System [RedmineID: #181596]
 	- 20231206@Johnson: check permission by UserID [RedmineID: #197160]
+	- 20240725@Tacy: Remove linked-server/cross-db on NAP_UserControl and move to DBCUST [redmineID: #208402]
 */
 BEGIN
 	SET NOCOUNT ON
-	DECLARE @SearchQuery varchar(1024)
-	DECLARE @tmp TABLE (siteid INT, site NVARCHAR(50), SpecialGroup TINYINT )
-	DECLARE @tmpUserid VARCHAR(50)
 
 	IF(@System = 'ACCOUNTING')
 	BEGIN
-		IF @Userid IS NULL
-		BEGIN
-			SELECT [siteid], [site],  isLicensee, SiteDBGroupID, [SiteLabel]
-			FROM [Site] with (NOLOCK)
-			WHERE isActive = 1 
-			ORDER BY isLicensee, SiteDBGroupID, [site]
-		END
-		ELSE
-		BEGIN
-			SELECT @tmpUserid = CAST(@Userid AS VARCHAR(50))
-			SELECT @SearchQuery = 'SELECT * 
-			FROM OPENQUERY(DBPOL, 
-			''SELECT siteid , site, SpecialGroup FROM NAP_UserControl.dbo.f_GetDeniedSiteByUser( ''''' + @tmpUserid + ''''')'')'
+		DECLARE @tmp TABLE (siteid INT, site NVARCHAR(50), SpecialGroup TINYINT )
+		
+		INSERT INTO  @tmp (siteid, site, SpecialGroup)
+		SELECT siteid , site, SpecialGroup 
+		FROM NAP_UserControl.dbo.f_GetDeniedSiteByUser(@Userid)
+		WHERE @Userid IS NOT NULL
 
-			INSERT INTO  @tmp (siteid, site, SpecialGroup)
-			EXECUTE(@SearchQuery)
-
-			SELECT a.siteid, a.site, isLicensee, SiteDBGroupID, a.SiteLabel
-			FROM [Site] a with (NOLOCK)
-			WHERE isActive = 1 
-				AND siteid NOT IN (SELECT siteid FROM @tmp )
-				AND (@IncludeCN88 <> 0 OR a.site <> 'CN88')
-			ORDER BY isLicensee, SiteDBGroupID, [site]
-		END
+		SELECT a.siteid, a.site, isLicensee, SiteDBGroupID, a.SiteLabel
+		FROM [Site] a with (NOLOCK)
+		WHERE isActive = 1 
+			AND siteid NOT IN (SELECT siteid FROM @tmp )
+			AND (@IncludeCN88 <> 0 OR a.site <> 'CN88')
+		ORDER BY isLicensee, SiteDBGroupID, [site]
 	END
 	ELSE
 	BEGIN

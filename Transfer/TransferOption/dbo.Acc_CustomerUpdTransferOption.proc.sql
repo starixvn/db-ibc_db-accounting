@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBCUST-CUSTDB" executers="bodbAdminNet,bodbDownlineNet,bodbExtAccNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBCUST-CUSTDB" executers="wsv_nap,wsv_alp,wsv_xnap" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_CustomerUpdTransferOption]
     @CustId INT,
     @TransferOption VARCHAR(8),
@@ -31,7 +31,7 @@ Revisions:
     - 20150610@Kathy: Migrate custDB to new server DBCust (Move Acc_CustomerSelCheckEnable to DBCUST.CustDB, Change Age_CustomerSelCheckBelonging -> Age_CustomerSelCheckBelongingByCustID) [Redmine:#36216]
     - 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
     - 20231102@Luke: Alpha - Enhance auto transfer function (phase 2) [Redmine: #195135]
-                                                  
+	- 20240919@Tacy: Remove linked-server/cross-db on NAP_UserControl [redmineID: #208402]                           
 Param's Explanation:
 */
 BEGIN
@@ -53,17 +53,8 @@ BEGIN
     @roleid = @roleid OUTPUT
     IF (@roleid = 0) RETURN
     ---------------------------
-
-    --Check permission for account site: @phuc20080213
-    EXEC NAP_UserControl.dbo.Acc_Con_CheckPermission @custid=@userid,@funcname='[OtherCust]',@ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
-    IF @ErrCode <> 0
-    BEGIN
-        IF @ReturnErrCode = 0
-                RAISERROR (@ErrMsg, 16, 1)
-        RETURN
-    END
-    --end
-    --Check disable user
+    
+	--Check disable user
     EXEC dbo.Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
     IF @ErrCode <>0 RETURN
     --end
