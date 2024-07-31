@@ -2309,7 +2309,7 @@ BEGIN
 		IF @ErrCode <> 0
 			RETURN
 
-		IF @ProductID IN (1, 27) AND @IsOutright = 0
+		IF @ProductID IN (1, 27, 88) AND @IsOutright = 0
 		BEGIN
 			IF (ISNULL(@ActualResult,'') = '' OR ISNULL(@WrongResult, '') = '') AND @MessageID = 0
 			BEGIN
