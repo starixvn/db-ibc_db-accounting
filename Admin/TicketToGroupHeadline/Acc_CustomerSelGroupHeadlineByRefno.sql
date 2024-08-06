@@ -1989,8 +1989,9 @@ BEGIN
 		*/
 		UPDATE r
 			SET r.ProductId = s.ProductID, 
-				r.EventType = CASE WHEN s.bettype IN (9, 29, 2799, 11099) THEN 1 
-							  ELSE s.EventType END, 
+				r.EventType = CASE WHEN s.bettype IN (9, 29, 2799) THEN 1
+                                   WHEN s.BetType IN (11099) THEN 5
+							       ELSE s.EventType END, 
 				r.MatchId   = CASE WHEN s.bettype IN (9, 29, 2799, 11099) THEN @MatchId 
 						      ELSE r.MatchId END
 		FROM #result r
