@@ -69,8 +69,9 @@ Revisions:
 	- 20230227@Evan: Ensure correct balance calculation when allow to transfer 247 (BU) [Redmine: #173554]
 	- 20230322@Evan: Change code write log into bodb_customerlog.UserLog_Transfer [Redmine: #185507]
 	- 20240304@Eddie: Change "Dot_Member" to "Svc_Tig" account [Redmine: #201841]
-	- 20240318@Bobby: EC enhancement - [RedmineID: #191592]
+	- 20240318@Bobby: LAP - EC enhancement - [RedmineID: #191592]
 	- 20240710@Kelvin: Deposit - Enhance rollback process in SP transfer (HOT FIX) - [RedmineID: #206265]
+	- 20240502@Bobby: Deposit - Rollback Transfer Enhancement - [RedmineID: #206265]
 
 Param's Explanation:
 ? @bal_custid: Custid of "Balance" (dummy) account to record opposite value for transaction
@@ -149,7 +150,7 @@ BEGIN
 	DECLARE @username VARCHAR(50),
 		@currency TINYINT,
 		@currencyName VARCHAR(5),
-		-- @transdate datetime,	
+		@winlostdate smalldatetime,	
 		@actualrate FLOAT,
 		@winlost MONEY,	
 		@actual_stake MONEY,
@@ -190,7 +191,9 @@ BEGIN
 		@BalanceUpDate smalldatetime,
 		@IsDiff SMALLINT = 1,
 		@NewMoveBetsDay smalldatetime,
-		@NewBalanceUpDate smalldatetime
+		@NewBalanceUpDate smalldatetime,
+		--Enhance EC
+		@stepDone	INT
 
 	SELECT @ErrCode = 0,
 			@ErrMsg = '',
@@ -428,155 +431,146 @@ BEGIN
 		SELECT @IsForced = 0
 
 	IF @RefNo <> 0 Set @IsForced = 1   -- IF @Refno <> 0 = Approved action
-	------------------Insert trans into DB---------------------------------------------------------------
-	IF @RefNo = 0
-	BEGIN
-		EXEC Get_Refno_Transid @RefNo = @RefNo OUTPUT
-	END	
-
-	---Update Debit Balance	
-	SELECT @Cust_balance = @winlost - @actual_stake
-	IF @Cust_balance < 0 
-	BEGIN 
-		SELECT @Cust_balance_ABS = ABS(@Cust_balance)
-
-		EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_balance_ABS, @type = 2, @IsForced = @IsForced, @errCode = @ErrCode OUTPUT
-		IF @ErrCode <> 0
-		BEGIN
-			SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 105	
-			RETURN
-		END
-	END 
-
-	SELECT @transdate = current_timestamp
-	---get new transid 
-	EXEC Get_Bettrans_TransID @TransID = @TransId OUTPUT
 
 	BEGIN TRY
+		SELECT @ErrMSg	= ''
+			,@ErrCode	= 0
+			,@stepDone	= 0;
 
-		INSERT INTO dbo.transfer
-			(TransId, custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, 
-				creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID, ip, SerialNo, RepUpdateTime)
-		VALUES 
-			(@TransId, @CustID, @username, @RefNo, @transdate, @bettype, @transdesc,@winlost, @actual_stake, CONVERT(NVARCHAR(10), @transdate, 120),
-				@CustID, @recommend, @mrecommend, @srecommend, @Currency,@actualrate, @currencyName, 131, @ip, @BetCheck, SYSDATETIME())
+		------------------Insert trans into DB---------------------------------------------------------------
+		IF @RefNo = 0
+		BEGIN
+			EXEC Get_Refno_Transid @RefNo = @RefNo OUTPUT
+		END	
+
+		---Update Debit Balance	
+		SELECT @Cust_balance	= @winlost - @actual_stake
+			,@Cust_balance_ABS	= ABS(@Cust_balance)
+
+		IF @Cust_balance < 0 
+		BEGIN 
+			EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_balance_ABS, @type = 2, @IsForced = @IsForced, @errCode = @ErrCode OUTPUT
+			IF @ErrCode <> 0
+			BEGIN
+				SELECT @ErrMsg = 'Insert transaction failed. ERROR_MESSAGE: Update balance debit failed', @ErrCode = 105	
+				RAISERROR(@ErrMsg, 11, 1); --- will be handled in the Begin...Catch block code
+			END
+			SET @stepDone += POWER(2*1, 1); --Done BalanceDebit-2^1
+		END 
+
+		SELECT @transdate	= CURRENT_TIMESTAMP
+			, @winlostdate	= CAST(@transdate AS DATE)
+
+		---get new @TransId 
+		EXEC Get_Bettrans_TransID @TransID = @TransId OUTPUT
+		--get new @bal_transid 
+		EXEC Get_Bettrans_TransID @TransID = @bal_transid OUTPUT
+
+		BEGIN TRY
+			INSERT INTO dbo.transfer
+				(TransId, custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, 
+					creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID, ip, SerialNo, RepUpdateTime)
+			VALUES 
+				(@TransId, @CustID, @username, @RefNo, @transdate, @bettype, @transdesc,@winlost, @actual_stake, @winlostdate,
+					@CustID, @recommend, @mrecommend, @srecommend, @Currency,@actualrate, @currencyName, 131, @ip, @BetCheck, SYSDATETIME())
+				,
+				(@bal_transid, @bal_custID, @bal_Username, @RefNo, @transdate, @bettype, @transdesc, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, @winlostdate, 
+					@CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 131, @ip, @BetCheck, SYSDATETIME())
+
+			SET @stepDone += POWER(2*1, 2); --Done BalanceDebit-2^2
+		END TRY
+		BEGIN CATCH
+			SELECT	@ErrCode = 108
+					,@ErrMsg = 'Insert transaction failed.' + ' ERROR_MESSAGE: Insert transfer failed'  + ' - ERROR_NUMBER: ' + CONVERT(VARCHAR(20), @ErrCode) + '. Exception: ' + ERROR_MESSAGE();
+				
+			RAISERROR(@ErrMsg, 11, 1); --- will be handled in the Begin...Catch block code
+		END CATCH
+
+		---Update Credit Balance	
+		IF @Cust_balance > 0 
+		BEGIN 
+			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_balance, @type = 2, @errCode = @ErrCode OUTPUT
+			IF @ErrCode <> 0
+			BEGIN
+				SELECT @ErrMsg = 'Insert transaction failed. ERROR_MESSAGE: Update balance credit failed', @ErrCode = 106	
+				RAISERROR(@ErrMsg, 11, 1); --- will be handled in the Begin...Catch block code
+			END
+			SET @stepDone += POWER(2*1, 3); --Done BalanceCredit-2^3
+		END 
 
 		---insert into new table transferinfo
-
 		IF NOT (@WalletType IS NULL AND @BonusID IS NULL)
 		BEGIN
 			INSERT INTO dbo.TransferInfo(TransId, WalletType, BonusID, RepUpdateTime)
 			VALUES (@TransId, @WalletType, @BonusID, SYSDATETIME())
+				,(@bal_transid, @WalletType, @BonusID, SYSDATETIME())
+
+			SET @stepDone += POWER(2*1, 4); --Done TransferInfo-2^4
 		END
 
 	END TRY
 	BEGIN CATCH
 							
-		SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 105	
-
 		WAITFOR DELAY '000:00:00.002' -- wait for in-house service
 
-		--Manually rollback
-		UPDATE dbo.Transfer WITH(ROWLOCK)
-		SET	custid = 0, 
-			Recommend = 0, 
-			MRecommend = 0, 
-			SRecommend = 0, 
-			Winlost = 0, 
-			Actual_Stake = 0, 
-			RepUpdateTime = SYSDATETIME()
-		WHERE refno = @RefNo and bettype = @bettype and custid = @custid AND TransId = @transid
-			
-		UPDATE TransferInfo WITH(ROWLOCK)
-		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-		WHERE TransId = @TransId
+		--TODO: Unhandle exception
+		SELECT @ErrCode = 110
+			, @ErrMsg	= CONCAT('Insert transaction failed. Exception:' + ERROR_MESSAGE(), ', ERROR_LINE: ', ERROR_LINE(), ', ERROR_NUMBER: ', ERROR_NUMBER())
+		WHERE @ErrMsg <> ERROR_MESSAGE()
 
-		--rollback balance
-		IF @Cust_balance < 0 
-		BEGIN 
-			SELECT @Cust_balance_ABS = ABS(@Cust_balance)
-			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_balance_ABS, @type = 2
-		END  
-
-		RETURN
-
-	END CATCH
-
-	---Update Credit Balance	
-	IF @Cust_balance > 0 
-	BEGIN 
-		EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_balance, @type = 2
-	END 
-
-	-------------------------------------------------------------------------------------------------
-	-------------------------------------------------------------------------------------------------
-
-	--get new transid 
-	EXEC Get_Bettrans_TransID @TransID = @bal_transid OUTPUT
-
-	BEGIN TRY
-
-		INSERT INTO dbo.Transfer 
-			(TransId, custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, 
-				creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID, ip, SerialNo, RepUpdateTime)
-		VALUES 
-			(@bal_transid, @bal_custID, @bal_Username, @RefNo, @transdate, @bettype, @transdesc, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, CONVERT(NVARCHAR(10), @transdate, 120), 
-				@CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 131, @ip, @BetCheck, SYSDATETIME())
-
-		---insert into new table transferinfo
-
-		IF NOT (@WalletType IS NULL AND @BonusID IS NULL)
-		BEGIN
-			INSERT INTO dbo.TransferInfo(TransId, WalletType, BonusID, RepUpdateTime)
-			VALUES (@bal_transid, @WalletType, @BonusID, SYSDATETIME())
-		END
-
-
-	END TRY
-	BEGIN CATCH
-		
-		SELECT @ErrMsg = 'Insert transaction failed.', @ErrCode = 106
-			
-		IF @Cust_balance > 0 
+		--TODO: rollback BalanceDebit
+		IF @Cust_balance > 0 AND @stepDone & 8 = 8
 		BEGIN 
 			EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_balance, @type = 2, @isForced = 1
-		END 	
-		
-		WAITFOR DELAY '000:00:00.002' -- wait for in-house service
-			
-		--Manually rollback
-		UPDATE dbo.Transfer WITH(ROWLOCK)
-		SET	custid = 0, 
-			Recommend = 0, 
-			MRecommend = 0, 
-			SRecommend = 0,  
-			Winlost = 0, 
-			Actual_Stake = 0, 
-			RepUpdateTime = SYSDATETIME()
-		WHERE refno = @RefNo and bettype = @bettype and custid in (@custid, @bal_custID) AND TransId IN (@transid, @bal_transid)
-			
-		UPDATE TransferInfo WITH(ROWLOCK)
-		SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
-		WHERE TransId IN (@transid, @bal_transid)
-
-		--rollback balance @CustID
-		IF @Cust_balance < 0 
-		BEGIN 
-			SELECT @Cust_balance_ABS = ABS(@Cust_balance)
-			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_balance_ABS, @type = 2
 		END 
 
-		RETURN
+		--TODO: Manually rollback transfer
+		IF @stepDone & 4 = 4
+		BEGIN
+			UPDATE dbo.Transfer WITH(ROWLOCK)
+			SET	custid = 0, 
+				Recommend = 0, 
+				MRecommend = 0, 
+				SRecommend = 0, 
+				Winlost = 0, 
+				Actual_Stake = 0, 
+				RepUpdateTime = SYSDATETIME()
+			WHERE transid IN (@TransId, @bal_transId) AND refno = @RefNo
+				AND @stepDone & 4 = 4
+		END
 
+		--TODO: rollback BalanceCredit
+		IF @Cust_balance < 0 AND @stepDone & 2 = 2
+		BEGIN 
+			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_balance_ABS, @type = 2
+		END 
+			
+		--TODO: Manually rollback transferInfo
+		IF @stepDone & 16 = 16
+		BEGIN
+			UPDATE TransferInfo WITH(ROWLOCK)
+			SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+			WHERE TransId IN (@TransId, @bal_transId)
+				AND @stepDone & 16 = 16
+		END
 	END CATCH
 
-	SET @transdate = CONVERT(CHAR(30),@transdate, 121)
-	
-	DECLARE @LogData VARCHAR(1000)
+	--TODO: OUTPT params
+	SET @transdate = IIF(@ErrCode = 0, CONVERT(CHAR(30), @transdate, 121), NULL)
 
-	SELECT @LogData = 
-				'Insert trans custid = ' + CONVERT(VARCHAR(20), @custid) + ', bettype = ' + CONVERT(VARCHAR(20), @bettype) + ', amount = ' + CONVERT(VARCHAR(20), @amount) 
-				+ CASE WHEN @BonusId > 0 THEN ', bonusId = ' + CONVERT(VARCHAR(20), @BonusId) ELSE '' END
+	----------------------------------------------------------------------
+	--TODO: write userlog successfully
+	DECLARE @LogData VARCHAR(1000)
+	IF @ErrCode = 0 --success
+	BEGIN
+		SELECT @LogData = 
+					'Insert trans custid = ' + CONVERT(VARCHAR(20), @custid) + ', bettype = ' + CONVERT(VARCHAR(20), @bettype) + ', amount = ' + CONVERT(VARCHAR(20), @amount) 
+					+ CASE WHEN @BonusId > 0 THEN ', bonusId = ' + CONVERT(VARCHAR(20), @BonusId) ELSE '' END
+	END
+	ELSE -- error logs
+	BEGIN
+		SELECT @LogData = CONCAT(@ErrMsg, '. Transfer @transid=',@transid,', @bal_transid=', @bal_transid)
+	END
 
 	BEGIN TRY	
 	
@@ -600,5 +594,3 @@ BEGIN
 	END CATCH
 END
 GO
-
-
