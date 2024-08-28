@@ -1,4 +1,4 @@
-/*<info serverAlias="DBPRO-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBPRO-bodb02" executers="wsv_nap" viewers="" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE  dbo.Acc_Product_Ins
 	@File	    NVARCHAR(MAX),
 	@LoginIP	VARCHAR(20)='',
@@ -14,6 +14,7 @@ Original:
 
 	Revisions:
 		- 20200413@Malcolm: NAP Manage Products/Sporttype/Bettype [Redmine: #131241]
+		- 20240708@Lewis: RepUpdateTime [Redmine: #207579]
 	Param's Explanation:
 	- @Fie:		
 		<ROOT>
@@ -284,7 +285,8 @@ BEGIN
 									CasinoType,
 									IsOfferPlayForFun,									
 									VendorID,
-									OrderNo									
+									OrderNo,
+									RepUpdateTime
 			)
 
 			SELECT					ProductID,
@@ -299,7 +301,8 @@ BEGIN
 									CasinoType,
 									IsOfferPlayForFun,								
 									VendorID,
-									OrderNo
+									OrderNo,
+									dbo.f_GetDateTime2()
 			FROM #input
 			WHERE ID = @CurrentRow
 		END TRY
