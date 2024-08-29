@@ -39,13 +39,9 @@ AS
 		- 20240729@Lewis: Scale Out DBCust - Remove Linked Server [Redmine : #206895]
 
 	Param's Explanation:
-	- @Fie:		
-		<ROOT>
-				<File 
-						UserName="member1" 
-						RefNo="123456789" 					
-				/>
-		</ROOT>	
+	- @Fie:	<ROOT>
+                <File UserName="member1" RefNo="123456789"/>
+            </ROOT>	
 	- @HeadlineType: 2-All,1-Vip,0-Normal
 	- ErrCode:	1-Deposit Customer	
 				2-Invalid Ref No
