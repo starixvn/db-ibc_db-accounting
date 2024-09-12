@@ -17,6 +17,7 @@ AS
 		- 20240219@Lewis: Add Live22 PromotionPrize - bettype = 7698 [RedmineID: #201011]
 		- 20240626@Lewis: Add FastSpin [RedmineID: #205740]	
 		- 20240718@Lewis: Add VGaming PromotionPrize [RedmineID: #203763]
+		- 20240826@Lewis: Add FA CHAI - Promotion Prize [RedmineID: #209893]
 		 
 */
 
@@ -25,7 +26,7 @@ RETURN
 		CONVERT(INT, Bettype) AS Bettype
 		,CONVERT(VARCHAR(50), 'Prize') AS BettypeGroup
 	FROM (
-		VALUES (1699), (1906), (2199), (2399), (2999), (3899), (4298), (4299), (4300), (4600), (8695), (2499), (7698), (11295), (3897)
+		VALUES (1699), (1906), (2199), (2399), (2999), (3899), (4298), (4299), (4300), (4600), (8695), (2499), (7698), (11295), (3897), (11399)
 	) AS t (Bettype)
 
 	UNION ALL
