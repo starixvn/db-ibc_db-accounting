@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,wsv_nap"  isFunction="0" isNested="1"></info>*/
+/*<info serverAlias="DBAGE-bodb02" executers="wsv_nap"  isFunction="0" isNested="1"></info>*/
 ALTER PROCEDURE [dbo].[Acc_CustomerSelBalanceInfo]
 	@CustId		INT = NULL,
 	@CustIdList	VARCHAR(MAX) = NULL,
@@ -6,7 +6,6 @@ ALTER PROCEDURE [dbo].[Acc_CustomerSelBalanceInfo]
 	@BalanceUpDay SMALLDATETIME = NULL
 
 AS
-
 /*
 	Creator: Percy
 	Date: 2017-04-19
@@ -24,24 +23,45 @@ AS
 		- 20230606@Lewis: Add 3rd Party Pending transfer column [Redmine: #188648]
 		- 20231110@Bobby: Tuning perf - put index hint option [Redmine: #196544]
 		- 20240314@Bobby: EC enhancement [Redmine: #202276]
+		- 20240918@Bobby: SabaWallet - Reward Program [Redmine: #209191]
 
 	Param's Explaination:
 		- @CustId: single cust
 		- @CustIdList: multiple cust
 */
-
 BEGIN
 	SET NOCOUNT ON
 
-	-- Get Balance Information --
-	CREATE TABLE #balanceInfo (CustId INT, totalBalance MONEY, TotalBalance_RM MONEY, YesterdayTotalBalance MONEY, YesterdayTotalBalance_RM MONEY, PendingTransfer3rd MONEY, PendingTransfer3rd_RM MONEY)
+	DROP TABLE IF EXISTS #SportBettype
+	DROP TABLE IF EXISTS #balanceInfo
+	DROP TABLE IF EXISTS #CustInfo
 
-	IF @CustId IS NULL AND ISNULL(@CustIdList, '') = ''
-	BEGIN
-		SELECT CustId, totalBalance, TotalBalance_RM, YesterdayTotalBalance, YesterdayTotalBalance_RM, PendingTransfer3rd, PendingTransfer3rd_RM FROM #balanceInfo
-		RETURN
-	END
+	-- Get Balance Information --
+	CREATE TABLE #balanceInfo (CustId INT, totalBalance MONEY, TotalBalance_RM MONEY, YesterdayTotalBalance MONEY, YesterdayTotalBalance_RM MONEY, PendingTransfer3rd MONEY, PendingTransfer3rd_RM MONEY
+		, RewardPending MONEY, RewardPending_RM MONEY
+		, RewardBalance MONEY, RewardBalance_RM MONEY
+		, RewardCurrencyID INT
+		, RewardMaxTransId BIGINT
+	);
+
+	CREATE TABLE #CustInfo (CustId INT PRIMARY KEY, RoleId TINYINT);
+
+	INSERT INTO #CustInfo (CustId, RoleId)
+	SELECT custid, roleid
+	FROM dbo.custInfo WITH(NOLOCK)
+	WHERE custid = @custID
+		AND roleid < 5
+	UNION 
+	SELECT custid, roleid
+	FROM dbo.custInfo c WITH(NOLOCK)
+	WHERE EXISTS (SELECT TOP 1 1 FROM STRING_SPLIT(@CustIdList, ',')s WHERE c.custid = s.value)
+		AND roleid < 5
+
+	IF @@ROWCOUNT = 0 
+		GOTO RS_OUTPUT;
 	
+
+	--TODO: Process balance info
 	DECLARE @today SMALLDATETIME, @yesterday SMALLDATETIME
 	SELECT  @today = CONVERT(DATE, GETDATE())
 	SELECT  @yesterday = DATEADD(DAY, -1, @today)
@@ -67,31 +87,6 @@ BEGIN
 	BEGIN
 		SELECT @moveBetsDay = @MoveBetDay
 		SELECT @BUDay = @BalanceUpDay
-	END
-	
-	CREATE TABLE #CustInfo (CustId INT PRIMARY KEY, RoleId TINYINT)
-
-	IF @CustId IS NOT NULL
-	BEGIN
-		INSERT INTO #CustInfo (CustId, RoleId)
-		SELECT custid, roleid
-		FROM dbo.custInfo WITH(NOLOCK)
-		WHERE custid = @custID
-			AND roleid < 5
-	END
-	ELSE
-	BEGIN
-		INSERT INTO #CustInfo (CustId, RoleId)
-		SELECT custid, roleid
-		FROM dbo.custInfo c WITH(NOLOCK)
-		WHERE EXISTS (SELECT TOP 1 1 FROM dbo.strSplit(@CustIdList, ',')s WHERE c.custid = s.val)
-			AND roleid < 5
-	END
-
-	IF NOT EXISTS (SELECT TOP 1 1 FROM #CustInfo)
-	BEGIN
-		SELECT CustId, totalBalance, TotalBalance_RM, YesterdayTotalBalance, YesterdayTotalBalance_RM,PendingTransfer3rd, PendingTransfer3rd_RM FROM #balanceInfo
-		RETURN
 	END
 
 	-- member
@@ -172,6 +167,20 @@ BEGIN
 			AND statusID IN (111, 112, 113)
 			AND winlostdate >= @yesterday
 		GROUP BY CustId
+		;
+
+		--TODO: SabaWallet
+		INSERT INTO #balanceInfo (CustId, RewardPending, RewardPending_RM, RewardBalance, RewardBalance_RM, RewardCurrencyID, RewardMaxTransId)
+		SELECT c.CustId, 0 AS RewardPending, 0 AS RewardPending_RM,
+			SUM(sw.Amount) AS RewardBalance, SUM(sw.Amount*sw.ActualRate) AS RewardBalance_RM,
+			sw.CurrencyID, MAX(sw.TransId) AS RewardMaxTransId
+		FROM dbo.SabaWalletTicket sw  WITH(NOLOCK)
+			INNER JOIN #CustInfo c ON sw.custid = c.CustId AND c.RoleId = 1
+		WHERE (POWER(2, c.RoleId - 1) & ISNULL(sw.PaymentStatus, 0)) = 0 -- bit0
+			AND sw.StatusId = 0 -- NOT completed
+			AND sw.WalletID = 2
+		GROUP BY c.CustId, sw.CurrencyID
+		;
 	END
 	-- agent
 	IF EXISTS (SELECT TOP 1 1 FROM #CustInfo WHERE RoleId = 2)
@@ -261,6 +270,22 @@ BEGIN
 			AND statusID IN (111,112,113)  
 			AND winlostdate >= @yesterday
 		GROUP BY recommend
+		;
+
+		--TODO: SabaWallet
+		INSERT INTO #balanceInfo (CustId, RewardPending, RewardPending_RM, RewardBalance, RewardBalance_RM, RewardCurrencyID, RewardMaxTransId)
+		SELECT c.CustId, 
+			SUM(IIF((POWER(2, c.RoleId - 2) & ISNULL(sw.PaymentStatus, 0)) = 0, sw.Amount, 0)) AS RewardPending,
+			SUM(IIF((POWER(2, c.RoleId - 2) & ISNULL(sw.PaymentStatus, 0)) = 0, sw.Amount*sw.ActualRate, 0)) AS RewardPending_RM,
+			SUM(IIF((POWER(2, c.RoleId - 1) & ISNULL(sw.PaymentStatus, 0)) = 0, sw.Amount, 0)) AS RewardBalance, 
+			SUM(IIF((POWER(2, c.RoleId - 1) & ISNULL(sw.PaymentStatus, 0)) = 0, sw.Amount*sw.ActualRate, 0)) AS RewardBalance_RM, 
+			sw.CurrencyID, 
+			MAX(sw.TransId) AS RewardMaxTransId
+		FROM dbo.SabaWalletTicket sw  WITH(NOLOCK)
+			INNER JOIN #CustInfo c ON sw.recommend = c.CustId AND c.RoleId = 2
+		WHERE sw.WalletID = 2
+		GROUP BY c.CustId, sw.CurrencyID
+		;
 	END
 	-- master
 	IF EXISTS (SELECT TOP 1 1 FROM #CustInfo WHERE RoleId = 3)
@@ -367,6 +392,22 @@ BEGIN
 			AND b.statusID IN (111, 112, 113)
 			AND winlostdate >= @yesterday
 		GROUP BY mrecommend
+		;
+
+		--TODO: SabaWallet
+		INSERT INTO #balanceInfo (CustId, RewardPending, RewardPending_RM, RewardBalance, RewardBalance_RM, RewardCurrencyID, RewardMaxTransId)
+		SELECT c.CustId, 
+			SUM(IIF((POWER(2, c.RoleId - 2) & ISNULL(sw.PaymentStatus, 0)) = 0, sw.Amount, 0)) AS RewardPending,
+			SUM(IIF((POWER(2, c.RoleId - 2) & ISNULL(sw.PaymentStatus, 0)) = 0, sw.Amount*sw.ActualRate, 0)) AS RewardPending_RM,
+			SUM(IIF((POWER(2, c.RoleId - 1) & ISNULL(sw.PaymentStatus, 0)) = 0, sw.Amount, 0)) AS RewardBalance, 
+			SUM(IIF((POWER(2, c.RoleId - 1) & ISNULL(sw.PaymentStatus, 0)) = 0, sw.Amount*sw.ActualRate, 0)) AS RewardBalance_RM, 
+			sw.CurrencyID, 
+			MAX(sw.TransId) AS RewardMaxTransId
+		FROM dbo.SabaWalletTicket sw  WITH(NOLOCK)
+			INNER JOIN #CustInfo c ON sw.mrecommend = c.CustId AND c.RoleId = 3
+		WHERE sw.WalletID = 2
+		GROUP BY c.CustId, sw.CurrencyID
+		;
 
 	END
 	-- super
@@ -469,16 +510,31 @@ BEGIN
 			AND statusID NOT IN (0,1) 
 			AND winlostdate >= @yesterday
 		GROUP BY srecommend
+		;
+
+		--TODO: SabaWallet
+		INSERT INTO #balanceInfo (CustId, RewardPending, RewardPending_RM, RewardBalance, RewardBalance_RM, RewardCurrencyID, RewardMaxTransId)
+		SELECT c.CustId, 
+			SUM(IIF((POWER(2, c.RoleId - 2) & ISNULL(sw.PaymentStatus, 0)) = 0, sw.Amount, 0)) AS RewardPending,
+			SUM(IIF((POWER(2, c.RoleId - 2) & ISNULL(sw.PaymentStatus, 0)) = 0, sw.Amount*sw.ActualRate, 0)) AS RewardPending_RM,
+			SUM(IIF((POWER(2, c.RoleId - 1) & ISNULL(sw.PaymentStatus, 0)) = 0, sw.Amount, 0)) AS RewardBalance, 
+			SUM(IIF((POWER(2, c.RoleId - 1) & ISNULL(sw.PaymentStatus, 0)) = 0, sw.Amount*sw.ActualRate, 0)) AS RewardBalance_RM, 
+			sw.CurrencyID, 
+			MAX(sw.TransId) AS RewardMaxTransId
+		FROM dbo.SabaWalletTicket sw  WITH(NOLOCK)
+			INNER JOIN #CustInfo c ON sw.srecommend = c.CustId AND c.RoleId = 4
+		WHERE sw.WalletID = 2
+		GROUP BY c.CustId, sw.CurrencyID
 	END
 	--headline
 	IF EXISTS (SELECT TOP 1 1 FROM #CustInfo WHERE RoleId = 0)
 	BEGIN
 		DROP TABLE IF EXISTS #tempSuper;
-		CREATE TABLE #tempSuper(SuperID INT PRIMARY KEY, HeadlineID INT);
+		CREATE TABLE #tempSuper(SuperID INT PRIMARY KEY, HeadlineID INT, RoleId TINYINT);
 
 		-- headline - SMA(s) Cash 
-		INSERT INTO #tempSuper (SuperID, HeadlineID)
-		SELECT DISTINCT c.CustID AS SuperID
+		INSERT INTO #tempSuper (SuperID, HeadlineID, RoleId)
+		SELECT DISTINCT c.CustID AS SuperID, ci.RoleId
 			, c.UplineID AS HeadlineID
 		FROM dbo.CustSuper c WITH (NOLOCK) 
 		--INNER JOIN dbo.CS_CustSuper cs ON c.custid = cs.CustId
@@ -595,11 +651,40 @@ BEGIN
 					ELSE 1 END
 			AND b.winlostdate <= @today
 		GROUP BY b.custid
+		;
 
-		DROP TABLE #tempSuper
+		--TODO: SabaWallet
+		INSERT INTO #balanceInfo (CustId, RewardPending, RewardPending_RM, RewardBalance, RewardBalance_RM, RewardCurrencyID, RewardMaxTransId)
+		SELECT c.CustId, 
+			SUM(IIF((POWER(2, c.RoleId - 2) & ISNULL(sw.PaymentStatus, 0)) = 0, sw.Amount, 0)) AS RewardPending,
+			SUM(IIF((POWER(2, c.RoleId - 2) & ISNULL(sw.PaymentStatus, 0)) = 0, sw.Amount*sw.ActualRate, 0)) AS RewardPending_RM,
+			SUM(IIF((POWER(2, c.RoleId - 1) & ISNULL(sw.PaymentStatus, 0)) = 0, sw.Amount, 0)) AS RewardBalance, 
+			SUM(IIF((POWER(2, c.RoleId - 1) & ISNULL(sw.PaymentStatus, 0)) = 0, sw.Amount*sw.ActualRate, 0)) AS RewardBalance_RM, 
+			sw.CurrencyID, 
+			MAX(sw.TransId) AS RewardMaxTransId
+		FROM dbo.SabaWalletTicket sw  WITH(NOLOCK)
+			INNER JOIN #tempSuper ts ON sw.srecommend = ts.SuperID
+		WHERE sw.WalletID = 2
+		GROUP BY ts.SuperID, sw.CurrencyID
+		;
+
 	END
 
-
+	--TODO: output result
+	RS_OUTPUT:
+	;WITH CTE_Reward AS (
+		SELECT bal.CustId,
+			SUM(ISNULL(bal.RewardPending, 0))		AS RewardPending,
+			SUM(ISNULL(bal.RewardPending_RM, 0))	AS RewardPending_RM,
+			SUM(ISNULL(bal.RewardBalance, 0))		AS RewardBalance,
+			SUM(ISNULL(bal.RewardBalance_RM, 0))	AS RewardBalance_RM,
+			ISNULL(ex.Code, '') AS RewardCurrency,
+			MAX(bal.RewardMaxTransId) AS RewardMaxTransId
+		FROM #balanceInfo bal 
+			LEFT JOIN dbo.exchange ex on ex.ExchangeId = bal.RewardCurrencyID
+		WHERE bal.RewardCurrencyID > 0
+		GROUP BY bal.CustId, ex.Code
+	)
 	SELECT
 		ci.CustId,
 		SUM(ISNULL(bal.TotalBalance, 0)) TotalBalance,
@@ -607,12 +692,16 @@ BEGIN
 		SUM(ISNULL(bal.YesterdayTotalBalance, 0)) YesterdayTotalBalance,
 		SUM(ISNULL(bal.YesterdayTotalBalance_RM, 0)) YesterdayTotalBalance_RM,
 		SUM(ISNULL(bal.PendingTransfer3rd,0)) PendingTransfer3rd,
-		SUM(ISNULL(bal.PendingTransfer3rd_RM,0)) PendingTransfer3rd_RM
+		SUM(ISNULL(bal.PendingTransfer3rd_RM,0)) PendingTransfer3rd_RM,
+		MAX(ISNULL(rw.RewardPending, 0)) AS RewardPending,
+		MAX(ISNULL(rw.RewardPending_RM, 0)) AS RewardPending_RM,
+		MAX(ISNULL(rw.RewardBalance, 0)) AS RewardBalance,
+		MAX(ISNULL(rw.RewardBalance_RM, 0)) AS RewardBalance_RM,
+		MAX(ISNULL(rw.RewardCurrency, '')) AS RewardCurrency,
+		MAX(rw.RewardMaxTransId) AS RewardMaxTransId
 	FROM #CustInfo ci
-	LEFT JOIN #balanceInfo bal ON ci.CustId = bal.custid
+		LEFT JOIN #balanceInfo bal ON ci.CustId = bal.custid
+		LEFT JOIN CTE_Reward rw ON rw.CustId = ci.CustId
 	GROUP BY ci.CustId
-
-	DROP TABLE #SportBettype
-	DROP TABLE #balanceInfo
-	DROP TABLE #CustInfo
+	;
 END
