@@ -73,7 +73,7 @@ BEGIN
         b.transid,
         b.transdate,
         CASE 
-			WHEN ISNULL(ti.IsCollection,0) = 0 THEN ISNULL(bettype.typenamee, 'TRANR')
+			WHEN ISNULL(ti.IsCollection,0) = 0 THEN bettype.typenamee
 			ELSE 'Coll' END transtype,
         b.transdesc + ' - Ex.Rate: ' + CAST(b.actualrate AS VARCHAR(10)) transdesc,
         (b.winlost - b.actual_stake),
@@ -91,7 +91,7 @@ BEGIN
     SELECT 
         b.transid,
         b.transdate,
-        ISNULL( bettype.typenamee, 'TRANR') AS transtype,
+        bettype.typenamee AS transtype,
         b.transdesc + ' - Ex.Rate: ' + CAST(b.actualrate AS VARCHAR(10)) transdesc,
         (b.Credit - b.Debit),
         CASE WHEN b.custid = @CustID THEN 1 ELSE 0 END IsOwner,
@@ -110,12 +110,13 @@ BEGIN
         SELECT 
             tf.transid,
             tf.transdate,
-			CASE WHEN EXISTS (SELECT 1 FROM bodb_archive.dbo.Transfer_Coll_BK tcbk WITH(NOLOCK) WHERE tcbk.TransID = tf.TransID) THEN 'Coll' ELSE bettype.typenamee END transtype,
+			CASE WHEN tcbk.TransID > 0 THEN 'Coll' ELSE bettype.typenamee END transtype,
             tf.transdesc + ' - Ex.Rate: ' + isnull(CAST(tf.actualrate AS VARCHAR(10)),'') transdesc,
             (tf.winlost - tf.actual_stake),
             CASE WHEN tf.custid = @CustID THEN 1 ELSE 0 END IsOwner,
             (tf.winlost - tf.actual_stake) * tf.actualrate
         FROM bodb_archive.dbo.transfer_fi tf WITH(NOLOCK)
+            LEFT JOIN bodb_archive.dbo.Transfer_Coll_BK tcbk WITH(NOLOCK) ON tcbk.TransID = tf.TransID
             LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = tf.bettype 
         WHERE 
             tf.winlostdate >= @_FromDate AND tf.winlostdate < @_ToDate
@@ -129,12 +130,13 @@ BEGIN
             SELECT 
                 tf.transid,
                 tf.transdate,
-				CASE WHEN EXISTS (SELECT 1 FROM bodb_archive.dbo.Transfer_Coll_BK tcbk WITH(NOLOCK) WHERE tcbk.TransID = tf.TransID) THEN 'Coll' ELSE bettype.typenamee END transtype,
+				CASE WHEN tcbk.TransID > 0 THEN 'Coll' ELSE bettype.typenamee END transtype,
                 tf.transdesc,
                 (tf.credit - tf.debit) totalamt,
                 CASE WHEN tf.custid = @CustID THEN 1 ELSE 0 END IsOwner
             FROM bodb_Archive.dbo.transfer_bk tf (NOLOCK)
                 LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = tf.bettype 
+                LEFT JOIN bodb_archive.dbo.Transfer_Coll_BK tcbk WITH(NOLOCK) ON tcbk.TransID = tf.TransID
                 LEFT JOIN @StatementTable st ON st.TransID = tf.transid
             WHERE 
                 tf.winlostdate >= @_FromDate AND tf.winlostdate < @_ToDate
@@ -145,7 +147,7 @@ BEGIN
             SELECT 
                 tf.transid,
                 tf.transdate,
-				ISNULL( bettype.typenamee, 'TRANR') AS transtype,
+				bettype.typenamee AS transtype,
                 --tf.transdesc,
                 tf.transdesc + ' - Ex.Rate: ' + isnull(CAST(tf.actualrate AS VARCHAR(10)),'') transdesc,
                 (tf.credit - tf.debit) totalamt,

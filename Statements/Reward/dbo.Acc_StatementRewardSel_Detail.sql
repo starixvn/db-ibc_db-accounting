@@ -7,7 +7,6 @@ AS
 	Created by: 20240826@Bobby
 	Task: 209633 - CreditReward - Reward Statement
 	DB: DBACC.bodb02
-	ORIGINAL: Acc_AllStatement_Full
 
 	Revisions:
 		- 20240826@Bobby: Init [Redmine: #209633]

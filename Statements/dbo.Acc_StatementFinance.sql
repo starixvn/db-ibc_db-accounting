@@ -132,7 +132,7 @@ BEGIN
 			b.refno,
 			(b.winlost - b.actual_stake) totalamt,
 			CASE 
-				WHEN ISNULL(ti.IsCollection,0) = 0 THEN ISNULL(bettype.typenamee, 'TRANR')
+				WHEN ISNULL(ti.IsCollection,0) = 0 THEN bettype.typenamee
 				ELSE 'Coll' END transtype,
 			b.transdesc + ' - Ex.Rate: ' + CAST(b.actualrate AS VARCHAR(10)) transdesc, 
 			b.creator,
@@ -194,7 +194,7 @@ BEGIN
 			b.WinlostDate,
 			b.RefNo,
 			(b.Credit- b.Debit) AS TotalAmt,
-			ISNULL(bt.typenamee, 'TRANR') AS TransType,
+			bt.typenamee AS TransType,
 			CONCAT(b.TransDesc, ' - Ex.Rate: ', CAST(b.actualrate AS VARCHAR(10))) AS TransDesc,
 			b.Creator,
 			b.CheckID AS CheckerID,
@@ -259,7 +259,7 @@ BEGIN
 					tf.winlostdate,
 					tf.refno,
 					(tf.winlost - tf.actual_stake) totalamt,
-					CASE WHEN EXISTS (SELECT 1 FROM bodb_archive.dbo.Transfer_Coll_BK tcbk WITH(NOLOCK) WHERE tcbk.TransID = tf.TransID) THEN 'Coll' ELSE bettype.typenamee END transtype,
+					CASE WHEN tcbk.TransID > 0 THEN 'Coll' ELSE bettype.typenamee END transtype,
 					tf.transdesc + ' - Ex.Rate: ' + isnull(CAST(tf.actualrate AS VARCHAR(10)),'') transdesc, 
 					tf.creator,
 					NULL checkerID,
@@ -268,6 +268,7 @@ BEGIN
 					0 isAllowVerify,
 					ISNULL(isReversal,0) isReversal
 				FROM bodb_archive.dbo.transfer_fi tf WITH(NOLOCK)
+					LEFT JOIN bodb_archive.dbo.Transfer_Coll_BK tcbk WITH(NOLOCK) ON tcbk.TransID = tf.TransID
 					LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = tf.bettype 
 					LEFT JOIN dbo.Customer s WITH(NOLOCK) ON tf.srecommend = s.custid
 				    LEFT JOIN dbo.Customer m WITH(NOLOCK) ON tf.mrecommend = m.custid
@@ -301,7 +302,7 @@ BEGIN
 					tf.winlostdate,
 					tf.refno,
 					(tf.Credit - tf.Debit) totalamt,
-					ISNULL(bettype.typenamee, 'TRANR') AS transtype,
+					bettype.typenamee AS transtype,
 					tf.transdesc + ' - Ex.Rate: ' + isnull(CAST(tf.actualrate AS VARCHAR(10)),'') transdesc, 
 					tf.creator,
 					NULL checkerID,
@@ -487,7 +488,7 @@ BEGIN
 				tf.winlostdate,
 				tf.refno,
 				(tf.winlost - tf.actual_stake) totalamt,
-				CASE WHEN EXISTS (SELECT 1 FROM bodb_archive.dbo.Transfer_Coll_BK tcbk WITH(NOLOCK) WHERE tcbk.TransID = tf.TransID) THEN 'Coll' ELSE bettype.typenamee END transtype,
+				CASE WHEN tcbk.TransID > 0 THEN 'Coll' ELSE bettype.typenamee END transtype,
 				tf.transdesc + ' - Ex.Rate: ' + isnull(CAST(tf.actualrate AS VARCHAR(10)),'') transdesc, 
 				tf.creator,
 				NULL checkerID,
@@ -496,6 +497,7 @@ BEGIN
 				0 isAllowVerify,
 				ISNULL(isReversal,0) isReversal
 			FROM bodb_archive.dbo.transfer_fi tf WITH(NOLOCK)
+				LEFT JOIN bodb_archive.dbo.Transfer_Coll_BK tcbk WITH(NOLOCK) ON tcbk.TransID = tf.TransID
 				LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = tf.bettype 
 			WHERE 
 				tf.custid = @CustID

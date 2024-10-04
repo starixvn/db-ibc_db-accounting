@@ -1,7 +1,7 @@
 /*<info serverAlias="DBSIC-bodb02" executers="wsv_nap" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE dbo.Acc_RewardPayment_Transfer_Rollback
 	@RefNo			BIGINT, -- Rollback Transfer & TransferExtra & SabaWalletTicket
-	@MaxTransId		BIGINT ,
+	@MaxTransId		BIGINT,
 	@Creator		INT,
 	@SiteDBGroupId	SMALLINT,
 	@IP				VARCHAR(45)	= '',
@@ -74,7 +74,8 @@ BEGIN
 
 	BEGIN TRY
 		--TODO: Check RewardPayment to rollback
-		SELECT @FromCustId	= custid,
+		SELECT TOP(1)
+			@FromCustId		= custid,
 			@srecommend		= srecommend,
 			@mrecommend		= mrecommend,
 			@recommend		= recommend,
@@ -82,35 +83,19 @@ BEGIN
 		FROM #tmpTransfer 
 		WHERE TransTable = 'TransferExtra'
 		;
-
-		WITH CTE_DirectAccount AS (
-			SELECT 
-				SUM(IIF(cd.custid = @FromCustId, 1, 0)) AS DummyCount,
-				SUM(IIF(cd.custid <> @FromCustId, 1, 0)) AS UplineCount
-			FROM CUSTDB.dbo.Acc_CustDirect cd WITH(NOLOCK) 
-			WHERE cd.custid IN (@srecommend, @mrecommend, @recommend, @FromCustId)
-				AND cd.roleid >= @roleId
-		)
-		SELECT @IsDirectCheck = IIF(ck.DummyCount = 0 AND ck.UplineCount > 0, 1, 0)
-		FROM CTE_DirectAccount ck;
-
-		IF @roleId <> 4 AND @IsDirectCheck = 0
-		BEGIN
-			SELECT @ErrCode = 103,
-				@ErrMsg = 'Invalid payment account to rollback.'
-			RETURN;		
-		END
-
-		--TODO: #1 - Rollback confirm payment on SUPER first --> SiteDB of @FromCustId
-		SELECT @confirmData = (SELECT t.CustId, t.MaxTransId, t.RefNo, t.IsDirect
+		
+		--TODO: #1 - Rollback confirm payment status on @FromCustId
+		SELECT @IsDirectCheck	= IIF(@roleId <> 4, 1, 0),
+			@confirmData		= (SELECT t.CustId, t.MaxTransId, t.RefNo, t.IsDirect
 								FROM (VALUES(@FromCustId, @MaxTransId, @RefNo, @IsDirectCheck)) AS t (CustId, MaxTransId, RefNo, IsDirect)
-								WHERE t.CustId > 0
+								WHERE @srecommend > 0
 								FOR JSON PATH);
 
 		IF ISJSON(@confirmData) = 1
 		BEGIN
 			EXEC dbo.Acc_RewardPayment_Confirm_Rollback 
 				@Data			= @confirmData,
+				@Action			= 'Transfer',
 				@ErrCode		= @ErrCode OUTPUT,
 				@ErrMsg			= @ErrMsg OUTPUT
 			;
@@ -131,16 +116,14 @@ BEGIN
 		SET custid = 0, Recommend = 0, Mrecommend=0, Srecommend=0, Credit=0, Debit=0, RepUpdateTime = SYSDATETIME()
 		FROM dbo.[TransferExtra] st WITH(ROWLOCK, UPDLOCK)
 			INNER JOIN #tmpTransfer tmp ON tmp.transid = st.transid
-		;
-		SET @stepDone |= IIF(@@ROWCOUNT = 1 AND @@ERROR = 0, POWER(2, 2), 0);
+		;SET @stepDone |= IIF(@@ROWCOUNT = 1 AND @@ERROR = 0, POWER(2, 2), 0);
 
 		--TODO: rollback transfer by transid
 		UPDATE st 
 		SET custid = 0, Recommend = 0, Mrecommend=0, Srecommend=0, winlost=0, actual_stake=0, RepUpdateTime = SYSDATETIME()
 		FROM dbo.[Transfer] st WITH(ROWLOCK, UPDLOCK)
 			INNER JOIN #tmpTransfer tmp ON tmp.transid = st.transid
-		;
-		SET @stepDone |= IIF(@@ROWCOUNT = 1 AND @@ERROR = 0, POWER(2, 3), 0);
+		;SET @stepDone |= IIF(@@ROWCOUNT = 1 AND @@ERROR = 0, POWER(2, 3), 0);
 		
 		COMMIT;
 	END TRY

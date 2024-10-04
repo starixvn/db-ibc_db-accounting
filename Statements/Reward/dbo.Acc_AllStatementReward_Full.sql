@@ -65,7 +65,7 @@ BEGIN
 								ELSE @_BalanceUpDay -- old BU
 							END
 
-	IF @_ToDate >= @_BalanceUpDay
+	IF @ToDate >= @_BalanceUpDay
 	BEGIN
 		-- always get all data from latest BUDate -> @todate for calculating ACCUMULATED BALANCE row
 		IF (@_FromDate > @_BalanceUpDay)
@@ -74,12 +74,13 @@ BEGIN
 			SELECT @_FromDate = @_BalanceUpDay
 		END	
 
+		SELECT @_ToDate = DATEADD(DAY, 1, CAST(@ToDate AS DATE)) -- whole ToDate
 		INSERT INTO @StatementTable -- transfer
 		SELECT 
 			transdate AS accdate,
 			refno,
 			(Credit-Debit) totalamt,
-			ISNULL(bt.typenamee, 'TRANR') transtype,
+			bt.typenamee AS transtype,
 			0,
 			transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END transdesc, 
 			b.creator AS creatorID,
@@ -91,32 +92,50 @@ BEGIN
 			dbo.TransferExtra b WITH (NOLOCK)
 			LEFT JOIN dbo.bettype bt WITH (NOLOCK) ON b.bettype = bt.typeid 
 			LEFT JOIN dbo.Customer ci WITH(NOLOCK) ON b.CheckID = ci.custid
-		WHERE 
-			bettype > 30000 
-			AND b.custid=@CID 
-			AND (Credit-Debit) <> 0 
-			AND winlostdate BETWEEN @_FromDate and @_ToDate 
-			AND winlostdate >= @_BalanceUpDay
+		WHERE b.custid=@CID 
+			AND b.bettype > 30000 
+			AND (b.Credit-b.Debit) <> 0 
+			AND b.transdate >= @_FromDate AND b.transdate < @_ToDate 
+			AND b.winlostdate >= @_BalanceUpDay
 	END
 
-	IF @_FromDate <= @_BalanceUpDay
+	IF @FromDate <= @_BalanceUpDay
 	BEGIN
 		-- CORRECT: full day of @ToDate
-		IF @_ToDate >= @_BalanceUpDay
+		IF @ToDate >= @_BalanceUpDay
 		BEGIN
-            SELECT @_ToDate = DATEADD(SECOND, -1, CAST(@_BalanceUpDay AS DATETIME))
+            SELECT @_ToDate = @_BalanceUpDay
         END
 
-		INSERT INTO @StatementTable -- transferExtra
+		INSERT INTO @StatementTable
+		SELECT
+			accdate,
+			0,
+			totalamt,
+			transtype,
+			0,
+			transdesc, 
+			'' creator,
+			NULL,
+			'',
+			NULL,
+			0
+		FROM bodb_Report.dbo.[StatementReward] sr WITH (NOLOCK)
+		WHERE
+			custid = @CID
+			AND accdate >= @_FromDate AND accdate < @_ToDate 
+			AND transtype <> 'Bal'
+
+		/*INSERT INTO @StatementTable -- transferExtra
 		SELECT 
 			transdate AS accdate,
 			refno,
 			(Credit-Debit) totalamt,
-			ISNULL(bt.typenamee, 'TRANR') transtype,
+			bt.typenamee AS transtype,
 			0,
 			transdesc + CASE WHEN @showExchangeRate = 1 THEN ' - Ex.Rate: ' + CAST(actualrate AS VARCHAR(10)) ELSE '' END transdesc, 
 			b.creator AS creatorID,
-			b.CheckID AS CheckerId, -- Transfer to Casino/Bingo/P2P
+			b.CheckID AS CheckerId, 
 			ci.username AS CheckerName,
 			b.checkTime,
 			0 AS IsAllowVeify
@@ -124,46 +143,72 @@ BEGIN
 			bodb_Archive.dbo.TransferExtra_bk b WITH (NOLOCK)
 			LEFT JOIN dbo.bettype bt WITH (NOLOCK) ON b.bettype = bt.typeid 
 			LEFT JOIN dbo.Customer ci WITH(NOLOCK) ON b.CheckID = ci.custid
-		WHERE 
-			bettype > 30000 
-			AND b.custid=@CID 
-			AND (Credit-Debit) <> 0 
-			AND winlostdate BETWEEN @_FromDate and @_ToDate 
-		;
+		WHERE b.custid=@CID 
+			AND b.bettype > 30000 
+			AND (b.Credit-b.Debit) <> 0 
+			AND b.transdate >= @_FromDate AND b.transdate < @_ToDate 
+			AND b.winlostdate < @_BalanceUpDay
+		;*/
+	END
 
-		-- TODO: OPENING BALANCE on the fly
-		INSERT INTO @StatementTable
-		SELECT
-			MAX(TransDate) AS accdate,
-			0,
-			SUM(Credit-Debit),
-			'Bal' transtype,
-			0 transtypeid,
-			'OPENING BALANCE' transdesc, 
-			'' creator,
-			NULL,
-			'',
-			NULL,
-			0
+	-- TODO: OPENING BALANCE on the fly
+	SET @_FromDate = @FromDate;
+	INSERT INTO @StatementTable
+	SELECT TOP (1)
+		accdate,
+		0,
+		totalamt,
+		transtype,
+		0,
+		'OPENNING BALANCE' transdesc, 
+		'' creator,
+		NULL,
+		'',
+		NULL,
+		0
+	FROM bodb_Report.dbo.[StatementReward] sr WITH (NOLOCK)
+	WHERE
+		custid = @CID
+		AND accdate < @_FromDate
+		AND transtype = 'BAL'
+	ORDER BY accdate DESC
+
+	/*
+	INSERT INTO @StatementTable
+	SELECT
+		MAX(TransDate) AS accdate,
+		0,
+		SUM(Credit-Debit),
+		'BAL' transtype,
+		0 transtypeid,
+		'OPENNING BALANCE' transdesc, 
+		'' creator,
+		NULL,
+		'',
+		NULL,
+		0
+	FROM (
+		SELECT TransDate, Credit, Debit
+		FROM dbo.TransferExtra b WITH (NOLOCK)
+		WHERE CustId = @CID
+			AND Transdate < @_FromDate
+			AND WinlostDate >= @_BalanceUpDay
+		UNION ALL
+		SELECT TransDate, Credit, Debit
 		FROM bodb_Archive.dbo.TransferExtra_bk b WITH (NOLOCK)
 		WHERE CustId = @CID
 			AND Transdate < @_FromDate
+			AND WinlostDate < @_BalanceUpDay
+	) AS t
+	HAVING SUM(Credit-Debit) <> 0
+	*/
 
-	END
-
-	--select @Fromdate_bk
-
-	IF (@_IncludeAccBal = 1) AND (@Fromdate_bk <> @_BalanceUpDay)
+	IF (@_IncludeAccBal = 1)
 	BEGIN
-		DECLARE @AccBal MONEY, @BUDate DATETIME
-
-		SELECT @AccBal = ISNULL(SUM(totalamt),0)
-		FROM @StatementTable
-		WHERE accdate < @Fromdate_bk 
-
-		IF EXISTS(SELECT 1 FROM @StatementTable WHERE accdate >= @Fromdate_bk AND @AccBal <> 0) 
+		IF EXISTS(SELECT 1 FROM @StatementTable WHERE transtype = 'BAL') 
 			INSERT INTO @StatementTable
-			SELECT '', 0, @AccBal, 'BAL', 0, 'ACCUMULATED BALANCE', NULL, NULL, 0, NULL, 0
+			SELECT '', 0, totalamt, transtype, 0, 'ACCUMULATED BALANCE', NULL, NULL, 0, NULL, 0
+			FROM @StatementTable WHERE transtype = 'BAL'
 		ELSE
 			INSERT INTO @StatementTable
 			SELECT '', 0, 0, 'BAL', 0, 'ACCUMULATED BALANCE', NULL, NULL, 0, NULL, 0

@@ -8,7 +8,7 @@ AS
 	Created by: 20240826@Bobby
 	Task: 209633 - CreditReward - Reward Statement
 	DB: DBACC.bodb02
-	ORIGINAL: Acc_AllStatement_Full
+	ORIGINAL: Acc_StatementSel, Acc_StatementSel_14,Acc_StatementSel_Old
 
 	Revisions:
 		- 20240826@Bobby: Init [Redmine: #209633]
@@ -20,8 +20,16 @@ BEGIN
 	DECLARE @isTest BIT = 0
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
 
-	DECLARE @CID INT -- to prevent bad parameter sniffing
-	SELECT  @CID = @custid
+	DECLARE @CID INT, -- to prevent bad parameter sniffing
+		@tmpFromDate  SMALLDATETIME,
+		@tmpToDate  SMALLDATETIME
+	;
+
+	SELECT
+		@CID			= @custid,
+		@tmpFromDate	= @FromDate,
+		@tmpToDate		= @ToDate
+	;
 	
 
 	DECLARE @roleid INT
@@ -68,7 +76,7 @@ BEGIN
 	-- 1.1 Get TransferExtra	
 	IF @todate >= @balanceUpDay
 	BEGIN
-		SELECT @fromdate = IIF(@fromdate < @balanceUpDay, @balanceUpDay, @fromdate);
+		SELECT @tmpFromDate = IIF(@fromdate < @balanceUpDay, @balanceUpDay, @fromdate);
 
 		INSERT INTO #Data (winlostdate, bettype, StatusID, IsOwner, OwnerWinloss, BetCount)
 		SELECT Winlostdate, bettype, 131 AS StatusID, 1 AS IsOwner,
@@ -78,26 +86,51 @@ BEGIN
 			AND 1 = CASE WHEN bettype = 30000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
 						WHEN winlostdate < @balanceUpDay THEN 0 --> old data
 					ELSE 1 END
-			AND winlostdate BETWEEN @fromdate AND @todate
+			AND winlostdate BETWEEN @tmpFromDate AND @tmpToDate
 		GROUP BY Winlostdate, bettype
 	END
 
 	-- 1.2 Get TransferExtra_bk
 	IF @fromdate < @balanceUpDay
 	BEGIN
-		SET @todate = DATEADD(DAY, -1, @balanceUpDay);
+		SELECT @tmpFromDate = @fromdate,
+			@tmpToDate = DATEADD(DAY, -1, @balanceUpDay);
 
 		INSERT INTO #Data (winlostdate, bettype, StatusID, IsOwner, OwnerWinloss, BetCount)
 		SELECT Winlostdate, bettype, 131 AS StatusID, 1 AS IsOwner,
 				SUM(Credit-Debit), COUNT(1)
 		FROM bodb_Archive.dbo.TransferExtra_bk bt WITH (NOLOCK)					
 		WHERE bt.custID = @CID		
-			AND winlostdate BETWEEN @fromdate AND @todate
+			AND winlostdate BETWEEN @tmpFromDate AND @tmpToDate
 		GROUP BY Winlostdate, bettype
 	END
 
 	-- 2. Get Openning Balance ----	
 	BEGIN
+		INSERT INTO #Data (winlostdate, bettype, StatusID, IsOwner, OwnerWinloss, BetCount)
+		SELECT
+			DATEADD(DAY, -1, @FromDate) AS WinlostDate,
+			30000 AS bettype,
+			131 StatusID,
+			1 IsOwner,
+			SUM(Credit-Debit) OwnerWinloss,
+			COUNT(1) BetCount
+		FROM (
+			SELECT WinlostDate, Credit, Debit
+			FROM dbo.TransferExtra b WITH (NOLOCK)
+			WHERE CustId = @CID
+				AND WinlostDate < @FromDate
+				AND WinlostDate >= @balanceUpDay
+			UNION ALL
+			SELECT WinlostDate, Credit, Debit
+			FROM bodb_Archive.dbo.TransferExtra_bk b WITH (NOLOCK)
+			WHERE CustId = @CID
+				AND WinlostDate < @FromDate
+				AND WinlostDate < @balanceUpDay
+		) AS t
+		HAVING SUM(Credit-Debit) <> 0
+		;
+
 		;WITH CTE_Balance (winlostdate, Balance) AS
 		(			
 			SELECT
@@ -134,6 +167,8 @@ BEGIN
 			AND IsOpeningBalance = 1 
 		/*End Calculate Opening Balance*/
 	END
+
+	--select * from #rptStatementTable
 
 	-- IV. Transfer tickets	
 	INSERT INTO #rptStatementTable (winlostdate, TransferAmt, TransCount)
