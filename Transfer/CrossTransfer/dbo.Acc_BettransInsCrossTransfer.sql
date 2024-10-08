@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBTXN-bodb02" executers="wsv_nap" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_BettransInsCrossTransfer]
 (
 	@FromCustID		INT,
@@ -40,6 +40,7 @@ AS
 		- 20211115@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 		- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
 		- 20220801@Danny: change code to support SiteDB [Redmine: #175253]
+		- 20240729@Lewis: Scale Out DBCust - Remove Linked Server [Redmine : #206895]
 */
 BEGIN
 	SET NOCOUNT ON	
@@ -51,14 +52,7 @@ BEGIN
 		RETURN
 	END 
 	
-	IF @UserID <> 10278938 -- StarixIT
-	BEGIN
-		--Check permission for account site: @phuc20080213
-		EXEC DBPOL.NAP_UserControl.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[FinanceTransfer]',@ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
-		If @ErrCode <> 0
-			RETURN
-	END
-		
+
 	---- #1 CHECK UM TRANSFER FUNCTION
 	EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckUM  
 		@CustID = @FromCustID

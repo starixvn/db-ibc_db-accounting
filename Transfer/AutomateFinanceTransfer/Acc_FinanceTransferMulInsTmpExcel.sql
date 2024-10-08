@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBCUST-CustDB" executers="wsv_nap" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE [dbo].[Acc_FinanceTransferMulInsTmpExcel]	
 	@UserID INT,
 	@ListTransfer XML,	
@@ -23,15 +23,11 @@ AS
 		- 20181112@Sophia: Add @IsCollection [redmine: #98621]
 		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
 		- 20230322@Danny: Enhance invalid transaction checking[Redmine: #184731]
+		- 20240729@Lewis: Scale Out DBCust - Remove Linked Server [Redmine : #206895]
 */
 BEGIN
 SET NOCOUNT ON
 			
-	--Check permission for account site
-	EXEC NAP_UserControl.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[AutomateFinanceTransfer]',@ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
-	
-	IF @ErrCode <> 0
-		RETURN
 
 	DECLARE @tblCust TABLE (
 		Seq INT,

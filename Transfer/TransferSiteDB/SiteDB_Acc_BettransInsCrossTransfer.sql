@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBTXN-bodb02" executers="wsv_nap" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE [dbo].[SiteDB_Acc_BettransInsCrossTransfer]
 (
 	@FromCustID		INT,
@@ -27,6 +27,7 @@ AS
 	Revisions:
 		- 20220719@Danny: Init. SP [Redmine: #175253]
 		- 20221006@Danny: fix issue wrong currency name [Redmine: #178818]
+		- 20240729@Lewis: Scale Out DBCust - Remove Linked Server [Redmine : #206895]
 */
 BEGIN
 	SET NOCOUNT ON	
@@ -37,16 +38,8 @@ BEGIN
 		SELECT @ErrMsg = 'You cannot do TRANSFER due to the destination account is the same as the source account.', @ErrCode = 100 
 		RETURN
 	END 
-	
-	IF @UserID <> 10278938 -- StarixIT
-	BEGIN
-		--Check permission for account site: @phuc20080213
-		EXEC DBPOL.NAP_UserControl.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[FinanceTransfer]',@ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
-		If @ErrCode <> 0
-			RETURN
-	END
-		
-		
+
+			
 	---- #1 CHECK UM TRANSFER FUNCTION
 	EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckUM  
 		@CustID = @FromCustID

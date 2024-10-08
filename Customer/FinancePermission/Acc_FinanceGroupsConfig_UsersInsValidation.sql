@@ -1,6 +1,7 @@
-/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="wsv_nap" viewers="" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE [dbo].[Acc_FinanceGroupsConfig_UsersInsValidation]
 	@UsernameList	VARCHAR(MAX) = ''
+	,@ValidCustIds  NVARCHAR(MAX) = ''
 	,@ErrCode		INT = 0 OUTPUT
 	,@ErrMsg		NVARCHAR(2000) = '' OUTPUT
 	,@IsAssignUsers BIT OUTPUT
@@ -13,6 +14,7 @@ AS
 	Revisions:
 		- 20220114@Malcolm: Initialize SP [Redmine: #164833]
 		- 20220614@Danny: Use String_split built-in function [RemineID: #171831]
+		- 20240809@Lewis: Scale Out DBCust - Remove Linked Server [Redmine : #206895]
 		
 	Param's Explanation:		
 		               
@@ -29,24 +31,6 @@ BEGIN
 
 	DECLARE @NRowInValid INT = 0, @NRows INT = 0
 
-	DECLARE @ABS TABLE (custid int)
-
-	INSERT INTO @ABS(custid)
-	SELECT 5452637 --ABS014
-	UNION SELECT 5452639 --ABS015
-	UNION SELECT 5519908 --ABS016
-	UNION SELECT 5519911 --ABS017
-	UNION SELECT 5519914 --ABS018
-	UNION SELECT 5519916 --ABS019
-	UNION SELECT 5519917 --ABS020
-	UNION SELECT 5519919 --ABS021
-	UNION SELECT 5519921 --ABS022
-	UNION SELECT 5519922 --ABS023
-	UNION SELECT 5519924 --ABS024
-	UNION SELECT 5519926 --ABS025
-	UNION SELECT 5848823 --ABS026
-	UNION SELECT 6081162 --ABSJackyTING.
-
 	DECLARE @FinanceUserTmp TABLE (CustId INT, UserName VARCHAR(30), GroupId INT, Status VARCHAR(20) DEFAULT ('Invalid'), RoleId INT)
 
 	INSERT INTO @FinanceUserTmp (UserName)
@@ -58,10 +42,6 @@ BEGIN
 		SELECT @ErrCode = 101, @ErrMsg = 'Maximum limit at 50 Usernames.'
 		RETURN
 	END
-
-	DECLARE @FuncId INT
-
-	SELECT @FuncId = FuncId FROM NAP_UserControl.dbo.acc_functioninfo WITH(NOLOCK) WHERE FuncDesc = 'View Finance Account'
 
 	UPDATE u
 		SET u.CustId = n.CustId, u.RoleId = n.Roleid, u.Status = CASE WHEN ISNULL(n.closed, 0) = 0 THEN 'Active' ELSE 'Closed' END
@@ -75,13 +55,9 @@ BEGIN
 	FROM @FinanceUserTmp u
 	WHERE NOT EXISTS (
 		SELECT 1 
-		FROM NAP_UserControl.dbo.acccustomer a WITH(NOLOCK) 
-			INNER JOIN NAP_UserControl.dbo.acc_memberpolicy m WITH(NOLOCK) ON m.CustID = a.custid
-			INNER JOIN NAP_UserControl.DBO.acc_grouppolicy g WITH(NOLOCK) ON g.GroupID = a.GroupID AND g.FuncID = m.FuncID
-		WHERE a.custid = u.CustId 
-			AND m.FuncID = @FuncId AND ((ISNULL(m.Policy, 0) | ISNULL(g.Policy, 0)) > 0)
-			AND a.custid NOT IN (SELECT Custid FROM @ABS)
-		) 
+		FROM string_split(@ValidCustIds,',') a
+		WHERE a.value = u.CustId
+	) 
 
 	UPDATE u
 		SET u.GroupId = n.GroupId

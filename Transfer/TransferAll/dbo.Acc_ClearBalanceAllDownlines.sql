@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet,bodbExtAccNet,wsv_nap,wsv_xnap" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBTXN-bodb02" executers="wsv_nap,wsv_xnap" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_ClearBalanceAllDownlines]
 	@AgentName varchar(50),	-- S99BD
 	@UserID int = 8,
@@ -51,6 +51,7 @@ AS
     	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 		- 20230609@Danny: support scale out credit [Redmine: #181595]
 		- 20240312@Bobby: EC enhancement [Redmine: #202276]
+		- 20240729@Lewis: Scale Out DBCust - Remove Linked Server [Redmine : #206895]
 		 				       
 	Param's Explanation:
 		@AgentName: username of agent/master/super to clear his all downlines' balance
@@ -70,15 +71,7 @@ BEGIN
 	END
 
 	------ /20121109@Viet: do not allow this SP to run once cpu is high --------  
-	--Check permission  
-	DECLARE @ErrMsg_temp NVARCHAR(4000)
 
-	-- must use temporary variable for @ErrMsg because of nvarchar(max) is not allowed in remote call  
-	EXEC DBPOL.NAP_UserControl.dbo.Acc_Con_CheckPermission @custid = @UserID, @funcname = '[OtherTrans]', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg_temp OUTPUT
-
-	SELECT @ErrMsg = @ErrMsg_temp
-
-	IF @ErrCode <> 0 RETURN
 
 	DECLARE @roleid INT, @AgentID INT, @Amount MONEY, @custid INT, @recommend INT, @mrecommend INT, @srecommend INT, @currency INT, @actualrate FLOAT, @currencyName NVARCHAR(10), @membername VARCHAR(50), @agentusername VARCHAR(50), @mastername VARCHAR(50), @supername VARCHAR(50), @memberBalance MONEY, @agentBalance MONEY, @masterBalance MONEY, @ABSmemberBalance MONEY
 	DECLARE @LogData VARCHAR(1000)

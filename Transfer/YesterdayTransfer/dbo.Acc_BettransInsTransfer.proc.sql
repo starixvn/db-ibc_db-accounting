@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBTXN-bodb02" executers="wsv_nap" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_BettransInsTransfer]
 	@FromCustID int,
 	@ToUserName varchar(30), 
@@ -46,18 +46,13 @@ Revisions:
 	- 20220801@Danny: change code to support SiteDB [Redmine: #175253]
 	- 20230322@Danny: Enhance invalid transaction checking[Redmine: #184731]
 	- 20230724@Danny: Write log amount with money data type [Redmine: #183447]
+	- 20240729@Lewis: Scale Out DBCust - Remove Linked Server [Redmine : #206895]
 					   
 Param's Explanation:
 */
 BEGIN
 	SET NOCOUNT ON
-	--Check permission for account site: @phuc20080213
-	IF @UserID <> 10278938 -- StarixIT
-	BEGIN
-		EXEC DBPOL.NAP_UserControl.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[OtherTrans]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
-		IF @ErrCode <> 0
-		RETURN
-	END
+
 
 	Declare @ToMrecommend int, @ToRecommend int, @ToSrecommend int, @ToCustID int, @Amt money,
 			@ToCurr int, @ToActualrate float, @ToCurrName nvarchar(10), @RemarkFromCurr nvarchar(70), @RemarkToCurr nvarchar(70), @ToRoleID tinyint, @ToCurrCode VARCHAR(12)
