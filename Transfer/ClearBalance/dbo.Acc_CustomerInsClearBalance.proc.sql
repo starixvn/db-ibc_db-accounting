@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet,bodbExtAccNet,wsv_nap,wsv_xnap" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBTXN-bodb02" executers="wsv_nap,wsv_xnap" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_CustomerInsClearBalance]
  	@FromCustID int, --Agent ID here
 	@ToCustIDs varchar(4000), 
@@ -56,28 +56,12 @@ Revisions:
 	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
 	- 20230609@Danny: support scale out credit [Redmine: #181595]
 	- 20240313@Bobby: EC enhancement [Redmine: #202276]
+	- 20240729@Lewis: Scale Out DBCust - Remove Linked Server [Redmine : #206895]
 	
 Param's Explanation:
 */ 
 BEGIN
 	SET NOCOUNT ON
-
-	--Check permission for account site: @phuc20080213
-	DECLARE @ErrMsg_temp nvarchar(4000)   
-
-	IF @system = 'EXTERNAL'
-	BEGIN
-		--- no check permssion in case of calling from external accounting
-		SET @ErrMsg = ''
-	END
-	ELSE
-	BEGIN
-		-- must use temporary variable for @ErrMsg because of nvarchar(max) is not allowed in remote call
-		EXEC DBPOL.NAP_UserControl.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[CustomerBalance]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg_temp output
-		SELECT @ErrMsg = @ErrMsg_temp
-		If @ErrCode <> 0
-			RETURN
-	END
 
 	--Check disable user
 	--EXEC DB052.bodb02.dbo.Acc_CustomerSelCheckEnable @custid = @FromCustID, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output

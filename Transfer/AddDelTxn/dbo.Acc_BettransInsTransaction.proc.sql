@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBTXN-bodb02" executers="wsv_nap" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_BettransInsTransaction]
 	@transid bigint OUTPUT,
 	@custid int,
@@ -47,6 +47,7 @@ Revisions:
 	- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
 	- 20220801@Danny: change code to support SiteDB [Redmine: #175253]
 	- 20221107@Danny: Database - Sync-up Standby Server data - [RedmineID: #167261]
+	- 20240729@Lewis: Scale Out DBCust - Remove Linked Server [Redmine : #206895]
 	
 Param's Explanation:
 */
@@ -54,11 +55,7 @@ BEGIN
 	SET NOCOUNT ON
 	DECLARE @balance money, @balance_ABS money
 
-	--Check permission for account site: @phuc20080213
-	EXEC DBPOL.NAP_UserControl.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[AddTransaction]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
-	If @ErrCode <> 0
-		RETURN
-	--end
+
 	--Check disable user
 		EXEC DBCUST.CustDB.dbo.Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
 		if @ErrCode <>0 return

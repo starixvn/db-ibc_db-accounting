@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBCUST-CustDB" executers="wsv_nap" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE [dbo].[Acc_FinanceTransferMulDelTmpExcel]	
 	@UserID INT,	
 	@ErrCode INT = 0 OUTPUT,
@@ -14,13 +14,10 @@ Revisions:
 	- 20130224@Lukas: move Acc_CustFinanceTransfer to new database bodb_acc
 	- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 	- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
+		- 20240729@Lewis: Scale Out DBCust - Remove Linked Server [Redmine : #206895]
 */
 SET NOCOUNT ON
 		
-	--Check permission for account site
-	EXEC NAP_UserControl.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[AutomateFinanceTransfer]',@ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
-	IF @ErrCode <> 0
-		RETURN
 		
 	IF EXISTS (SELECT 1 FROM dbo.Acc_CustFinanceTransfer WHERE UserID=@UserID)
 	BEGIN

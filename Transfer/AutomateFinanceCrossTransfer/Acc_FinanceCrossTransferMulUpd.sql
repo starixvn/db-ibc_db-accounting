@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBTXN-bodb02" executers="wsv_nap" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_FinanceCrossTransferMulUpd]
     @UserID			INT,    
     @FileName		VARCHAR(100),
@@ -24,18 +24,10 @@ AS
 		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
 		- 20211115@Danny: Change @Ip datatype to support IPv6 [Redmine: #164196]
 		- 20220802@Danny: change code to support SiteDB [Redmine: #175253]
+		- 20240729@Lewis: Scale Out DBCust - Remove Linked Server [Redmine : #206895]
 */
 BEGIN
     SET NOCOUNT ON		
-
---Check permission for account site
-    EXEC DBPOL.NAP_UserControl.dbo.Acc_Con_CheckPermission 
-				@custid		= @UserID,
-				@funcname	= '[AutomateFinanceTransfer]', 
-				@ErrCode	= @ErrCode OUTPUT,
-				@ErrMsg		= @ErrMsg OUTPUT
-    IF @ErrCode <> 0 
-        RETURN
 	
 	DECLARE @tmpTransfer TABLE --this table is suitable to SP [Acc_FinanceCrossTransferBettransIns]
     (
@@ -105,8 +97,5 @@ BEGIN
     FROM @tmpTransfer
 END			
 
-
-GO
-GRANT EXECUTE ON [dbo].[Acc_FinanceCrossTransferMulUpd] TO [bodbAdminNet] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Acc_FinanceCrossTransferMulUpd] TO [vnteam] AS [dbo]

@@ -1,6 +1,6 @@
 /*<info serverAlias="DBCUST-CustDB" executers="wsv_nap" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_GroupHeadline_Sel]
-	@UserID INT = 0
+	@DeniedList NVARCHAR(MAX)=NULL
 AS
 
 /*
@@ -12,6 +12,7 @@ AS
 		- 20210302@Percy: Initialize SP [RemineID: #146710]
 		- 20231207@Johnson: Arrange Permission on NAP for new site 777 [Redmine: #197160]
 		- 20240419@Tacy: NAP - Permission controls on real currency [redmineID: #202523]
+		- 20240729@Lewis: Scale Out DBCust - Remove Linked Server [Redmine : #206895]
 
 */
 
@@ -21,15 +22,36 @@ BEGIN
 	DECLARE @tmp TABLE (siteid INT,site NVARCHAR(50), SpecialGroup TINYINT )
 	DECLARE @tmpExchange TABLE (exchangeID INT, Currency NVARCHAR(50), OfferSite TINYINT)
 
-	--get deny site
-	INSERT INTO  @tmp (siteid , site,SpecialGroup)
-	SELECT siteid , [site], SpecialGroup 
-	FROM NAP_UserControl.dbo.f_GetDeniedSiteByUser(@UserID)
+	IF ISNULL(@DeniedList,'')<>''
+	BEGIN
+		--get deny site
+		INSERT INTO @tmp (siteid, site, SpecialGroup)
+		SELECT vl.[ID], vl.[Name], vl.[Opt]
+		FROM OPENJSON(@DeniedList) 
+				WITH (  [KeyName]	VARCHAR(30),
+						[Value]	NVARCHAR(MAX) AS JSON
+					) AS js
+		CROSS APPLY OPENJSON (js.[value])
+				WITH (  [ID]	INT,
+						[Name]	NVARCHAR(30),
+						[Opt]	TINYINT
+					) AS vl
+		WHERE js.[KeyName]='Site'
 	
-	--get deny currency
-	INSERT INTO  @tmpExchange (exchangeID, Currency, OfferSite)
-	SELECT exchangeID, Currency, OfferSite 
-	FROM NAP_UserControl.dbo.f_GetDeniedCurrencyByUser(@UserID)
+		--get deny currency
+		INSERT INTO  @tmpExchange (exchangeID, Currency, OfferSite)
+		SELECT vl.[ID], vl.[Name], vl.[Opt]
+		FROM OPENJSON(@DeniedList) 
+				WITH (  [KeyName]	VARCHAR(30),
+						[Value]	NVARCHAR(MAX) AS JSON
+					) AS js
+		CROSS APPLY OPENJSON (js.[value])
+				WITH (  [ID]	INT,
+						[Name]	NVARCHAR(30),
+						[Opt]	TINYINT
+					) AS vl
+		WHERE js.[KeyName]='Exchange'
+	END
 	
 	SELECT cgh.GroupId AS GroupHeadlineId, c.UserName AS HeadlineName
 	FROM dbo.CustGroupHeadline cgh WITH (NOLOCK)

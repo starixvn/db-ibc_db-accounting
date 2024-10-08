@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet,wsv_nap" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBTXN-bodb02" executers="wsv_nap" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_BettransInsTransferAllMembers]	
 	@AgentName varchar(50),  
 	@UserID int,  
@@ -44,18 +44,11 @@ AS
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
 		- 20230609@Danny: support scale out credit [Redmine: #181595]
 		- 20240312@Bobby: EC enhancement [Redmine: #202276]
+		- 20240729@Lewis: Scale Out DBCust - Remove Linked Server [Redmine : #206895]
 		
 	Param's Explanation:
 */ 
 BEGIN
-	--Check permission for account site: @phuc20080213  
-	DECLARE @ErrMsg_temp nvarchar(4000)   
-	-- must use temporary variable for @ErrMsg because of nvarchar(max) is not allowed in remote call
-	EXEC DBPOL.NAP_UserControl.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[OtherTrans]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg_temp output  
-	SELECT @ErrMsg = @ErrMsg_temp
-	If @ErrCode <> 0  
-	 RETURN
-	--end  
 
 
 	 DECLARE @roleid int, @AgentID int, @ABSamount MONEY

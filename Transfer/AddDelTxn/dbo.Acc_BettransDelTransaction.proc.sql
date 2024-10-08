@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet,bodbExtAccNet" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBTXN-bodb02" executers="wsv_nap,wsv_xnap" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_BettransDelTransaction]
 	@refno bigint = 0,
 	@custid int, --CustId of selected account
@@ -45,15 +45,14 @@ AS
 		- 20221107@Danny: Database - Sync-up Standby Server data - [RedmineID: #167261]
 		- 20230530@Evan: Enhancement for Customer Statement - update ErrMsg [Redmine: #186750]
 		- 20230609@Danny: support scale out credit [Redmine: #181595]
+		- 20240729@Lewis: Scale Out DBCust - Remove Linked Server [Redmine : #206895]
 
 */
 BEGIN
 
 	SET NOCOUNT ON 
-	--Check permission for account site: @phuc20080213
-	EXEC DBPOL.NAP_UserControl.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[DeleteTrans]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
-	If @ErrCode <> 0
-		RETURN
+
+
 
 	IF @refno <> 0 
 	BEGIN

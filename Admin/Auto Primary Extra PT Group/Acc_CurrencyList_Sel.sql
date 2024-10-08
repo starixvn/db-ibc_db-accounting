@@ -3,8 +3,8 @@ USE bodb02
 GO
 
 ALTER PROCEDURE [dbo].[Acc_CurrencyList_Sel]
-	@UserID INT,
-	@IsTest BIT = 1
+	@IsTest BIT = 1,
+	@DeniedList NVARCHAR(MAX) = NULL
 AS
 
 /*
@@ -15,6 +15,7 @@ AS
 	Revisions:
 		- 20210301@Percy: Initialize SP [RedmineID: #146710]
 		- 20240529@Tacy: NAP - Permission controls on real currency [redmineID: #202523]
+		- 20240729@Lewis: Scale Out DBCust - Remove Linked Server [Redmine : #206895]
 */
 
 BEGIN
@@ -22,18 +23,22 @@ BEGIN
 
 	DECLARE @tmpExchange TABLE (exchangeID INT, Currency NVARCHAR(50), OfferSite TINYINT)
 
-	DECLARE @SearchCurrency VARCHAR(1024)
-
-	DECLARE @tmpUserid VARCHAR(50)
-	SELECT @tmpUserid=CAST(@Userid AS VARCHAR(50))
-
-	--get deny currency
-    SELECT @SearchCurrency = 'SELECT * 
-	FROM OPENQUERY(DBPOL, 
-	''SELECT exchangeID, Currency, OfferSite FROM NAP_UserControl.dbo.f_GetDeniedCurrencyByUser ( ''''' + @tmpUserid + ''''')'')'
-
-	INSERT INTO  @tmpExchange (exchangeID, Currency, OfferSite)
-	EXECUTE(@SearchCurrency)
+	IF ISNULL(@DeniedList,'')<>''
+	BEGIN
+		--get deny currency
+		INSERT INTO  @tmpExchange (exchangeID, Currency, OfferSite)
+		SELECT vl.[ID], vl.[Name], vl.[Opt]
+		FROM OPENJSON(@DeniedList) 
+				WITH (  [KeyName]	VARCHAR(30),
+						[Value]	NVARCHAR(MAX) AS JSON
+					) AS js
+		CROSS APPLY OPENJSON (js.[value])
+				WITH (  [ID]	INT,
+						[Name]	NVARCHAR(30),
+						[Opt]	TINYINT
+					) AS vl
+		WHERE js.[KeyName]='Exchange'
+	END
 
 	SELECT ExchangeId, Currency
 	FROM dbo.Exchange WITH (NOLOCK)

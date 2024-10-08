@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBTXN-bodb02" executers="wsv_nap" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[SiteDB_Acc_BettransInsTransfer]
 	@FromCustID		INT,
 	@ToUserName		VARCHAR(30), 
@@ -21,6 +21,7 @@ DB: DBTXN/bodb02
 Revisions:
 	- 20220719@Danny: Init. SP [Redmine: #175253]
 	- 20230322@Danny: Enhance invalid transaction checking[Redmine: #184731]
+	- 20240729@Lewis: Scale Out DBCust - Remove Linked Server [Redmine : #206895]
 					   
 Param's Explanation:
 Orig SP: Acc_BettransInsTransfer
@@ -28,13 +29,6 @@ Orig SP: Acc_BettransInsTransfer
 BEGIN
 	SET NOCOUNT ON
 
-	IF @UserID <> 10278938 -- StarixIT
-	BEGIN
-		--Check permission for account site: @phuc20080213
-		EXEC DBPOL.NAP_UserControl.dbo.Acc_Con_CheckPermission @custid=@UserID,@funcname='[OtherTrans]',@ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
-		IF @ErrCode <> 0
-			RETURN
-	END
 	DECLARE @TransIDs AS TABLE (transID BIGINT)
 
 	DECLARE @ToMrecommend int, @ToRecommend int, @ToSrecommend int, @ToCustID int, @Amt money,

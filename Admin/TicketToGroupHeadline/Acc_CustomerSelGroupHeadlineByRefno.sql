@@ -15,7 +15,7 @@ ALTER PROCEDURE [dbo].[Acc_CustomerSelGroupHeadlineByRefno]
 	@ActualResult	NVARCHAR(MAX) ='',
 	@WrongResult    NVARCHAR(MAX) ='',
 	@IsCheckMessage	BIT = 0 OUTPUT,
-	@UserId			INT = 0,
+	@DeniedList		NVARCHAR(MAX)=NULL,
 	@ErrCode		INT = 0 OUTPUT,
 	@ErrMsg			NVARCHAR(MAX) = '' OUTPUT
 AS
@@ -36,7 +36,7 @@ AS
 		- 20210922@Malcolm : remove the Actual and Wrong result requirements if messageid <> 0 [RedmineId : #161524]
 		- 20240110@Johnson: check permission for 777 [redmineID: #197160]
 		- 20240419@Tacy: NAP - Permission controls on real currency [redmineID: #202523]
-        - 20240719@Ned.Le: CRM - Incorporate new product - Virtual Sports 5 (#207712)
+		- 20240729@Lewis: Scale Out DBCust - Remove Linked Server [Redmine : #206895]
 
 	Param's Explanation:
 	- @Fie:		
@@ -54,7 +54,6 @@ AS
 */
 
 BEGIN
-
 	SET NOCOUNT ON
 
 	IF ISNULL(@File, '') = ''
@@ -165,29 +164,39 @@ BEGIN
 	DECLARE @tmp TABLE (siteid INT,site NVARCHAR(50), SpecialGroup TINYINT )
 	DECLARE @tmpExchange TABLE (exchangeID INT, Currency NVARCHAR(50), OfferSite TINYINT)
 
-	DECLARE @tmpUserid VARCHAR(50),
-			@cnt INT
+	DECLARE @cnt INT
+
+	IF ISNULL(@DeniedList,'')<>''
+	BEGIN
+		--get deny site
+		INSERT INTO @tmp (siteid, site, SpecialGroup)
+		SELECT vl.[ID], vl.[Name], vl.[Opt]
+		FROM OPENJSON(@DeniedList) 
+				WITH (  [KeyName]	VARCHAR(30),
+						[Value]	NVARCHAR(MAX) AS JSON
+					) AS js
+		CROSS APPLY OPENJSON (js.[value])
+				WITH (  [ID]	INT,
+						[Name]	NVARCHAR(30),
+						[Opt]	TINYINT
+					) AS vl
+		WHERE js.[KeyName]='Site'
 	
-	SELECT @tmpUserid=CAST(@UserID AS VARCHAR(50))
+		--get deny currency
+		INSERT INTO  @tmpExchange (exchangeID, Currency, OfferSite)
+		SELECT vl.[ID], vl.[Name], vl.[Opt]
+		FROM OPENJSON(@DeniedList) 
+				WITH (  [KeyName]	VARCHAR(30),
+						[Value]	NVARCHAR(MAX) AS JSON
+					) AS js
+		CROSS APPLY OPENJSON (js.[value])
+				WITH (  [ID]	INT,
+						[Name]	NVARCHAR(30),
+						[Opt]	TINYINT
+					) AS vl
+		WHERE js.[KeyName]='Exchange'
+	END
 	
-	DECLARE @SearchQuery VARCHAR(1024), @SearchCurrency VARCHAR(1024)
-
-	--get deny site
-	SELECT @SearchQuery = 'SELECT * 
-		FROM OPENQUERY(DBPOL, 
-		''SELECT siteid, site, SpecialGroup FROM NAP_UserControl.dbo.f_GetDeniedSiteByUser ( ''''' + @tmpUserid + ''''')'')'
-
-	INSERT INTO @tmp (siteid, site, SpecialGroup)
-	EXECUTE(@SearchQuery)
-	
-	--get deny currency
-    SELECT @SearchCurrency = 'SELECT * 
-	FROM OPENQUERY(DBPOL, 
-	''SELECT exchangeID, Currency, OfferSite FROM NAP_UserControl.dbo.f_GetDeniedCurrencyByUser ( ''''' + @tmpUserid + ''''')'')'
-
-	INSERT INTO  @tmpExchange (exchangeID, Currency, OfferSite)
-	EXECUTE(@SearchCurrency)
-
 	-- Check invalid input username, ErrCode = 3
 	DELETE i	
 	OUTPUT deleted.UserNameRaw, deleted.RefNo, 3
@@ -1959,7 +1968,7 @@ BEGIN
 		WHERE RowNum BETWEEN @RowStart AND @RowEnd
 	END
 
-	IF @ProductID IN (1, 3, 5, 27, 88)
+	IF @ProductID IN (1, 3, 5, 27)
 	BEGIN
 		DECLARE @IsOutright BIT = 0
 
@@ -1989,10 +1998,9 @@ BEGIN
 		*/
 		UPDATE r
 			SET r.ProductId = s.ProductID, 
-				r.EventType = CASE WHEN s.bettype IN (9, 29, 2799) THEN 1
-                                   WHEN s.BetType IN (11099) THEN 5
-							       ELSE s.EventType END, 
-				r.MatchId   = CASE WHEN s.bettype IN (9, 29, 2799, 11099) THEN @MatchId 
+				r.EventType = CASE WHEN s.bettype IN (9, 29, 2799) THEN 1 
+							  ELSE s.EventType END, 
+				r.MatchId   = CASE WHEN s.bettype IN (9, 29, 2799) THEN @MatchId 
 						      ELSE r.MatchId END
 		FROM #result r
 			INNER JOIN dbo.SportBettypeMatrix s WITH(NOLOCK) ON s.BetType = r.Bettype
@@ -2061,19 +2069,7 @@ BEGIN
 				BEGIN
 					SELECT @IsValidMatchId = 1
 				END
-			END
-			IF @EventType LIKE '%,5,%' -- Match3rd
-			BEGIN
-				IF EXISTS(SELECT 1 FROM Match3rd WITH(NOLOCK) WHERE Match3rdId = @MatchId)
-				BEGIN
-					SELECT @IsValidMatchId = 1
-				END
-
-				IF EXISTS(SELECT 1 FROM Match3rd14 WITH(NOLOCK) WHERE Match3rdId = @MatchId AND @IsValidMatchId = 0)
-				BEGIN
-					SELECT @IsValidMatchId = 1
-				END
-			END
+			END		
 						
 			IF @IsValidMatchId = 0 
 			BEGIN
@@ -2086,13 +2082,13 @@ BEGIN
 			INSERT INTO @ErrorRefNo (RefNo, Bettype)
 			SELECT r.Refno, r.Bettype
 			FROM #result r
-			WHERE r.MatchId <> @MatchId OR r.Bettype IN (9, 29, 2799, 11099) OR r.Bettype = 10
+			WHERE r.MatchId <> @MatchId OR r.Bettype IN (9, 29, 2799) OR r.Bettype = 10
 
-			IF EXISTS(SELECT 1 FROM #result WHERE Bettype IN (9, 29, 2799, 11099))
+			IF EXISTS(SELECT 1 FROM #result WHERE Bettype IN (9, 29, 2799))
 			BEGIN
 				DELETE r 
 				FROM @ErrorRefNo r
-				WHERE r.Bettype IN (9, 29 , 2799, 11099)
+				WHERE r.Bettype IN (9, 29 , 2799)
 				AND EXISTS(
 					SELECT 1
 					FROM dbo.bettrans b WITH(NOLOCK)
@@ -2102,7 +2098,7 @@ BEGIN
 
 				DELETE r 
 				FROM @ErrorRefNo r
-				WHERE r.Bettype IN (9, 29 , 2799, 11099)
+				WHERE r.Bettype IN (9, 29 , 2799)
 				AND EXISTS(
 					SELECT 1
 					FROM dbo.bettrans b WITH(NOLOCK)
@@ -2112,7 +2108,7 @@ BEGIN
 
 				DELETE r 
 				FROM @ErrorRefNo r
-				WHERE r.Bettype IN (9, 29 , 2799, 11099)
+				WHERE r.Bettype IN (9, 29 , 2799)
 				AND EXISTS(
 					SELECT 1
 					FROM dbo.bettrans14 b WITH(NOLOCK)
@@ -2122,7 +2118,7 @@ BEGIN
 
 				DELETE r 
 				FROM @ErrorRefNo r
-				WHERE r.Bettype IN (9, 29 , 2799, 11099)
+				WHERE r.Bettype IN (9, 29 , 2799)
 				AND EXISTS(
 					SELECT 1
 					FROM dbo.bettrans14 b WITH(NOLOCK)
@@ -2178,13 +2174,6 @@ BEGIN
 					INSERT INTO @TeamName (EventName, EventType, ErrorRow)
 					VALUES ('', 3, '')
 				END
-
-				IF EXISTS(SELECT 1 FROM #result WHERE EventType = 5)
-				BEGIN
-					INSERT INTO @TeamName (EventName, EventType, ErrorRow)
-					VALUES ('', 5, '')
-				END
-
 				UPDATE @TeamName
 				SET ErrorRow = 	
 				(
@@ -2216,23 +2205,6 @@ BEGIN
 								)
 				)
 				WHERE EventType = 3
-
-				UPDATE @TeamName
-				SET ErrorRow = 	
-				(
-						SELECT STUFF
-								(
-									(
-										SELECT ',' + CONVERT(VARCHAR(20), i.RowAt)
-										FROM #result r 
-											INNER JOIN #inputRaw i ON r.Refno = i.RefNo
-										WHERE EventType = 5
-										FOR XML PATH('')
-									), 1, 1,''
-								)
-				)
-				WHERE EventType = 5
-
 				/*
 				Message : All Ticket Ref No have to belong to an event/game! Please check:
 							Group 1 (<Event 1>): row <row1>, <row3>
@@ -2310,7 +2282,7 @@ BEGIN
 		IF @ErrCode <> 0
 			RETURN
 
-		IF @ProductID IN (1, 27, 88) AND @IsOutright = 0
+		IF @ProductID IN (1, 27) AND @IsOutright = 0
 		BEGIN
 			IF (ISNULL(@ActualResult,'') = '' OR ISNULL(@WrongResult, '') = '') AND @MessageID = 0
 			BEGIN
