@@ -27,6 +27,7 @@ Revisions:
 	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
 	- 20230530@Evan: Not allow verify before balance up date [Redmine: #186750]
 	- 20240729@Lewis: Scale Out DBCust - Remove Linked Server [Redmine : #206895]
+	- 20240923@Lewis: Remove linked server DBTXN [Redmine: #207738]
 
 Param's Explanation:
 	@TransIDs   : '1111,2341,...'
