@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBACC-BODB02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBACC-BODB02" executers="wsv_nap" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_DailyTxn_Sel]
 	@fromdate	DATETIME,	
 	@Type		NVARCHAR(30) = '',
@@ -23,6 +23,7 @@ Revisions:
 	- 20211115@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
   	- 20230530@Evan: Enhancement for Customer Statement - add output column IsAllowVerify [Redmine: #186750]
+	- 20240826@Bobby: Reward Payement transfer [Redmine: #209633]
 
 Param's Explanation: Daily transaction
 	@Type   : Dep, Trac, ..
@@ -93,7 +94,7 @@ BEGIN
 			AND b.WinlostDate >= @balanceUpDay
 			AND creator.roleid > 4 
 			AND s.isInternal = 1 
-			AND b.winlostdate between @fromdate AND Dateadd(d,1,@fromdate) 
+			AND b.winlostdate between @fromdate AND Dateadd(d,1,@fromdate) --Confirmed with PM, BA & QC. Leave it as it is.
 			AND CASE WHEN @Type <> '' AND @Type <> 'Coll' THEN bt.typenamee ELSE @Type END = @Type 
 			AND	(
 					(@Type LIKE 'Trac' AND ISNULL(t.IsCollection,0) = 0) 
@@ -104,6 +105,39 @@ BEGIN
 			AND CASE WHEN @checkerName <> '' AND @checkerID = 1 THEN t.CheckerName ELSE @checkerName END = @checkerName 
 			AND CASE   
 				WHEN @checkerID = 0 THEN ISNULL(t.CheckerId,0)
+				WHEN @checkerID = 1 THEN @checkerID  				
+				END = @checkerID 
+
+		UNION ALL
+		SELECT	b.transid,
+				b.refno,
+				ower.username,
+				b.CheckId betid, --checkerID      
+				checker.username betcheck,--checkerName
+				b.checkTime, 
+				b.transdate,
+				b.credit-b.debit amount,
+				b.transdesc, 
+				bt.typenamee,
+				creator.username creator,
+				CASE WHEN b.WinlostDate < @ConstraintDay THEN 0 ELSE 1 END AS IsAllowVerify
+		FROM dbo.TransferExtra b with (nolock)
+			INNER JOIN CustSuper s with (nolock) on b.srecommend = s.custid 
+			INNER JOIN customer creator WITH (NOLOCK) on creator.custid=b.creator
+			INNER JOIN bettype bt WITH (NOLOCK) on bt.typeid=b.bettype
+			INNER JOIN customer checker WITH(NOLOCK) ON checker.custid=b.CheckId
+			INNER JOIN customer ower WITH(NOLOCK) ON ower.custid=b.custid
+		WHERE
+			bt.typeid > 30000
+			AND b.WinlostDate >= @balanceUpDay
+			AND creator.roleid > 4 
+			AND s.isInternal = 1 
+			AND b.winlostdate between @fromdate AND Dateadd(d,1,@fromdate) --Confirmed with PM, BA & QC. Leave it as it is.
+			AND CASE WHEN @Type <> '' THEN bt.typenamee ELSE @Type END = @Type 
+			AND CASE WHEN @Creator <> '' THEN creator.username ELSE @Creator END = @Creator 
+			AND CASE WHEN @checkerName <> '' AND @checkerID = 1 THEN checker.username ELSE @checkerName END = @checkerName 
+			AND CASE   
+				WHEN @checkerID = 0 THEN ISNULL(b.CheckId,0)
 				WHEN @checkerID = 1 THEN @checkerID  				
 				END = @checkerID 
 	
@@ -133,7 +167,7 @@ BEGIN
 			AND b.WinlostDate >= @balanceUpDay
 			AND creator.roleid > 4 
 			AND s.isInternal = 1 
-			AND b.winlostdate between @fromdate AND Dateadd(d,1,@fromdate) 
+			AND b.winlostdate between @fromdate AND Dateadd(d,1,@fromdate) --Confirmed with PM, BA & QC. Leave it as it is.
 			AND CASE WHEN @Type <> '' AND @Type <> 'Coll' THEN bt.typenamee ELSE @Type END = @Type 
 			AND (
 					(@Type LIKE 'Trac' AND ISNULL(t.IsCollection,0) = 0) 
@@ -143,6 +177,36 @@ BEGIN
 			AND CASE WHEN @Creator <> '' THEN creator.username ELSE @Creator END = @Creator 
 			AND CASE WHEN @checkerName <> '' THEN t.CheckerName ELSE @checkerName END = @checkerName 
 			AND ISNULL(t.CheckerId,0) <> 0 
+
+		UNION ALL
+		SELECT	b.transid,
+				b.refno,
+				ower.username,
+				b.CheckId betid, --checkerID      
+				checker.username betcheck,--checkerName
+				b.checkTime, 
+				b.transdate,
+				b.credit-b.debit amount,
+				b.transdesc, 
+				bt.typenamee,
+				creator.username creator,
+				CASE WHEN b.WinlostDate < @ConstraintDay THEN 0 ELSE 1 END AS IsAllowVerify
+		FROM dbo.TransferExtra b WITH(NOLOCK)
+			INNER JOIN CustSuper s WITH(NOLOCK) ON b.srecommend = s.custid 
+			INNER JOIN customer creator WITH(NOLOCK) ON creator.custid=b.creator
+			INNER JOIN bettype bt WITH(NOLOCK) ON bt.typeid=b.bettype
+			INNER JOIN customer checker WITH(NOLOCK) ON checker.custid=b.CheckId
+			INNER JOIN customer ower WITH(NOLOCK) ON ower.custid=b.custid
+		WHERE
+			bt.typeid > 30000 
+			AND b.WinlostDate >= @balanceUpDay
+			AND creator.roleid > 4 
+			AND s.isInternal = 1 
+			AND b.winlostdate between @fromdate AND Dateadd(d,1,@fromdate) --Confirmed with PM, BA & QC. Leave it as it is.
+			AND CASE WHEN @Type <> '' THEN bt.typenamee ELSE @Type END = @Type 
+			AND CASE WHEN @Creator <> '' THEN creator.username ELSE @Creator END = @Creator 
+			AND CASE WHEN @checkerName <> '' THEN checker.username ELSE @checkerName END = @checkerName 
+			AND ISNULL(b.CheckId,0) <> 0 
 	END 
 
 	SELECT * 

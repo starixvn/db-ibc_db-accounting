@@ -21,7 +21,7 @@ AS
 		- 20211122@Danny: Split transfer tickets out of bettrans [Redmine: #164196]
 		- 20220830@Danny: Remove orphan ticket [Redmine: #175253]
         - 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
-        - 20240826@Bobby: Reward Payement transfer [Redmine: #209633]
+        - 20240826@Bobby: Reward Payment transfer [Redmine: #209633]
 
     Param's Explanation:
     
@@ -40,7 +40,8 @@ BEGIN
 	    TransDesc NVARCHAR(1000),
 	    TotalAmt MONEY,
 	    TotalAmtRM MONEY,
-	    IsOwner BIT 
+	    IsOwner BIT,
+        Creator INT
     )
 
     DECLARE @_RefNo AS BIGINT
@@ -68,7 +69,7 @@ BEGIN
 
     SELECT @balanceUpDay = BalanceUpDay FROM @tblMoveBetBalanceUp
 
-    INSERT INTO @StatementTable(TransID, TransDate, TransType, TransDesc, TotalAmt, IsOwner, TotalAmtRM)
+    INSERT INTO @StatementTable(TransID, TransDate, TransType, TransDesc, TotalAmt, IsOwner, TotalAmtRM, Creator)
     SELECT 
         b.transid,
         b.transdate,
@@ -78,7 +79,8 @@ BEGIN
         b.transdesc + ' - Ex.Rate: ' + CAST(b.actualrate AS VARCHAR(10)) transdesc,
         (b.winlost - b.actual_stake),
         CASE WHEN b.custid = @CustID THEN 1 ELSE 0 END IsOwner,
-        (b.winlost - b.actual_stake) * b.actualrate
+        (b.winlost - b.actual_stake) * b.actualrate,
+        b.Creator
     FROM dbo.transfer b (NOLOCK) 
 		LEFT JOIN dbo.TransferInfo ti WITH(NOLOCK) ON b.TransId = ti.TransId
         LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = b.bettype 
@@ -95,7 +97,8 @@ BEGIN
         b.transdesc + ' - Ex.Rate: ' + CAST(b.actualrate AS VARCHAR(10)) transdesc,
         (b.Credit - b.Debit),
         CASE WHEN b.custid = @CustID THEN 1 ELSE 0 END IsOwner,
-        (b.Credit - b.Debit) * b.actualrate
+        (b.Credit - b.Debit) * b.actualrate,
+        b.Creator
     FROM dbo.transferExtra b (NOLOCK) 
         LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = b.bettype 
     WHERE b.bettype > 30000 
@@ -106,7 +109,7 @@ BEGIN
     IF NOT EXISTS( SELECT 1 FROM @StatementTable )
     BEGIN
 
-        INSERT INTO @StatementTable(TransID, TransDate, TransType, TransDesc, TotalAmt, IsOwner, TotalAmtRM)
+        INSERT INTO @StatementTable(TransID, TransDate, TransType, TransDesc, TotalAmt, IsOwner, TotalAmtRM, Creator)
         SELECT 
             tf.transid,
             tf.transdate,
@@ -114,7 +117,8 @@ BEGIN
             tf.transdesc + ' - Ex.Rate: ' + isnull(CAST(tf.actualrate AS VARCHAR(10)),'') transdesc,
             (tf.winlost - tf.actual_stake),
             CASE WHEN tf.custid = @CustID THEN 1 ELSE 0 END IsOwner,
-            (tf.winlost - tf.actual_stake) * tf.actualrate
+            (tf.winlost - tf.actual_stake) * tf.actualrate,
+            tf.Creator
         FROM bodb_archive.dbo.transfer_fi tf WITH(NOLOCK)
             LEFT JOIN bodb_archive.dbo.Transfer_Coll_BK tcbk WITH(NOLOCK) ON tcbk.TransID = tf.TransID
             LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = tf.bettype 
@@ -126,22 +130,21 @@ BEGIN
         SELECT @TotalAmtRM = ISNULL(SUM(TotalAmtRM),0) FROM @StatementTable
     
         IF @TotalAmtRM <> 0
-            INSERT INTO @StatementTable(TransID, TransDate, TransType, TransDesc, TotalAmt, IsOwner)
+            INSERT INTO @StatementTable(TransID, TransDate, TransType, TransDesc, TotalAmt, IsOwner, Creator)
             SELECT 
                 tf.transid,
                 tf.transdate,
 				CASE WHEN tcbk.TransID > 0 THEN 'Coll' ELSE bettype.typenamee END transtype,
                 tf.transdesc,
                 (tf.credit - tf.debit) totalamt,
-                CASE WHEN tf.custid = @CustID THEN 1 ELSE 0 END IsOwner
+                CASE WHEN tf.custid = @CustID THEN 1 ELSE 0 END IsOwner,
+                tf.Creator
             FROM bodb_Archive.dbo.transfer_bk tf (NOLOCK)
                 LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = tf.bettype 
                 LEFT JOIN bodb_archive.dbo.Transfer_Coll_BK tcbk WITH(NOLOCK) ON tcbk.TransID = tf.TransID
-                LEFT JOIN @StatementTable st ON st.TransID = tf.transid
             WHERE 
                 tf.winlostdate >= @_FromDate AND tf.winlostdate < @_ToDate
                 AND tf.refno = @RefNo 
-                AND st.TransID IS NULL
 
             UNION ALL --transferExtra_bk
             SELECT 
@@ -151,7 +154,8 @@ BEGIN
                 --tf.transdesc,
                 tf.transdesc + ' - Ex.Rate: ' + isnull(CAST(tf.actualrate AS VARCHAR(10)),'') transdesc,
                 (tf.credit - tf.debit) totalamt,
-                CASE WHEN tf.custid = @CustID THEN 1 ELSE 0 END IsOwner
+                CASE WHEN tf.custid = @CustID THEN 1 ELSE 0 END IsOwner,
+                tf.Creator
             FROM bodb_Archive.dbo.transferExtra_bk tf (NOLOCK)
                 LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = tf.bettype 
             WHERE 
@@ -168,8 +172,10 @@ BEGIN
         tmp.TransType [TransType],
         tmp.TransDesc [TransDescription],
         tmp.TotalAmt [TotalAmount],
-        tmp.IsOwner [IsOwner]
+        tmp.IsOwner [IsOwner],
+        ci.UserName AS Creator
     FROM @StatementTable tmp
+    INNER JOIN dbo.Customer ci WITH(NOLOCK) ON ci.custid = tmp.Creator
     ORDER BY tmp.TransID
 END
 GO

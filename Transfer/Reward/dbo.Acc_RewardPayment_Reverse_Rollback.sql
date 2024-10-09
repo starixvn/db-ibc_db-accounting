@@ -39,21 +39,24 @@ BEGIN
 
 	--TODO: Fetch transfer by RefNo - T1 only
 	DROP TABLE IF EXISTS #reversalTransfer;
-	SELECT t.TransId, t.IsReversed, TransTable
+	SELECT t.TransId, t.IsReversed, t.TransTable, t.custid, ci.roleId
 	INTO #reversalTransfer
 	FROM (
-		SELECT st.TransId, CAST(IIF(st.TransDesc LIKE '%(Reversal)%', 1, 0) AS  BIT) AS IsReversed, CAST('Transfer' AS VARCHAR(30)) AS TransTable
+		SELECT st.custid, st.TransId, CAST(IIF(st.TransDesc LIKE '%(Reversal)%', 1, 0) AS  BIT) AS IsReversed, CAST('Transfer' AS VARCHAR(30)) AS TransTable
 		FROM dbo.[Transfer] st WITH(NOLOCK)
 		INNER JOIN dbo.[TransferInfo] ti WITH(NOLOCK) ON ti.transid = st.transid
 		WHERE st.RefNo = @RefNoCheck
 			AND ti.IsDel = 1
 
 		--UNION ALL
-		--SELECT st.TransId, CAST(IIF(st.TransDesc LIKE '%(Reversal)%', 1, 0) AS  BIT) AS IsReversed, 'TransferExtra'
+		--SELECT st.custid, st.TransId, CAST(IIF(st.TransDesc LIKE '%(Reversal)%', 1, 0) AS  BIT) AS IsReversed, 'TransferExtra'
 		--FROM dbo.TransferExtra st WITH(NOLOCK)
 		--WHERE st.RefNo = @RefNoCheck
 		--	AND st.IsReversed = 1
 	) AS t
+	INNER JOIN CustDB.dbo.[Customer] ci WITH(NOLOCK) ON ci.custid = t.custid
+	INNER JOIN CustDB.dbo.[Site] s WITH(NOLOCK) ON s.[site] = ci.[site]
+	WHERE s.SiteDBGroupID = @Server_SiteDBGroupID
 
 	IF @@ROWCOUNT = 0
 	BEGIN
@@ -64,12 +67,12 @@ BEGIN
 
 
 	--TODO: Check RewardPayment to rollback
-	SELECT TOP(1)
-		@FromCustId		= custid,
-		@roleId			= roleId
-	FROM #reversalTransfer 
-	WHERE TransTable = 'TransferExtra'
-	;
+	--SELECT TOP(1)
+	--	@FromCustId		= custid,
+	--	@roleId			= roleId
+	--FROM #reversalTransfer 
+	--WHERE TransTable = 'TransferExtra'
+	--;
 
 	--TODO: Control flow
 	DECLARE @stepDone	SMALLINT,
@@ -87,8 +90,8 @@ BEGIN
 			, st.Recommend		= IIF(tmp.IsReversed = 1, 0, st.Recommend)
 			, st.Mrecommend		= IIF(tmp.IsReversed = 1, 0, st.Mrecommend)
 			, st.Srecommend		= IIF(tmp.IsReversed = 1, 0, st.Srecommend)
-			, st.winlost		= IIF(tmp.IsReversed = 1, 0, st.Credit)
-			, st.actual_stake	= IIF(tmp.IsReversed = 1, 0, st.Debit)
+			, st.winlost		= IIF(tmp.IsReversed = 1, 0, st.winlost)
+			, st.actual_stake	= IIF(tmp.IsReversed = 1, 0, st.actual_stake)
 			, st.RepUpdateTime	= SYSDATETIME()
 		FROM dbo.[Transfer] st WITH(ROWLOCK, UPDLOCK)
 		INNER JOIN #reversalTransfer tmp ON tmp.transid = st.transid
@@ -97,9 +100,9 @@ BEGIN
 		--[TransferInfo]
 		UPDATE ti 
 		SET ti.IsDel			= 0
-			, st.RepUpdateTime	= SYSDATETIME()
-		FROM dbo.[TransferInfo] st WITH(ROWLOCK, UPDLOCK)
-		INNER JOIN #reversalTransfer tmp ON tmp.transid = st.transid
+			, ti.RepUpdateTime	= SYSDATETIME()
+		FROM dbo.[TransferInfo] ti WITH(ROWLOCK, UPDLOCK)
+		INNER JOIN #reversalTransfer tmp ON tmp.transid = ti.transid
 		;SET @stepDone |= IIF(@@ROWCOUNT > 0, POWER(2, 2), 0);
 
 		COMMIT;

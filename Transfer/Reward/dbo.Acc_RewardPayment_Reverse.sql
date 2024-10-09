@@ -52,7 +52,7 @@ BEGIN
 	EXEC dbo.NAP_Admin_GetBalanceUpDate @BalanceUpDate = @balanceUpDay OUTPUT;
 
 	SELECT @ArchivedDay	= MAX(winlostdate)
-	FROM DBTXN.bodb02.dbo.Task_ArchiveDate WITH (NOLOCK);
+	FROM bodb02.dbo.Task_ArchiveDate WITH (NOLOCK);
 
 	SELECT @ConstraintDay = CASE 
 								WHEN @ArchivedDay > @balanceUpDay THEN DATEADD(DAY,7,@balanceUpDay) -- new BU
@@ -70,25 +70,35 @@ BEGIN
 	WITH CTE_RefNo (RefNo) AS (
 		SELECT @RefNo
 	)
-	INSERT INTO #reversalTransfer (CustId, TransId, RefNo, IsReversed, TransTable, IsMoving, RoleId)
-	SELECT t.CustId, t.TransId, t.RefNo, t.IsReversed, t.TransTable, t.IsMoving, ci.RoleId
-	FROM (
-		SELECT st.custid, st.TransId, st.RefNo, ISNULL(ti.IsDel,0) AS IsReversed, 'Transfer' AS TransTable,
-			CASE WHEN st.WinlostDate < @ConstraintDay THEN 1 ELSE 0 END AS IsMoving
-		FROM CTE_RefNo tmp
-			INNER JOIN  dbo.[Transfer] st WITH(NOLOCK) ON st.RefNo = tmp.RefNo
-			LEFT JOIN dbo.TransferInfo ti WITH(NOLOCK) ON ti.transid = st.transid
-		WHERE ISNULL(ti.IsDel,0) = 0
-			AND st.custid > 0
+	INSERT INTO #reversalTransfer (CustId, TransId, RefNo, IsReversed, TransTable, IsMoving)
+	SELECT st.custid, st.TransId, st.RefNo, ISNULL(ti.IsDel,0) AS IsReversed, 'Transfer' AS TransTable,
+		CASE WHEN st.WinlostDate < @ConstraintDay THEN 1 ELSE 0 END AS IsMoving
+	FROM CTE_RefNo tmp
+		INNER JOIN  dbo.[Transfer] st WITH(NOLOCK) ON st.RefNo = tmp.RefNo
+		LEFT JOIN dbo.TransferInfo ti WITH(NOLOCK) ON ti.transid = st.transid
+	WHERE ISNULL(ti.IsDel,0) = 0
+		AND st.custid > 0
 		
-		UNION ALL ---TransferExtra
+	--UNION ALL ---TransferExtra
+	--TODO: transferExtra
+	IF OBJECT_ID(N'dbo.TransferExtra') > 0
+	BEGIN
+		WITH CTE_RefNo (RefNo) AS (
+			SELECT @RefNo
+		)
+		INSERT INTO #reversalTransfer (CustId, TransId, RefNo, IsReversed, TransTable, IsMoving)
 		SELECT st.custid, st.TransId, st.RefNo, ISNULL(st.IsReversed, 0), 'TransferExtra',
 			CASE WHEN st.WinlostDate < @ConstraintDay THEN 1 ELSE 0 END AS IsMoving
 		FROM CTE_RefNo tmp
 			INNER JOIN  dbo.TransferExtra st WITH(NOLOCK) ON st.RefNo = tmp.RefNo
 		WHERE ISNULL(st.IsReversed,0) = 0
 			AND st.custid > 0
-	) AS t
+	END
+
+	--CONFIRM: siteDB
+	UPDATE t
+	SET roleId = ci.roleId
+	FROM #reversalTransfer t
 		INNER JOIN CustDB.dbo.[Customer] ci WITH(NOLOCK) ON ci.custid = t.custid
 		INNER JOIN CustDB.dbo.[Site] s WITH(NOLOCK) ON s.[site] = ci.[site]
 	WHERE s.SiteDBGroupID = @Server_SiteDBGroupID
@@ -96,7 +106,7 @@ BEGIN
 
 	--select * from #reversalTransfer;
 	IF @rowCheck = 0
-		OR EXISTS (SELECT 1 FROM #reversalTransfer WHERE IsMoving = 1)
+		OR EXISTS (SELECT 1 FROM #reversalTransfer WHERE IsMoving = 1 OR RoleID IS NULL)
 	BEGIN
 		SELECT @ErrCode = 102,
 			@ErrMsg		= 'Sorry, reversal transfer(s) is invalid.'
@@ -177,59 +187,61 @@ BEGIN
 		;SET @stepDone |= IIF(@@ROWCOUNT > 0, POWER(2, 2), 0);
 
 		--TODO: T2 - Add (Reversal) transferExtra T2.1
-		INSERT INTO dbo.TransferExtra(
-			TransId
-			,CustID
-			,Recommend
-			,Mrecommend
-			,Srecommend
-			,CurrencyID
-			,ActualRate
-			,Bettype
-			,Credit
-			,Debit
-			,TransDate
-			,WinlostDate
-			,TransDesc
-			,RefNo
-			,WalletID
-			,Creator
-			,SiteDBGroupID
-			,RepUpdateTime
-			,IsReversed
-		)
-		SELECT tmp.ReversalTransId
-			,st.CustID
-			,st.Recommend
-			,st.Mrecommend
-			,st.Srecommend
-			,st.CurrencyID
-			,st.ActualRate
-			,st.Bettype
-			,st.Debit
-			,st.Credit
-			,@TransDate AS TransDate
-			,st.WinlostDate
-			,CONCAT('(Reversal) ', st.TransDesc)
-			,st.RefNo
-			,st.WalletID
-			,@Creator AS Creator
-			,st.SiteDBGroupID
-			,SYSDATETIME() AS RepUpdateTime
-			,@IsReversed AS IsReversed
-		FROM dbo.TransferExtra st WITH(NOLOCK)
-			INNER JOIN #reversalTransfer tmp ON tmp.transid = st.transid
-		WHERE tmp.TransTable = 'TransferExtra'
-		;SET @stepDone |= IIF(@@ROWCOUNT > 0, POWER(2, 3), 0);
+		IF OBJECT_ID(N'dbo.TransferExtra') > 0
+		BEGIN
+			INSERT INTO dbo.TransferExtra(
+				TransId
+				,CustID
+				,Recommend
+				,Mrecommend
+				,Srecommend
+				,CurrencyID
+				,ActualRate
+				,Bettype
+				,Credit
+				,Debit
+				,TransDate
+				,WinlostDate
+				,TransDesc
+				,RefNo
+				,WalletID
+				,Creator
+				,SiteDBGroupID
+				,RepUpdateTime
+				,IsReversed
+			)
+			SELECT tmp.ReversalTransId
+				,st.CustID
+				,st.Recommend
+				,st.Mrecommend
+				,st.Srecommend
+				,st.CurrencyID
+				,st.ActualRate
+				,st.Bettype
+				,st.Debit
+				,st.Credit
+				,@TransDate AS TransDate
+				,st.WinlostDate
+				,CONCAT('(Reversal) ', st.TransDesc)
+				,st.RefNo
+				,st.WalletID
+				,@Creator AS Creator
+				,st.SiteDBGroupID
+				,SYSDATETIME() AS RepUpdateTime
+				,@IsReversed AS IsReversed
+			FROM dbo.TransferExtra st WITH(NOLOCK)
+				INNER JOIN #reversalTransfer tmp ON tmp.transid = st.transid
+			WHERE tmp.TransTable = 'TransferExtra'
+			;SET @stepDone |= IIF(@@ROWCOUNT > 0, POWER(2, 3), 0);
 
-		--TODO: T2 - Update Orginal transferExtra T2.2
-		UPDATE st WITH(ROWLOCK, UPDLOCK)
-		SET st.IsReversed = 1
-		FROM dbo.TransferExtra st
-			INNER JOIN #reversalTransfer tmp ON tmp.transid = st.transid
-		WHERE tmp.TransTable = 'TransferExtra'
-		;SET @stepDone |= IIF(@@ROWCOUNT > 0, POWER(2, 4), 0);
-
+			--TODO: T2 - Update Orginal transferExtra T2.2
+			UPDATE st WITH(ROWLOCK, UPDLOCK)
+			SET st.IsReversed = 1
+			FROM dbo.TransferExtra st
+				INNER JOIN #reversalTransfer tmp ON tmp.transid = st.transid
+			WHERE tmp.TransTable = 'TransferExtra'
+			;SET @stepDone |= IIF(@@ROWCOUNT > 0, POWER(2, 4), 0);
+		END
 		COMMIT;
 
 		--TODO: T3 - DO confirm payment status on @FromCustId
@@ -245,7 +257,7 @@ BEGIN
 			SET @PaymentLog = '';
 			EXEC dbo.Acc_RewardPayment_Confirm_Rollback 
 				@Data			= @confirmData,
-				@Action			= 'Reverse',
+				@Creator		= @Creator,
 				@ErrCode		= @ErrCode OUTPUT,
 				@ErrMsg			= @ErrMsg OUTPUT,
 				@PaymentLog		= @PaymentLog OUTPUT
@@ -288,20 +300,23 @@ BEGIN
 			AND POWER(2, 2) & @stepDone > 0
 
 		--TODO: T2 rollback if ERROR - T2.1-2
-		UPDATE st WITH(ROWLOCK, UPDLOCK)
-		SET custid		= IIF(st.TransId = tmp.ReversalTransId, 0, st.custid), 
-			Recommend	= IIF(st.TransId = tmp.ReversalTransId, 0, st.Recommend),  
-			Mrecommend	= IIF(st.TransId = tmp.ReversalTransId, 0, st.Mrecommend),  
-			Srecommend	= IIF(st.TransId = tmp.ReversalTransId, 0, st.Srecommend),  
-			Credit		= IIF(st.TransId = tmp.ReversalTransId, 0, st.Credit),  
-			Debit		= IIF(st.TransId = tmp.ReversalTransId, 0, st.Debit),  
-			IsReversed	= 0, 
-			RepUpdateTime = SYSDATETIME()
-		FROM dbo.TransferExtra st 
-		INNER JOIN #reversalTransfer tmp ON st.transid IN (tmp.TransId, tmp.ReversalTransId)
-		WHERE tmp.TransTable = 'TransferExtra'
-			AND POWER(2, 4) & @stepDone > 0
-		;
+		IF OBJECT_ID(N'dbo.TransferExtra') > 0
+		BEGIN
+			UPDATE st WITH(ROWLOCK, UPDLOCK)
+			SET custid		= IIF(st.TransId = tmp.ReversalTransId, 0, st.custid), 
+				Recommend	= IIF(st.TransId = tmp.ReversalTransId, 0, st.Recommend),  
+				Mrecommend	= IIF(st.TransId = tmp.ReversalTransId, 0, st.Mrecommend),  
+				Srecommend	= IIF(st.TransId = tmp.ReversalTransId, 0, st.Srecommend),  
+				Credit		= IIF(st.TransId = tmp.ReversalTransId, 0, st.Credit),  
+				Debit		= IIF(st.TransId = tmp.ReversalTransId, 0, st.Debit),  
+				IsReversed	= 0, 
+				RepUpdateTime = SYSDATETIME()
+			FROM dbo.TransferExtra st 
+			INNER JOIN #reversalTransfer tmp ON st.transid IN (tmp.TransId, tmp.ReversalTransId)
+			WHERE tmp.TransTable = 'TransferExtra'
+				AND POWER(2, 4) & @stepDone > 0
+			;
+		END
 
 	END CATCH
 

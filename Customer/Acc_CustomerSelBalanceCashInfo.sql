@@ -83,7 +83,8 @@ BEGIN
 	-- TODO: Get Reward Balance
 	DECLARE @RewardPending	MONEY, 
 		@RewardBalance		MONEY,
-		@RewardCurrency		VARCHAR(10)
+		@RewardCurrency		VARCHAR(10),
+		@RewardMaxTransId	BIGINT
 
 	EXEC [dbo].[Acc_CustomerSelBalanceReward] 
 	   @CustId = @custid
@@ -91,6 +92,7 @@ BEGIN
 	  ,@RewardPending	= @RewardPending OUTPUT
 	  ,@RewardBalance	= @RewardBalance OUTPUT
 	  ,@RewardCurrency	= @RewardCurrency OUTPUT
+	  ,@MaxTransId		= @RewardMaxTransId OUTPUT
 	;
 
     IF @roleid = 1
@@ -187,7 +189,8 @@ BEGIN
 			@transdate AS lastTxn,
 			@RewardPending AS RewardPending, 
 			@RewardBalance AS RewardBalance, 
-			@RewardCurrency AS RewardCurrency
+			@RewardCurrency AS RewardCurrency,
+			@RewardMaxTransId	AS RewardMaxTransId
 		FROM #BalanceInfo
 
     END 
@@ -318,7 +321,8 @@ BEGIN
 			@UsedCredit AS agentUsedCredit,
 			@RewardPending AS RewardPending, 
 			@RewardBalance AS RewardBalance, 
-			@RewardCurrency AS RewardCurrency
+			@RewardCurrency AS RewardCurrency,
+			@RewardMaxTransId	AS RewardMaxTransId
 		FROM #BalanceInfo
     END
     ELSE IF @roleid = 3
@@ -465,7 +469,8 @@ BEGIN
 			@UsedCredit AS masterUsedCredit,
 			@RewardPending AS RewardPending, 
 			@RewardBalance AS RewardBalance, 
-			@RewardCurrency AS RewardCurrency
+			@RewardCurrency AS RewardCurrency,
+			@RewardMaxTransId	AS RewardMaxTransId
 		FROM #BalanceInfo
 
     END
@@ -627,9 +632,10 @@ BEGIN
 			SUM(PendingTransfer3rd) AS PendingTransfer3rd,
 			@transdate AS lastTxn,
 			@UsedCredit AS superUsedCredit,
-			@RewardPending AS RewardPending, 
-			@RewardBalance AS RewardBalance, 
-			@RewardCurrency AS RewardCurrency
+			@RewardPending		AS RewardPending, 
+			@RewardBalance		AS RewardBalance, 
+			@RewardCurrency		AS RewardCurrency,
+			@RewardMaxTransId	AS RewardMaxTransId
 		FROM #BalanceInfo
 
     END

@@ -36,7 +36,7 @@ AS
   - 20220421@Percy: Get Opening Balance from Statement_Accum table [RedmineID: #169560]
   - 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
   - 20230530@Evan: Enhancement for Customer Statement - add output column IsAllowReversal [Redmine: #186750]
-  - 20240826@Bobby: Reward Payement transfer [Redmine: #209633]
+  - 20240826@Bobby: Reward Payment transfer [Redmine: #209633]
 
     Param's Explanation:  
         - @FilterBy: 1:winlostdate - 2:transdate  
@@ -402,10 +402,12 @@ BEGIN
 		;WITH CTE_Statement AS (
 			SELECT s.refno
 			FROM #StatementTable s
-				LEFT JOIN dbo.transfer b (NOLOCK) ON s.refno = b.refno
-			WHERE b.bettype > 20000
+				LEFT JOIN dbo.transfer b (NOLOCK) ON s.refno = b.refno and b.bettype > 20000
+				LEFT JOIN dbo.transferExtra tx (NOLOCK) ON s.refno = tx.refno and tx.bettype > 30000
+				OUTER APPLY (VALUES(b.TransId),(tx.TransId)) ck (transid)
+			WHERE ck.transid > 0
 			GROUP BY s.refno
-			HAVING COUNT(*) > 1
+			HAVING COUNT(1) > 1
 		)
 		UPDATE s
 		SET s.IsExpand = 1
@@ -506,22 +508,21 @@ BEGIN
 					OR (@FilterBy = 2 AND tf.transdate >= CASE @_FromDate WHEN @FromDate_Bk THEN '19000101' ELSE @_FromDate END AND tf.transdate < @_ToDate)
 					)
 
-		IF @CustID > 0
-		BEGIN
-			;WITH CTE_Statement AS (
-				SELECT s.refno
-				FROM #StatementTable s
-					LEFT JOIN bodb_archive.dbo.transfer_fi tf WITH(NOLOCK) ON s.refno = tf.refno
-				WHERE tf.winlostdate >= s.winlostdate
-				GROUP BY s.refno
-				HAVING COUNT(*) > 1
-			)
-			UPDATE s
-			SET s.IsExpand = 1
+		;WITH CTE_Statement AS (
+			SELECT s.refno
 			FROM #StatementTable s
-				INNER JOIN CTE_Statement cte ON s.refno = cte.refno
-			WHERE s.TransType NOT IN ('Dep','Wit')
-		END
+				LEFT JOIN bodb_archive.dbo.transfer_fi tf WITH(NOLOCK) ON s.refno = tf.refno AND tf.winlostdate >= s.winlostdate
+				LEFT JOIN bodb_archive.dbo.TransferExtra_bk tx WITH(NOLOCK) ON s.refno = tx.refno AND tx.winlostdate >= s.winlostdate
+				OUTER APPLY (VALUES(tf.TransId),(tx.TransId)) ck (transid)
+			WHERE ck.transid > 0
+			GROUP BY s.refno
+			HAVING COUNT(*) > 1
+		)
+		UPDATE s
+		SET s.IsExpand = 1
+		FROM #StatementTable s
+			INNER JOIN CTE_Statement cte ON s.refno = cte.refno
+		WHERE s.TransType NOT IN ('Dep','Wit')
 
 	END
 

@@ -2,8 +2,7 @@
 ALTER PROCEDURE dbo.Acc_RewardPayment_UpdChecker
 	@CheckerID		INT,
 	@CheckerName	VARCHAR(50),
-	--@Refnos			VARCHAR(8000),
-	@Refno			BIGINT,
+	@RefNos			VARCHAR(8000) = '',
 	@SiteDBGroupID	SMALLINT,
 	@IsVerified		BIT = 0, 
 	@IP				VARCHAR(45),
@@ -15,7 +14,7 @@ AS
 	Created by: 20240826@Bobby
 	Task: 209633 - CreditReward - Reward Transfer
 	DB: DBACC.bodb02
-	ORIGINAL: Acc_AllStatement4Agent
+	ORIGINAL: Acc_DailyTxn_UpdChecker
 
 	Revisions:
 		- 20240826@Bobby: Init [Redmine: #209633]
@@ -43,7 +42,7 @@ BEGIN
 
 	--Check to not allow to veify before balance up date
 	SELECT @ArchivedDay	= MAX(winlostdate)
-	FROM DBTXN.bodb02.dbo.Task_ArchiveDate WITH (NOLOCK)
+	FROM bodb02.dbo.Task_ArchiveDate WITH (NOLOCK)
 
 	SELECT @ConstraintDay = CASE 
 								WHEN @ArchivedDay > @balanceUpDay THEN DATEADD(DAY,7,@balanceUpDay) -- new BU
@@ -57,8 +56,10 @@ BEGIN
 	DECLARE	@tmpTransInfo TABLE (transID BIGINT, checktime DATETIME, RepUpdateTime DATETIME2(7), custID INT, CheckerId INT)
 
 	--TODO: Fetch transfer & TransferExtra by RefNo
-	;WITH CTE_RefNo AS (
-		SELECT @Refno AS RefNo
+	;WITH CTE_RefNo (RefNo) AS (
+		SELECT DISTINCT CAST([value] AS BIGINT)
+		FROM STRING_SPLIT(@RefNos, ',')
+		WHERE CAST([value] AS BIGINT) > 0
 	)
 	INSERT INTO @tmpRefNo (RefNo, TransID, Checktime, RepUpdateTime, CustID, IsMoving, IsVerified, TransTable, CheckerId)
 	SELECT	t.refno,
@@ -76,22 +77,31 @@ BEGIN
 	WHERE	bettype > 20000 
 			AND CustID > 0
 
-	UNION ALL
-	--TODO: collect old info - [TransferExtra]
-	SELECT	t.refno,
-			t.transID,
-			t.checktime,
-			t.RepUpdateTime,
-			t.custID,
-			CASE WHEN t.WinlostDate < @ConstraintDay THEN 1 ELSE 0 END AS IsMoving,
-			CASE WHEN t.CheckId IS NULL THEN 0 ELSE 1 END AS IsVerified,
-			'TransferExtra' AS TransTable, 
-			t.CheckId
-	FROM	dbo.[TransferExtra] t WITH (NOLOCK) 
-		INNER JOIN CTE_RefNo tmp ON tmp.RefNo = t.RefNo
-	WHERE	bettype > 30000 
-			AND CustID > 0
-	
+	--UNION ALL
+	IF OBJECT_ID(N'dbo.TransferExtra') > 0
+	BEGIN
+		--TODO: collect old info - [TransferExtra]
+		;WITH CTE_RefNo (RefNo) AS (
+			SELECT DISTINCT CAST([value] AS BIGINT)
+			FROM STRING_SPLIT(@RefNos, ',')
+			WHERE CAST([value] AS BIGINT) > 0
+		)
+		INSERT INTO @tmpRefNo (RefNo, TransID, Checktime, RepUpdateTime, CustID, IsMoving, IsVerified, TransTable, CheckerId)
+		SELECT	t.refno,
+				t.transID,
+				t.checktime,
+				t.RepUpdateTime,
+				t.custID,
+				CASE WHEN t.WinlostDate < @ConstraintDay THEN 1 ELSE 0 END AS IsMoving,
+				CASE WHEN t.CheckId IS NULL THEN 0 ELSE 1 END AS IsVerified,
+				'TransferExtra' AS TransTable, 
+				t.CheckId
+		FROM	dbo.[TransferExtra] t WITH (NOLOCK) 
+			INNER JOIN CTE_RefNo tmp ON tmp.RefNo = t.RefNo
+		WHERE	bettype > 30000 
+				AND CustID > 0
+	END
+
 	--TODO: save rollback info
 	INSERT INTO @tmpTransInfo(transID, checktime, RepUpdateTime, custID, CheckerId)
 	SELECT t.transID,
@@ -128,20 +138,22 @@ BEGIN
 
 		BEGIN TRAN
 		--TODO: Verify/UnVerify transfer
-		UPDATE	dbo.Transfer WITH (UPDLOCK,ROWLOCK)
+		UPDATE	dbo.[Transfer] WITH (UPDLOCK,ROWLOCK)
 		SET		checkTime = IIF(@IsVerified=1, @checkTime, NULL),
 				RepUpdateTime = SYSDATETIME()
 		WHERE transID IN (SELECT transID FROM @tmpTransInfo) 
 		;SET @stepDone |= IIF(@@ROWCOUNT > 0, POWER(2, 1), 0);
 
 		--TODO: Verify/UnVerify transferExtra
-		UPDATE	dbo.TransferExtra WITH (UPDLOCK,ROWLOCK)
-		SET		checkTime = IIF(@IsVerified=1, @checkTime, NULL),
-				checkId = @CheckerID,
-				RepUpdateTime = SYSDATETIME()
-		WHERE	transID IN (SELECT transID FROM @tmpTransInfo) 
-		;SET @stepDone |= IIF(@@ROWCOUNT > 0, POWER(2, 2), 0);
-
+		IF OBJECT_ID(N'dbo.TransferExtra') > 0
+		BEGIN
+			UPDATE	dbo.TransferExtra WITH (UPDLOCK,ROWLOCK)
+			SET		checkTime = IIF(@IsVerified=1, @checkTime, NULL),
+					checkId = @CheckerID,
+					RepUpdateTime = SYSDATETIME()
+			WHERE	transID IN (SELECT transID FROM @tmpTransInfo) 
+			;SET @stepDone |= IIF(@@ROWCOUNT > 0, POWER(2, 2), 0);
+		END
 		--TODO: Verify/UnVerify transferInfo
 		MERGE dbo.TransferInfo t
 		USING @tmpTransInfo s ON t.transid=s.transid
@@ -196,7 +208,6 @@ BEGIN
 	SELECT	@LogData = '<Acc_RewardPayment_UpdChecker CheckerName="'+ @Username +'" />'
 
 	--ActionID: 1600 - Verify; 1601 - Unverify 
-	DECLARE @Refnos VARCHAR(8000) = CONCAT('', @Refno);
 	BEGIN TRY
 		INSERT INTO DBLOG.bodb_CustomerLog.dbo.UserLog_Transaction(UserID, Refno, ActionID, IP, Doing)
 		SELECT	@UserID, CONVERT(BIGINT, VALUE),@ActionID, @IP, @LogData

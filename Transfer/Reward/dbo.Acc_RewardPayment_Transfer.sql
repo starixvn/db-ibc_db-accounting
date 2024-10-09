@@ -1,7 +1,9 @@
 /*<info serverAlias="DBSIC-bodb02" executers="wsv_nap" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_RewardPayment_Transfer]
-	@FromCustId		INT, --- super custid
-	@ToCustId		INT, --- expense code custid
+	@FromUserName	VARCHAR(50),
+	@ToUserName		VARCHAR(50),
+	@FromCurrName	VARCHAR(15),
+	@ToCurrName		VARCHAR(15),
 	@MaxTransId		BIGINT,
 	@Amount			MONEY,
 	@Creator		INT,
@@ -25,7 +27,10 @@ AS
 BEGIN
 	SET NOCOUNT ON;
 
-	DECLARE @mrecommend		INT,
+	DECLARE @FromCustId		INT, --- super custid
+		@ToCustId			INT, --- expense code custid
+		--------------------------
+		@mrecommend			INT,
 		@recommend			INT,
 		@srecommend			INT,
 		@roleId				TINYINT,
@@ -33,7 +38,7 @@ BEGIN
 		@to_transid			BIGINT,
 		@currencyId			INT,
 		@actualRate			FLOAT,
-		@walletId			TINYINT = 1, --1: Whitelabel wallet, 2: Reward wallet
+		@walletId			TINYINT = 2, --1: Whitelabel wallet, 2: Reward wallet
 		@transDate			DATETIME,
 		@winlostDate		SMALLDATETIME,
 		@Server_SiteDBGroupID SMALLINT,
@@ -54,12 +59,11 @@ BEGIN
 		@to_TransDesc		NVARCHAR(4000),
 		@ToCurrCode			VARCHAR(12),
 		@FromCurrCode		VARCHAR(12),
-		@ToCurrName			NVARCHAR(10),
-		@FromCurrName		NVARCHAR(10),
+		--@ToCurrName			NVARCHAR(10),
+		--@FromCurrName		NVARCHAR(10),
 		@Remark				NVARCHAR(4000),
 		@RemarkFromCurr		NVARCHAR(70), 
 		@RemarkToCurr		NVARCHAR(70),
-		@PaymentDate		DATE,
 		@IsDirectCheck		BIT
 	;
 
@@ -73,47 +77,56 @@ BEGIN
 	END
 
 	--Saba Rewards Promotion Code
-	--SET @ToCustId = 7178333 --PHL-MYR
+	--SET @ToCustId = 170463027 --Rewards Expense
+
+	SELECT @username = @FromUserName,
+		@to_username = @ToUserName
+	;
 
 	SELECT 
 		-----------from
-		@currencyId		= IIF(@FromCustId = ci.custid, ci.currency, @currencyId)
-		,@actualrate	= IIF(@FromCustId = ci.custid, e.actualrate, @actualrate)
-		,@mrecommend	= IIF(@FromCustId = ci.custid, ci.mrecommend, @mrecommend)
-		,@recommend		= IIF(@FromCustId = ci.custid, ci.recommend, @recommend)
-		,@srecommend	= IIF(@FromCustId = ci.custid, ci.srecommend, @srecommend)
-		,@username		= IIF(@FromCustId = ci.custid, ci.username, @username)
-		,@roleId		= IIF(@FromCustId = ci.custid, ci.roleId, @roleId)
-		,@FromCurrCode	= IIF(@FromCustId = ci.custid, e.Code, @FromCurrCode)
-		,@FromCurrName	= IIF(@FromCustId = ci.custid, e.currency, @FromCurrName)
+		@FromCustId		= IIF(@username = ci.username, ci.custid, @FromCustId)
+		,@currencyId	= IIF(@username = ci.username, ci.currency, @currencyId)
+		,@actualrate	= IIF(@username = ci.username, e.actualrate, @actualrate)
+		,@mrecommend	= IIF(@username = ci.username, ci.mrecommend, @mrecommend)
+		,@recommend		= IIF(@username = ci.username, ci.recommend, @recommend)
+		,@srecommend	= IIF(@username = ci.username, ci.srecommend, @srecommend)
+		,@roleId		= IIF(@username = ci.username, ci.roleId, @roleId)
+		--,@username		= IIF(@username = ci.username, ci.username, @username)
+		--,@FromCurrCode	= IIF(@username = ci.username, e.Code, @FromCurrCode)
+		--,@FromCurrName	= IIF(@username = ci.username, e.currency, @FromCurrName)
 		-----------to
-		,@to_currencyId	= IIF(@ToCustId = ci.custid, ci.currency, @to_currencyId)
-		,@to_actualrate	= IIF(@ToCustId = ci.custid, e.actualrate, @to_actualrate)
-		,@to_mrecommend	= IIF(@ToCustId = ci.custid, ci.mrecommend, @to_mrecommend)
-		,@to_recommend	= IIF(@ToCustId = ci.custid, ci.recommend, @to_recommend)
-		,@to_srecommend	= IIF(@ToCustId = ci.custid, ci.srecommend, @to_srecommend)
-		,@to_username	= IIF(@ToCustId = ci.custid, ci.username, @to_username)
-		,@ToCurrCode	= IIF(@ToCustId = ci.custid, e.Code, @ToCurrCode)
-		,@ToCurrName	= IIF(@ToCustId = ci.custid, e.currency, @ToCurrName)
+		,@ToCustId		= IIF(@to_username = ci.username, ci.custid, @ToCustId)
+		,@to_currencyId	= IIF(@to_username = ci.username, ci.currency, @to_currencyId)
+		,@to_actualrate	= IIF(@to_username = ci.username, e.actualrate, @to_actualrate)
+		,@to_mrecommend	= IIF(@to_username = ci.username, ci.mrecommend, @to_mrecommend)
+		,@to_recommend	= IIF(@to_username = ci.username, ci.recommend, @to_recommend)
+		,@to_srecommend	= IIF(@to_username = ci.username, ci.srecommend, @to_srecommend)
+		--,@to_username	= IIF(@to_username = ci.username, ci.username, @to_username)
+		--,@ToCurrCode	= IIF(@to_username = ci.username, e.Code, @ToCurrCode)
+		--,@ToCurrName	= IIF(@to_username = ci.username, e.currency, @ToCurrName)
 
 	FROM CustDB.dbo.customer AS ci WITH (NOLOCK)
 		INNER JOIN CustDB.dbo.exchange AS e WITH (NOLOCK) ON ci.currency = e.exchangeid
 		INNER JOIN CustDB.dbo.[Site] s WITH(NOLOCK) ON s.[site] = ci.[site]
-	WHERE ci.custid IN (@FromCustId, @ToCustId)
+	WHERE ci.UserName IN (@username, @to_username)
 		AND s.SiteDBGroupID = @Server_SiteDBGroupID
 	;
 
 	--TODO: check direct account status
-	WITH CTE_DirectAccount AS (
-		SELECT 
-			SUM(IIF(cd.custid = @FromCustId, 1, 0)) AS DummyCount,
-			SUM(IIF(cd.custid <> @FromCustId, 1, 0)) AS UplineCount
-		FROM CUSTDB.dbo.Acc_CustDirect cd WITH(NOLOCK) 
-		WHERE cd.custid IN (@srecommend, @mrecommend, @recommend, @FromCustId)
-			AND cd.roleid >= @roleId
-	)
-	SELECT @IsDirectCheck = IIF(ck.DummyCount = 0 AND ck.UplineCount > 0, 1, 0)
-	FROM CTE_DirectAccount ck;
+	IF @srecommend > 0
+	BEGIN
+		WITH CTE_DirectAccount AS (
+			SELECT 
+				SUM(IIF(cd.custid = @FromCustId, 1, 0)) AS DummyCount,
+				SUM(IIF(cd.custid <> @FromCustId, 1, 0)) AS UplineCount
+			FROM CUSTDB.dbo.Acc_CustDirect cd WITH(NOLOCK) 
+			WHERE cd.custid IN (@srecommend, @mrecommend, @recommend, @FromCustId)
+				AND cd.roleid >= @roleId
+		)
+		SELECT @IsDirectCheck = IIF(ck.DummyCount = 0 AND ck.UplineCount > 0, 1, 0)
+		FROM CTE_DirectAccount ck;
+	END
 
 	IF (@srecommend IS NULL AND @to_srecommend IS NULL) 
 		OR @FromCustID = @ToCustID 
@@ -124,24 +137,12 @@ BEGIN
 		RETURN
 	END
 
-	IF ISNULL(@Amount,0) = 0 OR ISNULL(@ExchangeRate, 0) = 0
+	--TODO: check @ExchangeRate
+	SET @ExchangeRate = IIF(@FromCurrName = @ToCurrName, 1, ISNULL(@ExchangeRate, 0))
+	IF ISNULL(@Amount,0) = 0 OR @ExchangeRate = 0
 	BEGIN
 		SELECT @ErrCode = 103,
 			@ErrMsg = 'Sorry, amount or Ex.rate is invalid.'	
-		RETURN
-	END
-
-	IF (@FromCurrCode <> @ToCurrCode AND 'MYR' NOT IN (@FromCurrCode, @ToCurrCode))
-	BEGIN
-		SELECT @ErrMsg = N'The two accounts have different currency code, but neither of them includes the RM currency. Please check again Users Info.'
-			, @ErrCode = 104
-		RETURN
-	END
-
-	IF (@FromCurrName = @ToCurrName AND @ExchangeRate <> 1)
-	BEGIN
-		SELECT @ErrMsg = N'The two accounts have same currency name, but Ex.rate is different 1.'
-			, @ErrCode = 104
 		RETURN
 	END
 
@@ -150,8 +151,7 @@ BEGIN
 		@confirmData	NVARCHAR(MAX)
 	;
 
-	SELECT @PaymentDate = NULL,
-		@ErrCode		= 0, 
+	SELECT @ErrCode		= 0, 
 		@ErrMsg			= NULL,
 		@stepDone		= 0
 	;
@@ -187,19 +187,17 @@ BEGIN
 
 			EXEC dbo.Acc_RewardPayment_Confirm 
 				@Data		= @confirmData,
-				--@Action		= 'Transfer',
 				@Creator	= @Creator,
 				@IP			= @IP,
 				@Language	= @Language,
 				@ErrCode	= @ErrCode OUTPUT,
 				@ErrMsg		= @ErrMsg OUTPUT,
-				@PaymentDate = @PaymentDate OUTPUT,
 				@PaymentLog	 = @PaymentLog OUTPUT
 			;
 
-			--select @PaymentDate [@PaymentDate], @ErrCode, @ErrMsg
+			--select @ErrCode, @ErrMsg
 
-			IF @ErrCode > 0 --OR @PaymentDate IS NULL
+			IF @ErrCode > 0
 			BEGIN
 				SELECT @ErrMsg = IIF(LEN(@ErrMsg) > 0, @ErrMsg, 'There is no payment''s confirmation.')
 					, @ErrCode = 105
@@ -281,12 +279,12 @@ BEGIN
 		INSERT INTO dbo.[Transfer](
 			transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 			winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
-			scomm, swinlost, [ip], statusID, RepUpdateTime
+			scomm, swinlost, [ip], statusId, RepUpdateTime
 		)
 		SELECT 
 			transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 			winlostdate, currencyId, actualrate, currencyName, recommend, mrecommend, srecommend, 
-			scomm, swinlost, [ip], 131 AS statusID, RepUpdateTime
+			scomm, swinlost, [ip], statusId, RepUpdateTime
 		FROM (
 			VALUES(
 				--- to customer
@@ -307,9 +305,10 @@ BEGIN
 				,@Creator
 				,IIF(@to_TransId > 0, @SiteDBGroupID, 0)
 				,@IP, 0, 0
-				,SYSDATETIME())
+				,SYSDATETIME()
+				,131)
 		) AS t (TransId,CustID,username,Recommend,Mrecommend,Srecommend,CurrencyID,CurrencyName,ActualRate,Bettype,winlost,actual_stake,TransDate,WinlostDate,TransDesc,RefNo,Creator,SiteDBGroupID
-			,[IP],scomm,swinlost,RepUpdateTime)
+			,[IP],scomm,swinlost,RepUpdateTime,statusId)
 		WHERE SiteDBGroupID = @Server_SiteDBGroupID
 		;SET @stepDone |= IIF(@@ROWCOUNT = 1 AND @@ERROR = 0, POWER(2, 3), 0); --MARK done insert transfer table
 
@@ -329,7 +328,6 @@ BEGIN
 		BEGIN
 			EXEC dbo.Acc_RewardPayment_Confirm_Rollback 
 				@Data			= @confirmData,
-				@Action			= 'Transfer',
 				@ErrCode		= @ErrCode OUTPUT,
 				@ErrMsg			= @ErrMsg OUTPUT
 			;
@@ -352,20 +350,22 @@ BEGIN
 	END CATCH
 
 	--TODO: write userlog successfully
-	DECLARE @LogData VARCHAR(1000)
+	DECLARE @LogData VARCHAR(1000), @UserID INT;
+	SELECT @UserID = ISNULL(@FromCustID, @ToCustID); -- check cross site DB between from and to accounts
+
 	IF @ErrCode = 0 --success
 	BEGIN
-		SELECT @LogData = CONCAT('CreditReward: Insert transfer fromcustid = ', @fromcustid,' tocustid=', @tocustid ,', amount = ', @amount, ', refno = ', @refNo)
+		SELECT @LogData = CONCAT('CreditReward: Insert transfer from account = ', @username,' to account=', @to_username ,', amount = ', @amount, ', refno = ', @refNo)
 	END
 	ELSE -- error logs
 	BEGIN
-		SELECT @LogData = CONCAT(@ErrMsg, '. Transfer fromcustid = ', @fromcustid,' tocustid=', @tocustid ,', amount = ', @amount, ', refno = ', @refNo)
+		SELECT @LogData = CONCAT(@ErrMsg, '. Transfer from account = ', @username,' to account=', @to_username ,', amount = ', @amount, ', refno = ', @refNo)
 	END
 
 	BEGIN TRY	
 		--SELECT @LogData [@LogData]
 		EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer 
-								@UserID		= @FromCustid, 
+								@UserID		= @UserID, 
 								@FromCustID = @FromCustID, 
 								@ToCustID	= @ToCustID, 
 								@IP			= @IP, 
@@ -376,8 +376,8 @@ BEGIN
 		SELECT @LogData = @LogData + ' ErrMsg: ' + ERROR_MESSAGE()
 			
 		EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer 
-							@UserID		= @FromCustID, 
-							@FromCustID = @FromCustID, 
+							@UserID		= @UserID, 
+							@FromCustID = @FromCustId, 
 							@ToCustID	= @ToCustID, 
 							@IP			= @IP, 
 							@Doing		= @LogData

@@ -85,8 +85,8 @@ BEGIN
 		;
 		
 		--TODO: #1 - Rollback confirm payment status on @FromCustId
-		SELECT @IsDirectCheck	= IIF(@roleId <> 4, 1, 0),
-			@confirmData		= (SELECT t.CustId, t.MaxTransId, t.RefNo, t.IsDirect
+		SELECT @IsDirectCheck	= IIF(@roleId <> 4, 1, 0);
+		SELECT @confirmData		= (SELECT t.CustId, t.MaxTransId, t.RefNo, t.IsDirect
 								FROM (VALUES(@FromCustId, @MaxTransId, @RefNo, @IsDirectCheck)) AS t (CustId, MaxTransId, RefNo, IsDirect)
 								WHERE @srecommend > 0
 								FOR JSON PATH);

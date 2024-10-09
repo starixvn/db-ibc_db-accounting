@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="wsv_nap,wsv_xnap" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBACC-bodb02" executers="wsv_nap,wsv_xnap" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_RewardPayment_CustomerSelByRefNo]
 	@RefNo			BIGINT,
 	@ErrCode		INT	=	0	OUTPUT,
@@ -29,19 +29,19 @@ BEGIN
 		RETURN
 	END
 
-	DECLARE @txnDetail TABLE (transid BIGINT, CustID INT, IsReversed BIT)
+	DECLARE @txnDetail TABLE (transid BIGINT, CustID INT, IsReversed BIT, ReverseOrder TINYINT)
 
 	INSERT INTO @txnDetail
-	SELECT t.transid, t.custid, t.IsReversed
+	SELECT t.transid, t.custid, t.IsReversed, ReverseOrder
 	FROM (
 	
-		SELECT t.transid, t.custid,ISNULL(ti.IsDel, 0) AS IsReversed
+		SELECT t.transid, t.custid,ISNULL(ti.IsDel, 0) AS IsReversed, 1 AS ReverseOrder
 		FROM dbo.[Transfer] t WITH (NOLOCK)
 			LEFT JOIN dbo.[TransferInfo] ti WITH (NOLOCK) ON ti.transid = t.transid
 		WHERE RefNo = @RefNoCheck
 
 		UNION ALL
-		SELECT transid, custid, ISNULL(IsReversed, 0) AS IsReversed
+		SELECT transid, custid, ISNULL(IsReversed, 0) AS IsReversed, 2
 		FROM dbo.TransferExtra WITH (NOLOCK)
 		WHERE RefNo = @RefNoCheck
 	) AS t;
@@ -54,7 +54,11 @@ BEGIN
 		RETURN
 	END
 
-	SELECT DISTINCT CustID 
-	FROM @txnDetail;
+	SELECT CustID
+	FROM (
+		SELECT DISTINCT CustID, ReverseOrder
+		FROM @txnDetail
+	) AS t
+	ORDER BY ReverseOrder;
 
 END

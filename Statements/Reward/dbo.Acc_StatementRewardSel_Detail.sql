@@ -14,10 +14,6 @@ AS
 BEGIN
 	SET NOCOUNT ON;
 
-	----Get Sport bettype Matrix------
-	DECLARE @isTest BIT = 0
-	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
-
 	DECLARE @CID INT -- to prevent bad parameter sniffing
 	SELECT  @CID = @custid
 	
@@ -30,13 +26,16 @@ BEGIN
 	BEGIN
 		SELECT 
 			b.TransDate, 
+			bt.typenamee AS transtype, 
 			b.transdesc + ' - Ex.Rate: ' + CAST(b.actualrate AS VARCHAR(10)) Remark, 
 			(Credit-Debit) AS Amount,
 			c.username AS Creator
 		FROM dbo.TransferExtra b WITH (NOLOCK)	
 			INNER JOIN dbo.Customer c WITH(NOLOCK) ON c.custid = b.Creator
+			LEFT JOIN dbo.bettype bt WITH (NOLOCK) ON b.bettype = bt.typeid 
 		WHERE b.custID = @CID		
 			AND b.winlostdate = @Winlostdate
+			AND b.bettype > 30000
 		ORDER BY b.TransId
 	END
 
@@ -46,11 +45,13 @@ BEGIN
 
 		SELECT 
 			b.TransDate, 
+			bt.typenamee AS transtype, 
 			b.transdesc + ' - Ex.Rate: ' + CAST(b.actualrate AS VARCHAR(10)) Remark, 
 			(Credit-Debit) AS Amount,
 			c.username AS Creator
 		FROM bodb_Archive.dbo.TransferExtra_bk b WITH (NOLOCK)	
 			INNER JOIN dbo.Customer c WITH(NOLOCK) ON c.custid = b.Creator
+			LEFT JOIN dbo.bettype bt WITH (NOLOCK) ON b.bettype = bt.typeid 
 		WHERE b.custID = @CID		
 			AND b.winlostdate = @Winlostdate
 		ORDER BY b.TransId
