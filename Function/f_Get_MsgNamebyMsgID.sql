@@ -1,4 +1,4 @@
-/*<info serverAlias="DBTXN-CustDB,DBAGE-bodb02,DBCUST-CustDB,DBACC-bodb02" executers="bodbAdminNet,bodbExtAccNet,bodbDownlineNet,bodbDownlineNetView" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBTXN-CustDB,DBAGE-bodb02,DBCUST-CustDB,DBACC-bodb02,DBGLOB-GLOBCUSTDB" executers="wsv_nap,wsv_xnap,wsv_alp,wsv_alpv" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION [dbo].[f_Get_MsgNamebyMsgID]
 (
 	@MsgID		INT,
@@ -18,6 +18,7 @@ AS
 		- 20230227@Bobby: AutoJob clear balance downlines [RedmineID: #182071]
 		- 20230810@Luke: LAP - SEA Localization [Redmine: #187132]
 		- 20231124@Luke: LAP - Support Indonesian & Thai language [Redmine: #196246]
+		- 20240704@Helen: add meta data DBGLOB-GLOBCUSTDB - [Redmine:206823]
 */
 BEGIN
 	-- Declare the return variable here
