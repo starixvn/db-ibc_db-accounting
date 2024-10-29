@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCTG-bodb02" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCTG-bodb02" executers="wsv_nap" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_LicenseeTransfer_Job]
 	@MoveBetsDay		SMALLDATETIME,
 	@TransferMonthDate	SMALLDATETIME = NULL OUTPUT,
@@ -22,6 +22,8 @@ AS
 		- 20220802@Danny: change code to support SiteDB [Redmine: #175253]
 		- 20221206@Danny: Skip transferring for crypto Licensee [Redmine: #181343]
 		- 20230627@Danny: Change Meta data  [Redmine: #189515]
+		- 20231015@Danny: Exclude BTS currency  [Redmine: #212221]
+
 		@Environment: LOCAL, SIT, UAT, PROD
 		 
 */
@@ -199,7 +201,7 @@ BEGIN
 		INNER JOIN CustDB.dbo.Dep_CustSuper cs WITH(NOLOCK) ON sc.LicenseeName = cs.[site]
 	WHERE @TransferMonthDate BETWEEN sc.FromDate AND sc.ToDate
 		AND ( 
-			( cs.currency <> 20 AND @Environment = 'PROD')
+			( cs.currency NOT IN (20,218) AND @Environment = 'PROD')
 			OR @Environment IN ('LOCAL','SIT','UAT')
 		)
 	
