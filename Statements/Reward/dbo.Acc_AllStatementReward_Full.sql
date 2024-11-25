@@ -145,13 +145,15 @@ BEGIN
 
 		IF @Fromdate_bk < @_BalanceUpDay
 		BEGIN
+			SELECT @_ToDate = IIF(@ToDate >= @_BalanceUpDay, @_BalanceUpDay, @ToDate);
+
 			WITH CTE_Accum AS (
 				SELECT TOP 1 accdate, totalamt
 				FROM (
 					SELECT TOP(1) accdate, totalamt
 					FROM bodb_Report.dbo.[StatementExtra] sr WITH (NOLOCK)
 					WHERE custid = @CID
-						AND accdate < @Fromdate_bk
+						AND accdate <= @Fromdate_bk
 						AND transtype = 'ACCUM'
 					ORDER BY accdate DESC
 					UNION ALL SELECT NULL, 0 --> Init accum balance from begining
@@ -180,6 +182,24 @@ BEGIN
 					AND sr.accdate < @Fromdate_bk
 					AND sr.transtype NOT IN ('BALR', 'ACCUM')
 			) AS cal --> CAL ACCUM total
+			---------- INCLUDE - OPENING BALANCE
+			UNION ALL
+			SELECT 
+				sr.accdate,
+				0,
+				sr.totalamt,
+				'BALR' AS transtype,
+				0,
+				'OPENING BALANCE' AS transdesc, 
+				NULL,
+				NULL,
+				0,
+				NULL,
+				0
+			FROM bodb_Report.dbo.[StatementExtra] sr WITH (NOLOCK)
+			WHERE sr.custid = @CID
+				AND sr.accdate > @Fromdate_bk AND sr.accdate <= @_ToDate 
+				AND sr.transtype IN ('ACCUM')
 		END
 		ELSE IF @Fromdate_bk > @_BalanceUpDay
 		BEGIN

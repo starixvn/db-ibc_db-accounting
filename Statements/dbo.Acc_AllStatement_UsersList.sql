@@ -768,7 +768,7 @@ BEGIN
         LEFT JOIN #StatementTable ck ON ck.custid = s.custid AND ck.transtype = s.transtype AND ck.accdate = s.accdate
         WHERE @lateTransaction = 1
             AND s.Accdate BETWEEN @_BalanceUpDay AND @_ToAccdate
-AND s.TransType IN ('Dep','Wit','Trac')
+            AND s.TransType IN ('Dep','Wit','Trac')
             AND ck.custid IS NULL
 
         --Statement_Accum
@@ -806,7 +806,7 @@ AND s.TransType IN ('Dep','Wit','Trac')
             GROUP BY UserName,Roleid,Currency, custid
         )
         INSERT INTO #StatementTable(UserName,Roleid,Accdate,TotalAmt,TransType,TransDesc,Currency, custid)
-        SELECT UserName,Roleid,NULL,TotalAmt,'BALR','ACCUMULATED BALANCE',Currency, custid
+        SELECT UserName,Roleid,NULL,TotalAmt,'BAL','ACCUMULATED BALANCE',Currency, custid
         FROM CTE_Sum 
         WHERE TotalAmt <> 0;
 
