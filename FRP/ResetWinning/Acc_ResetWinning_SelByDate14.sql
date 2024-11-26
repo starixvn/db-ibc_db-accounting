@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet" isFunction="0" isNested="1"></info>*/
+﻿/*<info serverAlias="DBACC-bodb02" executers="wsv_nap" isFunction="0" isNested="1"></info>*/
 ALTER PROCEDURE [dbo].[Acc_ResetWinning_SelByDate14]
 	@Winlostdate	SMALLDATETIME,	
 	@TotalBalance	MONEY = 0 OUTPUT, 
@@ -83,6 +83,7 @@ AS
 		- 20220614@Danny: Database - scale out credit [RedmineID: #181595]
 		- 20231004@Lewis: Include bettype 998 into Parlay [RedmineID: #194992]
 		- 20240228@Lewis: Incorporate AG Jackpot [RedmineID: #201339]
+		- 20241023@Lewis: Rebate Retention [RedmineID: #208503]
 		
 	Explanation's Param:
 	    @mode:  0 _ view report
@@ -167,22 +168,50 @@ BEGIN
 	)
 	
 	INSERT INTO #Transfer (winlostdate, custid, bettype, Product, winlost, Realwinlost)
-	SELECT	b.winlostdate, 
-			CASE WHEN b.bettype IN (21001, 21002) THEN custid ELSE -1 END as custid,			
-			CASE WHEN b.bettype = 20000 then b.bettype ELSE 0 END as bettype, 			
-			''  AS Product,
-			SUM((ISNULL(winlost, 0) - ISNULL(actual_stake, 0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)) * b.actualrate) AS Winlost,
-			SUM(ISNULL(winlost, 0) - ISNULL(actual_stake, 0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)) AS RealWinlost 
-	FROM dbo.transfer b WITH (NOLOCK)
-	WHERE b.winlostdate = @winlostdate
-	   AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
-                        WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
-                        WHEN winlostdate < @balanceUpDay THEN 0 --> old data
-                    ELSE 1 END
-	   AND b.bettype <> 21007 ---- exclude CN88 headline balance
-    GROUP BY b.winlostdate, 
-			CASE WHEN b.bettype IN (21001, 21002) THEN custid ELSE -1 END  ,			
-			CASE WHEN b.bettype = 20000 then b.bettype ELSE 0 END
+	SELECT  A.WinlostDate,
+			A.custid,
+			A.bettype,
+			A.Product,
+			SUM(A.Winlost),
+			SUM(A.RealWinlost)
+	FROM (
+		SELECT	b.winlostdate, 
+				CASE WHEN b.bettype IN (21001, 21002) THEN custid ELSE -1 END as custid,			
+				CASE WHEN b.bettype = 20000 then b.bettype ELSE 0 END as bettype, 			
+				''  AS Product,
+				SUM((ISNULL(winlost, 0) - ISNULL(actual_stake, 0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)) * b.actualrate) AS Winlost,
+				SUM(ISNULL(winlost, 0) - ISNULL(actual_stake, 0)+ISNULL(awinlost,0)+ISNULL(mwinlost,0)+ISNULL(swinlost,0)+ISNULL(scomm,0)) AS RealWinlost 
+		FROM dbo.transfer b WITH (NOLOCK)
+		WHERE b.winlostdate = @winlostdate
+		   AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+							WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+							WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+						ELSE 1 END
+		   AND b.bettype <> 21007 ---- exclude CN88 headline balance
+		GROUP BY b.winlostdate, 
+				CASE WHEN b.bettype IN (21001, 21002) THEN custid ELSE -1 END  ,			
+				CASE WHEN b.bettype = 20000 then b.bettype ELSE 0 END
+
+		-- TODO: TransferExtra
+		UNION ALL
+		SELECT  b.WinlostDate,
+				-1 as custid,			
+				CASE WHEN b.bettype = 30000 then b.bettype ELSE 0 END as bettype,
+				''  AS Product,
+				SUM((Credit - Debit) * ActualRate) AS Winlost,
+				SUM(Credit - Debit) AS RealWinlost
+		FROM dbo.TransferExtra b WITH (NOLOCK)
+		WHERE b.winlostdate = @winlostdate
+			AND 1 = CASE WHEN bettype = 30000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+						 WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+						ELSE 1 END
+		GROUP BY  b.WinlostDate,			
+				CASE WHEN b.bettype = 30000 then b.bettype ELSE 0 END
+		) A
+	GROUP BY A.WinlostDate,
+			A.custid,
+			A.bettype,
+			A.Product
 
 	DELETE t FROM #Transfer t WHERE t.CustId IN (SELECT d.CustId FROM @dummyBalance d WHERE d.IsExtraPT = 1)  
 	DELETE @dummyBalance WHERE IsExtraPT = 1	
@@ -426,7 +455,7 @@ BEGIN
 		SELECT @totalBalance = SUM(ISNULL(b.Winlost, 0))
 		FROM #Transfer b	     
 		WHERE CustID = -1	
-			  AND b.bettype <> 20000
+			  AND b.bettype NOT IN (20000,30000)	
      ---------------------------------------------------------------------------
 
 		IF @Mode = 0 --- view only
@@ -439,7 +468,7 @@ BEGIN
 					   SUM(CASE WHEN @Istest = 1 THEN ISNULL(b.RealWinlost, 0) ELSE ISNULL(b.Winlost, 0) END ) AS reset,
 					   ISNULL(SUM(b.RealWinlost), 0) AS RealRreset
 				 FROM #Transfer b
-				 WHERE b.bettype <> 20000	     
+				 WHERE b.bettype NOT IN (20000,30000)	     
 				 GROUP BY b.product
 			)
 			,OpenningBalance AS
@@ -447,7 +476,7 @@ BEGIN
 				SELECT 'Openning Balance' as product, 
 						SUM(ISNULL(winlost, 0)) AS winlost
 				FROM #Transfer b
-				WHERE b.bettype = 20000
+				WHERE b.bettype IN (20000,30000)	
 				HAVING SUM(ISNULL(winlost, 0)) <> 0
 			)
 			SELECT product, winlost AS Winlost , 0 AS WinlostAfterExtraPT, 0 as reset, 0 as seq
@@ -487,7 +516,7 @@ BEGIN
 					   SUM(CASE WHEN @Istest = 1 THEN ISNULL(b.RealWinlost, 0) ELSE ISNULL(b.Winlost, 0) END ) AS reset,
 					   ISNULL(SUM(b.RealWinlost), 0) AS RealReset
 				 FROM #Transfer b
-				 WHERE b.bettype <> 20000	     
+				 WHERE b.bettype NOT IN (20000,30000)		     
 				 GROUP BY b.product
 			) 		
 			INSERT INTO #reset( product,  Winlost, WinlostAfterExtraPT, reset, LatestReset, RealWinlost, RealWinlostAfterExtraPT, RealReset, RealLatestReset)	
