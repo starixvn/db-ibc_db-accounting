@@ -1,4 +1,4 @@
-/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBACC-bodb02" executers="wsv_nap" isFunction="0" isNested="0"></info>*/
 USE bodb02
 GO
 ALTER PROCEDURE [dbo].[Task_ResetWinning_Non3rdParty]
@@ -81,6 +81,7 @@ AS
 		- 20230801@Danny: fix email issue [Redmine: #192134]
 		- 20231004@Lewis: Include bettype 998 into Parlay [RedmineID: #194992]
 		- 20240228@Lewis: Incorporate AG Jackpot [RedmineID: #201339]
+		- 20241023@Lewis: Rebate Retention [RedmineID: #208503]
 
 	Param Explanation:
 	    @mode:  0 _ view report
@@ -165,15 +166,30 @@ BEGIN
 	)
 
 	INSERT INTO #Transfer (winlostdate, custid, product, winlost, Realwinlost)
-	SELECT winlostdate, CASE WHEN bettype IN (21001, 21002) THEN custid ELSE -1 END AS custid, '' AS product
-		,SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS Winlost
-		,SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm)) AS RealWinlost
-	FROM dbo.transfer WITH (NOLOCK)
-	WHERE winlostdate BETWEEN @fromdate AND @todate
-	   AND ((bettype = 19999 AND winlostdate <= @moveBetsDay)  OR (bettype > 19999 ))
-	   AND bettype <> 21007 -- Exclude CN88 headline balance
-	GROUP BY winlostdate, CASE WHEN bettype IN (21001, 21002) THEN custid ELSE -1 END
+	SELECT A.WinlostDate,A.custid,A.product,SUM(A.Winlost),SUM(A.RealWinlost)
+	FROM (
+			SELECT winlostdate, CASE WHEN bettype IN (21001, 21002) THEN custid ELSE -1 END AS custid, '' AS product
+				,SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm) * actualrate) AS Winlost
+				,SUM((winlost - actual_stake + awinlost + mwinlost + swinlost + scomm)) AS RealWinlost
+			FROM dbo.transfer WITH (NOLOCK)
+			WHERE winlostdate BETWEEN @fromdate AND @todate
+			   AND ((bettype = 19999 AND winlostdate <= @moveBetsDay)  OR (bettype > 19999 ))
+			   AND bettype <> 21007 -- Exclude CN88 headline balance
+			GROUP BY winlostdate, CASE WHEN bettype IN (21001, 21002) THEN custid ELSE -1 END
 	
+			--TODO: TransferExtra -- bettype in (30001)
+			--custid=-1 => sum for TotalBalance
+			--=> TotalBalance - TotalWLproducts = Others
+			UNION ALL
+			SELECT te.WinlostDate, -1 AS custid, '' AS product
+				,SUM((Credit - Debit) * actualrate) AS Winlost
+				,SUM(Credit - Debit) AS RealWinlost
+			FROM dbo.TransferExtra te WITH (NOLOCK)
+			WHERE te.WinlostDate BETWEEN @fromdate AND @todate
+			GROUP BY te.WinlostDate
+		) A
+	GROUP BY A.WinlostDate,A.custid,A.product
+
 	DELETE t FROM #Transfer t WHERE t.CustId IN (SELECT d.CustId FROM @dummyBalance d WHERE d.IsExtraPT = 1)
 	DELETE @dummyBalance WHERE IsExtraPT = 1
 
