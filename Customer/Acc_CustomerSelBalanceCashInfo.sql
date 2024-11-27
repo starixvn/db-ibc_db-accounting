@@ -1,8 +1,7 @@
-/*<info serverAlias="DBAGE-bodb02,DBSIG-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView,bodbExtAccNet" isFunction="0" isNested="1"></info>*/
+/*<info serverAlias="DBAGE-bodb02" executers="wsv_nap,wsv_alp,wsv_alpv,wsv_xnap" isFunction="0" isNested="1"></info>*/
 ALTER PROCEDURE [dbo].[Acc_CustomerSelBalanceCashInfo]
 	@CustId INT
 AS
-
 /*
 	Created by Percy
 	Date: 2017-10-18
@@ -22,13 +21,16 @@ AS
 		- 20221104@Evan: Enhance performance get max transid [RedmineID: #180141]
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
 		- 20230706@Danny: deploy SP to SiteDB03 [Redmine: #181595]
+		- 20240918@Bobby: SabaWallet - Reward Program [Redmine: #209191]
 
 	Param's Explaination:
 		- @CustId: custid
 */
-
 BEGIN
-	SET NOCOUNT ON
+	SET NOCOUNT ON;
+
+	DROP TABLE IF EXISTS #SportBettype
+	DROP TABLE IF EXISTS #BalanceInfo
 
 	DECLARE @yesterday SMALLDATETIME, @today SMALLDATETIME
 	SELECT @today =   CAST(CURRENT_TIMESTAMP AS DATE)
@@ -77,6 +79,21 @@ BEGIN
 		memberCash MONEY, yesterday_memberCash MONEY, memberOutstanding MONEY,
 		PendingTransfer3rd MONEY DEFAULT (0)
 	)
+
+	-- TODO: Get Reward Balance
+	DECLARE @RewardPending	MONEY, 
+		@RewardBalance		MONEY,
+		@RewardCurrency		VARCHAR(10),
+		@RewardMaxTransId	BIGINT
+
+	EXEC [dbo].[Acc_CustomerSelBalanceReward] 
+	   @CustId = @custid
+	  ,@RoleId = @roleid
+	  ,@RewardPending	= @RewardPending OUTPUT
+	  ,@RewardBalance	= @RewardBalance OUTPUT
+	  ,@RewardCurrency	= @RewardCurrency OUTPUT
+	  ,@MaxTransId		= @RewardMaxTransId OUTPUT
+	;
 
     IF @roleid = 1
 	BEGIN
@@ -163,13 +180,19 @@ BEGIN
                         WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
                         WHEN winlostdate < @balanceUpDay THEN 0 --> old data
                     ELSE 1 END
+		;
 
 		SELECT
 			SUM(memberCash) AS Cash,
 			SUM(yesterday_memberCash) AS yesterday_Cash,
 			SUM(memberOutstanding) AS outstanding,
-			@transdate AS lastTxn
+			@transdate AS lastTxn,
+			@RewardPending AS RewardPending, 
+			@RewardBalance AS RewardBalance, 
+			@RewardCurrency AS RewardCurrency,
+			@RewardMaxTransId	AS RewardMaxTransId
 		FROM #BalanceInfo
+
     END 
     ELSE IF @roleid = 2
     BEGIN
@@ -284,6 +307,7 @@ BEGIN
 		                    WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
 		                    WHEN winlostdate < @balanceUpDay THEN 0 --> old data
 		                ELSE 1 END
+		;
 
 		SELECT
 			SUM(agentCash) AS agentCash,
@@ -294,7 +318,11 @@ BEGIN
 			SUM(memberOutstanding) AS customerOutstanding,
 			SUM(PendingTransfer3rd) AS PendingTransfer3rd,
 			@transdate AS lastTxn,
-			@UsedCredit AS agentUsedCredit
+			@UsedCredit AS agentUsedCredit,
+			@RewardPending AS RewardPending, 
+			@RewardBalance AS RewardBalance, 
+			@RewardCurrency AS RewardCurrency,
+			@RewardMaxTransId	AS RewardMaxTransId
 		FROM #BalanceInfo
     END
     ELSE IF @roleid = 3
@@ -425,6 +453,7 @@ BEGIN
 	                        WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
 	                        WHEN winlostdate < @balanceUpDay THEN 0 --> old data
                     	ELSE 1 END
+		;
 
 		SELECT
 			SUM(masterCash) AS masterCash,
@@ -437,8 +466,13 @@ BEGIN
 			SUM(memberOutstanding) AS customerOutstanding,
 			SUM(PendingTransfer3rd) AS PendingTransfer3rd,
 			@transdate AS lastTxn,
-			@UsedCredit AS masterUsedCredit
+			@UsedCredit AS masterUsedCredit,
+			@RewardPending AS RewardPending, 
+			@RewardBalance AS RewardBalance, 
+			@RewardCurrency AS RewardCurrency,
+			@RewardMaxTransId	AS RewardMaxTransId
 		FROM #BalanceInfo
+
     END
     ELSE IF @roleid = 4
     BEGIN
@@ -580,8 +614,10 @@ BEGIN
 	                    WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
 	                    WHEN winlostdate < @balanceUpDay THEN 0 --> old data
 	                ELSE 1 END
-		GROUP BY winlostdate, Bettype 
+		GROUP BY winlostdate, Bettype;
 
+		;
+		
 		SELECT
 			SUM(superCash) AS superCash,
 			SUM(yesterday_superCash) AS yesterday_superCash,
@@ -595,8 +631,13 @@ BEGIN
 			SUM(memberOutstanding) AS customerOutstanding,
 			SUM(PendingTransfer3rd) AS PendingTransfer3rd,
 			@transdate AS lastTxn,
-			@UsedCredit AS superUsedCredit
+			@UsedCredit AS superUsedCredit,
+			@RewardPending		AS RewardPending, 
+			@RewardBalance		AS RewardBalance, 
+			@RewardCurrency		AS RewardCurrency,
+			@RewardMaxTransId	AS RewardMaxTransId
 		FROM #BalanceInfo
+
     END
 	ELSE IF @roleid = 0
 	BEGIN
@@ -616,7 +657,6 @@ BEGIN
 				AND b.winlostdate <= @today
 		) AS bal
 	END
-	DROP TABLE #SportBettype
-	DROP TABLE #BalanceInfo
+	
 END
 GO

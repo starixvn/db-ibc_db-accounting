@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBACC-bodb02" executers="wsv_nap" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Acc_AllStatement_UsersList]
     @UserList       VARCHAR(6000),
     @FromDate       SMALLDATETIME,
@@ -24,6 +24,7 @@ AS
         - 20221208@Bobby: Fix bug (correct winlostdate vs RefTable) [Redmine: #181466,181480]
         - 20221219@Bobby: Correct statement in case difference between winlostdate and transdate of transfer [Redmine: #181771]
         - 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
+        - 20240826@Bobby: Reward Payment transfer [Redmine: #209633]
 */
 BEGIN
     SET NOCOUNT ON
@@ -43,6 +44,13 @@ BEGIN
     DECLARE @Yesterday SMALLDATETIME 
     SELECT  @Yesterday = CONVERT(DATE, DATEADD(DAY, -1, GETDATE()))
         
+    DROP TABLE IF EXISTS #SportBettype
+    DROP TABLE IF EXISTS #TEMP_USER_LIST
+    DROP TABLE IF EXISTS #BetPosCom
+    DROP TABLE IF EXISTS #StatementTable
+    DROP TABLE IF EXISTS #tmpBettrans
+    DROP TABLE IF EXISTS #tmpTransfer
+
     ---- Get Sport Bettype Matrix 
     DECLARE @isTest BIT = 0
     SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
@@ -103,7 +111,6 @@ BEGIN
 	    WHERE t.Roleid = 4
     ) AS t
 
-
     CREATE TABLE #StatementTable
     (
 		custid		INT,
@@ -113,7 +120,8 @@ BEGIN
         TransDesc   NVARCHAR(1000),   
         Roleid      INT,
         UserName    VARCHAR(50),
-        Currency    INT
+        Currency    INT,
+        WalletType  TINYINT DEFAULT(0)
     )
     CREATE TABLE #tmpBettrans
     (
@@ -155,7 +163,8 @@ BEGIN
         scomm       MONEY,
         acomm       MONEY,
         Playercomm  MONEY,
-        Bettype     SMALLINT  
+        Bettype     SMALLINT,
+        WalletType  TINYINT DEFAULT(0)
     )  
 
     IF @_ToDate >= @_BalanceUpDay
@@ -206,7 +215,7 @@ BEGIN
         GROUP BY Winlostdate,b.Custid,Recommend,Mrecommend,Srecommend,StatusID,b.gameID
 
         -- Transfer
-        INSERT INTO #tmpTransfer (Transdate,WinlostDate,Custid,Recommend,Mrecommend,Srecommend,TotalAmt,TransType,TransDesc,winlost,actual_stake,awinlost,mwinlost,swinlost,Comm,scomm,acomm,Playercomm,Bettype)  
+        INSERT INTO #tmpTransfer (Transdate,WinlostDate,Custid,Recommend,Mrecommend,Srecommend,TotalAmt,TransType,TransDesc,winlost,actual_stake,awinlost,mwinlost,swinlost,Comm,scomm,acomm,Playercomm,Bettype,WalletType)  
         SELECT    
                 TransDate,  
                 WinlostDate,  
@@ -214,8 +223,9 @@ BEGIN
                 SUM(winlost-actual_stake) AS TotalAmt,  
                 CASE WHEN ISNULL(ti.IsCollection,0) = 0 THEN bt.typenamee ELSE 'Coll' END  AS TransType,  
                 TransDesc,
-                SUM(winlost),SUM(actual_stake),SUM(awinlost),SUM(mwinlost),SUM(swinlost),SUM(Comm),SUM(scomm),SUM(acomm),SUM(Playercomm),Bettype
-        FROM        Transfer b WITH (NOLOCK)   
+                SUM(winlost),SUM(actual_stake),SUM(awinlost),SUM(mwinlost),SUM(swinlost),SUM(Comm),SUM(scomm),SUM(acomm),SUM(Playercomm),Bettype,
+                0 AS WalletType
+        FROM dbo.[Transfer] b WITH (NOLOCK)   
 		INNER JOIN #tempCust u on u.Custid = b.custid
         INNER JOIN  bettype bt WITH (NOLOCK) ON b.bettype = bt.typeid   
         LEFT JOIN   TransferInfo ti WITH (NOLOCK) ON b.TransId = ti.TransId   
@@ -224,6 +234,25 @@ BEGIN
             AND winlostdate >= @_BalanceUpDay
             AND winlostdate BETWEEN @_FromDate AND @_ToDate
         GROUP BY Bettype,TransDate,WinlostDate,b.Custid,Recommend,Mrecommend,Srecommend,TransDesc,ti.IsCollection,bt.typenamee
+
+        UNION ALL -- TransferExtra
+        SELECT    
+                TransDate,  
+                WinlostDate,  
+                b.Custid,Recommend,Mrecommend,Srecommend,
+                SUM(credit-debit) AS TotalAmt,  
+                bt.typenamee  AS TransType,  
+                TransDesc,
+                SUM(credit),SUM(debit),0,0,0,0,0,0,0,Bettype,
+                b.WalletID
+        FROM dbo.TransferExtra b WITH (NOLOCK)   
+		INNER JOIN #tempCust u on u.Custid = b.custid
+        INNER JOIN  bettype bt WITH (NOLOCK) ON b.bettype = bt.typeid
+        WHERE  
+            bettype > 30000
+            AND winlostdate >= @_BalanceUpDay
+            AND winlostdate BETWEEN @_FromDate AND @_ToDate
+        GROUP BY Bettype,TransDate,WinlostDate,b.Custid,Recommend,Mrecommend,Srecommend,TransDesc,bt.typenamee,b.WalletID
         
         --IF @Roleid = 1
         IF EXISTS (SELECT 1 FROM #TEMP_USER_LIST WHERE Roleid = 1)
@@ -314,7 +343,7 @@ BEGIN
                 bettype = 19999  
             GROUP BY b.Custid,winlostdate
             
-            INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency, custid)  
+            INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency, custid, WalletType)  
             SELECT  
                 Transdate AS Accdate,  
                 TotalAmt,  
@@ -323,7 +352,8 @@ BEGIN
                 1 AS Roleid,  
                 UserName,   
                 Currency ,
-				t.Custid
+				t.Custid,
+                WalletType
             FROM        #tmpTransfer b   
             INNER JOIN  #TEMP_USER_LIST t   
                     ON  b.Custid = t.Custid AND Roleid = 1  
@@ -436,7 +466,7 @@ BEGIN
                     t.UserName,
                     t.Currency,
 					t.Custid
-                FROM        zzzbettrans b WITH (NOLOCK)
+                FROM  zzzbettrans b WITH (NOLOCK)
                 INNER JOIN  match14 m WITH (NOLOCK) ON b.matchid = m.matchid
                 INNER JOIN  #TEMP_USER_LIST t ON b.custid = t.Custid AND t.Roleid = 1
                 LEFT JOIN   #SportBettype s ON b.bettype = s.Bettype
@@ -474,7 +504,7 @@ BEGIN
         IF EXISTS (SELECT 1 FROM #TEMP_USER_LIST  WHERE Roleid = 2)
         BEGIN
             
-            INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency,custid)
+            INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency,custid,WalletType)
             SELECT
                 Transdate AS Accdate,
                 TotalAmt,
@@ -483,7 +513,8 @@ BEGIN
                 2 AS Roleid,
                 UserName, 
                 Currency,
-				t.Custid
+				t.Custid,
+                WalletType
             FROM        #tmpTransfer b 
             INNER JOIN  #TEMP_USER_LIST t 
                     ON  b.Custid = t.Custid AND Roleid = 2
@@ -541,7 +572,7 @@ BEGIN
         IF EXISTS (SELECT 1 FROM #TEMP_USER_LIST WHERE Roleid = 3)
         BEGIN
            
-            INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency, custid)
+            INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency, custid,WalletType)
             SELECT
                 Transdate AS Accdate,
                 TotalAmt ,
@@ -550,7 +581,8 @@ BEGIN
                 3 AS Roleid,
                 UserName, 
                 Currency,
-				t.Custid
+				t.Custid,
+                WalletType
             FROM        #tmpTransfer b 
             INNER JOIN  #TEMP_USER_LIST t 
                     ON  b.Custid = t.Custid AND Roleid = 3
@@ -608,7 +640,7 @@ BEGIN
         IF EXISTS (SELECT 1 FROM #TEMP_USER_LIST WHERE Roleid = 4)
         BEGIN       
             
-            INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency, custid)
+            INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency, custid,WalletType)
             SELECT
                 Transdate AS Accdate,
                 TotalAmt,
@@ -617,7 +649,8 @@ BEGIN
                 4 AS Roleid,
                 UserName, 
                 Currency,
-				t.Custid
+				t.Custid,
+                WalletType
             FROM        #tmpTransfer b 
             INNER JOIN  #TEMP_USER_LIST t 
                     ON  b.Custid = t.Custid AND Roleid = 4
@@ -675,10 +708,12 @@ BEGIN
     BEGIN
         DECLARE @lateTransaction BIT
 			, @_ToAccdate DATETIME
-			, @_FromAccdate DATETIME;
+			, @_FromAccdate DATETIME
+            , @_FromAccdateExtra DATETIME;
 		
 		SELECT @_ToAccdate = @_ToDate
 			,@_FromAccdate = @_FromDate
+			,@_FromAccdateExtra = @_FromDate
 
         IF @_ToDate >= @_BalanceUpDay
         BEGIN
@@ -689,25 +724,45 @@ BEGIN
             SELECT @_ToAccdate = DATEADD(SECOND, 86399, @_ToAccdate)
 
         IF @_FromDate < @_BalanceUpDay
+        BEGIN
+            --Statement_Accum
             SELECT TOP 1 @_FromAccdate = ISNULL(AccDate, @FromDate_Bk)
             FROM bodb_Report.dbo.Statement_Accum WITH (NOLOCK)
             WHERE AccDate <= @FromDate_Bk
-            ORDER BY AccDate DESC
+            ORDER BY AccDate DESC;
 
-        
+            ---StatementExtra
+            SELECT TOP 1 @_FromAccdateExtra = ISNULL(AccDate, @FromDate_Bk)
+            FROM bodb_Report.dbo.StatementExtra WITH (NOLOCK)
+            WHERE AccDate <= @FromDate_Bk
+                AND TransType = 'ACCUM'
+            ORDER BY AccDate DESC;
+
+        END
+
+        --[Statement]
         INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency, custid)
         SELECT s.Accdate, TotalAmt, TransType, TransDesc, t.Roleid, t.UserName, t.Currency,t.Custid
-        FROM    bodb_Report.dbo.Statement s WITH (NOLOCK)
+        FROM    bodb_Report.dbo.[Statement] s WITH (NOLOCK)
         INNER JOIN  #TEMP_USER_LIST t 
                 ON  s.custid = t.Custid
         WHERE s.Accdate BETWEEN @_FromAccdate AND @_ToAccdate
             AND s.TransType <> 'BAL'
+
+        --[StatementExtra]
+        INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency, custid, WalletType)
+        SELECT s.Accdate, TotalAmt, TransType, TransDesc, t.Roleid, t.UserName, t.Currency,t.Custid, 2 AS WalletType
+        FROM    bodb_Report.dbo.[StatementExtra] s WITH (NOLOCK)
+        INNER JOIN  #TEMP_USER_LIST t 
+                ON  s.custid = t.Custid
+        WHERE s.Accdate BETWEEN @_FromAccdateExtra AND @_ToAccdate
+            AND s.TransType NOT IN ('BALR', 'ACCUM')
 		
         -- CORRECT: @lateTransaction
         SELECT @_ToAccdate = DATEADD(SECOND, 86399, CAST(@ToDate AS DATETIME));
         INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency, custid)
         SELECT s.Accdate, s.TotalAmt, s.TransType, s.TransDesc, t.Roleid, t.UserName, t.Currency, t.Custid
-        FROM    bodb_Report.dbo.Statement s WITH (NOLOCK)
+        FROM    bodb_Report.dbo.[Statement] s WITH (NOLOCK)
         INNER JOIN  #TEMP_USER_LIST t 
                 ON  s.custid = t.Custid
         LEFT JOIN #StatementTable ck ON ck.custid = s.custid AND ck.transtype = s.transtype AND ck.accdate = s.accdate
@@ -716,6 +771,7 @@ BEGIN
             AND s.TransType IN ('Dep','Wit','Trac')
             AND ck.custid IS NULL
 
+        --Statement_Accum
         INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency, custid)
         SELECT a.Accdate, a.TotalAmt, 'BAL' TransType, 'OPENING BALANCE' TransDesc, t.Roleid, t.UserName, t.Currency, t.Custid
         FROM        bodb_Report.dbo.Statement_Accum a WITH (NOLOCK) 
@@ -724,6 +780,17 @@ BEGIN
         WHERE 
             a.Accdate BETWEEN @_FromAccdate AND @_ToAccdate
             AND a.AccDate <= @_BalanceUpDay
+
+        --StatementExtra
+        INSERT INTO #StatementTable (Accdate, TotalAmt, TransType, TransDesc, Roleid, UserName, Currency, custid, WalletType)
+        SELECT a.Accdate, a.TotalAmt, 'BALR' TransType, 'OPENING BALANCE - Reward Wallet' TransDesc, t.Roleid, t.UserName, t.Currency, t.Custid, 2
+        FROM        bodb_Report.dbo.StatementExtra a WITH (NOLOCK) 
+        INNER JOIN  #TEMP_USER_LIST t 
+                ON  a.custid = t.Custid
+        WHERE 
+            a.Accdate BETWEEN @_FromAccdateExtra AND @_ToAccdate
+            AND a.AccDate <= @_BalanceUpDay
+            AND a.TransType = 'ACCUM'
         
     END
 
@@ -733,20 +800,35 @@ BEGIN
         ;WITH CTE_Sum AS (
             SELECT UserName,Roleid,ISNULL(SUM(TotalAmt),0) TotalAmt,Currency, custid
             FROM #StatementTable s
-            WHERE   s.Accdate < @Fromdate_bk 
-                    AND EXISTS (SELECT TOP 1 1 FROM #StatementTable s1 WHERE s.UserName = s1.UserName AND s1.Accdate >= @Fromdate_bk)
+            WHERE   WalletType = 0
+                AND s.Accdate < @Fromdate_bk 
+                AND EXISTS (SELECT TOP 1 1 FROM #StatementTable s1 WHERE s.UserName = s1.UserName AND s1.Accdate >= @Fromdate_bk AND WalletType = 0)
             GROUP BY UserName,Roleid,Currency, custid
         )
         INSERT INTO #StatementTable(UserName,Roleid,Accdate,TotalAmt,TransType,TransDesc,Currency, custid)
         SELECT UserName,Roleid,NULL,TotalAmt,'BAL','ACCUMULATED BALANCE',Currency, custid
         FROM CTE_Sum 
-        WHERE TotalAmt <> 0
-         
+        WHERE TotalAmt <> 0;
+
+        ;WITH CTE_SumExtra AS (
+            SELECT UserName,Roleid,ISNULL(SUM(TotalAmt),0) TotalAmt,Currency, custid
+            FROM #StatementTable s
+            WHERE s.WalletType = 2
+                AND s.Accdate < @Fromdate_bk 
+                AND EXISTS (SELECT TOP 1 1 FROM #StatementTable s1 WHERE s.UserName = s1.UserName AND s1.Accdate >= @Fromdate_bk AND WalletType = 2)
+            GROUP BY UserName,Roleid,Currency, custid
+        )
+        INSERT INTO #StatementTable(UserName,Roleid,Accdate,TotalAmt,TransType,TransDesc,Currency, custid, WalletType)
+        SELECT UserName,Roleid,NULL,TotalAmt,'BALR','ACCUMULATED BALANCE - Reward Wallet',Currency, custid, 2
+        FROM CTE_SumExtra 
+        WHERE TotalAmt <> 0;
+                 
     END
 
     SELECT
         UserName,
         Roleid ,
+        WalletType,
         Accdate ,
         SUM(TotalAmt) TotalAmt ,
         TransType ,
@@ -755,16 +837,8 @@ BEGIN
     FROM #StatementTable
     WHERE 
         Accdate >= @Fromdate_bk
-        OR TransDesc = 'ACCUMULATED BALANCE'
-    GROUP BY UserName,Roleid,Accdate,TransType,TransDesc,Currency
-    ORDER BY UserName, Accdate, TransType, TransDesc, CASE WHEN TransDesc like '%OPENING BALANCE%' THEN 1 ELSE 2 END
+        OR TransDesc LIKE 'ACCUMULATED BALANCE%'
+    GROUP BY UserName,Roleid,Accdate,TransType,TransDesc,Currency,WalletType
+    ORDER BY UserName, WalletType, Accdate, TransType, TransDesc, CASE WHEN TransDesc like '%OPENING BALANCE%' THEN 1 ELSE 2 END
     
-    DROP TABLE #SportBettype
-    DROP TABLE #TEMP_USER_LIST
-    DROP TABLE #BetPosCom
-    DROP TABLE #StatementTable
-    DROP TABLE #tmpBettrans
-    DROP TABLE #tmpTransfer
 END
-
-GO

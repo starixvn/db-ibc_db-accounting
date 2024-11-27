@@ -1,4 +1,4 @@
-/*<info serverAlias="DBACC-bodb02" executers="bodbAdminNet,bodbExtAccNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBACC-bodb02" executers="wsv_nap,wsv_xnap" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_StatementFinance]
     @RefNo BIGINT = 0,
 	@Username VARCHAR(30) = null,
@@ -36,7 +36,7 @@ AS
   - 20220421@Percy: Get Opening Balance from Statement_Accum table [RedmineID: #169560]
   - 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
   - 20230530@Evan: Enhancement for Customer Statement - add output column IsAllowReversal [Redmine: #186750]
-
+  - 20240826@Bobby: Reward Payment transfer [Redmine: #209633]
 
     Param's Explanation:  
         - @FilterBy: 1:winlostdate - 2:transdate  
@@ -50,6 +50,7 @@ AS
 BEGIN
 	SET NOCOUNT ON
 	
+	DROP TABLE IF EXISTS #StatementTable;
 	CREATE TABLE #StatementTable(
 		TransID BIGINT,
 		TransDate DATETIME,
@@ -124,132 +125,224 @@ BEGIN
 				CheckTime,
 				IsAllowVerify,
 				IsReversal)
-			SELECT 
-				b.transid,
-				b.transdate,
-				b.winlostdate,
-				b.refno,
-				(b.winlost - b.actual_stake) totalamt,
-				CASE WHEN ISNULL(ti.IsCollection, 0) = 0 THEN bettype.typenamee ELSE 'Coll' END transtype,
-				b.transdesc + ' - Ex.Rate: ' + CAST(b.actualrate AS VARCHAR(10)) transdesc, 
-				b.creator,
-				CASE 
-					WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL 
-					ELSE ti.CheckerId
-				END checkerID, --BalanceUP AND Transfer to Casino/Bingo/P2P
-				CASE 
-					WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN '0' 
-					ELSE ti.CheckerName
-				END checkerName,
-				CASE 
-					WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL 
-					ELSE b.checkTime 
-				END checkTime,
-				CASE 
-					WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN 0 
-					ELSE 1 
-				END isAllowVerify,
-				CASE b.bettype WHEN 20000 THEN 1 ELSE ISNULL(ti.IsDel,0) END isReversal
-			FROM bodb02.dbo.transfer b WITH(NOLOCK) 
-				 LEFT JOIN dbo.TransferInfo ti WITH(NOLOCK) ON b.TransId = ti.TransId
-                 LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = b.bettype
-				 LEFT JOIN dbo.Customer s WITH(NOLOCK) ON b.srecommend = s.custid
-				 LEFT JOIN dbo.Customer m WITH(NOLOCK) ON b.mrecommend = m.custid
-				 LEFT JOIN dbo.Customer a WITH(NOLOCK) ON b.recommend  = a.custid
-				 LEFT JOIN dbo.Customer p WITH(NOLOCK) ON b.custid     = p.custid
-				 OUTER APPLY 
-					(
-						SELECT TOP 1 ISNULL(IsInternal,0) IsInternal FROM CustSuper  WITH (NOLOCK) WHERE p.custid    = custid AND p.roleid = 4
-						UNION ALL 
-						SELECT TOP 1 ISNULL(IsInternal,0) IsInternal FROM CustMaster WITH (NOLOCK) WHERE p.custid    = custid AND p.roleid = 3
-						UNION ALL 
-						SELECT TOP 1 ISNULL(IsInternal,0) IsInternal FROM CustAgent  WITH (NOLOCK) WHERE p.custid    = custid AND  p.roleid = 2
-						UNION ALL 
-						SELECT TOP 1 ISNULL(IsInternal,0) IsInternal FROM CustAgent  WITH (NOLOCK) WHERE p.recommend = custid AND  p.roleid = 1
-					) l
-			     OUTER APPLY (
-						SELECT TOP 1  f.IsView
-						FROM dbo.Acc_FinancePermission f WITH(NOLOCK)
-						WHERE  f.FinanceCode IN (s.username, m.username, a.username, p.username)
-							   AND f.GroupId = @GroupId
-							   AND l.IsInternal = 1
-							   AND @GroupId NOT IN (-1, 1)
-						ORDER BY f.RoleId ASC
-				 ) cr			 
-			WHERE  b.refno = @_RefNo
-				AND b.Bettype >= 20000
-				AND 1 = CASE WHEN b.bettype = 20000 AND b.winlostdate > @_BalanceUpDay THEN 0 --> new bal
-		                     WHEN b.winlostdate < @_BalanceUpDay THEN 0 --> old data
-                    	ELSE 1 END 
-				AND (@GroupId = 1 OR ISNULL(cr.IsView, ~l.IsInternal) = 1 OR (@GroupId = 0 AND ISNULL(cr.IsView, 1) = 1))
-				AND b.CustId <> 0
-            
-            
-			IF NOT EXISTS( SELECT 1 FROM #StatementTable )
-			BEGIN
-        
-				INSERT INTO #StatementTable(
-						TransID,
-						TransDate,
-						WinlostDate,
-						RefNo,
-						TotalAmt,
-						TransType,
-						TransDesc,
-						Creator,
-						CheckerID,
-						CheckerName,
-						CheckTime,
-						IsAllowVerify,
-						IsReversal)
-					SELECT 
-						tf.transid,
-						tf.transdate,
-						tf.winlostdate,
-						tf.refno,
-						(tf.winlost - tf.actual_stake) totalamt,
-						CASE WHEN EXISTS (SELECT 1 FROM bodb_archive.dbo.Transfer_Coll_BK tcbk WITH(NOLOCK) WHERE tcbk.TransID = tf.TransID) THEN 'Coll' ELSE bettype.typenamee END transtype,
-						tf.transdesc + ' - Ex.Rate: ' + isnull(CAST(tf.actualrate AS VARCHAR(10)),'') transdesc, 
-						tf.creator,
-						NULL checkerID,
-						'' checkerName,
-						NULL checkTime,
-						0 isAllowVerify,
-						ISNULL(isReversal,0) isReversal
-					FROM bodb_archive.dbo.transfer_fi tf WITH(NOLOCK)
-						LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = tf.bettype 
-						LEFT JOIN dbo.Customer s WITH(NOLOCK) ON tf.srecommend = s.custid
-				        LEFT JOIN dbo.Customer m WITH(NOLOCK) ON tf.mrecommend = m.custid
-				        LEFT JOIN dbo.Customer a WITH(NOLOCK) ON tf.recommend  = a.custid
-				        LEFT JOIN dbo.Customer p WITH(NOLOCK) ON tf.custid     = p.custid
-					    OUTER APPLY (
-								SELECT TOP 1  IsInternal FROM CustSuper  WITH (NOLOCK) WHERE p.custid    = custid AND p.roleid  = 4
-								UNION ALL 
-								SELECT TOP 1  IsInternal FROM CustMaster WITH (NOLOCK) WHERE p.custid    = custid AND p.roleid  = 3
-								UNION ALL 
-								SELECT TOP 1  IsInternal FROM CustAgent  WITH (NOLOCK) WHERE p.custid    = custid AND  p.roleid = 2
-								UNION ALL 
-								SELECT TOP 1  IsInternal FROM CustAgent  WITH (NOLOCK) WHERE p.recommend = custid AND  p.roleid = 1
-							) l
-						OUTER APPLY (
-								SELECT TOP 1  f.IsView
-								FROM dbo.Acc_FinancePermission f WITH(NOLOCK)
-								WHERE f.FinanceCode IN (s.username, m.username, a.username, p.username)
-								      AND l.IsInternal = 1
-									  AND f.GroupId = @GroupId 
-									  AND @GroupId NOT IN (-1 , 1)	
-								ORDER BY f.RoleId ASC
-						) cr
-					WHERE tf.refno = @_RefNo 
-					      AND(@GroupId = 1 OR ISNULL(cr.IsView, ~l.IsInternal) = 1 OR l.IsInternal IS NULL OR (@GroupId = 0 AND ISNULL(cr.IsView, 1) = 1))
+		SELECT 
+			b.transid,
+			b.transdate,
+			b.winlostdate,
+			b.refno,
+			(b.winlost - b.actual_stake) totalamt,
+			CASE 
+				WHEN ISNULL(ti.IsCollection,0) = 0 THEN bettype.typenamee
+				ELSE 'Coll' END transtype,
+			b.transdesc + ' - Ex.Rate: ' + CAST(b.actualrate AS VARCHAR(10)) transdesc, 
+			b.creator,
+			CASE 
+				WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL 
+				ELSE ti.CheckerId
+			END checkerID, --BalanceUP AND Transfer to Casino/Bingo/P2P
+			CASE 
+				WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN '0' 
+				ELSE ti.CheckerName
+			END checkerName,
+			CASE 
+				WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN NULL 
+				ELSE b.checkTime 
+			END checkTime,
+			CASE 
+				WHEN b.bettype IN (20000,23001,23002,23101,23102,23201,23202,21008,21009) THEN 0 
+				ELSE 1 
+			END isAllowVerify,
+			CASE b.bettype WHEN 20000 THEN 1 ELSE ISNULL(ti.IsDel,0) END isReversal
+		FROM bodb02.dbo.transfer b WITH(NOLOCK) 
+				LEFT JOIN dbo.TransferInfo ti WITH(NOLOCK) ON b.TransId = ti.TransId
+                LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = b.bettype
+				LEFT JOIN dbo.Customer s WITH(NOLOCK) ON b.srecommend = s.custid
+				LEFT JOIN dbo.Customer m WITH(NOLOCK) ON b.mrecommend = m.custid
+				LEFT JOIN dbo.Customer a WITH(NOLOCK) ON b.recommend  = a.custid
+				LEFT JOIN dbo.Customer p WITH(NOLOCK) ON b.custid     = p.custid
+				OUTER APPLY 
+				(
+					SELECT TOP 1 ISNULL(IsInternal,0) IsInternal FROM CustSuper  WITH (NOLOCK) WHERE p.custid    = custid AND p.roleid = 4
+					UNION ALL 
+					SELECT TOP 1 ISNULL(IsInternal,0) IsInternal FROM CustMaster WITH (NOLOCK) WHERE p.custid    = custid AND p.roleid = 3
+					UNION ALL 
+					SELECT TOP 1 ISNULL(IsInternal,0) IsInternal FROM CustAgent  WITH (NOLOCK) WHERE p.custid    = custid AND  p.roleid = 2
+					UNION ALL 
+					SELECT TOP 1 ISNULL(IsInternal,0) IsInternal FROM CustAgent  WITH (NOLOCK) WHERE p.recommend = custid AND  p.roleid = 1
+				) l
+			    OUTER APPLY (
+					SELECT TOP 1  f.IsView
+					FROM dbo.Acc_FinancePermission f WITH(NOLOCK)
+					WHERE  f.FinanceCode IN (s.username, m.username, a.username, p.username)
+							AND f.GroupId = @GroupId
+							AND l.IsInternal = 1
+							AND @GroupId NOT IN (-1, 1)
+					ORDER BY f.RoleId ASC
+				) cr			 
+		WHERE  b.refno = @_RefNo
+			AND b.Bettype >= 20000
+			AND 1 = CASE WHEN b.bettype = 20000 AND b.winlostdate > @_BalanceUpDay THEN 0 --> new bal
+		                    WHEN b.winlostdate < @_BalanceUpDay THEN 0 --> old data
+                    ELSE 1 END 
+			AND (@GroupId = 1 OR ISNULL(cr.IsView, ~l.IsInternal) = 1 OR (@GroupId = 0 AND ISNULL(cr.IsView, 1) = 1))
+			AND b.CustId <> 0
 
-			END
+		UNION ALL -- TransferExtra
+		SELECT
+			b.TransID,
+			b.TransDate,
+			b.WinlostDate,
+			b.RefNo,
+			(b.Credit- b.Debit) AS TotalAmt,
+			bt.typenamee AS TransType,
+			CONCAT(b.TransDesc, ' - Ex.Rate: ', CAST(b.actualrate AS VARCHAR(10))) AS TransDesc,
+			b.Creator,
+			b.CheckID AS CheckerID,
+			c.username AS CheckerName,
+			b.CheckTime,
+			IIF(b.bettype = 30000, 0, 1) AS IsAllowVerify,
+			ISNULL(b.IsReversed, 0) AS IsReversal
+		FROM dbo.TransferExtra b WITH(NOLOCK)
+			LEFT JOIN dbo.bettype bt (NOLOCK) ON bt.typeid = b.bettype 
+			LEFT JOIN dbo.Customer c WITH(NOLOCK) ON b.CheckID = c.custid
+			LEFT JOIN dbo.Customer s WITH(NOLOCK) ON b.srecommend = s.custid
+			LEFT JOIN dbo.Customer m WITH(NOLOCK) ON b.mrecommend = m.custid
+			LEFT JOIN dbo.Customer a WITH(NOLOCK) ON b.recommend  = a.custid
+			LEFT JOIN dbo.Customer p WITH(NOLOCK) ON b.custid     = p.custid
+			OUTER APPLY 
+				(
+					SELECT TOP 1 ISNULL(IsInternal,0) IsInternal FROM CustSuper  WITH (NOLOCK) WHERE p.custid    = custid AND p.roleid = 4
+					UNION ALL 
+					SELECT TOP 1 ISNULL(IsInternal,0) IsInternal FROM CustMaster WITH (NOLOCK) WHERE p.custid    = custid AND p.roleid = 3
+					UNION ALL 
+					SELECT TOP 1 ISNULL(IsInternal,0) IsInternal FROM CustAgent  WITH (NOLOCK) WHERE p.custid    = custid AND  p.roleid = 2
+					UNION ALL 
+					SELECT TOP 1 ISNULL(IsInternal,0) IsInternal FROM CustAgent  WITH (NOLOCK) WHERE p.recommend = custid AND  p.roleid = 1
+				) l
+			    OUTER APPLY (
+					SELECT TOP 1  f.IsView
+					FROM dbo.Acc_FinancePermission f WITH(NOLOCK)
+					WHERE  f.FinanceCode IN (s.username, m.username, a.username, p.username)
+							AND f.GroupId = @GroupId
+							AND l.IsInternal = 1
+							AND @GroupId NOT IN (-1, 1)
+					ORDER BY f.RoleId ASC
+				) cr		
+		WHERE  b.refno = @_RefNo
+			AND b.Bettype >= 30000
+			AND 1 = CASE WHEN b.bettype = 30000 AND b.winlostdate > @_BalanceUpDay THEN 0 --> new bal
+		                    WHEN b.winlostdate < @_BalanceUpDay THEN 0 --> old data
+                    ELSE 1 END 
+			AND (@GroupId = 1 OR ISNULL(cr.IsView, ~l.IsInternal) = 1 OR (@GroupId = 0 AND ISNULL(cr.IsView, 1) = 1))
+			AND b.CustId <> 0
+        
+		IF NOT EXISTS( SELECT 1 FROM #StatementTable )
+		BEGIN
+
+			INSERT INTO #StatementTable(
+					TransID,
+					TransDate,
+					WinlostDate,
+					RefNo,
+					TotalAmt,
+					TransType,
+					TransDesc,
+					Creator,
+					CheckerID,
+					CheckerName,
+					CheckTime,
+					IsAllowVerify,
+					IsReversal)
+				SELECT 
+					tf.transid,
+					tf.transdate,
+					tf.winlostdate,
+					tf.refno,
+					(tf.winlost - tf.actual_stake) totalamt,
+					CASE WHEN tcbk.TransID > 0 THEN 'Coll' ELSE bettype.typenamee END transtype,
+					tf.transdesc + ' - Ex.Rate: ' + isnull(CAST(tf.actualrate AS VARCHAR(10)),'') transdesc, 
+					tf.creator,
+					NULL checkerID,
+					'' checkerName,
+					NULL checkTime,
+					0 isAllowVerify,
+					ISNULL(isReversal,0) isReversal
+				FROM bodb_archive.dbo.transfer_fi tf WITH(NOLOCK)
+					LEFT JOIN bodb_archive.dbo.Transfer_Coll_BK tcbk WITH(NOLOCK) ON tcbk.TransID = tf.TransID
+					LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = tf.bettype 
+					LEFT JOIN dbo.Customer s WITH(NOLOCK) ON tf.srecommend = s.custid
+				    LEFT JOIN dbo.Customer m WITH(NOLOCK) ON tf.mrecommend = m.custid
+				    LEFT JOIN dbo.Customer a WITH(NOLOCK) ON tf.recommend  = a.custid
+				    LEFT JOIN dbo.Customer p WITH(NOLOCK) ON tf.custid     = p.custid
+					OUTER APPLY (
+							SELECT TOP 1  IsInternal FROM CustSuper  WITH (NOLOCK) WHERE p.custid    = custid AND p.roleid  = 4
+							UNION ALL 
+							SELECT TOP 1  IsInternal FROM CustMaster WITH (NOLOCK) WHERE p.custid    = custid AND p.roleid  = 3
+							UNION ALL 
+							SELECT TOP 1  IsInternal FROM CustAgent  WITH (NOLOCK) WHERE p.custid    = custid AND  p.roleid = 2
+							UNION ALL 
+							SELECT TOP 1  IsInternal FROM CustAgent  WITH (NOLOCK) WHERE p.recommend = custid AND  p.roleid = 1
+						) l
+					OUTER APPLY (
+							SELECT TOP 1  f.IsView
+							FROM dbo.Acc_FinancePermission f WITH(NOLOCK)
+							WHERE f.FinanceCode IN (s.username, m.username, a.username, p.username)
+								    AND l.IsInternal = 1
+									AND f.GroupId = @GroupId 
+									AND @GroupId NOT IN (-1 , 1)	
+							ORDER BY f.RoleId ASC
+					) cr
+				WHERE tf.refno = @_RefNo 
+					    AND(@GroupId = 1 OR ISNULL(cr.IsView, ~l.IsInternal) = 1 OR l.IsInternal IS NULL OR (@GroupId = 0 AND ISNULL(cr.IsView, 1) = 1))
+
+				UNION ALL
+				SELECT 
+					tf.transid,
+					tf.transdate,
+					tf.winlostdate,
+					tf.refno,
+					(tf.Credit - tf.Debit) totalamt,
+					bettype.typenamee AS transtype,
+					tf.transdesc + ' - Ex.Rate: ' + isnull(CAST(tf.actualrate AS VARCHAR(10)),'') transdesc, 
+					tf.creator,
+					NULL checkerID,
+					'' checkerName,
+					NULL checkTime,
+					0 isAllowVerify,
+					ISNULL(IsReversed,0) isReversal
+				FROM bodb_archive.dbo.TransferExtra_bk tf WITH(NOLOCK)
+					LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = tf.bettype 
+					LEFT JOIN dbo.Customer s WITH(NOLOCK) ON tf.srecommend = s.custid
+				    LEFT JOIN dbo.Customer m WITH(NOLOCK) ON tf.mrecommend = m.custid
+				    LEFT JOIN dbo.Customer a WITH(NOLOCK) ON tf.recommend  = a.custid
+				    LEFT JOIN dbo.Customer p WITH(NOLOCK) ON tf.custid     = p.custid
+					OUTER APPLY (
+							SELECT TOP 1  IsInternal FROM CustSuper  WITH (NOLOCK) WHERE p.custid    = custid AND p.roleid  = 4
+							UNION ALL 
+							SELECT TOP 1  IsInternal FROM CustMaster WITH (NOLOCK) WHERE p.custid    = custid AND p.roleid  = 3
+							UNION ALL 
+							SELECT TOP 1  IsInternal FROM CustAgent  WITH (NOLOCK) WHERE p.custid    = custid AND  p.roleid = 2
+							UNION ALL 
+							SELECT TOP 1  IsInternal FROM CustAgent  WITH (NOLOCK) WHERE p.recommend = custid AND  p.roleid = 1
+						) l
+					OUTER APPLY (
+							SELECT TOP 1  f.IsView
+							FROM dbo.Acc_FinancePermission f WITH(NOLOCK)
+							WHERE f.FinanceCode IN (s.username, m.username, a.username, p.username)
+								    AND l.IsInternal = 1
+									AND f.GroupId = @GroupId 
+									AND @GroupId NOT IN (-1 , 1)	
+							ORDER BY f.RoleId ASC
+					) cr
+				WHERE tf.refno = @_RefNo 
+					    AND(@GroupId = 1 OR ISNULL(cr.IsView, ~l.IsInternal) = 1 OR l.IsInternal IS NULL OR (@GroupId = 0 AND ISNULL(cr.IsView, 1) = 1))
+
+		END
     
 	END -- End of @_RefNo > 0
 
 	IF (DATEADD(day,-1,@_ToDate) >= @_BalanceUpDay) AND (@CustID > 0)
 	BEGIN
-
 		IF (@_FromDate > @_BalanceUpDay)
 			SELECT @_FromDate = @_BalanceUpDay
 	
@@ -309,10 +402,12 @@ BEGIN
 		;WITH CTE_Statement AS (
 			SELECT s.refno
 			FROM #StatementTable s
-				LEFT JOIN dbo.transfer b (NOLOCK) ON s.refno = b.refno
-			WHERE b.bettype > 20000
+				LEFT JOIN dbo.transfer b (NOLOCK) ON s.refno = b.refno and b.bettype > 20000
+				LEFT JOIN dbo.transferExtra tx (NOLOCK) ON s.refno = tx.refno and tx.bettype > 30000
+				OUTER APPLY (VALUES(b.TransId),(tx.TransId)) ck (transid)
+			WHERE ck.transid > 0
 			GROUP BY s.refno
-			HAVING COUNT(*) > 1
+			HAVING COUNT(1) > 1
 		)
 		UPDATE s
 		SET s.IsExpand = 1
@@ -395,7 +490,7 @@ BEGIN
 				tf.winlostdate,
 				tf.refno,
 				(tf.winlost - tf.actual_stake) totalamt,
-				CASE WHEN EXISTS (SELECT 1 FROM bodb_archive.dbo.Transfer_Coll_BK tcbk WITH(NOLOCK) WHERE tcbk.TransID = tf.TransID) THEN 'Coll' ELSE bettype.typenamee END transtype,
+				CASE WHEN tcbk.TransID > 0 THEN 'Coll' ELSE bettype.typenamee END transtype,
 				tf.transdesc + ' - Ex.Rate: ' + isnull(CAST(tf.actualrate AS VARCHAR(10)),'') transdesc, 
 				tf.creator,
 				NULL checkerID,
@@ -404,6 +499,7 @@ BEGIN
 				0 isAllowVerify,
 				ISNULL(isReversal,0) isReversal
 			FROM bodb_archive.dbo.transfer_fi tf WITH(NOLOCK)
+				LEFT JOIN bodb_archive.dbo.Transfer_Coll_BK tcbk WITH(NOLOCK) ON tcbk.TransID = tf.TransID
 				LEFT JOIN dbo.bettype (NOLOCK) ON bettype.typeid = tf.bettype 
 			WHERE 
 				tf.custid = @CustID
@@ -412,22 +508,21 @@ BEGIN
 					OR (@FilterBy = 2 AND tf.transdate >= CASE @_FromDate WHEN @FromDate_Bk THEN '19000101' ELSE @_FromDate END AND tf.transdate < @_ToDate)
 					)
 
-		IF @CustID > 0
-		BEGIN
-			;WITH CTE_Statement AS (
-				SELECT s.refno
-				FROM #StatementTable s
-					LEFT JOIN bodb_archive.dbo.transfer_fi tf WITH(NOLOCK) ON s.refno = tf.refno
-				WHERE tf.winlostdate >= s.winlostdate
-				GROUP BY s.refno
-				HAVING COUNT(*) > 1
-			)
-			UPDATE s
-			SET s.IsExpand = 1
+		;WITH CTE_Statement AS (
+			SELECT s.refno
 			FROM #StatementTable s
-				INNER JOIN CTE_Statement cte ON s.refno = cte.refno
-			WHERE s.TransType NOT IN ('Dep','Wit')
-		END
+				LEFT JOIN bodb_archive.dbo.transfer_fi tf WITH(NOLOCK) ON s.refno = tf.refno AND tf.winlostdate >= s.winlostdate
+				LEFT JOIN bodb_archive.dbo.TransferExtra_bk tx WITH(NOLOCK) ON s.refno = tx.refno AND tx.winlostdate >= s.winlostdate
+				OUTER APPLY (VALUES(tf.TransId),(tx.TransId)) ck (transid)
+			WHERE ck.transid > 0
+			GROUP BY s.refno
+			HAVING COUNT(*) > 1
+		)
+		UPDATE s
+		SET s.IsExpand = 1
+		FROM #StatementTable s
+			INNER JOIN CTE_Statement cte ON s.refno = cte.refno
+		WHERE s.TransType NOT IN ('Dep','Wit')
 
 	END
 
