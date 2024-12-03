@@ -1,7 +1,4 @@
-﻿/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
-USE [CustDB]
-GO
-
+﻿/*<info serverAlias="DBCUST-CustDB" executers="wsv_nap" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_CustomerUpdAutoTransferAgent]
 	@custid			INT,
 	@TransferType	TINYINT = 1,
@@ -20,7 +17,7 @@ AS
 		- 20170703@Percy: Add space bar into log content [RedmineID: #79293]
 		- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 		- 20190409@Percy: Check super is in automate transfer list [RedmineID: #111365]
-	
+		- 20241129@Johnson: Apply In-house replication for Credit Setting [RedmineID: #212684]
 	Parameter's Explanation:
 		- @TransferType = 1: Transfer all members
 						= 2: Transfer all downlines

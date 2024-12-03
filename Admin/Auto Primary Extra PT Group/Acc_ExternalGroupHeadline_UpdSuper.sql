@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0" isNested="1"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="wsv_nap" isFunction="0" isNested="1"></info>*/
 USE CustDB
 GO
 
@@ -19,6 +19,7 @@ AS
 
 	Revisions:
 		- 20210301@Percy: Initialize SP [RedmineID: #146710]
+		- 20241213@Johnson: Apply In-house replication for Credit Setting [RedmineID: #212684]
 */
 
 BEGIN
@@ -289,8 +290,8 @@ BEGIN
 	)
 	BEGIN
 		IF NOT EXISTS (SELECT 1 FROM dbo.CustSuperProfile WITH (NOLOCK) WHERE CustId = @CustId)
-			INSERT INTO dbo.CustSuperProfile (CustId)
-			VALUES (@CustId)
+			INSERT INTO dbo.CustSuperProfile (CustId,RepUpdateTime)
+			VALUES (@CustId,dbo.f_GetDateTime2())
 	END
 
 	-- Log for Extra PT

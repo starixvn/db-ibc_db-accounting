@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="wsv_nap" isFunction="0" isNested="0"></info>*/
 USE CustDB
 GO
 
@@ -24,6 +24,7 @@ AS
 		- 20210302@Percy: Initialize SP [RemineID: #146710]
 		- 20210825@Percy: Add data into CustSuperProfile [RemineID: #160682]
 		- 20220509@Danny: Use String_split built-in function [RemineID: #171831]
+		- 20241213@Johnson: Apply In-house replication for Credit Setting [RedmineID: #212684]
 */
 
 BEGIN
@@ -365,8 +366,8 @@ BEGIN
 
 	-- CustSuperProfile
 	BEGIN
-		INSERT INTO dbo.CustSuperProfile (CustId)
-		SELECT s.CustId
+		INSERT INTO dbo.CustSuperProfile (CustId,RepUpdateTime)
+		SELECT s.CustId, dbo.f_GetDateTime2()
 		FROM (SELECT DISTINCT CustId FROM #Super) s
 			LEFT JOIN dbo.CustSuperProfile csp WITH (NOLOCK) ON s.CustId = csp.CustId
 		WHERE csp.CustId IS NULL
