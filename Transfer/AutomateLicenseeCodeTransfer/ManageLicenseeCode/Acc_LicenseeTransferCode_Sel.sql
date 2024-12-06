@@ -24,6 +24,7 @@ AS
 		- 20210802@Sol: NAP - Remove Athena000 and Sabademo from auto mail informing the code needed - [Redmine: #159565]
 		- 20220901@Danny: NAP - Change code to support test Licensee [Redmine: #175253]
 		- 20240703Lewis: NAP- Manage licensee code - Licensee not display correctly when choosing option All [Redmine: #207540]
+		- 20241206@Eddie: Hide special licensees [Redmine: #207696]
 
 	Param Info:
 		- @MoveBetsDay: movebet get from sp [age_SelBalanceUpDay]
@@ -72,12 +73,8 @@ BEGIN
 	FROM DBCUST.bodb_licensee.dbo.LicenseeTransferCode WITH(NOLOCK)
 
 	---- run only when the filter include "code needed", "n/a"
-	IF EXISTS (SELECT TOP 1 1 FROM string_split(@StatusIds,',') t WHERE t.value IN (3, 4))
+	IF EXISTS (SELECT TOP 1 1 FROM STRING_SPLIT(@StatusIds,',') t WHERE t.value IN (3, 4))
 	BEGIN
-
-		DECLARE @TestLicenseeIDs TABLE (LicenseeId INT)
-		INSERT INTO @TestLicenseeIDs(LicenseeId)
-		SELECT LicenseeId FROM dbo.Licensees l WITH(NOLOCK) WHERE l.LicenseeName IN ('Athena000','SampleSite','spondemo')
 
 		INSERT INTO @tblLicenseeList(LicenseeId, LicenseeName, CustSuperId)
 		SELECT l.LicenseeID, l.LicenseeName, cs.custid
@@ -92,9 +89,10 @@ BEGIN
 					lc.LicenseeName IS NULL
 					OR @BillingMonth NOT BETWEEN lc.FromDate AND lc.ToDate
 				)
-			AND (cs.currency <> 20 OR l.LicenseeName IN ('Athena000','SampleSite','spondemo') )
+			AND cs.currency <> 20 
+			AND l.LicenseeName NOT IN (SELECT LicenseeName FROM dbo.f_Hide_Licensee())
 			AND (
-					l.LicenseeID IN (SELECT value FROM string_split(@LicenseeIds,',') t) 
+					l.LicenseeID IN (SELECT value FROM STRING_SPLIT(@LicenseeIds,',') t) 
 					OR @LicenseeIds = 'ALL'
 				)
 			AND l.LicenseeName NOT IN 
@@ -110,10 +108,10 @@ BEGIN
 				ON i.custid = la.CustID AND la.RoleID = i.roleid
 			INNER JOIN @tblLicenseeList t
 				ON i.srecommend = t.CustSuperId
-		WHERE
-			(la.Currency <> 20  OR la.LicenseeId IN (SELECT z.LicenseeID FROM @TestLicenseeIDs z) )
+		WHERE la.Currency <> 20
+			AND la.LicenseeId NOT IN (SELECT LicenseeID FROM dbo.f_Hide_Licensee())
 			AND (
-					la.LicenseeID IN (SELECT value FROM string_split(@LicenseeIds,',') t) 
+					la.LicenseeID IN (SELECT value FROM STRING_SPLIT(@LicenseeIds,',') t) 
 					OR @LicenseeIds = 'ALL'
 				)
 
@@ -186,14 +184,14 @@ BEGIN
 		lc.FromDate, lc.ToDate
 	FROM #LicenseeCode lc
 	WHERE 
-		lc.LicenseeStatusId IN (SELECT value FROM string_split(@StatusIds,',') t)
+		lc.LicenseeStatusId IN (SELECT value FROM STRING_SPLIT(@StatusIds,',') t)
 		AND 
 		(
-			lc.LicenseeID IN (SELECT value FROM string_split(@LicenseeIds,',') t)
+			lc.LicenseeID IN (SELECT value FROM STRING_SPLIT(@LicenseeIds,',') t)
 			OR @LicenseeIds = 'ALL'
 		)
 		AND (
-				(lc.LicenseeName NOT IN ('Saba789','Athena000','Sabademo','spondemo','sampleSite') AND @ForEmail = 1)
+				(lc.LicenseeName NOT IN (SELECT LicenseeName FROM dbo.f_Hide_Licensee()) AND @ForEmail = 1)
 				OR @ForEmail = 0
 			)
 
