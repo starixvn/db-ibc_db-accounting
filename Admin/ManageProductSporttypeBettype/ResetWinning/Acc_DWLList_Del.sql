@@ -18,6 +18,7 @@ Original:
 	Revisions:
 		- 20200917@Danny: NAP Manage Reset Winning [Redmine: #131241][Task: #141775]
 		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
+		- 20240815@Lewis: Scale Out DBCUST - Apply in-house replication for ResetWinning Setting Tables - [RedmineId:  #209319]
 	
 	Param's Explanation:
 	
@@ -33,6 +34,8 @@ BEGIN
 		IF @IsTest = 0
 		BEGIN
 			DELETE m
+				OUTPUT DELETED.custid, DELETED.product, [dbo].[f_GetDateTime2]()
+				INTO Acc_DWLList_Del_InHouse (custid, product, RepUpdateTime)
 			FROM dbo.Acc_DWLList m WITH (ROWLOCK)
 			WHERE m.CustID = @CustID AND m.Product =  @Product
 		END
@@ -40,6 +43,8 @@ BEGIN
 		IF @IsTest = 1
 		BEGIN
 			DELETE m
+				OUTPUT DELETED.custid, DELETED.product, [dbo].[f_GetDateTime2]()
+				INTO Acc_DWLList_xtest_Del_InHouse (custid, product, RepUpdateTime)
 			FROM dbo.Acc_DWLList_xtest m WITH (ROWLOCK)
 			WHERE m.CustID = @CustID AND m.Product =  @Product
 		END
