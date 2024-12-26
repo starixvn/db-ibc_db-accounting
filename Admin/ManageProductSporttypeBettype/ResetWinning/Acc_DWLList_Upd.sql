@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="wsv_nap" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE  dbo.Acc_DWLList_Upd
 	@File		NVARCHAR(MAX),
 	@LoginIP	VARCHAR(20)='',
@@ -17,6 +17,7 @@ Original:
 	Revisions:
 		- 20200918@Danny: NAP Manage Reset Winning [Redmine: #131241][Task: #141775]
 		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
+		- 20240815@Lewis: Scale Out DBCUST - Apply in-house replication for ResetWinning Setting Tables - [RedmineId:  #209319]
 */
 BEGIN
     SET NOCOUNT ON
@@ -43,7 +44,7 @@ BEGIN
 		Seq				TINYINT,
 		ProductID		TINYINT,
 		Product			VARCHAR(50),
-		IsDeleted		BIT
+		IsDisabled		BIT
 	)
 
 	CREATE TABLE #inputTmp
@@ -52,7 +53,7 @@ BEGIN
 		Seq				NVARCHAR(MAX),
 		ProductID		NVARCHAR(MAX),
 		Product			NVARCHAR(MAX),
-		IsDeleted		NVARCHAR(MAX)
+		IsDisabled		NVARCHAR(MAX)
 	)
 
 	BEGIN TRY
@@ -63,19 +64,19 @@ BEGIN
 							Seq,
 							ProductID,
 							Product,
-							IsDeleted
+							IsDisabled
 							)
 
 			SELECT          CustID,
 							Seq,
 							ProductID,
 							Product,
-							IsDeleted
+							IsDisabled
 			FROM OPENXML(@iDoc, '/ROOT/File', 1) WITH  (CustID			NVARCHAR(MAX),
 														Seq				NVARCHAR(MAX),
 														ProductID		NVARCHAR(MAX),
 														Product			NVARCHAR(MAX),
-														IsDeleted		NVARCHAR(MAX)
+														IsDisabled		NVARCHAR(MAX)
 														)
 		    
 			EXEC sp_xml_removedocument @iDoc
@@ -90,8 +91,8 @@ BEGIN
 	SET CustID			= CASE WHEN LEN(CustID)		= 0 THEN  NULL ELSE CustID END,
 		Seq				= CASE WHEN LEN(Seq)		= 0 THEN  NULL ELSE Seq	END,
 		ProductID		= CASE WHEN LEN(ProductID)	= 0 THEN  NULL ELSE ProductID END,
-		IsDeleted		= CASE WHEN LEN(IsDeleted)	= 0 THEN  NULL ELSE IsDeleted END
-	WHERE LEN(CustID) = 0  OR LEN(Seq) = 0 OR LEN(ProductID) = 0 OR LEN(IsDeleted) = 0
+		IsDisabled		= CASE WHEN LEN(IsDisabled)	= 0 THEN  NULL ELSE IsDisabled END
+	WHERE LEN(CustID) = 0  OR LEN(Seq) = 0 OR LEN(ProductID) = 0 OR LEN(IsDisabled) = 0
 
 
 	SELECT TOP(1) @DWLListError =	CAST(CustID AS VARCHAR(15))+ '-' + Product, 
@@ -149,7 +150,7 @@ BEGIN
 									'Seq="' + COALESCE(CAST(Seq  AS VARCHAR(15)), SPACE(1)) + '" ' +
 									'ProductID="' + COALESCE(CAST(ProductID  AS VARCHAR(15)), SPACE(1)) + '" ' +
 									'Product="' + COALESCE(CAST(Product  AS VARCHAR(50)), SPACE(1)) + '" ' +
-									'IsDeleted="' + COALESCE(CAST(IsDeleted  AS VARCHAR(3)), SPACE(1)) + '" ' +
+									'IsDisabled="' + COALESCE(CAST(IsDisabled  AS VARCHAR(3)), SPACE(1)) + '" ' +
 									'LoginIP="'+ COALESCE(CAST(@LoginIP as NVARCHAR(20)),SPACE(1)) + '" />'
 			FROM Acc_DWLList WITH(NOLOCK)
 			WHERE CustID = @CustID and product = @Product
@@ -161,7 +162,7 @@ BEGIN
 									'Seq="' + COALESCE(CAST(Seq  AS VARCHAR(15)), SPACE(1)) + '" ' +
 									'ProductID="' + COALESCE(CAST(ProductID  AS VARCHAR(15)), SPACE(1)) + '" ' +
 									'Product="' + COALESCE(CAST(Product  AS VARCHAR(50)), SPACE(1)) + '" ' +
-									'IsDeleted="' + COALESCE(CAST(IsDeleted  AS VARCHAR(3)), SPACE(1)) + '" ' +
+									'IsDisabled="' + COALESCE(CAST(IsDisabled  AS VARCHAR(3)), SPACE(1)) + '" ' +
 									'LoginIP="'+ COALESCE(CAST(@LoginIP as NVARCHAR(20)),SPACE(1)) + '" />'
 			FROM Acc_DWLList_xtest WITH(NOLOCK)
 			WHERE CustID = @CustID and product = @Product
@@ -176,7 +177,8 @@ BEGIN
 					t.Seq = i.Seq,
 					t.ProductID = i.ProductID,
 					t.Product = i.Product,
-					t.IsDeleted = i.IsDeleted
+					t.IsDisabled = i.IsDisabled,
+					t.RepUpdateTime = dbo.f_GetDateTime2()
 				FROM Acc_DWLList t WITH (ROWLOCK)
 				INNER JOIN  #input i ON  t.CustID = i.CustID and t.Product = i.Product
 				WHERE ID = @CurrentRow
@@ -190,7 +192,8 @@ BEGIN
 					t.Seq = i.Seq,
 					t.ProductID = i.ProductID,
 					t.Product = i.Product,
-					t.IsDeleted = i.IsDeleted
+					t.IsDisabled = i.IsDisabled,
+					t.RepUpdateTime = dbo.f_GetDateTime2()
 				FROM Acc_DWLList_xtest t WITH (ROWLOCK)
 				INNER JOIN  #input i ON  t.CustID = i.CustID and t.Product = i.Product
 				WHERE ID = @CurrentRow
@@ -209,7 +212,7 @@ BEGIN
 								'Seq="' + COALESCE(CAST(Seq  AS VARCHAR(15)), SPACE(1)) + '" ' +
 								'ProductID="' + COALESCE(CAST(ProductID  AS VARCHAR(15)), SPACE(1)) + '" ' +
 								'Product="' + COALESCE(CAST(Product  AS VARCHAR(50)), SPACE(1)) + '" ' +
-								'IsDeleted="' + COALESCE(CAST(IsDeleted  AS VARCHAR(3)), SPACE(1)) + '" ' +
+								'IsDisabled="' + COALESCE(CAST(IsDisabled  AS VARCHAR(3)), SPACE(1)) + '" ' +
 								'IsTest="' + COALESCE(CAST(@IsTest  AS VARCHAR(3)), SPACE(1)) + '" ' +
 								'LoginIP="'+ COALESCE(CAST(@LoginIP as NVARCHAR(20)),SPACE(1)) + '" />'
 		FROM #input

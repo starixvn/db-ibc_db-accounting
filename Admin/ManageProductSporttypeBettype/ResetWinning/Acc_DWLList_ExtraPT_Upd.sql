@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="wsv_nap" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE  dbo.Acc_DWLList_ExtraPT_Upd
 	@File		NVARCHAR(MAX),
 	@LoginIP	VARCHAR(20)='',
@@ -17,6 +17,7 @@ Original:
 	Revisions:
 		- 20200918@Danny: NAP Manage Reset Winning [Redmine: #131241][Task: #141775]
 		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
+		- 20240815@Lewis: Scale Out DBCUST - Apply in-house replication for ResetWinning Setting Tables - [RedmineId:  #209319]
 */
 
 
@@ -168,7 +169,8 @@ BEGIN
 					t.CustID = i.CustID, 
 					t.GroupID = i.GroupID,
 					t.GroupName = i.GroupName,
-					t.IsDisabled = i.IsDisabled
+					t.IsDisabled = i.IsDisabled,
+					t.RepUpdateTime = dbo.f_GetDateTime2()
 				FROM Acc_DWLList_ExtraPT t WITH (ROWLOCK)
 				INNER JOIN  #input i ON  t.CustID = i.CustID 
 				WHERE ID = @CurrentRow
@@ -181,7 +183,8 @@ BEGIN
 					t.CustID = i.CustID, 
 					t.GroupID = i.GroupID,
 					t.GroupName = i.GroupName,
-					t.IsDisabled = i.IsDisabled
+					t.IsDisabled = i.IsDisabled,
+					t.RepUpdateTime = dbo.f_GetDateTime2()
 				FROM Acc_DWLList_ExtraPT_xtest t WITH (ROWLOCK)
 				INNER JOIN  #input i ON  t.CustID = i.CustID 
 				WHERE ID = @CurrentRow

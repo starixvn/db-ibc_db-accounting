@@ -1,10 +1,10 @@
-/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="wsv_nap" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE  dbo.Acc_DWLList_Sel
 	@CustID			INT = NULL,
 	@UserName		VARCHAR(30) = NULL,
 	@ProductID		TINYINT = NULL,
 	@Product		VARCHAR(50) = NULL,
-	@IsDeleted		BIT = NULL,
+	@IsDisabled		BIT = NULL,
 	@IsTest			BIT = 0
 AS
 
@@ -17,6 +17,7 @@ Original:
 	Revisions:
 		- 20200918@Danny: NAP Manage Reset Winning [Redmine: #131241][Task: #141775]
 		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
+		- 20240815@Lewis: Scale Out DBCUST - Apply in-house replication for ResetWinning Setting Tables - [RedmineId:  #209319]
 */
 
 BEGIN
@@ -28,7 +29,7 @@ BEGIN
 		Seq				TINYINT,
 		ProductID		TINYINT,
 		Product			VARCHAR(50),
-		IsDeleted		BIT
+		IsDisabled		BIT
 	)
 
 	IF @IsTest = 0 
@@ -39,21 +40,21 @@ BEGIN
 				   Seq,
 				   ProductID,
 				   Product,
-				   IsDeleted
+				   IsDisabled
 		)
 		SELECT     acc.CustID,
 				   cus.Username,
 				   acc.Seq,
 				   acc.ProductID,
 				   acc.Product,
-				   acc.IsDeleted
+				   acc.IsDisabled
 		FROM Acc_DWLList acc WITH(NOLOCK)
 		INNER JOIN dbo.Customer cus WITH(NOLOCK) on acc.CustID = cus.CustID
 		WHERE (acc.CustID = @CustID OR @CustID IS NULL) 
 				AND (acc.ProductID = @ProductID OR @ProductID IS NULL)	
 				AND (cus.Username LIKE '%' + @Username +'%' OR ISNULL(@Username,'') = '')
 				AND (acc.Product LIKE '%' + @Product +'%' OR ISNULL(@Product,'') = '')
-				AND (acc.IsDeleted = @IsDeleted OR @IsDeleted IS NULL)	
+				AND (acc.IsDisabled = @IsDisabled OR @IsDisabled IS NULL)	
 		ORDER BY  acc.Seq
 	END
 
@@ -65,21 +66,21 @@ BEGIN
 				   Seq,
 				   ProductID,
 				   Product,
-				   IsDeleted
+				   IsDisabled
 		)
 		SELECT     acc.CustID,
 				   cus.Username,
 				   acc.Seq,
 				   acc.ProductID,
 				   acc.Product,
-				   acc.IsDeleted
+				   acc.IsDisabled
 		FROM Acc_DWLList_xtest acc WITH(NOLOCK)
 		INNER JOIN dbo.Customer cus WITH(NOLOCK) on acc.CustID = cus.CustID
 		WHERE (acc.CustID = @CustID OR @CustID IS NULL) 
 				AND (acc.ProductID = @ProductID OR @ProductID IS NULL)	
 				AND (cus.Username LIKE '%' + @Username +'%' OR ISNULL(@Username,'') = '')
 				AND (acc.Product LIKE '%' + @Product +'%' OR ISNULL(@Product,'') = '')
-				AND (acc.IsDeleted = @IsDeleted OR @IsDeleted IS NULL)	
+				AND (acc.IsDisabled = @IsDisabled OR @IsDisabled IS NULL)	
 		ORDER BY  acc.Seq
 	END
 
@@ -88,7 +89,7 @@ BEGIN
 			Seq,
 			ProductID,
 			Product,
-			IsDeleted
+			IsDisabled
 	FROM #Tmp
 
 	DROP TABLE #Tmp
