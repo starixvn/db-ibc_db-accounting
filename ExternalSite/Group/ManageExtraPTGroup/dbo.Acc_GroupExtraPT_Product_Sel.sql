@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="wsv_nap" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_GroupExtraPT_Product_Sel]
 	@IsExtra BIT = 0
 AS
@@ -13,6 +13,7 @@ AS
 		- 20170926@Percy: Move table dbo.Acc_GroupExtraPT_Product from DBACC.bodb_ACC to DBCUST.CustDB [RedmineID: #83600]
 		- 20200805@Sophia: Edit mode IsExtra = 1, to shwo PP [RedmineID: #138483]
 		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
+		- 20240815@Lewis: Scale Out DBCUST - Apply in-house replication for ResetWinning Setting Tables - [RedmineId:  #209319]
 	Param's Explanation:
 */
 
@@ -25,7 +26,7 @@ BEGIN
 	BEGIN
 		INSERT INTO @Product (ProductId)
 		SELECT ProductId FROM dbo.Acc_DWLList WITH(NOLOCK)
-		WHERE IsDeleted = 0
+		WHERE IsDisabled = 0
 	END
 	ELSE
 	BEGIN
@@ -34,7 +35,7 @@ BEGIN
 
 		DELETE p
 		FROM @Product p
-			LEFT JOIN dbo.Acc_DWLList a WITH(NOLOCK) ON p.ProductId = a.ProductId AND a.IsDeleted = 0
+			LEFT JOIN dbo.Acc_DWLList a WITH(NOLOCK) ON p.ProductId = a.ProductId AND a.IsDisabled = 0
 		WHERE  a.ProductId IS NULL
 				
 	END

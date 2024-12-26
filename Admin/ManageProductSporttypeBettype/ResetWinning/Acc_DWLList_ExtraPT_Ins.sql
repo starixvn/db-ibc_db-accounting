@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="wsv_nap" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE  dbo.Acc_DWLList_ExtraPT_Ins
 	@File	    NVARCHAR(MAX),
 	@LoginIP	VARCHAR(20)='',
@@ -16,6 +16,7 @@ Original:
 	Revisions:
 		- 20200918@Danny: NAP Manage Reset Winning [Redmine: #131241][Task: #141775]
 		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
+		- 20240815@Lewis: Scale Out DBCUST - Apply in-house replication for ResetWinning Setting Tables - [RedmineId:  #209319]
 	Param's Explanation:
 	- @Fie:		
 		<ROOT>
@@ -171,22 +172,24 @@ BEGIN
 		BEGIN TRY
 			IF @IsTest = 0
 			BEGIN
-				INSERT INTO dbo.Acc_DWLList_ExtraPT(CustID,GroupID,GroupName,IsDisabled)
+				INSERT INTO dbo.Acc_DWLList_ExtraPT(CustID,GroupID,GroupName,IsDisabled,RepUpdateTime)
 				SELECT	CustID,
 						GroupID,
 						GroupName,
-						IsDisabled
+						IsDisabled,
+						dbo.f_GetDateTime2()
 				FROM #input
 				WHERE ID = @CurrentRow
 			END
 
 			IF @IsTest = 1
 			BEGIN
-				INSERT INTO dbo.Acc_DWLList_ExtraPT_xtest(CustID,GroupID,GroupName,IsDisabled)
+				INSERT INTO dbo.Acc_DWLList_ExtraPT_xtest(CustID,GroupID,GroupName,IsDisabled,RepUpdateTime)
 				SELECT	CustID,
 						GroupID,
 						GroupName,
-						IsDisabled
+						IsDisabled,
+						dbo.f_GetDateTime2()
 				FROM #input
 				WHERE ID = @CurrentRow
 			END

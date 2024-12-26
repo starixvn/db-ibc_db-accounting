@@ -83,6 +83,7 @@ AS
 		- 20220614@Danny: Database - scale out credit [RedmineID: #181595]
 		- 20231004@Lewis: Include bettype 998 into Parlay [RedmineID: #194992]
 		- 20240228@Lewis: Incorporate AG Jackpot [RedmineID: #201339]
+		- 20240815@Lewis: Scale Out DBCUST - Apply in-house replication for ResetWinning Setting Tables - [RedmineId:  #209319]
 		- 20241023@Lewis: Rebate Retention [RedmineID: #208503]
 		
 	Explanation's Param:
@@ -137,7 +138,7 @@ BEGIN
 		INSERT INTO @dummyBalance (CustId, Product, IsExtraPT, Seq)  
 		SELECT CustId, Product, 0, CASE WHEN Seq = 0 THEN 999 ELSE Seq END  
 		FROM dbo.Acc_DWLList WITH (NOLOCK)  
-		WHERE IsDeleted = 0  
+		WHERE IsDisabled = 0  
   
 		INSERT INTO @dummyBalance (CustId, IsExtraPT)  
 		SELECT CustId, 1  
@@ -148,7 +149,7 @@ BEGIN
 		INSERT INTO @dummyBalance (CustId, Product, IsExtraPT, Seq)  
 		SELECT CustId, Product, 0, CASE WHEN Seq = 0 THEN 999 ELSE Seq END  
 		FROM dbo.Acc_DWLList_xtest WITH (NOLOCK)  
-		WHERE IsDeleted = 0  
+		WHERE IsDisabled = 0  
   
 		INSERT INTO @dummyBalance (CustId, IsExtraPT)  
 		SELECT CustId, 1  
