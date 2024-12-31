@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="wsv_nap" isFunction="0" isNested="0"></info>*/
 USE CustDB
 GO
 
@@ -23,6 +23,7 @@ AS
 	Revisions:
 		- 20210302@Percy: Initialize SP [RemineID: #146710]
 		- 20220509@Danny: Use String_split built-in function [RemineID: #171831]
+		- 20241231@Hughie: Scale Out DBCUST - Apply Inhouse replication for the remaning tables [Redmine: #215627]
 */
 
 BEGIN
@@ -257,6 +258,8 @@ BEGIN
 
 		-- Remove supers from old normal groups
 		DELETE c WITH (ROWLOCK, UPDLOCK)
+		OUTPUT DELETED.custid, DELETED.GroupName, dbo.f_GetDateTime2()
+		INTO Acc_CustGroup_Del_Inhouse(custid,GroupName,RepUpdateTime)
 		FROM dbo.Acc_CustGroup c
 			INNER JOIN #Super s ON c.CustId = s.CustId AND c.GroupName = s.GroupName
 		WHERE s.DataType = 1
