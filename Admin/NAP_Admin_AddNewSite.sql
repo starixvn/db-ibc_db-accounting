@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCust-CustDB" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCust-CustDB" executers="wsv_nap" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[NAP_Admin_AddNewSite]
 	@sitename	NVARCHAR(50),
 	@sitelabel	VARCHAR(50)=NULL,
@@ -17,6 +17,7 @@ AS
 		- 20220413@Elodie: Remove code to delete site in case of error [RedmineID: #170752]
 		- 20220722@Eden: LAP - Scale Out DBTrans  [redmine: #158293/#175297]
 		- 20230112@Tacy: Alpha/NAP - Split 789y Site [RedmineID: #181596]
+		- 20241230@July: Scale Out DBCUST - Apply Inhouse replication for the remaning tables [Redmine: #215627]
 */
 BEGIN
 	IF LEN(@Sitename) > 10
@@ -36,8 +37,8 @@ BEGIN
 	END
 	ELSE
 	BEGIN
-		INSERT INTO dbo.Site(site, ServerID, isLicensee, isActive, isDeposit,SiteDBGroupID,SiteLabel)
-		VALUES (@sitename, 0, @isDeposit, 1, @isDeposit, @SiteDBGroupID, @sitelabel)
+		INSERT INTO dbo.Site(site, ServerID, isLicensee, isActive, isDeposit,SiteDBGroupID,SiteLabel, RepUpdateTime)
+		VALUES (@sitename, 0, @isDeposit, 1, @isDeposit, @SiteDBGroupID, @sitelabel, dbo.f_GetDateTime2())
 	
 		IF @@ERROR <> 0
 		BEGIN
