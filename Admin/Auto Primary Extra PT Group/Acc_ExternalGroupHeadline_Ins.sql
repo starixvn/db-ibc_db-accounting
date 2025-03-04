@@ -25,6 +25,7 @@ AS
 		- 20210825@Percy: Add data into CustSuperProfile [RemineID: #160682]
 		- 20220509@Danny: Use String_split built-in function [RemineID: #171831]
 		- 20241213@Johnson: Apply In-house replication for Credit Setting [RedmineID: #212684]
+		- 20250102@Hughie: Scale Out DBCUST - Apply Inhouse replication for the remaning tables [Redmine: #215627]
 */
 
 BEGIN
@@ -343,8 +344,8 @@ BEGIN
 	-- Acc_CustGroup
 	IF EXISTS (SELECT 1 FROM #Super)
 	BEGIN
-		INSERT INTO dbo.Acc_CustGroup (CustId, GroupName, RoleId)
-		SELECT s.CustId, s.GroupName, 4
+		INSERT INTO dbo.Acc_CustGroup (CustId, GroupName, RoleId, RepUpdateTime)
+		SELECT s.CustId, s.GroupName, 4, dbo.f_GetDateTime2()
 		FROM #Super s
 			LEFT JOIN dbo.Acc_CustGroup cg WITH (NOLOCK) ON s.CustId = cg.CustId AND s.GroupName = cg.GroupName
 		WHERE cg.CustId IS NULL AND s.GroupName <> '' -- No Extra PT

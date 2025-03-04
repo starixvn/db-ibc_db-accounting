@@ -20,6 +20,7 @@ AS
 	Revisions:
 		- 20210301@Percy: Initialize SP [RedmineID: #146710]
 		- 20241213@Johnson: Apply In-house replication for Credit Setting [RedmineID: #212684]
+		- 20241231@Hughie: Scale Out DBCUST - Apply Inhouse replication for the remaning tables [Redmine: #215627]
 */
 
 BEGIN
@@ -253,12 +254,14 @@ BEGIN
 		WHERE e.DataType = 2
 
 		DELETE c WITH (ROWLOCK)
+		OUTPUT DELETED.custid, DELETED.GroupName, dbo.f_GetDateTime2()
+		INTO Acc_CustGroup_Del_Inhouse(custid,GroupName,RepUpdateTime)
 		FROM dbo.Acc_CustGroup c
 			INNER JOIN @ExternalGroup e ON c.GroupName = e.GroupName
 		WHERE c.CustId = @CustId AND e.DataType = 2
 
-		INSERT INTO dbo.Acc_CustGroup (CustId, RoleId, GroupName)
-		SELECT @CustId, 4, e.GroupName
+		INSERT INTO dbo.Acc_CustGroup (CustId, RoleId, GroupName, RepUpdateTime)
+		SELECT @CustId, 4, e.GroupName, dbo.f_GetDateTime2()
 		FROM @ExternalGroup e
 			LEFT JOIN dbo.Acc_CustGroup c WITH (NOLOCK) ON c.CustId = @CustId AND e.GroupName = c.GroupName
 		WHERE e.DataType = 1 AND c.CustId IS NULL
