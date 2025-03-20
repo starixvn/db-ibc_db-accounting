@@ -26,6 +26,7 @@ AS
 		- 20220509@Danny: Use String_split built-in function [RemineID: #171831]
 		- 20241213@Johnson: Apply In-house replication for Credit Setting [RedmineID: #212684]
 		- 20250102@Hughie: Scale Out DBCUST - Apply Inhouse replication for the remaning tables [Redmine: #215627]
+		- 20250114@Lewis: Apply Rep-Inhouse [RedmineID: #215883]
 */
 
 BEGIN
@@ -243,8 +244,8 @@ BEGIN
 
 	-- Insert mapping
 	BEGIN TRY
-		INSERT INTO dbo.EaGroupHeadline (GroupHeadlineId, GroupId, GroupName, SiteId, ExchangeId, GroupTypeId, EffectiveDate, EndDate)
-		SELECT @GroupHeadlineId, GroupId, GroupName, @SiteId, @ExchangeId, GroupTypeId, CASE WHEN GroupTypeId = 2 THEN @EffectiveDate END, CASE WHEN GroupTypeId = 2 THEN @maxDate END
+		INSERT INTO dbo.EaGroupHeadline (GroupHeadlineId, GroupId, GroupName, SiteId, ExchangeId, GroupTypeId, EffectiveDate, EndDate, RepUpdateTime)
+		SELECT @GroupHeadlineId, GroupId, GroupName, @SiteId, @ExchangeId, GroupTypeId, CASE WHEN GroupTypeId = 2 THEN @EffectiveDate END, CASE WHEN GroupTypeId = 2 THEN @maxDate END, [dbo].[f_GetDateTime2]()
 		FROM @EaGroup
 	END TRY
 	BEGIN CATCH
@@ -263,6 +264,8 @@ BEGIN
 
 		-- Remove future setting
 		DELETE e WITH (ROWLOCK, UPDLOCK)
+			OUTPUT deleted.ID, [dbo].[f_GetDateTime2]()
+			INTO Acc_GroupExtraPTSetting_Del_InHouse (ID, RepUpdateTime)
 		FROM dbo.Acc_GroupExtraPTSetting e
 			INNER JOIN (SELECT DISTINCT CustId, EndDate FROM #Super) s ON e.SuperId = s.CustId
 		WHERE e.FromDate >= @currentDate
@@ -272,6 +275,8 @@ BEGIN
 			)
 
 		DELETE e WITH (ROWLOCK, UPDLOCK)
+			OUTPUT deleted.ID, [dbo].[f_GetDateTime2]()
+			INTO Acc_GroupExtraPT2Setting_Del_InHouse (ID, RepUpdateTime)
 		FROM dbo.Acc_GroupExtraPT2Setting e
 			INNER JOIN (SELECT DISTINCT CustId, EndDate FROM #Super) s ON e.SuperId = s.CustId
 		WHERE e.FromDate >= @currentDate
@@ -282,7 +287,7 @@ BEGIN
 		
 		-- Update current setting
 		UPDATE e WITH (ROWLOCK)
-		SET e.ToDate = CASE WHEN s.EndDate < p.ToDate THEN s.EndDate ELSE p.ToDate END
+		SET e.ToDate = CASE WHEN s.EndDate < p.ToDate THEN s.EndDate ELSE p.ToDate END, e.RepUpdateTime = [dbo].[f_GetDateTime2]()
 		FROM dbo.Acc_GroupExtraPTSetting e
 			INNER JOIN dbo.Acc_GroupExtraPT_Product p WITH (NOLOCK)
 				ON		e.GroupId		= p.GroupId
@@ -294,7 +299,7 @@ BEGIN
 			AND s.EndDate BETWEEN e.FromDate AND e.ToDate
 
 		UPDATE e WITH (ROWLOCK)
-		SET e.ToDate = CASE WHEN s.EndDate < p.ToDate THEN s.EndDate ELSE p.ToDate END
+		SET e.ToDate = CASE WHEN s.EndDate < p.ToDate THEN s.EndDate ELSE p.ToDate END, e.RepUpdateTime = [dbo].[f_GetDateTime2]()
 		FROM dbo.Acc_GroupExtraPT2Setting e
 			INNER JOIN dbo.Acc_GroupExtraPT_Product p WITH (NOLOCK)
 				ON		e.GroupId		= p.GroupId
@@ -311,8 +316,8 @@ BEGIN
 			DECLARE @New_ExtraPTGroupId INT
 			SELECT TOP 1 @New_ExtraPTGroupId = GroupId FROM dbo.Acc_GroupExtraPT_Product WITH (NOLOCK) WHERE GroupName = @PrimaryExtraGroup
 			
-			INSERT INTO dbo.Acc_GroupExtraPTSetting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate)
-			SELECT CustId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate
+			INSERT INTO dbo.Acc_GroupExtraPTSetting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate, RepUpdateTime)
+			SELECT CustId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate, [dbo].[f_GetDateTime2]()
 			FROM (
 				SELECT s.CustId, p.GroupId, p.GroupName, p.ProductId, p.Sporttype, p.SubProduct, p.ExtraPT
 					,CASE WHEN s.EffectiveDate > p.FromDate THEN s.EffectiveDate ELSE p.FromDate END AS FromDate
@@ -325,8 +330,8 @@ BEGIN
 			) t
 			WHERE FromDate <= ToDate
 
-			INSERT INTO dbo.Acc_GroupExtraPT2Setting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate)
-			SELECT CustId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate
+			INSERT INTO dbo.Acc_GroupExtraPT2Setting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate, RepUpdateTime)
+			SELECT CustId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate, [dbo].[f_GetDateTime2]()
 			FROM (
 				SELECT s.CustId, p.GroupId, p.GroupName, p.ProductId, p.Sporttype, p.SubProduct, p.ExtraPT
 					,CASE WHEN s.EffectiveDate > p.FromDate THEN s.EffectiveDate ELSE p.FromDate END AS FromDate

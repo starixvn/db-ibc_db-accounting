@@ -1,1 +1,0 @@
-Transfer\ManageAutoTransferList\Acc_CustomerInsAutoTransferAgent.sql

@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CUSTDB" executers="bodbAdminNet,bodbExtAccNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CUSTDB" executers="wsv_nap,wsv_xnap" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[EAS_CustomerInsMember_CloneSetting_ExtraPT]
 	@CustID				INT,
 	@ExistingCustid		INT,	
@@ -17,6 +17,7 @@ AS
 		- 20200405@Sophia: Clone setting ExtraPT from existing Super [redmineId: #130647]
 		- 20200708@Sol: Add/modify setting for new table - Extra PT - Redmine: [#136320]
 		- 20220615@Danny: Use explicit temporary table  [RemineID: #174035]
+		- 20250114@Lewis: Apply Rep-Inhouse [RedmineID: #215883]
 */
 
 BEGIN
@@ -35,10 +36,11 @@ BEGIN
 	IF NOT EXISTS (SELECT 1 FROM dbo.Acc_GroupExtraPTSetting WITH (NOLOCK) WHERE SuperID = @Custid AND ToDate > = @EffectiveDate)
 	BEGIN 
 		INSERT INTO dbo.Acc_GroupExtraPTSetting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct,
-												ExtraPT, FromDate, ToDate, UplineId)
+												ExtraPT, FromDate, ToDate, UplineId, RepUpdateTime)
 		SELECT @CustId, GroupId, GroupName, ProductID, Sporttype, SubProduct, ExtraPT,
 			CASE WHEN @EffectiveDate < FromDate THEN FromDate ELSE @EffectiveDate END AS FromDate,
 			ToDate,	UplineId
+			, [dbo].[f_GetDateTime2]()
 		FROM Acc_GroupExtraPTSetting WITH (NOLOCK)
 		WHERE SuperId = @ExistingCustid
 			  AND ToDate >= @EffectiveDate		
@@ -48,10 +50,11 @@ BEGIN
 		IF NOT EXISTS (SELECT 1 FROM dbo.Acc_GroupExtraPT2Setting WITH (NOLOCK) WHERE SuperID = @Custid AND ToDate > = @EffectiveDate)
 		BEGIN
 			INSERT INTO dbo.Acc_GroupExtraPT2Setting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct,
-												ExtraPT, FromDate, ToDate)
+												ExtraPT, FromDate, ToDate, RepUpdateTime)
 			SELECT @CustId, GroupId, GroupName, ProductID, Sporttype, SubProduct, ExtraPT,
 				CASE WHEN @EffectiveDate < FromDate THEN FromDate ELSE @EffectiveDate END AS FromDate,
 				ToDate
+				, [dbo].[f_GetDateTime2]()
 			FROM Acc_GroupExtraPT2Setting WITH (NOLOCK)
 			WHERE SuperId = @ExistingCustid
 					AND ToDate >= @EffectiveDate

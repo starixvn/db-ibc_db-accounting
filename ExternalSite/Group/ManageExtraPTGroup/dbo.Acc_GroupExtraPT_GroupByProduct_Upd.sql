@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="wsv_nap" isFunction="0" isNested="0"></info>*/
 USE [CustDB]
 GO
 
@@ -30,6 +30,7 @@ AS
 		- 20191216@Percy: Do not allow user to select the current date in Effective Date [RedmineID: #125418]
 		- 20210301@Percy: Change BC to real Extra PT Group [RedmineID: #146710]
 		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
+		- 20250114@Lewis: Apply Rep-Inhouse [RedmineID: #215883]
 		
 	Param's Explanation:
 */
@@ -146,8 +147,10 @@ BEGIN
 			/* Group */
 			BEGIN TRY
 				UPDATE dbo.Acc_GroupExtraPT_Product WITH (ROWLOCK, UPDLOCK)
-				SET FromDate = @NewEffectiveDate, ToDate = @NewEndDate,
-					ExtraPT = @NewExtraPT
+				SET FromDate = @NewEffectiveDate
+					, ToDate = @NewEndDate
+					, ExtraPT = @NewExtraPT
+					, RepUpdateTime = [dbo].[f_GetDateTime2]()
 				WHERE GroupId = @GroupId AND ProductID = @ProductID
 					AND ToDate = @OldEndDate
 			END TRY
@@ -168,13 +171,20 @@ BEGIN
 						WHERE GroupId = @GroupId AND ProductID = @ProductID
 							AND ToDate BETWEEN @NewEndDate AND @OldEndDate
 					)
-					MERGE dbo.Acc_GroupExtraPTSetting WITH(ROWLOCK, UPDLOCK) AS g
-					USING Super AS s
-						ON g.SuperId = s.SuperId AND g.GroupId = s.GroupId
-							AND g.ProductId = s.ProductId AND g.Sporttype = s.Sporttype AND g.SubProduct = s.SubProduct
-							AND g.FromDate = s.FromDate
-					WHEN MATCHED AND g.FromDate <= @NewEndDate THEN UPDATE SET g.ToDate = @NewEndDate
-					WHEN MATCHED THEN DELETE;
+					INSERT INTO Acc_GroupExtraPTSetting_Del_Inhouse(ID, RepUpdateTime)
+					SELECT ID, RepUpdateTime
+					FROM (
+						MERGE dbo.Acc_GroupExtraPTSetting WITH(ROWLOCK, UPDLOCK) AS g
+						USING Super AS s
+							ON g.SuperId = s.SuperId AND g.GroupId = s.GroupId
+								AND g.ProductId = s.ProductId AND g.Sporttype = s.Sporttype AND g.SubProduct = s.SubProduct
+								AND g.FromDate = s.FromDate
+						WHEN MATCHED AND g.FromDate <= @NewEndDate THEN UPDATE SET g.ToDate = @NewEndDate, g.RepUpdateTime = [dbo].[f_GetDateTime2]()
+						WHEN MATCHED THEN DELETE
+						OUTPUT $action, DELETED.ID, [dbo].[f_GetDateTime2]()
+						) AS __deleting([Action], ID, [RepUpdateTime])
+					WHERE [Action] = 'DELETE'
+					;
 				END
 				ELSE
 				BEGIN
@@ -187,6 +197,7 @@ BEGIN
 					)
 					UPDATE g WITH(ROWLOCK, UPDLOCK)
 					SET g.ToDate = CASE WHEN s.FromDate IS NULL OR @NewEndDate < ISNULL(s.FromDate, '9999-12-31') THEN @NewEndDate ELSE DATEADD(DAY, -1, ISNULL(s.FromDate, '9999-12-31')) END
+						, g.RepUpdateTime = [dbo].[f_GetDateTime2]()
 					FROM dbo.Acc_GroupExtraPTSetting AS g
 						LEFT JOIN Super s ON g.SuperId = s.SuperId
 					WHERE GroupId = @GroupId AND ProductId = @ProductId
@@ -198,7 +209,7 @@ BEGIN
 				IF @OldExtraPT <> @NewExtraPT
 				BEGIN
 					UPDATE dbo.Acc_GroupExtraPTSetting WITH(ROWLOCK, UPDLOCK)
-					SET ExtraPT = @NewExtraPT
+					SET ExtraPT = @NewExtraPT, RepUpdateTime = [dbo].[f_GetDateTime2]()
 					WHERE GroupId = @GroupId AND ProductId = @ProductId
 						AND FromDate >= @OldEffectiveDate AND ToDate <= @OldEndDate
 				END
@@ -214,6 +225,7 @@ BEGIN
 					)
 					UPDATE g WITH(ROWLOCK, UPDLOCK)
 					SET g.FromDate = CASE WHEN @NewEffectiveDate > ISNULL(s.ToDate, '1970-01-01') THEN @NewEffectiveDate ELSE DATEADD(DAY, 1, ISNULL(s.ToDate, '1970-01-01')) END
+						, g.RepUpdateTime = [dbo].[f_GetDateTime2]()
 					FROM dbo.Acc_GroupExtraPTSetting AS g
 						LEFT JOIN Super s ON g.SuperId = s.SuperId
 					WHERE GroupId = @GroupId AND ProductId = @ProductId
@@ -223,11 +235,13 @@ BEGIN
 				IF @OldEffectiveDate < @NewEffectiveDate
 				BEGIN
 					DELETE dbo.Acc_GroupExtraPTSetting WITH(ROWLOCK, UPDLOCK)
+						OUTPUT deleted.ID, [dbo].[f_GetDateTime2]()
+						INTO Acc_GroupExtraPTSetting_Del_InHouse (ID, RepUpdateTime)
 					WHERE GroupId = @GroupId AND ProductId = @ProductId
 						AND FromDate >= @OldEffectiveDate AND ToDate < @NewEffectiveDate  
 					
 					UPDATE Acc_GroupExtraPTSetting WITH(ROWLOCK, UPDLOCK)
-					SET FromDate = @NewEffectiveDate
+					SET FromDate = @NewEffectiveDate, RepUpdateTime = [dbo].[f_GetDateTime2]()
 					WHERE GroupId = @GroupId AND ProductId = @ProductId
 						AND FromDate BETWEEN @OldEffectiveDate AND @NewEffectiveDate
 				END
@@ -243,6 +257,7 @@ BEGIN
 					)
 					UPDATE g WITH(ROWLOCK, UPDLOCK)
 					SET g.ToDate = CASE WHEN @NewEndDate < ISNULL(s.FromDate, '9999-12-31') THEN @NewEndDate ELSE DATEADD(DAY, -1, ISNULL(s.FromDate, '9999-12-31')) END
+						, g.RepUpdateTime = [dbo].[f_GetDateTime2]()
 					FROM dbo.Acc_GroupExtraPTSetting AS g
 						LEFT JOIN Super s ON g.SuperId = s.SuperId
 					WHERE GroupId = @GroupId AND ProductId = @ProductId
@@ -252,11 +267,13 @@ BEGIN
 				IF @OldEndDate > @NewEndDate
 				BEGIN
 					DELETE dbo.Acc_GroupExtraPTSetting WITH(ROWLOCK, UPDLOCK)
+						OUTPUT deleted.ID, [dbo].[f_GetDateTime2]()
+						INTO Acc_GroupExtraPTSetting_Del_InHouse (ID, RepUpdateTime)
 					WHERE GroupId = @GroupId AND ProductId = @ProductId
 						AND FromDate > @NewEndDate AND ToDate <= @OldEndDate  
 					
 					UPDATE Acc_GroupExtraPTSetting WITH(ROWLOCK, UPDLOCK)
-					SET ToDate = @NewEndDate
+					SET ToDate = @NewEndDate, RepUpdateTime = [dbo].[f_GetDateTime2]()
 					WHERE GroupId = @GroupId AND ProductId = @ProductId
 						AND ToDate BETWEEN @NewEndDate AND @OldEndDate
 				END

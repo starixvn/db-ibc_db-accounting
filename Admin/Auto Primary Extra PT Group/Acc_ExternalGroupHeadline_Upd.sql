@@ -24,6 +24,7 @@ AS
 		- 20210302@Percy: Initialize SP [RemineID: #146710]
 		- 20220509@Danny: Use String_split built-in function [RemineID: #171831]
 		- 20241231@Hughie: Scale Out DBCUST - Apply Inhouse replication for the remaning tables [Redmine: #215627]
+		- 20250114@Lewis: Apply Rep-Inhouse [RedmineID: #215883]
 */
 
 BEGIN
@@ -402,20 +403,27 @@ BEGIN
 
 	-- Update mapping
 	BEGIN TRY
-		MERGE dbo.EaGroupHeadline AS t
-		USING @EaGroup AS s
-			ON		t.GroupId			= s.GroupId
-				AND t.GroupName			= s.GroupName
-				AND t.GroupHeadlineId	= @GroupHeadlineId
-				AND t.SiteId			= @SiteId
-				AND t.ExchangeId		= @ExchangeId
-		WHEN MATCHED THEN UPDATE
-			SET t.GroupTypeId = s.GroupTypeId, t.EffectiveDate = s.EffectiveDate, t.EndDate = s.EndDate
-		WHEN NOT MATCHED BY TARGET THEN INSERT
-			(GroupHeadlineId, GroupId, GroupName, SiteId, ExchangeId, GroupTypeId, EffectiveDate, EndDate)
-			VALUES
-			(@GroupHeadlineId, GroupId, GroupName, @SiteId, @ExchangeId, GroupTypeId, EffectiveDate, EndDate)
-		WHEN NOT MATCHED BY SOURCE AND t.GroupHeadlineId = @GroupHeadlineId AND t.SiteId = @SiteId AND t.ExchangeId = @ExchangeId THEN DELETE;
+		INSERT INTO EaGroupHeadline_Del_Inhouse (GroupHeadlineId, GroupId, GroupName, SiteId, ExchangeId, RepUpdatetime)
+		SELECT GroupHeadlineId, GroupId, GroupName, SiteId, ExchangeId, RepUpdatetime
+		FROM (
+				MERGE dbo.EaGroupHeadline AS t
+				USING @EaGroup AS s
+					ON		t.GroupId			= s.GroupId
+						AND t.GroupName			= s.GroupName
+						AND t.GroupHeadlineId	= @GroupHeadlineId
+						AND t.SiteId			= @SiteId
+						AND t.ExchangeId		= @ExchangeId
+				WHEN MATCHED THEN UPDATE
+					SET t.GroupTypeId = s.GroupTypeId, t.EffectiveDate = s.EffectiveDate, t.EndDate = s.EndDate, t.RepUpdatetime = [dbo].[f_GetDateTime2]()
+				WHEN NOT MATCHED BY TARGET THEN INSERT
+					(GroupHeadlineId, GroupId, GroupName, SiteId, ExchangeId, GroupTypeId, EffectiveDate, EndDate, RepUpdatetime)
+					VALUES
+					(@GroupHeadlineId, GroupId, GroupName, @SiteId, @ExchangeId, GroupTypeId, EffectiveDate, EndDate, [dbo].[f_GetDateTime2]())
+				WHEN NOT MATCHED BY SOURCE AND t.GroupHeadlineId = @GroupHeadlineId AND t.SiteId = @SiteId AND t.ExchangeId = @ExchangeId THEN DELETE
+				OUTPUT $action, DELETED.GroupHeadlineId, DELETED.GroupId, DELETED.GroupName, DELETED.SiteId, DELETED.ExchangeId, [dbo].[f_GetDateTime2]()
+			) AS __deleting([Action], GroupHeadlineId, GroupId, GroupName, SiteId, ExchangeId, [RepUpdateTime])
+		WHERE [Action] = 'DELETE';
+		
 	END TRY
 	BEGIN CATCH
 		SELECT @ErrCode = ERROR_NUMBER(), @ErrMsg = 'Update Headline/External Group Mapping falied.'
@@ -433,6 +441,8 @@ BEGIN
 	BEGIN
 		-- Remove future setting
 		DELETE e WITH (ROWLOCK, UPDLOCK)
+			OUTPUT deleted.ID, [dbo].[f_GetDateTime2]()
+			INTO Acc_GroupExtraPTSetting_Del_InHouse (ID, RepUpdateTime)
 		FROM dbo.Acc_GroupExtraPTSetting e
 			INNER JOIN (SELECT DISTINCT CustId FROM #Super) s ON e.SuperId = s.CustId
 			LEFT JOIN #OldSuper o ON e.SuperId = o.CustId AND e.GroupName = o.GroupName
@@ -443,6 +453,8 @@ BEGIN
 			)
 
 		DELETE e WITH (ROWLOCK, UPDLOCK)
+			OUTPUT deleted.ID, [dbo].[f_GetDateTime2]()
+			INTO Acc_GroupExtraPT2Setting_Del_InHouse (ID, RepUpdateTime)
 		FROM dbo.Acc_GroupExtraPT2Setting e
 			INNER JOIN (SELECT DISTINCT CustId FROM #Super) s ON e.SuperId = s.CustId
 			LEFT JOIN #OldSuper o ON e.SuperId = o.CustId AND e.GroupName = o.GroupName
@@ -454,7 +466,7 @@ BEGIN
 
 		-- Update current setting
 		UPDATE e WITH (ROWLOCK)
-		SET e.ToDate = CASE WHEN o.EndDate < p.ToDate THEN o.EndDate ELSE p.ToDate END
+		SET e.ToDate = CASE WHEN o.EndDate < p.ToDate THEN o.EndDate ELSE p.ToDate END, e.RepUpdateTime = [dbo].[f_GetDateTime2]()
 		FROM dbo.Acc_GroupExtraPTSetting e
 			INNER JOIN dbo.Acc_GroupExtraPT_Product p WITH (NOLOCK)
 				ON		e.GroupId		= p.GroupId
@@ -466,7 +478,7 @@ BEGIN
 			AND @currentDate BETWEEN p.FromDate AND p.ToDate
 
 		UPDATE e WITH (ROWLOCK)
-		SET e.ToDate = CASE WHEN o.EndDate < p.ToDate THEN o.EndDate ELSE p.ToDate END
+		SET e.ToDate = CASE WHEN o.EndDate < p.ToDate THEN o.EndDate ELSE p.ToDate END, e.RepUpdateTime = [dbo].[f_GetDateTime2]()
 		FROM dbo.Acc_GroupExtraPT2Setting e
 			INNER JOIN dbo.Acc_GroupExtraPT2_Product p WITH (NOLOCK)
 				ON		e.GroupId		= p.GroupId
@@ -480,8 +492,8 @@ BEGIN
 		-- Add new setting
 		IF EXISTS (SELECT 1 FROM #Super WHERE GroupTypeId = 2 AND GroupName <> '')
 		BEGIN
-			INSERT INTO dbo.Acc_GroupExtraPTSetting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate)
-			SELECT t.CustId, t.GroupId, t.GroupName, t.ProductId, t.Sporttype, t.SubProduct, t.ExtraPT, t.FromDate, t.ToDate
+			INSERT INTO dbo.Acc_GroupExtraPTSetting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate, RepUpdateTime)
+			SELECT t.CustId, t.GroupId, t.GroupName, t.ProductId, t.Sporttype, t.SubProduct, t.ExtraPT, t.FromDate, t.ToDate, [dbo].[f_GetDateTime2]()
 			FROM (
 				SELECT s.CustId, p.GroupId, p.GroupName, p.ProductId, p.Sporttype, p.SubProduct, p.ExtraPT
 					,CASE WHEN s.EffectiveDate > p.FromDate THEN s.EffectiveDate ELSE p.FromDate END AS FromDate
@@ -500,8 +512,8 @@ BEGIN
 			WHERE t.FromDate <= t.ToDate
 				AND e.SuperId IS NULL
 
-			INSERT INTO dbo.Acc_GroupExtraPT2Setting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate)
-			SELECT t.CustId, t.GroupId, t.GroupName, t.ProductId, t.Sporttype, t.SubProduct, t.ExtraPT, t.FromDate, t.ToDate
+			INSERT INTO dbo.Acc_GroupExtraPT2Setting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate, RepUpdateTime)
+			SELECT t.CustId, t.GroupId, t.GroupName, t.ProductId, t.Sporttype, t.SubProduct, t.ExtraPT, t.FromDate, t.ToDate, [dbo].[f_GetDateTime2]()
 			FROM (
 				SELECT s.CustId, p.GroupId, p.GroupName, p.ProductId, p.Sporttype, p.SubProduct, p.ExtraPT
 					,CASE WHEN s.EffectiveDate > p.FromDate THEN s.EffectiveDate ELSE p.FromDate END AS FromDate
