@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0" isNested="1"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="wsv_nap" isFunction="0" isNested="1"></info>*/
 USE CustDB
 GO
 
@@ -25,6 +25,7 @@ AS
 		- 20191216@Percy: Do not allow user to select the current date in Effective Date [RedmineID: #125418]
 		- 20200708@Sol: Add/modify setting for new table - Extra PT - Redmine: [#136320]
 		- 20210301@Percy: Change BC to real Extra PT Group [RedmineID: #146710]
+		- 20250114@Lewis: Apply Rep-Inhouse [RedmineID: #215883]
 		
 	Param's Explanation:
 		- @EffectiveDate
@@ -52,7 +53,15 @@ BEGIN
 	DECLARE @GroupId INT
 	SELECT TOP 1 @GroupId = GroupId FROM dbo.Acc_GroupExtraPT_Product WITH(NOLOCK) WHERE GroupName = @GroupName
 
-	DECLARE @Setting TABLE (GroupId INT, FromDate DATETIME)
+	DECLARE @Setting TABLE (ID INT
+							, SuperId INT
+							, GroupId INT
+							, ProductId TINYINT NOT NULL
+							, Sporttype SMALLINT NOT NULL
+							, SubProduct VARCHAR(500) NOT NULL
+							, FromDate DATETIME NOT NULL
+							, ToDate DATETIME
+							, RepUpdateTime DATETIME2(7))
 
 	IF @EffectiveDate IS NOT NULL -- change @GroupName is Primary Extra PT Group of @CustID
 	BEGIN
@@ -112,11 +121,13 @@ BEGIN
 		END
 
 		DELETE dbo.Acc_GroupExtraPTSetting WITH(ROWLOCK, UPDLOCK)
+			OUTPUT deleted.ID, [dbo].[f_GetDateTime2]()
+			INTO Acc_GroupExtraPTSetting_Del_InHouse (ID, RepUpdateTime)
 		WHERE SuperId = @CustID AND FromDate >= @EffectiveDate
 			AND ToDate >= @today
 
 		UPDATE dbo.Acc_GroupExtraPTSetting WITH(ROWLOCK, UPDLOCK)
-		SET ToDate = DATEADD(DAY, -1, @EffectiveDate)
+		SET ToDate = DATEADD(DAY, -1, @EffectiveDate), RepUpdateTime = [dbo].[f_GetDateTime2]()
 		WHERE SuperId = @CustID AND FromDate < @EffectiveDate
 			AND ToDate >= @today
 
@@ -127,11 +138,12 @@ BEGIN
 
 		IF @GroupName <> 'No Extra PT'
 		BEGIN
-			INSERT INTO dbo.Acc_GroupExtraPTSetting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate, UplineId)
+			INSERT INTO dbo.Acc_GroupExtraPTSetting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate, UplineId, RepUpdateTime)
 			SELECT @CustId, @GroupId, @GroupName, ProductID, Sporttype, SubProduct, ExtraPT,
 				CASE WHEN @EffectiveDate < FromDate THEN FromDate ELSE @EffectiveDate END AS FromDate,
 				CASE WHEN @EndDate < ToDate THEN @EndDate ELSE ToDate END AS ToDate,
 				@UplineId
+				, [dbo].[f_GetDateTime2]()
 			FROM dbo.Acc_GroupExtraPT_Product WITH(NOLOCK)
 			WHERE GroupId = @GroupId
 				AND @EffectiveDate <= ToDate
@@ -169,6 +181,8 @@ BEGIN
 		) -- To be Is Primary Extra PT Group
 		BEGIN
 			DELETE dbo.Acc_GroupExtraPTSetting WITH(ROWLOCK, UPDLOCK)
+				OUTPUT deleted.ID, [dbo].[f_GetDateTime2]()
+				INTO Acc_GroupExtraPTSetting_Del_InHouse (ID, RepUpdateTime)
 			WHERE SuperId = @CustID AND GroupId = @GroupId AND FromDate > @today
 
 			IF EXISTS (
@@ -177,14 +191,19 @@ BEGIN
 			)
 			BEGIN
 				DELETE dbo.Acc_GroupExtraPTSetting WITH(ROWLOCK, UPDLOCK)
-				OUTPUT DELETED.GroupId, DELETED.FromDate
-					INTO @Setting (GroupId, FromDate)
+					OUTPUT deleted.ID, deleted.SuperId, deleted.GroupId, deleted.ProductId, deleted.Sporttype, deleted.SubProduct, deleted.FromDate, deleted.ToDate, [dbo].[f_GetDateTime2]()
+					INTO @Setting (ID, SuperId, GroupId, ProductId, Sporttype, SubProduct, FromDate, ToDate, RepUpdateTime)
 				WHERE SuperId = @CustID AND ToDate > @today
 
-				INSERT INTO dbo.Acc_GroupExtraPTSetting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate, UplineId)
+				INSERT INTO Acc_GroupExtraPTSetting_Del_InHouse (ID, RepUpdateTime)
+				SELECT ID, [dbo].[f_GetDateTime2]()
+				FROM @Setting
+
+				INSERT INTO dbo.Acc_GroupExtraPTSetting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate, UplineId, RepUpdateTime)
 				SELECT @CustId, g.GroupId, g.GroupName, g.ProductID, g.Sporttype, g.SubProduct, g.ExtraPT,
 					CASE WHEN s.FromDate < @today THEN s.FromDate ELSE g.FromDate END AS FromDate, g.ToDate,
 					@UplineId
+					, [dbo].[f_GetDateTime2]()
 				FROM dbo.Acc_GroupExtraPT_Product g WITH(NOLOCK)
 					INNER JOIN @Setting s ON g.GroupId = s.GroupId
 				WHERE @today >= g.ToDate

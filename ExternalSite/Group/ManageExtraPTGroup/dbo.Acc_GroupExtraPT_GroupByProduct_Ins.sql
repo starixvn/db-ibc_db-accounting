@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="wsv_nap" isFunction="0" isNested="0"></info>*/
 USE [CustDB]
 GO
 
@@ -27,6 +27,7 @@ AS
 		- 20191216@Percy: Do not allow user to select the current date in Effective Date [RedmineID: #125418]
 		- 20210301@Percy: Change BC to real Extra PT Group [RedmineID: #146710]
 		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
+		- 20250114@Lewis: Apply Rep-Inhouse [RedmineID: #215883]
 
 	Param's Explanation:
 */
@@ -143,10 +144,12 @@ BEGIN
 	BEGIN
 		BEGIN TRY
 			UPDATE dbo.Acc_GroupExtraPT_Product WITH (ROWLOCK, UPDLOCK)
-			SET ToDate = DATEADD(DAY, -1, @EffectiveDate)
+			SET ToDate = DATEADD(DAY, -1, @EffectiveDate), RepUpdateTime = [dbo].[f_GetDateTime2]()
 			WHERE GroupId = @GroupId AND ProductID = @ProductID AND ToDate = @OldEndDate
 
 			DELETE dbo.Acc_GroupExtraPT_Product WITH (ROWLOCK, UPDLOCK)
+				OUTPUT DELETED.ID, [dbo].[f_GetDateTime2]()
+				INTO Acc_GroupExtraPT_Product_Del_Inhouse (ID, RepUpdateTime)
 			WHERE GroupId = @GroupId AND ProductID = @ProductID AND ToDate < FromDate
 		END TRY
 		BEGIN CATCH
@@ -158,20 +161,20 @@ BEGIN
 
 	-- insert new group setting --
 	BEGIN TRY
-		INSERT INTO dbo.Acc_GroupExtraPT_Product (GroupId, GroupName, ProductID, Sporttype, SubProduct, FromDate, ToDate, ExtraPT)
-		SELECT DISTINCT @GroupId, @GroupName, @ProductID, Sporttype, SubProduct, @EffectiveDate, @EndDate, @ExtraPT
+		INSERT INTO dbo.Acc_GroupExtraPT_Product (GroupId, GroupName, ProductID, Sporttype, SubProduct, FromDate, ToDate, ExtraPT, RepUpdateTime)
+		SELECT DISTINCT @GroupId, @GroupName, @ProductID, Sporttype, SubProduct, @EffectiveDate, @EndDate, @ExtraPT, [dbo].[f_GetDateTime2]()
 		FROM Acc_GroupExtraPT_Product WITH (NOLOCK)
 		WHERE ProductID = @ProductId
 
 		IF @@ROWCOUNT = 0 -- no data insert
 		BEGIN
-			INSERT INTO dbo.Acc_GroupExtraPT_Product (GroupId, GroupName, ProductID, Sporttype, SubProduct, FromDate, ToDate, ExtraPT)
-			VALUES (@GroupId, @GroupName, @ProductID, 0, '', @EffectiveDate, @EndDate, @ExtraPT)
+			INSERT INTO dbo.Acc_GroupExtraPT_Product (GroupId, GroupName, ProductID, Sporttype, SubProduct, FromDate, ToDate, ExtraPT, RepUpdateTime)
+			VALUES (@GroupId, @GroupName, @ProductID, 0, '', @EffectiveDate, @EndDate, @ExtraPT, [dbo].[f_GetDateTime2]())
 
 			IF @ProductId = 1
 			BEGIN
-				INSERT INTO dbo.Acc_GroupExtraPT_Product (GroupId, GroupName, ProductID, Sporttype, SubProduct, FromDate, ToDate, ExtraPT)
-				SELECT @GroupId, @GroupName, @ProductID, Sporttype, SubProduct, @EffectiveDate, @EndDate, @ExtraPT
+				INSERT INTO dbo.Acc_GroupExtraPT_Product (GroupId, GroupName, ProductID, Sporttype, SubProduct, FromDate, ToDate, ExtraPT, RepUpdateTime)
+				SELECT @GroupId, @GroupName, @ProductID, Sporttype, SubProduct, @EffectiveDate, @EndDate, @ExtraPT, [dbo].[f_GetDateTime2]()
 				FROM (
 					SELECT  0 AS Sporttype, 'MG-SuperLive'	AS SubProduct UNION ALL
 					SELECT  0 AS Sporttype, 'Bet Builder'	AS SubProduct UNION ALL
@@ -188,7 +191,7 @@ BEGIN
 
 	/* Super */
 	-- affected super --
-	DECLARE @Super TABLE (SuperId INT, Sporttype INT, SubProduct VARCHAR(50), FromDate DATETIME, ToDate DATETIME, UplineId INT)
+	DECLARE @Super TABLE (ID INT, SuperId INT, Sporttype INT, SubProduct VARCHAR(50), FromDate DATETIME, ToDate DATETIME, UplineId INT, RepUpdateTime DATETIME2(7))
 
 	DECLARE @FromDate DATETIME, @ToDate DATETIME
 
@@ -198,14 +201,18 @@ BEGIN
 	IF @FromDate IS NOT NULL
 	BEGIN
 		DELETE dbo.Acc_GroupExtraPTSetting WITH(ROWLOCK, UPDLOCK)
-		OUTPUT DELETED.SuperId, DELETED.Sporttype, DELETED.SubProduct, DELETED.FromDate, DELETED.ToDate, DELETED.UplineId
-			INTO @Super (SuperId, Sporttype, SubProduct, FromDate, ToDate, UplineId)
+			OUTPUT DELETED.ID, DELETED.SuperId, DELETED.Sporttype, DELETED.SubProduct, DELETED.FromDate, DELETED.ToDate, DELETED.UplineId, [dbo].[f_GetDateTime2]()
+			INTO @Super (ID, SuperId, Sporttype, SubProduct, FromDate, ToDate, UplineId, RepUpdateTime)
 		WHERE GroupId = @GroupId AND ProductId = @ProductId
 			AND @ToDate < FromDate
-		
+
+		INSERT INTO dbo.Acc_GroupExtraPTSetting_Del_Inhouse (ID, RepUpdateTime)
+		SELECT ID, RepUpdateTime
+		FROM @Super
+
 		UPDATE dbo.Acc_GroupExtraPTSetting WITH(ROWLOCK, UPDLOCK)
-		SET ToDate = @ToDate
-		OUTPUT DELETED.SuperId, DELETED.Sporttype, DELETED.SubProduct, DATEADD(DAY, 1, @ToDate), DELETED.ToDate, DELETED.UplineId
+		SET ToDate = @ToDate, RepUpdateTime = [dbo].[f_GetDateTime2]()
+			OUTPUT DELETED.SuperId, DELETED.Sporttype, DELETED.SubProduct, DATEADD(DAY, 1, @ToDate), DELETED.ToDate, DELETED.UplineId
 			INTO @Super (SuperId, Sporttype, SubProduct, FromDate, ToDate, UplineId)
 		WHERE GroupId = @GroupId AND ProductId = @ProductId
 			AND @ToDate BETWEEN FromDate AND ToDate
@@ -218,8 +225,8 @@ BEGIN
 
 	IF @isNew = 0
 	BEGIN
-		INSERT INTO dbo.Acc_GroupExtraPTSetting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, FromDate, ToDate, ExtraPT, UplineId)
-		SELECT SuperId, @GroupId, @GroupName, @ProductId, Sporttype, SubProduct, FromDate, ToDate, @ExtraPT, UplineId
+		INSERT INTO dbo.Acc_GroupExtraPTSetting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, FromDate, ToDate, ExtraPT, UplineId, RepUpdateTime)
+		SELECT SuperId, @GroupId, @GroupName, @ProductId, Sporttype, SubProduct, FromDate, ToDate, @ExtraPT, UplineId, [dbo].[f_GetDateTime2]()
 		FROM @Super
 	END
 	ELSE
@@ -251,11 +258,12 @@ BEGIN
 				AND FromDate >= @FromDate
 			GROUP BY SuperId, UplineId
 		)
-		INSERT INTO dbo.Acc_GroupExtraPTSetting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate, UplineId)
+		INSERT INTO dbo.Acc_GroupExtraPTSetting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate, UplineId, RepUpdateTime)
 		SELECT cs.SuperId, @GroupId, @GroupName, @ProductId, B.Sporttype, B.SubProduct, @ExtraPT,
 				CASE WHEN @FromDate < cs.FromDate THEN cs.FromDate ELSE @FromDate END,
 				CASE WHEN fs.FromDate IS NULL OR @ToDate < fs.FromDate THEN @ToDate ELSE DATEADD(DAY, -1, ISNULL(fs.FromDate, '9999-12-31')) END,
 				cs.UplineId
+				, [dbo].[f_GetDateTime2]()
 		FROM CurrentSuper cs
 			LEFT JOIN FeatureSuper fs ON cs.SuperId = fs.SuperId
 			CROSS APPLY (

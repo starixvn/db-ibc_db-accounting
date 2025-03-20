@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="wsv_nap" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_GroupExtraPT_GroupByProduct_Del]
 	@UserId				INT,
 	@GroupId			TINYINT,
@@ -21,6 +21,7 @@ AS
 		- 20170926@Percy: Move this SP from DBACC.bodb_ACC to DBCUST.CustDB [RedmineID: #83600]
 		- 20180808@Helen: DB05.DBPOLICY migration - Move to DBCUST [Redmine:99462]
 		- 20210426@Sol: Alpha/NAP - Migrate from DBACC to DBCust - [Redmine: #154041]
+		- 20250114@Lewis: Apply Rep-Inhouse [RedmineID: #215883]
 		
 	Param's Explanation:
 */
@@ -99,6 +100,8 @@ BEGIN
 		/* Group */
 		BEGIN TRY
 		DELETE dbo.Acc_GroupExtraPT_Product WITH(ROWLOCK, UPDLOCK)
+			OUTPUT DELETED.ID, [dbo].[f_GetDateTime2]()
+			INTO Acc_GroupExtraPT_Product_Del_Inhouse (ID, RepUpdateTime)
 		WHERE GroupId = @GroupId
 			AND ProductID = @ProductID
 			AND FromDate = @EffectiveDate
@@ -112,6 +115,8 @@ BEGIN
 
 		/* Super */
 		DELETE dbo.Acc_GroupExtraPTSetting WITH(ROWLOCK, UPDLOCK)
+			OUTPUT deleted.ID, [dbo].[f_GetDateTime2]()
+			INTO Acc_GroupExtraPTSetting_Del_InHouse (ID, RepUpdateTime)
 		WHERE GroupId = @GroupId AND ProductID = @ProductID
 			AND FromDate >= @EffectiveDate
 			AND ToDate <= @EndDate

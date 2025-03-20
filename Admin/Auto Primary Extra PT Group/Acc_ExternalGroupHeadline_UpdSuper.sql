@@ -21,6 +21,7 @@ AS
 		- 20210301@Percy: Initialize SP [RedmineID: #146710]
 		- 20241213@Johnson: Apply In-house replication for Credit Setting [RedmineID: #212684]
 		- 20241231@Hughie: Scale Out DBCUST - Apply Inhouse replication for the remaning tables [Redmine: #215627]
+		- 20250114@Lewis: Apply Rep-Inhouse [RedmineID: #215883]
 */
 
 BEGIN
@@ -81,6 +82,8 @@ BEGIN
 			WHERE GroupHeadlineId = @Old_GroupHeadlineId
 
 			DELETE dbo.EaGroupHeadline WITH (ROWLOCK, UPDLOCK)
+				OUTPUT DELETED.GroupHeadlineId, DELETED.GroupId, DELETED.GroupName, DELETED.SiteId, DELETED.ExchangeId, [dbo].[f_GetDateTime2]()
+				INTO EaGroupHeadline_Del_Inhouse (GroupHeadlineId, GroupId, GroupName, SiteId, ExchangeId, RepUpdatetime)
 			WHERE GroupHeadlineId = @Old_GroupHeadlineId
 		END
 	END
@@ -163,6 +166,8 @@ BEGIN
 
 		-- Remove future setting
 		DELETE dbo.Acc_GroupExtraPTSetting WITH (ROWLOCK, UPDLOCK)
+			OUTPUT deleted.ID, [dbo].[f_GetDateTime2]()
+			INTO Acc_GroupExtraPTSetting_Del_InHouse (ID, RepUpdateTime)
 		WHERE SuperId = @CustId
 			AND FromDate >= @currentDate
 			AND (
@@ -171,6 +176,8 @@ BEGIN
 			)
 
 		DELETE dbo.Acc_GroupExtraPT2Setting WITH (ROWLOCK, UPDLOCK)
+			OUTPUT deleted.ID, [dbo].[f_GetDateTime2]()
+			INTO Acc_GroupExtraPT2Setting_Del_InHouse (ID, RepUpdateTime)
 		WHERE SuperId = @CustId
 			AND FromDate >= @currentDate
 			AND (
@@ -180,7 +187,7 @@ BEGIN
 
 		-- Update current setting
 		UPDATE e WITH (ROWLOCK)
-		SET e.ToDate = CASE WHEN @EndDate < p.ToDate THEN @EndDate ELSE p.ToDate END
+		SET e.ToDate = CASE WHEN @EndDate < p.ToDate THEN @EndDate ELSE p.ToDate END, e.RepUpdateTime = [dbo].[f_GetDateTime2]()
 		FROM dbo.Acc_GroupExtraPTSetting e
 			INNER JOIN dbo.Acc_GroupExtraPT_Product p WITH (NOLOCK)
 				ON		e.GroupId		= p.GroupId
@@ -192,7 +199,7 @@ BEGIN
 			AND @EndDate BETWEEN e.FromDate AND e.ToDate
 
 		UPDATE e WITH (ROWLOCK)
-		SET e.ToDate = CASE WHEN @EndDate < p.ToDate THEN @EndDate ELSE p.ToDate END
+		SET e.ToDate = CASE WHEN @EndDate < p.ToDate THEN @EndDate ELSE p.ToDate END, e.RepUpdateTime = [dbo].[f_GetDateTime2]()
 		FROM dbo.Acc_GroupExtraPT2Setting e
 			INNER JOIN dbo.Acc_GroupExtraPT2_Product p WITH (NOLOCK)
 				ON		e.GroupId		= p.GroupId
@@ -206,8 +213,8 @@ BEGIN
 		-- Add new setting
 		IF EXISTS (SELECT 1 FROM @ExternalGroup WHERE GroupTypeId = 2 AND DataType = 1)
 		BEGIN
-			INSERT INTO dbo.Acc_GroupExtraPTSetting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate)
-			SELECT @CustId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate
+			INSERT INTO dbo.Acc_GroupExtraPTSetting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate, RepUpdateTime)
+			SELECT @CustId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate, [dbo].[f_GetDateTime2]()
 			FROM (
 				SELECT ep.GroupId, ep.GroupName, ep.ProductId, ep.Sporttype, ep.SubProduct, ep.ExtraPT
 					,CASE WHEN eg.EffectiveDate < ep.FromDate THEN ep.FromDate ELSE eg.EffectiveDate END AS FromDate
@@ -218,8 +225,8 @@ BEGIN
 			) t
 			WHERE FromDate <= ToDate
 
-			INSERT INTO dbo.Acc_GroupExtraPT2Setting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate)
-			SELECT @CustId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate
+			INSERT INTO dbo.Acc_GroupExtraPT2Setting (SuperId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate, RepUpdateTime)
+			SELECT @CustId, GroupId, GroupName, ProductId, Sporttype, SubProduct, ExtraPT, FromDate, ToDate, [dbo].[f_GetDateTime2]()
 			FROM (
 				SELECT ep.GroupId, ep.GroupName, ep.ProductId, ep.Sporttype, ep.SubProduct, ep.ExtraPT
 					,CASE WHEN eg.EffectiveDate < ep.FromDate THEN ep.FromDate ELSE eg.EffectiveDate END AS FromDate
