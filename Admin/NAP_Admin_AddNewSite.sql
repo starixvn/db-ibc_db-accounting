@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCust-CustDB" executers="wsv_nap" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBGLOB-GlobCustDB" executers="wsv_nap" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[NAP_Admin_AddNewSite]
 	@sitename	NVARCHAR(50),
 	@sitelabel	VARCHAR(50)=NULL,
@@ -9,7 +9,7 @@ ALTER PROCEDURE [dbo].[NAP_Admin_AddNewSite]
 AS
 /*
 	Created: 20170704@Harper
-	DB: DBCust.CustDB
+	DB: DBGLOB-GlobCustDB
 	Description: Create new site by NAP [RedmineID: #77817]
 
 	Revisions:
@@ -18,6 +18,7 @@ AS
 		- 20220722@Eden: LAP - Scale Out DBTrans  [redmine: #158293/#175297]
 		- 20230112@Tacy: Alpha/NAP - Split 789y Site [RedmineID: #181596]
 		- 20241230@July: Scale Out DBCUST - Apply Inhouse replication for the remaning tables [Redmine: #215627]
+		- 202502025@Tacy: Move to GlobCustDB [RedmineID: #216870]
 */
 BEGIN
 	IF LEN(@Sitename) > 10
