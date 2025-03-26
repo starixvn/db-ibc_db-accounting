@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="wsv_nap" viewers="" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE [dbo].[Acc_FinanceGroupsConfig_FinanceCodeDel]
 	@XmlData	NVARCHAR(MAX) 
 	,@UserID	INT
@@ -13,6 +13,7 @@ AS
 
 	Revisions:
 		- 20220114@Malcolm: Initialize SP [Redmine: #164833]
+		- 20250114@Lewis: Apply Rep-Inhouse [RedmineID: #215883]
 		
 	Param's Explanation:
 		 @XmlData
@@ -49,6 +50,8 @@ BEGIN
 
 	BEGIN TRY
 		DELETE f WITH(ROWLOCK, UPDLOCK)
+			OUTPUT DELETED.ID, [dbo].[f_GetDateTime2]()
+			INTO Acc_FinancePermission_Del_Inhouse (ID, RepUpdateTime)
 		FROM dbo.Acc_FinancePermission f
 			INNER JOIN #Finance e ON e.UserName = f.FinanceCode AND e.GroupId = f.GroupId
 	END TRY

@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="wsv_nap" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_FinanceGroupsConfig_FinanceCode_IsViewUpd]
 	@XmlData 	NVARCHAR(MAX) 
 	,@UserID	INT
@@ -13,6 +13,7 @@ AS
 
 	Revisions:
 		- 20220114@Malcolm: Initialize SP [Redmine: #164833]
+		- 20250114@Lewis: Apply Rep-Inhouse [RedmineID: #215883]
 
 	Param's Explanation:
 		 @XmlData
@@ -52,7 +53,7 @@ BEGIN
 
 	BEGIN TRY
 		UPDATE f WITH(ROWLOCK)
-			SET f.IsView = c.IsView
+			SET f.IsView = c.IsView, f.RepUpdateTime = [dbo].[f_GetDateTime2]()
 		OUTPUT deleted.FinanceCode, deleted.GroupId, deleted.IsView, c.CustId
 			INTO #FinanceLog (UserName, GroupId, IsView, CustId)
 		FROM dbo.Acc_FinancePermission f

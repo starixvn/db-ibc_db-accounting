@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="wsv_nap" viewers="" isFunction="0" isNested="0"></info>*/
 CREATE PROC Acc_FinancePermissionDel
 	 @UserId INT,
 	 @GroupId SMALLINT,
@@ -12,6 +12,7 @@ AS
 
 	Revisions:
 		- 20200325@Malcolm: Remove Admin / Finance Code from FinancePermission table [Redmine : #128128]
+		- 20250114@Lewis: Apply Rep-Inhouse [RedmineID: #215883]
 	Param's Explanation:
 		- @Type = 0 : Finance code
 		        = 1 : Admin
@@ -28,6 +29,8 @@ BEGIN
 
     BEGIN TRY
 		DELETE t
+			OUTPUT DELETED.ID, [dbo].[f_GetDateTime2]()
+			INTO Acc_FinancePermission_Del_Inhouse (ID, RepUpdateTime)
 		FROM dbo.Acc_FinancePermission t 
 		WHERE t.FinanceCode = @Username AND t.GroupId = @GroupId
 	END TRY
