@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="wsv_nap" viewers="" isFunction="0" isNested="0"></info>*/
 CREATE PROC dbo.Acc_FinancePermissionIns
 	 @UserId INT,
 	 @GroupId SMALLINT,
@@ -14,6 +14,7 @@ AS
 
 	Revisions:
 		- 20200325@Malcolm: Insert Admin/ Finance Code into FinancePermission table [Redmine : #128128]
+		- 20250114@Lewis: Apply Rep-Inhouse [RedmineID: #215883]
 	Param's Explanation:
 		- @Type   = 0 : Finance code
 		          = 1 : Admin
@@ -27,8 +28,8 @@ BEGIN
 
 
     BEGIN TRY
-		INSERT INTO dbo.Acc_FinancePermission(GroupId, FinanceCode, RoleId, IsView)
-	    VALUES (@GroupId, @Username, @RoleId, @IsView)
+		INSERT INTO dbo.Acc_FinancePermission(GroupId, FinanceCode, RoleId, IsView, RepUpdateTime)
+	    VALUES (@GroupId, @Username, @RoleId, @IsView, [dbo].[f_GetDateTime2]())
 	END TRY
 	BEGIN CATCH
 	    SELECT @ErrCode = ERROR_NUMBER(), @ErrMsg = ERROR_MESSAGE();

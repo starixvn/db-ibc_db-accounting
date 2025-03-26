@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="wsv_nap" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_FinanceGroupsConfig_UsersIns]
 	@XMLData	NVARCHAR(MAX)
 	,@GroupId	SMALLINT
@@ -15,6 +15,7 @@ AS
 	DB: DBCUST/CUSTDB
 	Revisions:
 		- 20220114@Malcolm: Initialize SP [Redmine: #164833]
+		- 20250114@Lewis: Apply Rep-Inhouse [RedmineID: #215883]
 		
 	Param's Explanation:
 		 @XmlData
@@ -46,11 +47,13 @@ BEGIN
 
 	BEGIN TRY
 		DELETE f WITH(ROWLOCK, UPDLOCK)
+				OUTPUT DELETED.ID, [dbo].[f_GetDateTime2]()
+				INTO Acc_FinancePermission_Del_Inhouse (ID, RepUpdateTime)
 		FROM dbo.Acc_FinancePermission f 
 		WHERE EXISTS (SELECT 1 FROM #Finance c WHERE c.Username = f.FinanceCode AND f.RoleId >= 5)
 
-		INSERT INTO dbo.Acc_FinancePermission (GroupId, FinanceCode, RoleId, IsView)
-		SELECT @GroupId, f.Username, f.RoleId, 0
+		INSERT INTO dbo.Acc_FinancePermission (GroupId, FinanceCode, RoleId, IsView, RepUpdateTime)
+		SELECT @GroupId, f.Username, f.RoleId, 0, [dbo].[f_GetDateTime2]()
 		FROM #Finance f
 	END TRY
 	BEGIN CATCH 

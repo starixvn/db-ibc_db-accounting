@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="wsv_nap" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Acc_FinanceGroupsConfig_FinanceUser_GroupUpd]
 	@NewGroupId		SMALLINT = NULL
 	,@OldGroupId	SMALLINT = NULL
@@ -15,6 +15,7 @@ AS
 
 	Revisions:
 		- 20220114@Malcolm: Initialize SP [Redmine: #164833]
+		- 20250114@Lewis: Apply Rep-Inhouse [RedmineID: #215883]
 		
 	Param's Explanation:
        
@@ -35,13 +36,15 @@ BEGIN
 		IF @NewGroupId IS NULL
 		BEGIN
 			DELETE f WITH(ROWLOCK, UPDLOCK)
+				OUTPUT DELETED.ID, [dbo].[f_GetDateTime2]()
+				INTO Acc_FinancePermission_Del_Inhouse (ID, RepUpdateTime)
 			FROM dbo.Acc_FinancePermission f 
 			WHERE f.FinanceCode = @UserName AND f.RoleId >= 5
 		END
 		ELSE 
 		BEGIN
 			UPDATE f WITH(ROWLOCK)
-				SET f.GroupId = @NewGroupId
+				SET f.GroupId = @NewGroupId, f.RepUpdateTime = [dbo].[f_GetDateTime2]()
 			FROM dbo.Acc_FinancePermission f
 			WHERE f.FinanceCode = @UserName AND f.RoleId >= 5
 		END
